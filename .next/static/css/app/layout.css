@@ -1184,16 +1184,16 @@ video {
     width: 0.125rem;
   }
 
+  .lg\:w-1\/2 {
+    width: 50%;
+  }
+
   .lg\:w-\[33\%\] {
     width: 33%;
   }
 
   .lg\:w-\[90vw\] {
     width: 90vw;
-  }
-
-  .lg\:w-1\/2 {
-    width: 50%;
   }
 
   .lg\:grid-cols-3 {
@@ -1397,11 +1397,6 @@ video {
   .xl\:px-0 {
     padding-left: 0px;
     padding-right: 0px;
-  }
-
-  .xl\:px-14 {
-    padding-left: 3.5rem;
-    padding-right: 3.5rem;
   }
 
   .xl\:px-4 {

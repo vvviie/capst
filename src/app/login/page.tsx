@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -42,6 +43,31 @@ const LoginPage = () => {
     }, 3000);
   };
 
+  const handleGoogleSignIn = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // User is signed in.
+      const user = result.user;
+      // ... (Check if the user exists in your database and handle accordingly)
+      setMessage({ text: "Successfully logged in!", type: "success" });
+    } catch (error) {
+      // Handle Errors here.
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      // The email of the user's account used.
+      const email = error.email;
+      // The AuthCredential type that was used.
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      setMessage({ text: "Error signing in with Google.", type: "error" });
+
+    // Remove message after 3 seconds
+    setTimeout(() => {
+      setMessage(null);
+    }, 3000);
+    }
+  };
+
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
       {/* IMAGE CONTAINER */}
@@ -65,6 +91,7 @@ const LoginPage = () => {
           )}
           <button
             type="button"
+            onClick={handleGoogleSignIn}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
           shadow-md"
           >
