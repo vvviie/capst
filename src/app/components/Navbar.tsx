@@ -9,7 +9,7 @@ const user = false;
 const Navbar = () => {
   return (
     <div
-      className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-10"
+      className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50"
       style={{ backgroundColor: "#30261F" }}
     >
       {/* LOGO HERE */}

@@ -26,7 +26,7 @@ const data = [
 const FeaturedItems = () => {
   return (
     <div
-      className="relative h-[calc(100vh-56px)] w-full flex flex-col items-center justify-between py-6 bg-orange-50 gap-2
+      className="relative min-h-[calc(100vh-56px)] w-full flex flex-col items-center justify-between py-6 bg-orange-50 gap-2
  lg:justify-center lg:items-center lg:gap-0 xl:px-56 xl:gap-2 lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
     >
       <h1 className="text-3xl mb-0 md:text-4xl lg:text-5xl font-bold text-orange-950">
