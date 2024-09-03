@@ -1,4 +1,4 @@
-// File: C:\CAPSTONEVERSIONS\V5\fikastallev5\src\app\menu\page.tsx
+// File: C:\CAPSTONEVERSIONS\V6\fikastallev5 (1)\fikastallev6\src\app\menu\page.tsx
 import * as entry from '../../../../src/app/menu/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

@@ -81,7 +81,7 @@ const SignupPage: React.FC = () => {
       const uid = userCredential.user.uid;
   
       // Save user data to Firestore with email as the document ID
-      await setDoc(doc(db, "users", uid), { // Use email as the document ID
+      await setDoc(doc(db, "users", email), {
         username: email,
         firstName,
         lastName,
