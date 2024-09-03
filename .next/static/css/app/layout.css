@@ -740,6 +740,12 @@ video {
 .h-auto {
   height: auto;
 }
+<<<<<<< HEAD
+=======
+.h-20 {
+  height: 5rem;
+}
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
 .min-h-\[calc\(100vh-56px\)\] {
   min-height: calc(100vh - 56px);
 }
@@ -946,6 +952,10 @@ video {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity));
 }
+.bg-orange-900 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(124 45 18 / var(--tw-bg-opacity));
+}
 .object-contain {
   object-fit: contain;
 }
@@ -1000,6 +1010,14 @@ video {
 .py-6 {
   padding-top: 1.5rem;
   padding-bottom: 1.5rem;
+}
+.px-5 {
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+.py-3 {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .pb-6 {
   padding-bottom: 1.5rem;

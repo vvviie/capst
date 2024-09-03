@@ -25,6 +25,14 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/product/[slug]/[id]/page.js"
+<<<<<<< HEAD
+=======
+    ],
+    "/_not-found/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/_not-found/page.js"
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
     ]
   }
 }

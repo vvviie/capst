@@ -3,6 +3,17 @@
 import React, { useState, useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+<<<<<<< HEAD
+=======
+import useHotDrinks from "@/app/hooks/useHotDrinks";
+import useIcedDrinks from "@/app/hooks/useIcedDrinks";
+import useBlendedDrinks from "@/app/hooks/useBlendedDrinks";
+import useAffogatoDrinks from "@/app/hooks/useAffogatoDrinks";
+import Link from "next/link";
+
+import DrinksFilter from "@/app/components/DrinksFilter";
+import { Drinks } from "@/app/data";
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
 
 // Drinks
 import useHotDrinks from "@/app/hooks/useHotDrinks";
@@ -39,6 +50,7 @@ type DrinksCategoryData = {
   drinks: Drinks[];
 }[];
 
+<<<<<<< HEAD
 type PastasCategoryData = {
   title: string;
   pastas: Pasta[];
@@ -59,6 +71,8 @@ type SnacksCategoryData = {
   snacks: Snacks[];
 }[];
 
+=======
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
 const MenuCategoryPage: React.FC = () => {
   const pathname = usePathname();
   const slug = pathname.split("/").pop();
@@ -78,6 +92,7 @@ const MenuCategoryPage: React.FC = () => {
     { title: "Affogato Drinks", drinks: affogatoDrinks },
   ];
 
+<<<<<<< HEAD
   const { servingPasta } = usePasta();
   
   const pastas: PastasCategoryData = [
@@ -107,6 +122,13 @@ const MenuCategoryPage: React.FC = () => {
     setSearchText(event.target.value);
   };
 
+=======
+  // Function to handle search input changes
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(event.target.value);
+  };
+
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
   // Filter drinks based on selected filter and search text
   const filteredDrinks = useMemo(
     () =>
@@ -132,6 +154,7 @@ const MenuCategoryPage: React.FC = () => {
       })),
     [selectedFilter, searchText, drinks]
   );
+<<<<<<< HEAD
   
   const filteredPastas = useMemo(
     () =>
@@ -232,6 +255,8 @@ const MenuCategoryPage: React.FC = () => {
       })),
     [selectedFilter, searchText, snacks]
   );
+=======
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
 
   if (!slug) return <p>No category found.</p>;
 
@@ -315,6 +340,7 @@ const MenuCategoryPage: React.FC = () => {
               </div>
             )
         )}
+<<<<<<< HEAD
 
 {slug === "pasta" &&
         filteredPastas.map(
@@ -573,6 +599,8 @@ const MenuCategoryPage: React.FC = () => {
         )}
 
         
+=======
+>>>>>>> 09f40122b3a477650fa430187c20c14e0e3179a8
     </div>
   );
 };
