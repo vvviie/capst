@@ -26,14 +26,25 @@ const ProductPage: React.FC = () => {
         try { 
           const collection = 
           slug === "drinks" ? "drinks" :
-          slug === "mainCourse" ? "mainCourse" :
+          slug.toLowerCase() === "maincourse" ? "mainCourse" :
           slug === "pasta" ? "pasta" :
           slug === "pastries" ? "pastries" :
           slug === "sandwiches" ? "sandwiches" :
           slug === "snacks" ? "snacks" : null;
         
           // Fetch from different collections based on the slug (category)
-          
+
+          //debug
+          console.log("SLUG: " + slug);
+          console.log("Product Data:", productData);
+          console.log("Product ID:", productId);
+          console.log("Pathname:", pathname);
+          console.log("Collection:", collection);
+
+          if (!collection || !productId) {
+            console.error("Invalid collection or product ID");
+            return;
+          }
 
           const productRef = doc(db, collection, productId);
           const productSnap = await getDoc(productRef);
@@ -72,7 +83,9 @@ const ProductPage: React.FC = () => {
     milkOat = 0,
     addVanilla = 0,
   } = productData;
-  console.log("A" + slug);
+  
+
+
   let productAvailable = availability === "available";
   let calorieContent = calorie;
 
@@ -207,7 +220,7 @@ const ProductPage: React.FC = () => {
             {/* DESCRIPTION OF THE ITEM */}
             <p
              className={`text-justify mb-2 ${
-              slug === "maincourse" ? "" : "xl:h-14 xl:overflow-y-scroll"
+              slug === "mainCourse" ? "" : "xl:h-14 xl:overflow-y-scroll"
               }`}
               >
               {desc}
