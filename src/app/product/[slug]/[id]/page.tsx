@@ -22,15 +22,26 @@ const ProductPage: React.FC = () => {
 
   useEffect(() => {
     const fetchProductData = async () => {
-      if (productId) {
-        try {
-          const productRef = doc(db, "drinks", productId);
+      if (productId && slug) {
+        try { 
+          const collection = 
+          slug === "drinks" ? "drinks" :
+          slug === "mainCourse" ? "mainCourse" :
+          slug === "pasta" ? "pasta" :
+          slug === "pastries" ? "pastries" :
+          slug === "sandwiches" ? "sandwiches" :
+          slug === "snacks" ? "snacks" : null;
+        
+          // Fetch from different collections based on the slug (category)
+          
+
+          const productRef = doc(db, collection, productId);
           const productSnap = await getDoc(productRef);
 
           if (productSnap.exists()) {
             const data = productSnap.data();
             setProductData(data);
-            setSelectedDrinkSize(data.currSize);
+            setSelectedDrinkSize(data.currSize || "12oz"); // Set default size if it exists
           } else {
             console.error("No such document!");
           }
@@ -41,7 +52,7 @@ const ProductPage: React.FC = () => {
     };
 
     fetchProductData();
-  }, [productId]);
+  }, [productId, slug]);
 
   if (!productData) {
     return <div>Loading...</div>;
@@ -60,16 +71,14 @@ const ProductPage: React.FC = () => {
     milkAlmond = 0,
     milkOat = 0,
     addVanilla = 0,
-    
   } = productData;
-
-  let drinkSizeAvailable = addEspresso && addSyrup;
+  console.log("A" + slug);
   let productAvailable = availability === "available";
   let calorieContent = calorie;
 
   const handleDrinkSizeChange = (size: string) => {
     setSelectedDrinkSize(size);
-  
+
     if (size === productData.upsizeSize) {
       setUpsizePrice(productData.upsizePrice); // Correctly set the upsize price
     } else {
@@ -81,7 +90,7 @@ const ProductPage: React.FC = () => {
     setAdditionalCost(cost);
   };
 
-  // Compute the total price including additional costs
+   // Compute the total price including additional costs
   const totalPrice = price + upsizePrice + additionalCost;
 
   return (
@@ -103,6 +112,7 @@ const ProductPage: React.FC = () => {
           >
             X
           </Link>
+
           {/* CONTAINER FOR CALORIE CONTENT AND AVAILABILITY */}
           <div className="flex top-4 left-16 absolute gap-4">
             {/* AVAILABILITY */}
@@ -196,10 +206,10 @@ const ProductPage: React.FC = () => {
             </div>
             {/* DESCRIPTION OF THE ITEM */}
             <p
-              className={`text-justify mb-2 ${
-                slug === "maincourse" ? "" : "xl:h-14 xl:overflow-y-scroll"
+             className={`text-justify mb-2 ${
+              slug === "maincourse" ? "" : "xl:h-14 xl:overflow-y-scroll"
               }`}
-            >
+              >
               {desc}
             </p>
           </div>
@@ -260,40 +270,49 @@ const ProductPage: React.FC = () => {
                   milkOat={milkOat}
                   addVanilla={addVanilla}
                   onAdditionalCostChange={handleAdditionalCostChange}
-                  />
-                </div>
-              )}
-              {slug === "maincourse" && (
-                <div className="flex flex-col gap-2">
-                  <hr />
-                  <MainCourseOptions />
-                </div>
-              )}
-            </div>
-            {/* NOTE AND BUTTON */}
-            <div className="flex flex-col gap-2 my-2">
-              <span className="text-gray-500">Note</span>
-              <textarea
-                name=""
-                id=""
-                cols={30}
-                rows={3}
-                style={{resize: "none"}}
-                className="bg-gray-50 w-full pl-2"
-                placeholder="Any requests for this order?"
-              ></textarea>
-            </div>
-            {/* KAPAG PININDOT DAPAT MA-REDIRECT SA MENU CATEGORY NA ACCORDING SA SLUG */}
-            <button className="w-full bg-orange-950 text-white py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md xl:mt-2">
-              <i className="fa-solid fa-cart-shopping"></i>
-              <span>Update Cart (+P{totalPrice.toFixed(2)})</span>
-              {/*PAKI-LAGAY DITO ANG TOTAL PRICE*/}
-            </button>
+                />
+              </div>
+            )}
+
+            {slug === "mainCourse" && (
+              <div className="flex flex-col gap-2">
+                <hr />
+                <MainCourseOptions />
+              </div>
+            )}
+
+            
+          {slug === "pasta" && (
+              <div className="flex flex-col gap-2">
+                <hr />
+                {/* Add Pasta-specific options component */}
+                <div>Render pasta-specific options here</div>
+              </div>
+            )}
           </div>
+          {/* NOTE AND BUTTON */}
+          <div className="flex flex-col gap-2 my-2">
+            <span className="text-gray-500">Note</span>
+            <textarea
+              name=""
+              id=""
+              cols={30}
+              rows={3}
+              style={{resize: "none"}}
+              className="bg-gray-50 w-full pl-2"
+              placeholder="Any requests for this order?"
+            ></textarea>
+          </div>
+          {/* KAPAG PININDOT DAPAT MA-REDIRECT SA MENU CATEGORY NA ACCORDING SA SLUG */}
+          <button className="w-full bg-orange-950 text-white py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md xl:mt-2">
+            <i className="fa-solid fa-cart-shopping"></i>
+            <span>Update Cart (+P{totalPrice.toFixed(2)})</span>
+            {/*PAKI-LAGAY DITO ANG TOTAL PRICE*/}
+          </button>
         </div>
       </div>
-    );
-  };
-  
-  export default ProductPage;
-  
+    </div>
+  );
+};
+
+export default ProductPage;
