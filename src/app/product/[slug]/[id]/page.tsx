@@ -287,7 +287,7 @@ const ProductPage: React.FC = () => {
               </div>
             )}
 
-            {slug === "mainCourse" && (
+            {slug === "maincourse" && (
               <div className="flex flex-col gap-2">
                 <hr />
                 <MainCourseOptions />
