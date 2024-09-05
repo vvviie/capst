@@ -11,12 +11,12 @@
 
 # next.js
 /out/
-/.next/
-/.next/cache
+.next/
+/.next/cache/
 
-# production
-/build
-/dist
+# production build
+/build/
+/dist/
 
 # misc
 .DS_Store
@@ -28,42 +28,42 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-/logs
+/logs/
 *.log
 
-# local env files
+# local environment files
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
-# firebase
+# firebase related
 .firebase/
-.firebaserc
+/.firebaserc
 
-# vercel
-.vercel
+# vercel deployment related
+.vercel/
 
-# typescript
+# typescript related
 *.tsbuildinfo
 next-env.d.ts
 
 # IDE/editor specific files
 .vscode/
-.idea/
-.project
+/.idea/
+/.project
 .classpath
 
-# Tailwind CSS
+# Tailwind CSS related
 purgecss.config.js
 
-# Parcel cache (if using Parcel bundler)
-/.cache
+# Parcel bundler cache
+.cache/
 
 # Svelte build files (if using Svelte)
-/__sapper__/build
-/__sapper__/export
+/__sapper__/build/
+/__sapper__/export/
 .svelte/
 
 # JetBrains IDEs
