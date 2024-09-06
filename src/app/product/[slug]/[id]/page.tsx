@@ -20,10 +20,13 @@ const ProductPage: React.FC = () => {
   const [additionalCost, setAdditionalCost] = useState<number>(0);
   const [upsizePrice, setUpsizePrice] = useState<number>(0);
 
+  // Automatically uses the following data from the database through the slug
   useEffect(() => {
     const fetchProductData = async () => {
       if (productId && slug) {
         try { 
+
+          // if the slug is that certain category, then it would be the collection that would be retrieved from the database.
           const collection = 
           slug === "drinks" ? "drinks" :
           slug.toLowerCase() === "maincourse" ? "mainCourse" :
@@ -199,7 +202,7 @@ const ProductPage: React.FC = () => {
           </div>
         </div>
         {/* TITLE, PRICE, AND OPTIONS */}
-        <div className="px-10 md:px-24 xl:px-5 xl:py-10 xl:w-2/5">
+        <div className="px-10 md:px-24 xl:px-5 xl:py-10 xl:w-2/5 xl:min-h-[770px] xl:max-h-[450px]">
           {/* TITLE, PRICE, AND DESCRIPTION */}
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-start">
@@ -218,12 +221,8 @@ const ProductPage: React.FC = () => {
               </div>
             </div>
             {/* DESCRIPTION OF THE ITEM */}
-            <p
-             className={`text-justify mb-2 ${
-              slug === "mainCourse" ? "" : "xl:h-14 xl:overflow-y-scroll"
-              }`}
-              >
-              {desc}
+            <p className="text-justify mb-2 xl:h-14 xl:overflow-y-scroll">
+            {desc}
             </p>
           </div>
           {/* OPTIONS */}
