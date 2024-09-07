@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "next/image"; 
 import classNames from "classnames";
 
 // Import Firebase modules from npm

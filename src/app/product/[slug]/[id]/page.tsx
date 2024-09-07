@@ -8,7 +8,7 @@ import DrinksOptions from "@/app/components/DrinksOptions";
 import MainCourseOptions from "@/app/components/MainCourseOptions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/app/firebase";
-
+  
 const ProductPage: React.FC = () => {
   const pathname = usePathname();
   const parts = pathname.split("/");
