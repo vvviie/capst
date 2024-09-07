@@ -15,7 +15,7 @@ const MainCourseOptions = () => {
 
       {/* OPTIONS */}
       <div className="flex flex-col gap-2">
-        <h1 className="text-gray-500">Options</h1>
+        <h1 className="text-gray-500">Serve with</h1>
         {/* RICE OR MASHED POTATO CHOICES */}
         <div className="flex flex-col">
           <div
@@ -32,7 +32,6 @@ const MainCourseOptions = () => {
               onChange={() => handleOptionChange("rice")}
             />
             <span className="ml-4 font-semibold">Rice</span>
-            <span className="ml-2"> (+0)</span>
           </div>
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
@@ -48,7 +47,6 @@ const MainCourseOptions = () => {
               onChange={() => handleOptionChange("mashed")}
             />
             <span className="ml-4 font-semibold">Mashed Potato</span>
-            <span className="ml-2"> (+0)</span>
           </div>
         </div>
       </div>

@@ -286,7 +286,6 @@ const ProductPage: React.FC = () => {
                       <span className="ml-4 font-semibold">
                         {productData.currSize}
                       </span>
-                      <span className="ml-2"> (+0)</span>
                     </div>
 
                     {/* Conditionally render upsizable option */}
