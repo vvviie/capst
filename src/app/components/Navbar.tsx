@@ -1,13 +1,10 @@
-"use client"
+"use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import BurgerMenu from "./BurgerMenu";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-
-// TEMPORARY LANG KASI WALA PANG WORKING LOGIN
-// const user = false;
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
@@ -18,21 +15,22 @@ const Navbar = () => {
     const db = getFirestore();
 
     // Listen for authentication state change
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-
-        // Fetch the user's details from Firestore using the user's email or UID
-        const userDoc = await getDoc(doc(db, "users", user.email)); // assuming the document ID is user's email
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser && authUser.emailVerified) {
+        // Fetch the user's details from Firestore using the user's email
+        const userDoc = await getDoc(doc(db, "users", authUser.email));
         if (userDoc.exists()) {
           const userData = userDoc.data();
           setFirstName(userData.firstName); // Assuming `firstName` field exists in Firestore
+          setUser(authUser); // Set user only if document exists
         } else {
           console.log("No such document!");
+          setUser(null);
+          setFirstName("");
         }
       } else {
         setUser(null);
-        setFirstName(""); // Reset firstName if no user is logged in
+        setFirstName(""); // Reset firstName if no user is logged in or email is not verified
       }
     });
 

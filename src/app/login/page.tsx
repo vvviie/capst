@@ -1,11 +1,11 @@
-"use client"
+"use client";
+
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from 'next/navigation'; // Use the correct router import for Next.js app directory structure
+import { useRouter } from 'next/navigation';
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 // Firebase configuration
@@ -22,11 +22,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app); 
+const firestore = getFirestore(app);
 
 const LoginPage = () => {
-  const [message, setMessage] = useState(null);
-  const [isMounted, setIsMounted] = useState(false); // State to track if component is mounted
+  const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter(); // Initialize the router
 
   useEffect(() => {
@@ -35,14 +35,13 @@ const LoginPage = () => {
 
   const fetchUserDetails = async (email) => {
     try {
-      const userRef = doc(firestore, "users", email);
+      const userRef = doc(firestore, "users", email); // Assuming the document ID is the email
       const userDoc = await getDoc(userRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        console.log("User details: ", userData);
+        console.log("User details: ", userData); // Log the user details
       } else {
-        console.log("No such user in Firestore!");
         setMessage({ text: "No user details found in Firestore.", type: "error" });
       }
     } catch (error) {
@@ -58,18 +57,26 @@ const LoginPage = () => {
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      setMessage({ text: "Successfully logged in!", type: "success" });
+      const user = userCredential.user;
 
-      await fetchUserDetails(userCredential.user.email);
-      
-      if (isMounted) {
-        router.push('/'); // Ensure router.push runs only on client-side
+      // Reload user to get the latest information
+      await user.reload();
+
+      if (!user.emailVerified) {
+        setMessage({ text: "Please verify your email before logging in.", type: "error" });
+        await auth.signOut(); // Log out the user
+      } else {
+        setMessage({ text: "Successfully logged in!", type: "success" });
+        await fetchUserDetails(user.email);
+        if (isMounted) {
+          router.push('/'); // Ensure router.push runs only on client-side
+        }
       }
     } catch (error) {
-      console.error("Authentication error: ", error.message);
       setMessage({ text: "Invalid username or password.", type: "error" });
     }
 
+    // Remove message after 3 seconds
     setTimeout(() => {
       setMessage(null);
     }, 3000);
@@ -80,22 +87,25 @@ const LoginPage = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      await user.reload();
 
-      setMessage({ text: "Successfully logged in!", type: "success" });
-
-      await fetchUserDetails(user.email);
-
-      if (isMounted) {
-        router.push('/home'); // Ensure router.push runs only on client-side
+      if (!user.emailVerified) {
+        setMessage({ text: "Please verify your email before logging in.", type: "error" });
+        await auth.signOut(); // Log out the user
+      } else {
+        setMessage({ text: "Successfully logged in!", type: "success" });
+        if (isMounted) {
+          router.push('/home'); // Ensure router.push runs only on client-side
+        }
       }
     } catch (error) {
-      console.error("Google Sign-in error: ", error.message);
       setMessage({ text: "Error signing in with Google.", type: "error" });
-
-      setTimeout(() => {
-        setMessage(null);
-      }, 3000);
     }
+
+    // Remove message after 3 seconds
+    setTimeout(() => {
+      setMessage(null);
+    }, 3000);
   };
 
   return (
