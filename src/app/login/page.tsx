@@ -1,11 +1,13 @@
-"use client";
+// working
 
+"use client"
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore"; // Import Firestore methods
 
 // Firebase configuration
 const firebaseConfig = {
@@ -21,9 +23,29 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const firestore = getFirestore(app); // Initialize Firestore
 
 const LoginPage = () => {
   const [message, setMessage] = useState(null);
+
+  // Function to fetch user details from Firestore after login
+  const fetchUserDetails = async (email) => {
+    try {
+      const userRef = doc(firestore, "users", email); // Assuming the document ID is the email
+      const userDoc = await getDoc(userRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User details: ", userData); // Log the user details
+      } else {
+        console.log("No such user in Firestore!");
+        setMessage({ text: "No user details found in Firestore.", type: "error" });
+      }
+    } catch (error) {
+      console.error("Error fetching user details: ", error);
+      setMessage({ text: "Error fetching user details.", type: "error" });
+    }
+  };
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -31,20 +53,15 @@ const LoginPage = () => {
     const password = event.target.password.value;
 
     try {
+      // Sign in with email and password
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      setMessage({ text: "Successfully logged in!", type: "success" });
 
-      // Reload user to get the latest information
-      await user.reload();
+      // Fetch and log user details after successful login
+      await fetchUserDetails(userCredential.user.email);
 
-      if (!user.emailVerified) {
-        // If email is not verified, show an error message
-        setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        auth.signOut(); // Log out the user
-      } else {
-        setMessage({ text: "Successfully logged in!", type: "success" });
-      }
     } catch (error) {
+      console.error("Authentication error: ", error.message);
       setMessage({ text: "Invalid username or password.", type: "error" });
     }
 
@@ -59,31 +76,28 @@ const LoginPage = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      await user.reload();
 
-      if (!user.emailVerified) {
-        setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        auth.signOut(); // Log out the user
-      } else {
-        setMessage({ text: "Successfully logged in!", type: "success" });
-      }
+      setMessage({ text: "Successfully logged in!", type: "success" });
+
+      // Fetch and log user details after Google sign-in
+      await fetchUserDetails(user.email);
+
     } catch (error) {
+      console.error("Google Sign-in error: ", error.message);
       setMessage({ text: "Error signing in with Google.", type: "error" });
-    }
 
-    // Remove message after 3 seconds
-    setTimeout(() => {
-      setMessage(null);
-    }, 3000);
+      setTimeout(() => {
+        setMessage(null);
+      }, 3000);
+    }
   };
 
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
-      {/* IMAGE CONTAINER */}
       <div className="relative w-full aspect-square mb-2 xl:mb-0 xl:w-1/2">
         <Image src={"/coffee.png"} alt="" fill className="object-contain" />
       </div>
-      {/* LOG-IN FORM */}
+
       <form
         onSubmit={handleLogin}
         className="w-full flex flex-1 items-center justify-center"
@@ -92,12 +106,13 @@ const LoginPage = () => {
           <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
             Hello, there! Welcome back!
           </h1>
-          {/* ERROR/SUCCESS MESSAGE */}
+          
           {message && (
             <span className={`font-bold mt-[-20px] ${message.type === "success" ? "text-green-500" : "text-red-500"} text-xl`}>
               {message.text}
             </span>
           )}
+
           <button
             type="button"
             onClick={handleGoogleSignIn}
@@ -112,11 +127,13 @@ const LoginPage = () => {
               Google Sign-in
             </span>
           </button>
+
           <div className="flex items-center gap-4 justify-center w-full">
             <span className="w-20 h-[1px] bg-slate-400"></span>
             <span>or</span>
             <span className="w-20 h-[1px] bg-slate-400"></span>
           </div>
+
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -133,6 +150,7 @@ const LoginPage = () => {
               placeholder="ex. juandelacruz@gmail.com"
             />
           </div>
+
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -149,6 +167,7 @@ const LoginPage = () => {
               placeholder="●●●●●●●●●●"
             />
           </div>
+
           <button
             type="submit"
             className="flex items-center justify-center space-x-2 w-full h-10 rounded-md
@@ -157,7 +176,7 @@ const LoginPage = () => {
             <i className="fa fa-sign-in text-sm"></i>
             <span className="font-bold text-md">Username Login</span>
           </button>
-          {/* CREATE AN ACCOUNT BUTTON */}
+
           <Link
             href={"/signup"}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
