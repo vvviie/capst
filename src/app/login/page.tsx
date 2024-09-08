@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from 'next/navigation';
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -21,9 +22,33 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+const firestore = getFirestore(app);
 
 const LoginPage = () => {
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter(); // Initialize the router
+
+  useEffect(() => {
+    setIsMounted(true); // Set the state to true when the component mounts
+  }, []);
+
+  const fetchUserDetails = async (email) => {
+    try {
+      const userRef = doc(firestore, "users", email); // Assuming the document ID is the email
+      const userDoc = await getDoc(userRef);
+
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        console.log("User details: ", userData); // Log the user details
+      } else {
+        setMessage({ text: "No user details found in Firestore.", type: "error" });
+      }
+    } catch (error) {
+      console.error("Error fetching user details: ", error);
+      setMessage({ text: "Error fetching user details.", type: "error" });
+    }
+  };
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -38,11 +63,14 @@ const LoginPage = () => {
       await user.reload();
 
       if (!user.emailVerified) {
-        // If email is not verified, show an error message
         setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        auth.signOut(); // Log out the user
+        await auth.signOut(); // Log out the user
       } else {
         setMessage({ text: "Successfully logged in!", type: "success" });
+        await fetchUserDetails(user.email);
+        if (isMounted) {
+          router.push('/'); // Ensure router.push runs only on client-side
+        }
       }
     } catch (error) {
       setMessage({ text: "Invalid username or password.", type: "error" });
@@ -63,9 +91,12 @@ const LoginPage = () => {
 
       if (!user.emailVerified) {
         setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        auth.signOut(); // Log out the user
+        await auth.signOut(); // Log out the user
       } else {
         setMessage({ text: "Successfully logged in!", type: "success" });
+        if (isMounted) {
+          router.push('/home'); // Ensure router.push runs only on client-side
+        }
       }
     } catch (error) {
       setMessage({ text: "Error signing in with Google.", type: "error" });
@@ -79,11 +110,10 @@ const LoginPage = () => {
 
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
-      {/* IMAGE CONTAINER */}
       <div className="relative w-full aspect-square mb-2 xl:mb-0 xl:w-1/2">
         <Image src={"/coffee.png"} alt="" fill className="object-contain" />
       </div>
-      {/* LOG-IN FORM */}
+
       <form
         onSubmit={handleLogin}
         className="w-full flex flex-1 items-center justify-center"
@@ -92,12 +122,13 @@ const LoginPage = () => {
           <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
             Hello, there! Welcome back!
           </h1>
-          {/* ERROR/SUCCESS MESSAGE */}
+
           {message && (
             <span className={`font-bold mt-[-20px] ${message.type === "success" ? "text-green-500" : "text-red-500"} text-xl`}>
               {message.text}
             </span>
           )}
+
           <button
             type="button"
             onClick={handleGoogleSignIn}
@@ -112,11 +143,13 @@ const LoginPage = () => {
               Google Sign-in
             </span>
           </button>
+
           <div className="flex items-center gap-4 justify-center w-full">
             <span className="w-20 h-[1px] bg-slate-400"></span>
             <span>or</span>
             <span className="w-20 h-[1px] bg-slate-400"></span>
           </div>
+
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -133,6 +166,7 @@ const LoginPage = () => {
               placeholder="ex. juandelacruz@gmail.com"
             />
           </div>
+
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -149,6 +183,7 @@ const LoginPage = () => {
               placeholder="●●●●●●●●●●"
             />
           </div>
+
           <button
             type="submit"
             className="flex items-center justify-center space-x-2 w-full h-10 rounded-md
@@ -157,7 +192,7 @@ const LoginPage = () => {
             <i className="fa fa-sign-in text-sm"></i>
             <span className="font-bold text-md">Username Login</span>
           </button>
-          {/* CREATE AN ACCOUNT BUTTON */}
+
           <Link
             href={"/signup"}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
