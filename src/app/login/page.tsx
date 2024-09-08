@@ -1,13 +1,12 @@
-// working
-
 "use client"
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from 'next/navigation'; // Use the correct router import for Next.js app directory structure
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore"; // Import Firestore methods
+import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -23,20 +22,25 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app); // Initialize Firestore
+const firestore = getFirestore(app); 
 
 const LoginPage = () => {
   const [message, setMessage] = useState(null);
+  const [isMounted, setIsMounted] = useState(false); // State to track if component is mounted
+  const router = useRouter(); // Initialize the router
 
-  // Function to fetch user details from Firestore after login
+  useEffect(() => {
+    setIsMounted(true); // Set the state to true when the component mounts
+  }, []);
+
   const fetchUserDetails = async (email) => {
     try {
-      const userRef = doc(firestore, "users", email); // Assuming the document ID is the email
+      const userRef = doc(firestore, "users", email);
       const userDoc = await getDoc(userRef);
 
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        console.log("User details: ", userData); // Log the user details
+        console.log("User details: ", userData);
       } else {
         console.log("No such user in Firestore!");
         setMessage({ text: "No user details found in Firestore.", type: "error" });
@@ -53,19 +57,19 @@ const LoginPage = () => {
     const password = event.target.password.value;
 
     try {
-      // Sign in with email and password
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       setMessage({ text: "Successfully logged in!", type: "success" });
 
-      // Fetch and log user details after successful login
       await fetchUserDetails(userCredential.user.email);
-
+      
+      if (isMounted) {
+        router.push('/'); // Ensure router.push runs only on client-side
+      }
     } catch (error) {
       console.error("Authentication error: ", error.message);
       setMessage({ text: "Invalid username or password.", type: "error" });
     }
 
-    // Remove message after 3 seconds
     setTimeout(() => {
       setMessage(null);
     }, 3000);
@@ -79,9 +83,11 @@ const LoginPage = () => {
 
       setMessage({ text: "Successfully logged in!", type: "success" });
 
-      // Fetch and log user details after Google sign-in
       await fetchUserDetails(user.email);
 
+      if (isMounted) {
+        router.push('/home'); // Ensure router.push runs only on client-side
+      }
     } catch (error) {
       console.error("Google Sign-in error: ", error.message);
       setMessage({ text: "Error signing in with Google.", type: "error" });
@@ -106,7 +112,7 @@ const LoginPage = () => {
           <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
             Hello, there! Welcome back!
           </h1>
-          
+
           {message && (
             <span className={`font-bold mt-[-20px] ${message.type === "success" ? "text-green-500" : "text-red-500"} text-xl`}>
               {message.text}
