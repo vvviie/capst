@@ -82,13 +82,13 @@ const AboutUs = () => {
         </div>
         {/* OTHER DETAILS TEXT DYNAMIC CONTAINER */}
         {data.map((item) => (
-          <div className="flex flex-col gap-2 justify-center items-center">
-            <h1 className="text-xl font-bold text-orange-950 lg:text-2xl">
-              {item.title}
-            </h1>
-            <p>{item.desc}</p>
-          </div>
-        ))}
+        <div key={item.id} className="flex flex-col gap-2 justify-center items-center">
+          <h1 className="text-xl font-bold text-orange-950 lg:text-2xl">
+            {item.title}
+          </h1>
+          <p>{item.desc}</p>
+        </div>
+      ))}
       </div>
     </div>
   );

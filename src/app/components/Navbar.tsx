@@ -3,17 +3,15 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import BurgerMenu from "./BurgerMenu";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../firebase"; // Update with the correct path
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState("");
 
   useEffect(() => {
-    const auth = getAuth();
-    const db = getFirestore();
-
     // Listen for authentication state change
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && authUser.emailVerified) {
@@ -37,6 +35,20 @@ const Navbar = () => {
     // Clean up the subscription
     return () => unsubscribe();
   }, []);
+
+  const handleLogout = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault(); // Prevent the default link behavior
+    try {
+      await signOut(auth);
+
+      <Link
+      href="/"
+      ></Link>
+      // Optionally, you can handle any additional logic after signing out
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
 
   return (
     <div
@@ -85,7 +97,7 @@ const Navbar = () => {
           <Link href="/">{firstName}</Link> {/* Display the user's first name */}
         </div>
         <div>
-          <Link href="/" onClick={() => getAuth().signOut()}>Logout</Link> {/* Logout functionality */}
+          <Link href="/" onClick={handleLogout}>Logout</Link> {/* Logout functionality */}
         </div>
       </div>
       
