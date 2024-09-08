@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 
 interface DrinksOptionsProps {
   addEspresso: number;
@@ -15,10 +15,12 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
   milkAlmond,
   milkOat,
   addVanilla, // Optional
-  onAdditionalCostChange 
+  onAdditionalCostChange,
 }) => {
   const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
-  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(null);
+  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     let price = 0;
@@ -31,7 +33,8 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
       price += addSyrup;
     }
 
-    if (addVanilla && selectedAdditionals.includes("Vanilla")) { // Check if addVanilla exists
+    if (addVanilla && selectedAdditionals.includes("Vanilla")) {
+      // Check if addVanilla exists
       price += addVanilla;
     }
 
@@ -42,7 +45,16 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
     }
 
     onAdditionalCostChange(price);
-  }, [selectedAdditionals, selectedMilkOption, addEspresso, addSyrup, addVanilla, milkAlmond, milkOat, onAdditionalCostChange]);
+  }, [
+    selectedAdditionals,
+    selectedMilkOption,
+    addEspresso,
+    addSyrup,
+    addVanilla,
+    milkAlmond,
+    milkOat,
+    onAdditionalCostChange,
+  ]);
 
   const handleAdditionalsChange = (value: string) => {
     setSelectedAdditionals((prev) =>
