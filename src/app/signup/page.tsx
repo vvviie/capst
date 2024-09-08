@@ -2,13 +2,13 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import Image from "next/image"; 
 import classNames from "classnames";
 
 // Import Firebase modules from npm
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -77,18 +77,50 @@ const SignupPage: React.FC = () => {
     }
   
     try {
+      // Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-  
-      // Save user data to Firestore with email as the document ID
+      const user = userCredential.user;
+
+      // Send email verification
+      await sendEmailVerification(user);
+
+      setMessage("Verification email sent. Please verify your email.");
+      setMessageColor("green");
+
+      // Wait for email verification
+      const verificationTimeout = setTimeout(() => {
+        setMessage("Email verification timed out. Please try again.");
+        setMessageColor("red");
+      }, 30000); // 30 seconds timeout
+
+      const verified = await new Promise<boolean>((resolve) => {
+        const interval = setInterval(async () => {
+          await user.reload();
+          if (user.emailVerified) {
+            resolve(true);
+            clearInterval(interval);
+          }
+        }, 1000); // Check every 1 second
+      });
+
+      if (!verified) {
+        setMessage("Email verification failed. Please try again.");
+        setMessageColor("red");
+        return;
+      }
+
+      clearTimeout(verificationTimeout);
+      
+      // Save user data to Firestore with email as the document ID after verification
       await setDoc(doc(db, "users", email), {
         username: email,
         firstName,
         lastName,
         address,
-        phoneNumber
+        phoneNumber,
+        role: "user", // Add role to user document
       });
-  
+
       setMessage("User created successfully!");
       setMessageColor("green");
     } catch (error) {

@@ -31,8 +31,19 @@ const LoginPage = () => {
     const password = event.target.password.value;
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      setMessage({ text: "Successfully logged in!", type: "success" });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Reload user to get the latest information
+      await user.reload();
+
+      if (!user.emailVerified) {
+        // If email is not verified, show an error message
+        setMessage({ text: "Please verify your email before logging in.", type: "error" });
+        auth.signOut(); // Log out the user
+      } else {
+        setMessage({ text: "Successfully logged in!", type: "success" });
+      }
     } catch (error) {
       setMessage({ text: "Invalid username or password.", type: "error" });
     }
@@ -47,25 +58,23 @@ const LoginPage = () => {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
-      // User is signed in.
       const user = result.user;
-      // ... (Check if the user exists in your database and handle accordingly)
-      setMessage({ text: "Successfully logged in!", type: "success" });
+      await user.reload();
+
+      if (!user.emailVerified) {
+        setMessage({ text: "Please verify your email before logging in.", type: "error" });
+        auth.signOut(); // Log out the user
+      } else {
+        setMessage({ text: "Successfully logged in!", type: "success" });
+      }
     } catch (error) {
-      // Handle Errors here.
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      // The email of the user's account used.
-      const email = error.email;
-      // The AuthCredential type that was used.
-      const credential = GoogleAuthProvider.credentialFromError(error);
       setMessage({ text: "Error signing in with Google.", type: "error" });
+    }
 
     // Remove message after 3 seconds
     setTimeout(() => {
       setMessage(null);
     }, 3000);
-    }
   };
 
   return (
