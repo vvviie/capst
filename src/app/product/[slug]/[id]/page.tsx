@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -8,7 +8,8 @@ import DrinksOptions from "@/app/components/DrinksOptions";
 import MainCourseOptions from "@/app/components/MainCourseOptions";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/app/firebase";
-  
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
 const ProductPage: React.FC = () => {
   const pathname = usePathname();
   const parts = pathname.split("/");
@@ -99,6 +100,44 @@ const ProductPage: React.FC = () => {
 
     fetchProductData();
   }, [productId, slug]);
+
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      const loggedIn = !!authUser && authUser.emailVerified;
+      setIsLoggedIn(loggedIn);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowLoginModal(false);
+      }
+    };
+
+    if (showLoginModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showLoginModal]);
+
+  const handleCartClick = () => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+    } else {
+      // Handle adding to cart logic here
+    }
+  };
 
   if (!productData) {
     return <div>Loading...</div>;
@@ -336,7 +375,6 @@ const ProductPage: React.FC = () => {
                 <MainCourseOptions />
               </div>
             )}
-
           </div>
           {/* QUANTITY, NOTE, AND BUTTON */}
           <div className="flex flex-col gap-2 my-2">
@@ -394,13 +432,42 @@ const ProductPage: React.FC = () => {
           </div>
 
           {/* KAPAG PININDOT DAPAT MA-REDIRECT SA MENU CATEGORY NA ACCORDING SA SLUG */}
-          <button className="w-full bg-orange-950 text-white py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md xl:mt-2">
+          <button
+            className="w-full bg-orange-950 text-white py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md xl:mt-2"
+            onClick={handleCartClick}
+          >
             <i className="fa-solid fa-cart-shopping"></i>
             <span>Update Cart (+P{totalPrice.toFixed(2)})</span>
             {/*PAKI-LAGAY DITO ANG TOTAL PRICE*/}
           </button>
         </div>
       </div>
+
+      {showLoginModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
+          ref={modalRef}
+        >
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm text-center">
+            <h2 className="text-xl font-bold mb-4">Please Log In</h2>
+            <p className="mb-4">
+              You need to be logged in to update your cart.
+            </p>
+            <Link
+              href="/login"
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg"
+            >
+              Log In
+            </Link>
+            <button
+              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg mt-4"
+              onClick={() => setShowLoginModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

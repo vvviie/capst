@@ -12,8 +12,7 @@ const data = [
   },
   {
     id: 2,
-    title:
-      "Experience culinary delights and warm ambiance at our charming eatery.",
+    title: "Experience culinary delights and warm ambiance at our charming eatery.",
     desc: "Experience culinary delights and warm ambiance at our charming eatery.",
     img: "/cwfood.jpg",
   },
@@ -66,6 +65,7 @@ export const LandingSec = () => {
           src={data[0].img}
           alt=""
           fill
+          priority
           className={`object-contain
             }`}
         />
