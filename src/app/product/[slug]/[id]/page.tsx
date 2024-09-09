@@ -135,9 +135,17 @@ const ProductPage: React.FC = () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
     } else {
-      // Handle adding to cart logic here
+      // Log the product ID and details
+      console.log("Product ID:", productId);
+      console.log("Product Details:", productData);
+      console.log("Selected Drink Size:", selectedDrinkSize);
+      console.log("Quantity:", numberQtty);
+      console.log("Total Price:", totalPrice.toFixed(2));
+  
+      // Handle adding to cart logic here (e.g., Firebase cart update)
     }
   };
+  
 
   if (!productData) {
     return <div>Loading...</div>;
