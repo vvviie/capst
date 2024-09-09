@@ -83,7 +83,7 @@ const Navbar = () => {
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
         <div>
-          <Link href="/">
+          <Link href="/foodcart">
             <Image
               src="/shoppingcart.png"
               alt="Cart"
