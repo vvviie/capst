@@ -125,16 +125,24 @@ const CartPage = () => {
                   </div>
 
                   {/* PRICE AND EDIT CONTAINER */}
-                  <div className="flex flex-col gap-4 justify-start items-end">
+                  <div className="flex flex-col gap-2 justify-between items-end pr-2">
                     {/* PRICE */}
-                    <div className="font-bold text-lg pr-2">P{items.price}</div>
+                    <div className="font-bold text-lg">P{items.price}</div>
                     {/* EDIT CONTAINER */}
-                    <div className="flex space-x-1 items-center justify-center pr-2">
+                    <div className="flex space-x-1 items-center justify-center">
                       <i className="fas fa-edit text-xs text-gray-700"></i>
-                      <span className="text-sm underline underline-offset-2 text-gray-600">
+                      <span className="text-md underline underline-offset-2 text-gray-600">
                         Edit
                       </span>
                     </div>
+                    {/* REMOVE CONTAINER */}
+                    <button className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mr-[-8px] mt-2">
+                      <i
+                        className="fa fa-trash text-white text-xs"
+                        aria-hidden="true"
+                      ></i>
+                      <span className="text-xs text-white">Remove</span>
+                    </button>
                   </div>
                 </Link>
               ))}
