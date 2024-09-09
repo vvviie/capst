@@ -1,15 +1,17 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react"; 
 import Link from "next/link";
 import Image from "next/image";
 import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation"; // Import from next/navigation
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState("");
+  const router = useRouter(); // Correct useRouter for app directory
 
   useEffect(() => {
     // Listen for authentication state change
@@ -40,11 +42,7 @@ const Navbar = () => {
     event.preventDefault(); // Prevent the default link behavior
     try {
       await signOut(auth);
-
-      <Link
-      href="/"
-      ></Link>
-      // Optionally, you can handle any additional logic after signing out
+      router.push("/"); // Navigate after logout
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -82,8 +80,8 @@ const Navbar = () => {
       {/* NAV LINK PERSONAL */}
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
-        <div>
-          <Link href="/foodcart">
+          <div>
+            <Link href="/foodcart">
             <Image
               src="/shoppingcart.png"
               alt="Cart"
@@ -91,15 +89,15 @@ const Navbar = () => {
               height={20}
               className="mt-1"
             />
-          </Link>
+            </Link>
+          </div>
+          <div>
+            <Link href="/">{firstName}</Link> {/* Display the user's first name */}
+          </div>
+          <div>
+            <Link href="/" onClick={handleLogout}>Logout</Link> {/* Logout functionality */}
+          </div>
         </div>
-        <div>
-          <Link href="/">{firstName}</Link> {/* Display the user's first name */}
-        </div>
-        <div>
-          <Link href="/" onClick={handleLogout}>Logout</Link> {/* Logout functionality */}
-        </div>
-      </div>
       
       ) : (
         <div className="hidden md:block font-semibold">
