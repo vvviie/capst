@@ -164,7 +164,11 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange }) => {
             </h1>
             <hr
               className={`mb-4 ${
-                slug === "pastries" && "sandwiches" && "snacks"
+                slug === "pastries"
+                  ? "hidden"
+                  : slug === "sandwiches"
+                  ? "hidden"
+                  : slug === "snacks"
                   ? "hidden"
                   : "visible"
               }`}
@@ -221,7 +225,11 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange }) => {
             </div>
             <hr
               className={`mt-4 ${
-                slug === "pastries" && "sandwiches" && "snacks"
+                slug === "pastries"
+                  ? "hidden"
+                  : slug === "sandwiches"
+                  ? "hidden"
+                  : slug === "snacks"
                   ? "hidden"
                   : "visible"
               }`}
