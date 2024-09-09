@@ -79,27 +79,25 @@ const MenuCategoryPage: React.FC = () => {
   ];
 
   const { servingPasta } = usePasta();
-  
-  const pastas: PastasCategoryData = [
-    { title: "Pasta", pastas: servingPasta } 
-  ];
+
+  const pastas: PastasCategoryData = [{ title: "Pasta", pastas: servingPasta }];
 
   const { servingSandwich } = useSandwich();
 
   const sandwiches: SandwichesCategoryData = [
-    { title: "Sandwiches", sandwiches: servingSandwich }
+    { title: "Sandwiches", sandwiches: servingSandwich },
   ];
 
   const { servingMainCourse } = useMainCourse();
 
   const mainCourses: MainCourseCategoryData = [
-    { title: "Main Courses", mainCourses: servingMainCourse }
+    { title: "Main Courses", mainCourses: servingMainCourse },
   ];
 
   const { servingSnacks } = useSnacks();
-  
+
   const snacks: SnacksCategoryData = [
-    { title: "Snacks", snacks: servingSnacks }
+    { title: "Snacks", snacks: servingSnacks },
   ];
 
   // Function to handle search input changes
@@ -132,7 +130,7 @@ const MenuCategoryPage: React.FC = () => {
       })),
     [selectedFilter, searchText, drinks]
   );
-  
+
   const filteredPastas = useMemo(
     () =>
       pastas.map((category) => ({
@@ -237,12 +235,14 @@ const MenuCategoryPage: React.FC = () => {
 
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col gap-2 py-4 mt-14">
-      <div className="flex justify-between items-center pr-10 py-4 px-10 md:px-24 xl:px-56">
-        <span className="text-2xl font-bold text-orange-950">Menu</span>
-        <div className="flex md:w-2/3 justify-end items-center gap-4 z-10">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pr-10 py-4 px-10 md:flex-row md:gap-0 md:px-24 xl:px-56">
+        <span className="text-2xl font-bold text-orange-950 w-full text-left sm:w-auto">
+          Menu
+        </span>
+        <div className="flex w-full md:w-2/3 justify-between items-center gap-4 z-10 sm:justify-end">
           <input
             type="text"
-            className="border-2 border-solid border-gray-200 w-52 text-md md:w-64 md:text-lg pl-4 rounded-md bg-gray-50"
+            className="border-2 border-solid border-gray-200 w-56 sm:w-60 text-md md:w-64 md:text-lg pl-2 rounded-md bg-gray-50"
             name="inputSearch"
             id="inputSearch"
             placeholder="Search the menu..."
@@ -316,7 +316,7 @@ const MenuCategoryPage: React.FC = () => {
             )
         )}
 
-{slug === "pasta" &&
+      {slug === "pasta" &&
         filteredPastas.map(
           (category, index) =>
             category.pastas.length > 0 && (
@@ -380,7 +380,7 @@ const MenuCategoryPage: React.FC = () => {
             )
         )}
 
-{slug === "sandwiches" &&
+      {slug === "sandwiches" &&
         filteredSandwiches.map(
           (category, index) =>
             category.sandwiches.length > 0 && (
@@ -444,7 +444,7 @@ const MenuCategoryPage: React.FC = () => {
             )
         )}
 
-{slug === "maincourse" &&
+      {slug === "maincourse" &&
         filteredMainCourses.map(
           (category, index) =>
             category.mainCourses.length > 0 && (
@@ -508,7 +508,7 @@ const MenuCategoryPage: React.FC = () => {
             )
         )}
 
-{slug === "snacks" &&
+      {slug === "snacks" &&
         filteredSnacks.map(
           (category, index) =>
             category.snacks.length > 0 && (
@@ -571,8 +571,6 @@ const MenuCategoryPage: React.FC = () => {
               </div>
             )
         )}
-
-        
     </div>
   );
 };
