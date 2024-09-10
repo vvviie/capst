@@ -6,10 +6,12 @@ import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation"; // Import from next/navigation
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState("");
+  const router = useRouter(); // Correct useRouter for app directory
 
   useEffect(() => {
     // Listen for authentication state change
@@ -40,9 +42,7 @@ const Navbar = () => {
     event.preventDefault(); // Prevent the default link behavior
     try {
       await signOut(auth);
-
-      <Link href="/"></Link>;
-      // Optionally, you can handle any additional logic after signing out
+      router.push("/"); // Navigate after logout
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -82,7 +82,7 @@ const Navbar = () => {
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
           <div className="">
             <Link
-              href="/"
+              href="/foodcart"
               className="relative flex gap-2 group hover:text-yellow-100 items-center"
             >
               {/* ITEMS IN CART */}
@@ -96,19 +96,11 @@ const Navbar = () => {
             </Link>
           </div>
           <div>
-            <Link href="/" className="hover:text-yellow-100">
-              {firstName}
-            </Link>{" "}
+          <Link href="/">{firstName}</Link> {/* Display the user's first name */}
             {/* Display the user's first name */}
           </div>
           <div>
-            <Link
-              href="/"
-              className="hover:text-yellow-100"
-              onClick={handleLogout}
-            >
-              Logout
-            </Link>{" "}
+          <Link href="/" onClick={handleLogout}>Logout</Link> {/* Logout functionality */}
             {/* Logout functionality */}
           </div>
         </div>
