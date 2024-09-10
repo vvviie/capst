@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 
 type ItemInCart = {
@@ -37,7 +37,11 @@ let addedToCart = [
   },
 ];
 
+// BOOLEANS
+// EMPTY FOODCART?
 const isEmpty = false;
+// PROMO CODE IS VALID?
+const validCode = false;
 
 const CartPage = () => {
   const [selectedOption, setSelectedOption] = useState<string>("table");
@@ -57,6 +61,40 @@ const CartPage = () => {
   const handlePaymentChange = (value: string) => {
     setSelectedPayment(value);
   };
+
+  // TO OPEN DISCOUNT FORM
+  const [discountPromoForm, openDiscountPromoForm] = useState(false);
+
+  // FOR CLOSING OF POP-UP WHEN CLICKED OUTSIDE
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // ERROR POP-UP
+  const [showError, setShowError] = useState(false);
+
+  const showErrorPopup = () => {
+    setShowError(true);
+    setTimeout(() => {
+      setShowError(false);
+    }, 3000);
+  };
+
+  // CLOSE THE FORM WHEN CLICKED OUTSIDE
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        openDiscountPromoForm(false);
+      }
+    };
+
+    if (discountPromoForm) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [discountPromoForm]);
 
   return (
     <div
@@ -250,6 +288,65 @@ const CartPage = () => {
                 <span className="font-bold text-lg text-gray-600">-P50.00</span>
               </div>
             </div>
+
+            <button
+              onClick={() => openDiscountPromoForm(true)}
+              className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
+              py-2 rounded-lg mt-3 mb-2"
+            >
+              <span className="font-bold text-lg">% Enter Promo Code</span>
+            </button>
+
+            {discountPromoForm && (
+              <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                onClick={() => openDiscountPromoForm(false)} // Close modal when clicking on the background
+              >
+                {/* PROMO CONTAINER */}
+                <form
+                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                  ref={modalRef}
+                >
+                  <h2 className="text-xl font-bold mb-4">% Promo Code</h2>
+                  <p className="mb-4">Please enter a valid promo code:</p>
+                  <input
+                    type="text"
+                    className="text-center font-bold text-2xl inline-block w-64 border-2 border-gray-100 rounded-sm mb-4"
+                    style={{
+                      MozAppearance: "textfield",
+                      boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
+                    }}
+                  />
+                  {showError && (
+                    <p
+                      className={`${
+                        validCode ? "text-green-600" : "text-red-500"
+                      } mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100`}
+                    >
+                      {validCode
+                        ? "Code successfully entered!"
+                        : "Invalid code entered!"}
+                    </p>
+                  )}
+                  <div className="flex justify-center items-center gap-4">
+                    <button
+                      type="button"
+                      className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+                      onClick={showErrorPopup}
+                    >
+                      Enter Code
+                    </button>
+                    <button
+                      className="bg-white  text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                      onClick={() => openDiscountPromoForm(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             <hr />
 
