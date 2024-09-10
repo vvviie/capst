@@ -6,7 +6,16 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import DrinksOptions from "@/app/components/DrinksOptions";
 import MainCourseOptions from "@/app/components/MainCourseOptions";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  setDoc,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -103,6 +112,7 @@ const ProductPage: React.FC = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,6 +120,7 @@ const ProductPage: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const loggedIn = !!authUser && authUser.emailVerified;
       setIsLoggedIn(loggedIn);
+      setUserEmail(authUser?.email || null); // Set user email
     });
     return () => unsubscribe();
   }, []);
@@ -131,21 +142,62 @@ const ProductPage: React.FC = () => {
     }
   }, [showLoginModal]);
 
-  const handleCartClick = () => {
+  const handleCartClick = async () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
-    } else {
-      // Log the product ID and details
-      console.log("Product ID:", productId);
-      console.log("Product Details:", productData);
-      console.log("Selected Drink Size:", selectedDrinkSize);
-      console.log("Quantity:", numberQtty);
-      console.log("Total Price:", totalPrice.toFixed(2));
+      return;
+    }
   
-      // Handle adding to cart logic here (e.g., Firebase cart update)
+    const orderId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    const tempOrdersRef = collection(db, "tempOrders");
+  
+    const qtyPerDrink = numberQtty;
+    const pricePerDrink = parseFloat((totalPrice / qtyPerDrink).toFixed(2)); // Ensure this is a number
+  
+    const orderData = {
+      productImg: productData.img,
+      productTitle: productData.title,
+      selectedDrinkSize: selectedDrinkSize,
+      drinkQty: qtyPerDrink, // Store as a number
+      pricePerDrink: pricePerDrink, // Store as a number
+      note: document.querySelector("textarea")?.value || '',
+      totalPrice: parseFloat(totalPrice.toFixed(2)) // Ensure this is a number
+    };
+  
+    try {
+      // Reference to the collection where orders for the user are stored
+      const querySnapshot = await getDocs(query(tempOrdersRef, where("user", "==", userEmail)));
+  
+      let existingOrderDocId: string | null = null;
+  
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Check if the productId exists in the current document
+        if (data[productId]) {
+          existingOrderDocId = doc.id; // Store the document ID if an existing order is found
+        }
+      });
+  
+      if (existingOrderDocId) {
+        // Update the existing order
+        const existingOrderRef = doc(db, "tempOrders", existingOrderDocId);
+        await updateDoc(existingOrderRef, {
+          [productId]: orderData,
+          user: userEmail
+        });
+        console.log("Order updated in tempOrders collection!");
+      } else {
+        // Create a new order
+        await setDoc(doc(db, "tempOrders", orderId), {
+          [productId]: orderData,
+          user: userEmail
+        });
+        console.log("Order added to tempOrders collection!");
+      }
+    } catch (error) {
+      console.error("Error processing order:", error);
     }
   };
-  
 
   if (!productData) {
     return <div>Loading...</div>;
@@ -453,26 +505,31 @@ const ProductPage: React.FC = () => {
 
       {showLoginModal && (
         <div
-          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50"
-          ref={modalRef}
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+          onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
         >
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-sm text-center">
-            <h2 className="text-xl font-bold mb-4">Please Log In</h2>
-            <p className="mb-4">
-              You need to be logged in to update your cart.
-            </p>
-            <Link
-              href="/login"
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg"
-            >
-              Log In
-            </Link>
-            <button
-              className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg mt-4"
-              onClick={() => setShowLoginModal(false)}
-            >
-              Close
-            </button>
+          {/* SIGN IN REQUIRED CONTAINER */}
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+            ref={modalRef}
+          >
+            <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+            <p className="mb-4">Please sign in to add items to your cart.</p>
+            <div className="flex justify-center items-center gap-4">
+              <Link
+                href="/login"
+                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+              >
+                Sign in
+              </Link>
+              <button
+                className="bg-white  text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
