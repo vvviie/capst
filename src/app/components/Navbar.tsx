@@ -1,17 +1,15 @@
 "use client";
-import { useEffect, useState } from "react"; 
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
-import { useRouter } from "next/navigation"; // Import from next/navigation
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState("");
-  const router = useRouter(); // Correct useRouter for app directory
 
   useEffect(() => {
     // Listen for authentication state change
@@ -42,7 +40,9 @@ const Navbar = () => {
     event.preventDefault(); // Prevent the default link behavior
     try {
       await signOut(auth);
-      router.push("/"); // Navigate after logout
+
+      <Link href="/"></Link>;
+      // Optionally, you can handle any additional logic after signing out
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -80,25 +80,38 @@ const Navbar = () => {
       {/* NAV LINK PERSONAL */}
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
-          <div>
-            <Link href="/foodcart">
-            <Image
-              src="/shoppingcart.png"
-              alt="Cart"
-              width={20}
-              height={20}
-              className="mt-1"
-            />
+          <div className="">
+            <Link
+              href="/"
+              className="relative flex gap-2 group hover:text-yellow-100 items-center"
+            >
+              {/* ITEMS IN CART */}
+              <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
+                20
+              </span>
+              {/* CART ICON */}
+              <i className="fa-solid fa-cart-shopping text-white text-lg mt-1 group-hover:text-yellow-100"></i>
+              {/* TOTAL PRICE */}
+              <span className="">(P1000.00)</span>
             </Link>
           </div>
           <div>
-            <Link href="/">{firstName}</Link> {/* Display the user's first name */}
+            <Link href="/" className="hover:text-yellow-100">
+              {firstName}
+            </Link>{" "}
+            {/* Display the user's first name */}
           </div>
           <div>
-            <Link href="/" onClick={handleLogout}>Logout</Link> {/* Logout functionality */}
+            <Link
+              href="/"
+              className="hover:text-yellow-100"
+              onClick={handleLogout}
+            >
+              Logout
+            </Link>{" "}
+            {/* Logout functionality */}
           </div>
         </div>
-      
       ) : (
         <div className="hidden md:block font-semibold">
           <Link href="/login">Login</Link>
