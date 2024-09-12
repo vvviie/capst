@@ -321,7 +321,7 @@ const CartPage = () => {
               <div className="flex justify-between items-center px-4">
                 <span>Subtotal</span>
                 <span className="font-bold text-lg text-gray-600">
-                  P{totalCartPrice}
+                  P{totalCartPrice.toFixed(2)}
                 </span>
               </div>
               {/* ONLY SHOW PROMO IF APPLIED */}
@@ -440,7 +440,7 @@ const CartPage = () => {
               <div className="flex justify-between items-center px-4 py-4">
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-                P{promoApplied ? totalCartPrice - 50 : totalCartPrice}
+                P{promoApplied ? totalCartPrice - 50 : totalCartPrice.toFixed(2)}
               </span>
               </div>
               {/* CHECKOUT BUTTON */}
