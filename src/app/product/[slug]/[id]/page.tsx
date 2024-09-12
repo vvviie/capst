@@ -30,6 +30,20 @@ const ProductPage: React.FC = () => {
   const [additionalCost, setAdditionalCost] = useState<number>(0);
   const [upsizePrice, setUpsizePrice] = useState<number>(0);
 
+  // For getting the additionals in the DrinksOptions
+  const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
+  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(
+    null
+  );
+
+  const handleOptionsChange = (
+    additionals: string[],
+    milkOption: string | null
+  ) => {
+    setSelectedAdditionals(additionals);
+    setSelectedMilkOption(milkOption);
+  };
+
   // QUANTITY NUMBER ADJUSTMENT
   const [numberQtty, setNumberQtty] = useState<number>(1);
 
@@ -120,7 +134,7 @@ const ProductPage: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const loggedIn = !!authUser && authUser.emailVerified;
       setIsLoggedIn(loggedIn);
-      setUserEmail(authUser?.email || null); // Set user email
+      setUserEmail(authUser?.email || null); // Sets user email
     });
     return () => unsubscribe();
   }, []);
@@ -147,51 +161,136 @@ const ProductPage: React.FC = () => {
       setShowLoginModal(true);
       return;
     }
-  
-    const orderId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+
+    const orderId = `cart-${Math.floor(
+      1000000000 + Math.random() * 9000000000
+    )}`;
     const tempOrdersRef = collection(db, "tempOrders");
-  
-    const qtyPerDrink = numberQtty;
-    const pricePerDrink = parseFloat((totalPrice / qtyPerDrink).toFixed(2)); // Ensure this is a number
-  
-    const orderData = {
-      productImg: productData.img,
-      productTitle: productData.title,
-      selectedDrinkSize: selectedDrinkSize,
-      drinkQty: qtyPerDrink, // Store as a number
-      pricePerDrink: pricePerDrink, // Store as a number
-      note: document.querySelector("textarea")?.value || '',
-      totalPrice: parseFloat(totalPrice.toFixed(2)) // Ensure this is a number
+
+    const qtyPerItem = numberQtty;
+    const pricePerItem = parseFloat((totalPrice / qtyPerItem).toFixed(2)); // Ensure this is a number
+
+    // Eto needs polishing pa ito!!!!
+    //
+    //
+
+    //
+    // Create a unique key for the product based on its configuration
+    //let uniqueProductKey = `${productId}-${selectedDrinkSize}-${document.querySelector("textarea")?.value || ""}`;
+    // Create a unique key for the product based on its configuration
+    let uniqueProductKey =
+      slug === "drinks"
+        ? `${productId}-${selectedDrinkSize}-${selectedAdditionals.join("-")}-${
+            selectedMilkOption || "Fresh Milk"
+          }-${document.querySelector("textarea")?.value || "none"}`
+        : `${productId}-${document.querySelector("textarea")?.value || ""}`;
+
+    // Prepare order data for drinks or other products
+    let orderData = {
+      productImg: productData.img, // prio
+      productTitle: productData.title, // prio
+      itemQty: qtyPerItem, // prio
+      pricePerItem: pricePerItem, // prio
+      note: document.querySelector("textarea")?.value || "none", // prio
+      totalPrice: parseFloat(totalPrice.toFixed(2)), // Ensure this is a number
     };
-  
+
+    // If the product is a drink, add drink-specific options to the orderData
+    if (slug === "drinks") {
+      orderData = {
+        ...orderData,
+        selectedDrinkSize: selectedDrinkSize, // Optional
+        additionals: selectedAdditionals, // Contains options like Espresso, Syrup, etc.
+        milkOption: selectedMilkOption || "Fresh Milk",
+      };
+    }
+
     try {
       // Reference to the collection where orders for the user are stored
-      const querySnapshot = await getDocs(query(tempOrdersRef, where("user", "==", userEmail)));
-  
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+
       let existingOrderDocId: string | null = null;
-  
+      let existingOrderData: any = {};
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        // Check if the productId exists in the current document
-        if (data[productId]) {
-          existingOrderDocId = doc.id; // Store the document ID if an existing order is found
+        // Check if the document belongs to the user
+        if (data.user === userEmail) {
+          existingOrderDocId = doc.id; // Store the document ID if an existing cart is found
+          existingOrderData = data;
         }
       });
-  
+
       if (existingOrderDocId) {
-        // Update the existing order
-        const existingOrderRef = doc(db, "tempOrders", existingOrderDocId);
-        await updateDoc(existingOrderRef, {
-          [productId]: orderData,
-          user: userEmail
-        });
-        console.log("Order updated in tempOrders collection!");
+        // Check if the product with the specific options already exists in the order
+        if (existingOrderData[uniqueProductKey]) {
+          // Update the quantity of the existing product
+          const existingProductData = existingOrderData[uniqueProductKey];
+          const updatedProductData = {
+            ...existingProductData,
+            itemQty: existingProductData.itemQty + qtyPerItem,
+            totalPrice:
+              existingProductData.totalPrice +
+              parseFloat(totalPrice.toFixed(2)), // Add new price to existing total
+          };
+          const updatedOrderData = {
+            ...existingOrderData,
+            [uniqueProductKey]: updatedProductData,
+            user: userEmail,
+          };
+
+          // Recalculate totalItems and totalCartPrice (renaming fields)
+          const totalItems = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.itemQty)
+            .reduce((acc, item) => acc + (item.itemQty || 0), 0);
+          const totalCartPrice = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.totalPrice)
+            .reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+
+          updatedOrderData.totalItems = totalItems;
+          updatedOrderData.totalCartPrice = totalCartPrice;
+
+          await updateDoc(
+            doc(db, "tempOrders", existingOrderDocId),
+            updatedOrderData
+          );
+          console.log("Order updated in tempOrders collection!");
+        } else {
+          // Add the new product with different options to the existing order
+          const updatedOrderData = {
+            ...existingOrderData,
+            [uniqueProductKey]: orderData,
+            user: userEmail,
+          };
+
+          // Recalculate totalItems and totalCartPrice (renaming fields)
+          const totalItems = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.itemQty)
+            .reduce((acc, item) => acc + (item.itemQty || 0), 0);
+          const totalCartPrice = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.totalPrice)
+            .reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+
+          updatedOrderData.totalItems = totalItems;
+          updatedOrderData.totalCartPrice = totalCartPrice;
+
+          await updateDoc(
+            doc(db, "tempOrders", existingOrderDocId),
+            updatedOrderData
+          );
+          console.log("Order updated in tempOrders collection!");
+        }
       } else {
-        // Create a new order
-        await setDoc(doc(db, "tempOrders", orderId), {
-          [productId]: orderData,
-          user: userEmail
-        });
+        // Create a new order if no document exists for the user
+        const newOrderData = {
+          [uniqueProductKey]: orderData,
+          user: userEmail,
+          totalItems: qtyPerItem, // Renamed field
+          totalCartPrice: parseFloat(totalPrice.toFixed(2)), // Renamed field
+        };
+        await setDoc(doc(db, "tempOrders", orderId), newOrderData);
         console.log("Order added to tempOrders collection!");
       }
     } catch (error) {
@@ -419,12 +518,13 @@ const ProductPage: React.FC = () => {
                 </div>
                 {/* DrinksOptions component with props */}
                 <DrinksOptions
-                  addEspresso={addEspresso}
-                  addSyrup={addSyrup}
-                  milkAlmond={milkAlmond}
-                  milkOat={milkOat}
-                  addVanilla={addVanilla}
-                  onAdditionalCostChange={handleAdditionalCostChange}
+                  addEspresso={productData?.addEspresso || 0} // Ensure these props are provided
+                  addSyrup={productData?.addSyrup || 0}
+                  milkAlmond={productData?.milkAlmond || 0}
+                  milkOat={productData?.milkOat || 0}
+                  addVanilla={productData?.addVanilla || 0}
+                  onAdditionalCostChange={setAdditionalCost} // This function updates the additional cost
+                  onOptionsChange={handleOptionsChange} // This function updates the selected options
                 />
               </div>
             )}
