@@ -211,7 +211,7 @@ const CartPage = () => {
   
                   {/* PRICE AND EDIT CONTAINER */}
                   <div className="flex flex-col gap-2 justify-between items-end pr-2">
-                    <div className="font-bold text-lg">P{items.price}</div>
+                    <div className="font-bold text-lg">P{items.price.toFixed(2)}</div>
                     <div className="flex space-x-1 items-center justify-center">
                       <i className="fas fa-edit text-xs text-gray-700"></i>
                       <span className="text-md underline underline-offset-2 text-gray-600">
