@@ -29,6 +29,8 @@ const ProductPage: React.FC = () => {
   const [selectedDrinkSize, setSelectedDrinkSize] = useState<string>("12oz");
   const [additionalCost, setAdditionalCost] = useState<number>(0);
   const [upsizePrice, setUpsizePrice] = useState<number>(0);
+  const [selectedMainCourseOption, setSelectedMainCourseOption] =
+    useState<string>("rice");
 
   // For getting the additionals in the DrinksOptions
   const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
@@ -156,6 +158,10 @@ const ProductPage: React.FC = () => {
     }
   }, [showLoginModal]);
 
+  const handleMainCourseOptionChange = (option: string) => {
+    setSelectedMainCourseOption(option);
+  };
+
   const handleCartClick = async () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
@@ -183,7 +189,11 @@ const ProductPage: React.FC = () => {
         ? `${productId}-${selectedDrinkSize}-${selectedAdditionals.join("-")}-${
             selectedMilkOption || "Fresh Milk"
           }-${document.querySelector("textarea")?.value || "none"}`
-        : `${productId}-${document.querySelector("textarea")?.value || ""}`;
+        : slug === "maincourse"
+        ? `${productId}-${selectedMainCourseOption || "Rice"}-${
+            document.querySelector("textarea")?.value || "none"
+          }`
+        : `${productId}-${document.querySelector("textarea")?.value || "none"}`;
 
     // Prepare order data for drinks or other products
     let orderData = {
@@ -202,6 +212,28 @@ const ProductPage: React.FC = () => {
         selectedDrinkSize: selectedDrinkSize, // Optional
         additionals: selectedAdditionals, // Contains options like Espresso, Syrup, etc.
         milkOption: selectedMilkOption || "Fresh Milk",
+        slug: "drinks",
+      };
+    } else if (slug === "maincourse") {
+      orderData = {
+        ...orderData,
+        mainCourseOption: selectedMainCourseOption, // Add the selected main course option
+        slug: "maincourse",
+      };
+    } else if (slug === "pasta") {
+      orderData = {
+        ...orderData,
+        slug: "pasta",
+      };
+    } else if (slug === "snacks") {
+      orderData = {
+        ...orderData,
+        slug: "snacks",
+      };
+    } else if (slug === "sandwiches") {
+      orderData = {
+        ...orderData,
+        slug: "sandwiches",
       };
     }
 
@@ -453,44 +485,22 @@ const ProductPage: React.FC = () => {
               {desc}
             </p>
           </div>
-          {/* OPTIONS */}
-          <div>
-            {slug === "drinks" && (
-              <div className="flex flex-col gap-2">
-                <hr />
-                {/* DRINK SIZE CONTAINER */}
-                <div className="flex flex-col gap-2">
-                  <h1 className="text-gray-500">Drink size</h1>
-                  {/* DRINK SIZE CHOICES */}
-                  <div className="flex flex-col">
-                    {/* Always render the default size */}
-                    <div
-                      className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                        selectedDrinkSize === productData.currSize
-                          ? "bg-orange-50"
-                          : "bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="drinkSize"
-                        id={productData.currSize}
-                        className="w-5 h-5"
-                        checked={selectedDrinkSize === productData.currSize}
-                        onChange={() =>
-                          handleDrinkSizeChange(productData.currSize)
-                        }
-                      />
-                      <span className="ml-4 font-semibold">
-                        {productData.currSize}
-                      </span>
-                    </div>
 
-                    {/* Conditionally render upsizable option */}
-                    {productData.upsizable && (
+          {/* OPTIONS */}
+          {productAvailable && (
+            <div>
+              {slug === "drinks" && (
+                <div className="flex flex-col gap-2">
+                  <hr />
+                  {/* DRINK SIZE CONTAINER */}
+                  <div className="flex flex-col gap-2">
+                    <h1 className="text-gray-500">Drink size</h1>
+                    {/* DRINK SIZE CHOICES */}
+                    <div className="flex flex-col">
+                      {/* Always render the default size */}
                       <div
                         className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                          selectedDrinkSize === productData.upsizeSize
+                          selectedDrinkSize === productData.currSize
                             ? "bg-orange-50"
                             : "bg-gray-50"
                         }`}
@@ -498,44 +508,74 @@ const ProductPage: React.FC = () => {
                         <input
                           type="radio"
                           name="drinkSize"
-                          id={productData.upsizeSize}
+                          id={productData.currSize}
                           className="w-5 h-5"
-                          checked={selectedDrinkSize === productData.upsizeSize}
+                          checked={selectedDrinkSize === productData.currSize}
                           onChange={() =>
-                            handleDrinkSizeChange(productData.upsizeSize)
+                            handleDrinkSizeChange(productData.currSize)
                           }
                         />
                         <span className="ml-4 font-semibold">
-                          {productData.upsizeSize}
-                        </span>
-                        <span className="ml-2">
-                          {" "}
-                          (+{productData.upsizePrice})
+                          {productData.currSize}
                         </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-                {/* DrinksOptions component with props */}
-                <DrinksOptions
-                  addEspresso={productData?.addEspresso || 0} // Ensure these props are provided
-                  addSyrup={productData?.addSyrup || 0}
-                  milkAlmond={productData?.milkAlmond || 0}
-                  milkOat={productData?.milkOat || 0}
-                  addVanilla={productData?.addVanilla || 0}
-                  onAdditionalCostChange={setAdditionalCost} // This function updates the additional cost
-                  onOptionsChange={handleOptionsChange} // This function updates the selected options
-                />
-              </div>
-            )}
 
-            {slug === "maincourse" && (
-              <div className="flex flex-col gap-2">
-                <hr />
-                <MainCourseOptions />
-              </div>
-            )}
-          </div>
+                      {/* Conditionally render upsizable option */}
+                      {productData.upsizable && (
+                        <div
+                          className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                            selectedDrinkSize === productData.upsizeSize
+                              ? "bg-orange-50"
+                              : "bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="drinkSize"
+                            id={productData.upsizeSize}
+                            className="w-5 h-5"
+                            checked={
+                              selectedDrinkSize === productData.upsizeSize
+                            }
+                            onChange={() =>
+                              handleDrinkSizeChange(productData.upsizeSize)
+                            }
+                          />
+                          <span className="ml-4 font-semibold">
+                            {productData.upsizeSize}
+                          </span>
+                          <span className="ml-2">
+                            {" "}
+                            (+{productData.upsizePrice})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* DrinksOptions component with props */}
+                  <DrinksOptions
+                    addEspresso={productData?.addEspresso || 0}
+                    addSyrup={productData?.addSyrup || 0}
+                    milkAlmond={productData?.milkAlmond || 0}
+                    milkOat={productData?.milkOat || 0}
+                    addVanilla={productData?.addVanilla || 0}
+                    onAdditionalCostChange={setAdditionalCost}
+                    onOptionsChange={handleOptionsChange}
+                  />
+                </div>
+              )}
+
+              {slug === "maincourse" && (
+                <div className="flex flex-col gap-2">
+                  <hr />
+                  <MainCourseOptions
+                    onOptionChange={handleMainCourseOptionChange}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* QUANTITY, NOTE, AND BUTTON */}
           <div className="flex flex-col gap-2 my-2">
             <span className="text-gray-500">Note</span>
@@ -547,15 +587,16 @@ const ProductPage: React.FC = () => {
               style={{ resize: "none" }}
               className="bg-gray-50 w-full pl-2"
               placeholder="Any requests for this order?"
+              disabled={!productAvailable} // Make textarea editable only if the product is available
             ></textarea>
           </div>
+
           {/* QUANTITY CONTAINER */}
           <div className="flex items-center justify-center gap-4 pt-2 pb-4">
             {/* SUBTRACT BUTTON */}
             <button
               onClick={subQtty}
-              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2
-    border-gray-100 pb-1 rounded-lg shadow-md"
+              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2 border-gray-100 pb-1 rounded-lg shadow-md"
             >
               -
             </button>
@@ -584,21 +625,23 @@ const ProductPage: React.FC = () => {
             {/* ADD BUTTON */}
             <button
               onClick={addQtty}
-              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2
-    border-gray-100 pb-1 rounded-lg shadow-md"
+              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2 border-gray-100 pb-1 rounded-lg shadow-md"
             >
               +
             </button>
           </div>
 
-          {/* KAPAG PININDOT DAPAT MA-REDIRECT SA MENU CATEGORY NA ACCORDING SA SLUG */}
+          {/* BUTTON FOR CART UPDATE */}
           <button
-            className="w-full bg-orange-950 text-white py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md xl:mt-2"
-            onClick={handleCartClick}
+            className={`w-full py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md ${
+              productAvailable
+                ? "bg-orange-950 text-white"
+                : "bg-gray-300 text-gray-600 cursor-not-allowed"
+            }`}
+            onClick={productAvailable ? handleCartClick : undefined}
           >
             <i className="fa-solid fa-cart-shopping"></i>
             <span>Update Cart (+P{totalPrice.toFixed(2)})</span>
-            {/*PAKI-LAGAY DITO ANG TOTAL PRICE*/}
           </button>
         </div>
       </div>
@@ -624,7 +667,7 @@ const ProductPage: React.FC = () => {
                 Sign in
               </Link>
               <button
-                className="bg-white  text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
                 onClick={() => setShowLoginModal(false)}
               >
                 Close

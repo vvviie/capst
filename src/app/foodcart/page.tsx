@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getDocs, query, where, collection } from "firebase/firestore"; // Import Firestore functions
+import {
+  getDocs,
+  query,
+  where,
+  collection,
+  updateDoc,
+  doc,
+  getDoc,
+} from "firebase/firestore"; // Import Firestore functions
 import { db } from "@/app/firebase";
 import Image from "next/image";
 import Link from "next/link";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
 
 const CartPage = () => {
+  //#region Use State Variables
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -21,6 +30,11 @@ const CartPage = () => {
   const [showError, setShowError] = useState(false);
   const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
   const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [subtotal, setSubtotal] = useState(0);
+  const [discountedPromo,  setDiscountedPromo] = useState(0);
+
+  //#endregion
 
   const handleOptionChange = (value: string) => {
     setSelectedOption(value);
@@ -40,6 +54,70 @@ const CartPage = () => {
       setShowError(false);
     }, 3000);
   };
+
+  const handlePromoCodeSubmit = async () => {
+    if (!userEmail) {
+      showErrorPopup("Please log in to apply a promo code.");
+      return;
+    }
+
+    if (promoApplied) {
+      showErrorPopup("A promo code has already been applied. You cannot apply another one.");
+      return;
+    }
+
+    const promoCode = document.querySelector<HTMLInputElement>('input[type="text"]')?.value.trim();
+    if (!promoCode) {
+      showErrorPopup("Please enter a promo code.");
+      return;
+    }
+
+    console.log("Entered promo code:", promoCode);
+
+    try {
+      const promoCodesRef = collection(db, "promoCodes");
+      const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
+      const promoSnapshot = await getDocs(promoQuery);
+
+      if (!promoSnapshot.empty) {
+        const promoDoc = promoSnapshot.docs[0];
+        const promoDocRef = doc(db, "promoCodes", promoDoc.id);
+        const promoData = promoDoc.data();
+        const discountPercent = promoData?.discountPercent || 0;
+        const available = promoData?.available || false;
+
+        if (available) {
+          const discountFraction = discountPercent; // Adjusted to use decimal value directly
+          const newTotalCartPrice = subtotal * (1 - discountFraction);
+          const discountedPromo = subtotal - subtotal * (1 - discountFraction);
+          setTotalCartPrice(newTotalCartPrice);
+          setDiscountedPromo(discountedPromo);
+
+          setPromoApplied(true);
+
+          await updateDoc(promoDocRef, {
+            timesUsed: (promoData?.timesUsed || 0) + 1,
+          });
+
+          showErrorPopup("Promo code successfully redeemed!");
+        } else {
+          setPromoApplied(false);
+          showErrorPopup("Promo code is no longer available!");
+        }
+      } else {
+        setPromoApplied(false);
+        showErrorPopup("Promo code is invalid!");
+      }
+    } catch (error) {
+      console.error("Error validating promo code:", error);
+      setPromoApplied(false);
+      showErrorPopup("An error occurred. Please try again.");
+    }
+  };
+
+  useEffect(() => {
+    console.log("Promo applied:", promoApplied);
+  }, [promoApplied]);
 
   // CLOSE THE FORM WHEN CLICKED OUTSIDE
   useEffect(() => {
@@ -74,13 +152,11 @@ const CartPage = () => {
   useEffect(() => {
     const fetchCartItems = async () => {
       if (!userEmail) {
-        console.error("User is not logged in or userEmail is undefined.");
         setShowLoginModal(true); // Show login modal if user is not logged in
         return;
       }
 
       try {
-        // Firestore query to get the current user's orders
         const tempOrdersRef = collection(db, "tempOrders");
         const querySnapshot = await getDocs(
           query(tempOrdersRef, where("user", "==", userEmail))
@@ -88,10 +164,10 @@ const CartPage = () => {
 
         let cartItems: any[] = [];
         let totalCartPrice = 0; // Initialize total price
+        let subtotal = 0; // Initialize subtotal
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          // Assuming each document contains an object with product keys
           Object.keys(data).forEach((key) => {
             if (
               key !== "user" &&
@@ -99,26 +175,47 @@ const CartPage = () => {
               key !== "totalCartPrice"
             ) {
               const itemData = data[key];
-              cartItems.push({
-                id: key, // Using the unique product key as ID
-                title: itemData.productTitle,
-                img: itemData.productImg,
-                slug: "drinks", // You can customize this based on slug in your data
-                tags: [
+              const slug = itemData.slug;
+
+              let tags = [];
+              if (slug === "drinks") {
+                tags = [
                   itemData.selectedDrinkSize,
-                  ...itemData.additionals || [],
+                  ...(itemData.additionals || []),
                   itemData.milkOption || "Fresh Milk",
                   itemData.note && `"${itemData.note}"`,
-                ].filter(Boolean),
+                ].filter(Boolean);
+              } else if (slug === "maincourse") {
+                tags = [
+                  itemData.mainCourseOption || "Rice",
+                  itemData.note && `"${itemData.note}"`,
+                ].filter(Boolean);
+              } else if (slug === "pasta") {
+                tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+              } else if (slug === "snacks") {
+                tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+              } else if (slug === "sandwiches") {
+                tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+              }
+
+              cartItems.push({
+                id: key,
+                title: itemData.productTitle,
+                img: itemData.productImg,
+                slug: slug,
+                tags: tags,
                 qtty: itemData.itemQty,
                 price: itemData.totalPrice,
               });
+
+              subtotal += itemData.totalPrice; // Update subtotal
             }
           });
           totalCartPrice = data.totalCartPrice; // Get the total price
         });
 
         setTotalCartPrice(totalCartPrice); // Set total price
+        setSubtotal(subtotal); // Set subtotal
 
         if (cartItems.length > 0) {
           setAddedToCart(cartItems);
@@ -159,7 +256,7 @@ const CartPage = () => {
           </div>
         </div>
       )}
-  
+
       {isEmpty && isLoggedIn ? (
         <div className="font-bold text-gray-200 flex justify-center items-center h-full space-x-4">
           <i className="fas fa-shopping-cart text-3xl"></i>
@@ -189,7 +286,7 @@ const CartPage = () => {
                       className="object-contain"
                     />
                   </div>
-  
+
                   {/* ITEM NAME AND ADDITONALS/OPTIONS CONTAINER */}
                   <div className="col-span-2 px-4">
                     <h1 className="font-bold text-lg">{items.title}</h1>
@@ -199,19 +296,26 @@ const CartPage = () => {
                           {tag}
                         </p>
                       ))}
+                      {items.notes && (
+                        <p className="text-sm text-gray-500 italic">
+                          Notes: {items.notes}
+                        </p>
+                      )}
                     </div>
                   </div>
-  
+
                   {/* QUANTITY */}
                   <div className="h-20 flex items-center">
                     <span className="text-center w-full text-sm font-semibold lg:text-lg">
                       {items.qtty}x
                     </span>
                   </div>
-  
+
                   {/* PRICE AND EDIT CONTAINER */}
                   <div className="flex flex-col gap-2 justify-between items-end pr-2">
-                    <div className="font-bold text-lg">P{items.price.toFixed(2)}</div>
+                    <div className="font-bold text-lg">
+                      P{items.price.toFixed(2)}
+                    </div>
                     <div className="flex space-x-1 items-center justify-center">
                       <i className="fas fa-edit text-xs text-gray-700"></i>
                       <span className="text-md underline underline-offset-2 text-gray-600">
@@ -233,7 +337,7 @@ const CartPage = () => {
               <i className="fas fa-shopping-cart text-md lg:text-2xl"></i>{" "}
               <span className="text-lg lg:text-3xl">Payment Details</span>
             </div>
-            
+
             {/* OPTIONS */}
             <div className="flex flex-col gap-2">
               <h1 className="text-gray-500">Dining Options</h1>
@@ -321,27 +425,29 @@ const CartPage = () => {
               <div className="flex justify-between items-center px-4">
                 <span>Subtotal</span>
                 <span className="font-bold text-lg text-gray-600">
-                  P{totalCartPrice.toFixed(2)}
+                  P{subtotal.toFixed(2)}
                 </span>
               </div>
               {/* ONLY SHOW PROMO IF APPLIED */}
               {promoApplied && (
                 <div className="flex justify-between items-center px-4">
                   <span>Promo</span>
-                  <span className="font-bold text-lg text-gray-600">-P50.00</span>
+                  <span className="font-bold text-lg text-gray-600">
+                    -P{discountedPromo.toFixed(2)}
+                  </span>
                 </div>
               )}
             </div>
-  
+
             {/* PROMO CODE BUTTON */}
             <button
               onClick={() => openDiscountPromoForm(true)}
               className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
-              py-2 rounded-lg mt-3 mb-2"
+                py-2 rounded-lg mt-3 mb-2"
             >
               <span className="font-bold text-lg">% Enter Promo Code</span>
             </button>
-  
+
             {/* PROMO CODE FORM */}
             {discountPromoForm && (
               <div
@@ -367,24 +473,24 @@ const CartPage = () => {
                   {showError && (
                     <p
                       className={`${
-                        validCode ? "text-green-600" : "text-red-500"
+                        promoApplied ? "text-green-600" : "text-red-500"
                       } mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100`}
                     >
-                      {validCode
-                        ? "Code successfully entered!"
-                        : "Invalid code entered!"}
+                      {promoApplied
+                        ? "Promo code successfully redeemed!"
+                        : "Promo code is invalid!"}
                     </p>
                   )}
                   <div className="flex justify-center items-center gap-4">
                     <button
                       type="button"
                       className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
-                      onClick={showErrorPopup}
+                      onClick={handlePromoCodeSubmit}
                     >
                       Enter Code
                     </button>
                     <button
-                      className="bg-white  text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
                       onClick={() => openDiscountPromoForm(false)}
                     >
                       Close
@@ -394,8 +500,8 @@ const CartPage = () => {
               </div>
             )}
 
-                        {/* PAYMENT OPTIONS CONTAINER */}
-                        <div className="flex flex-col gap-2">
+            {/* PAYMENT OPTIONS CONTAINER */}
+            <div className="flex flex-col gap-2">
               <h1 className="text-gray-500">Payment Options</h1>
               {/* CASH OR CARD */}
               <div className="flex flex-col">
@@ -433,27 +539,29 @@ const CartPage = () => {
             </div>
 
             <hr />
-  
+
             {/* TOTAL AND CHECKOUT BUTTON */}
             <div>
               {/* TOTAL AMOUNT */}
               <div className="flex justify-between items-center px-4 py-4">
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-                P{promoApplied ? totalCartPrice - 50 : totalCartPrice.toFixed(2)}
-              </span>
+                  P
+                  {promoApplied
+                    ? (totalCartPrice - subtotal * discountPercent).toFixed(2)
+                    : totalCartPrice.toFixed(2)}
+                </span>
               </div>
               {/* CHECKOUT BUTTON */}
               <button className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg">
                 Checkout
               </button>
             </div>
-
           </div>
         </div>
       )}
     </div>
   );
-}
+};
 
 export default CartPage;
