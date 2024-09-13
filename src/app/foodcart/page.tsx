@@ -1,49 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
-import Link from "next/link";
-import React, { useState, useRef, useEffect } from "react";
-import Image from "next/image";
-
-type ItemInCart = {
-  title: string;
-  img?: string;
-  slug: string;
-  tags?: string[];
-  qtty: number;
-  price: number;
-};
-
-type Items = ItemInCart[];
-
-// KAPAG NOTE NG CUSTOMER ANG ISA SA MGA TAG, DAPAT MAY QUOTATIONS SIYA GAYA NG SA ITEM NUMBER 2
-let addedToCart = [
-  {
-    id: "adn1",
-    title: "A Drink Name",
-    img: "/menugroups/drink.webp",
-    slug: "drinks",
-    tags: ["16oz", "Extra Syrup", "Oat Milk"],
-    qtty: 2,
-    price: 330,
-  },
-  {
-    id: "afn1",
-    title: "A Food Name",
-    img: "/menugroups/meal.webp",
-    slug: "maincourse",
-    tags: ["Mashed Potato", '"Huwag lagyan ng corn."'],
-    qtty: 1,
-    price: 165,
-  },
-];
-
-// BOOLEANS
-// EMPTY FOODCART?
-const isEmpty = false;
-// PROMO CODE IS VALID?
-const validCode = false;
-=======
 import { useEffect, useState, useRef } from "react";
 import {
   getDocs,
@@ -58,7 +14,6 @@ import { db } from "@/app/firebase";
 import Image from "next/image";
 import Link from "next/link";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
 
 const CartPage = () => {
   //#region Use State Variables
@@ -93,18 +48,6 @@ const CartPage = () => {
     setSelectedPayment(value);
   };
 
-<<<<<<< HEAD
-  // TO OPEN DISCOUNT FORM
-  const [discountPromoForm, openDiscountPromoForm] = useState(false);
-
-  // FOR CLOSING OF POP-UP WHEN CLICKED OUTSIDE
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  // ERROR POP-UP
-  const [showError, setShowError] = useState(false);
-
-=======
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
   const showErrorPopup = () => {
     setShowError(true);
     setTimeout(() => {
@@ -112,8 +55,6 @@ const CartPage = () => {
     }, 3000);
   };
 
-<<<<<<< HEAD
-=======
   const handlePromoCodeSubmit = async () => {
     if (!userEmail) {
       showErrorPopup("Please log in to apply a promo code.");
@@ -178,7 +119,6 @@ const CartPage = () => {
     console.log("Promo applied:", promoApplied);
   }, [promoApplied]);
 
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
   // CLOSE THE FORM WHEN CLICKED OUTSIDE
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -197,8 +137,6 @@ const CartPage = () => {
     }
   }, [discountPromoForm]);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     // Listen to authentication state
     const auth = getAuth();
@@ -293,7 +231,6 @@ const CartPage = () => {
     fetchCartItems();
   }, [userEmail]);
 
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
   return (
     <div
       className={`flex flex-col ${
@@ -502,26 +439,16 @@ const CartPage = () => {
               )}
             </div>
 
-<<<<<<< HEAD
-            <button
-              onClick={() => openDiscountPromoForm(true)}
-              className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
-              py-2 rounded-lg mt-3 mb-2"
-=======
             {/* PROMO CODE BUTTON */}
             <button
               onClick={() => openDiscountPromoForm(true)}
               className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
                 py-2 rounded-lg mt-3 mb-2"
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
             >
               <span className="font-bold text-lg">% Enter Promo Code</span>
             </button>
 
-<<<<<<< HEAD
-=======
             {/* PROMO CODE FORM */}
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
             {discountPromoForm && (
               <div
                 className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
@@ -589,11 +516,6 @@ const CartPage = () => {
                 </form>
               </div>
             )}
-<<<<<<< HEAD
-
-            <hr />
-=======
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
 
             {/* PAYMENT OPTIONS CONTAINER */}
             <div className="flex flex-col gap-2">
