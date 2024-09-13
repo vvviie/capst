@@ -1,18 +1,25 @@
-"use client";
+import React, { useState, useEffect } from "react";
 
-import React, { useState } from "react";
+interface MainCourseOptionsProps {
+  onOptionChange: (option: string) => void; // Callback to notify the parent about the selected option
+}
 
-const MainCourseOptions = () => {
-  // Initialize selectedDrinkSize to "12oz"
-  const [selectedOption, setSelectedOption] = useState<string>("rice");
+const MainCourseOptions: React.FC<MainCourseOptionsProps> = ({
+  onOptionChange,
+}) => {
+  const [selectedOption, setSelectedOption] = useState<string>("Rice");
+
+  useEffect(() => {
+    onOptionChange(selectedOption);
+  }, [selectedOption, onOptionChange]);
 
   const handleOptionChange = (value: string) => {
     setSelectedOption(value);
   };
+
   return (
     <div className="flex flex-col gap-2">
       <hr />
-
       {/* OPTIONS */}
       <div className="flex flex-col gap-2">
         <h1 className="text-gray-500">Serve with</h1>
@@ -20,31 +27,31 @@ const MainCourseOptions = () => {
         <div className="flex flex-col">
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-              selectedOption === "rice" ? "bg-orange-50" : "bg-gray-50"
+              selectedOption === "Rice" ? "bg-orange-50" : "bg-gray-50"
             }`}
           >
             <input
               type="radio"
-              name="drinkSize"
+              name="mainCourseOption"
               id="rice"
               className="w-5 h-5 cursor-pointer"
-              checked={selectedOption === "rice"}
-              onChange={() => handleOptionChange("rice")}
+              checked={selectedOption === "Rice"}
+              onChange={() => handleOptionChange("Rice")}
             />
             <span className="ml-4 font-semibold">Rice</span>
           </div>
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-              selectedOption === "mashed" ? "bg-orange-50" : "bg-gray-50"
+              selectedOption === "Mashed Potato" ? "bg-orange-50" : "bg-gray-50"
             }`}
           >
             <input
               type="radio"
-              name="drinkSize"
-              id="16oz"
+              name="mainCourseOption"
+              id="mashed"
               className="w-5 h-5 cursor-pointer"
-              checked={selectedOption === "mashed"}
-              onChange={() => handleOptionChange("mashed")}
+              checked={selectedOption === "Mashed Potato"}
+              onChange={() => handleOptionChange("Mashed Potato")}
             />
             <span className="ml-4 font-semibold">Mashed Potato</span>
           </div>

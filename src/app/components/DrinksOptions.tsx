@@ -7,6 +7,7 @@ interface DrinksOptionsProps {
   milkOat: number;
   addVanilla?: number; // Optional
   onAdditionalCostChange: (cost: number) => void;
+  onOptionsChange: (additionals: string[], milkOption: string | null) => void; // New callback
 }
 
 const DrinksOptions: React.FC<DrinksOptionsProps> = ({
@@ -14,13 +15,12 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
   addSyrup,
   milkAlmond,
   milkOat,
-  addVanilla, // Optional
+  addVanilla,
   onAdditionalCostChange,
+  onOptionsChange,
 }) => {
   const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
-  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(
-    null
-  );
+  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(null);
 
   useEffect(() => {
     let price = 0;
@@ -34,7 +34,6 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
     }
 
     if (addVanilla && selectedAdditionals.includes("Vanilla")) {
-      // Check if addVanilla exists
       price += addVanilla;
     }
 
@@ -44,23 +43,16 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
       price += milkOat;
     }
 
+    // Notify parent about the additional cost
     onAdditionalCostChange(price);
-  }, [
-    selectedAdditionals,
-    selectedMilkOption,
-    addEspresso,
-    addSyrup,
-    addVanilla,
-    milkAlmond,
-    milkOat,
-    onAdditionalCostChange,
-  ]);
+
+    // Pass the selected options back to the parent
+    onOptionsChange(selectedAdditionals, selectedMilkOption);
+  }, [selectedAdditionals, selectedMilkOption, addEspresso, addSyrup, addVanilla, milkAlmond, milkOat, onAdditionalCostChange, onOptionsChange]);
 
   const handleAdditionalsChange = (value: string) => {
     setSelectedAdditionals((prev) =>
-      prev.includes(value)
-        ? prev.filter((item) => item !== value)
-        : [...prev, value]
+      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
     );
   };
 

@@ -6,7 +6,16 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import DrinksOptions from "@/app/components/DrinksOptions";
 import MainCourseOptions from "@/app/components/MainCourseOptions";
-import { doc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDoc,
+  setDoc,
+  getDocs,
+  query,
+  where,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -20,6 +29,22 @@ const ProductPage: React.FC = () => {
   const [selectedDrinkSize, setSelectedDrinkSize] = useState<string>("12oz");
   const [additionalCost, setAdditionalCost] = useState<number>(0);
   const [upsizePrice, setUpsizePrice] = useState<number>(0);
+  const [selectedMainCourseOption, setSelectedMainCourseOption] =
+    useState<string>("rice");
+
+  // For getting the additionals in the DrinksOptions
+  const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
+  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(
+    null
+  );
+
+  const handleOptionsChange = (
+    additionals: string[],
+    milkOption: string | null
+  ) => {
+    setSelectedAdditionals(additionals);
+    setSelectedMilkOption(milkOption);
+  };
 
   // QUANTITY NUMBER ADJUSTMENT
   const [numberQtty, setNumberQtty] = useState<number>(1);
@@ -103,6 +128,7 @@ const ProductPage: React.FC = () => {
 
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -110,6 +136,7 @@ const ProductPage: React.FC = () => {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const loggedIn = !!authUser && authUser.emailVerified;
       setIsLoggedIn(loggedIn);
+      setUserEmail(authUser?.email || null); // Sets user email
     });
     return () => unsubscribe();
   }, []);
@@ -131,11 +158,175 @@ const ProductPage: React.FC = () => {
     }
   }, [showLoginModal]);
 
-  const handleCartClick = () => {
+  const handleMainCourseOptionChange = (option: string) => {
+    setSelectedMainCourseOption(option);
+  };
+
+  const handleCartClick = async () => {
     if (!isLoggedIn) {
       setShowLoginModal(true);
-    } else {
-      // Handle adding to cart logic here
+      return;
+    }
+
+    const orderId = `cart-${Math.floor(
+      1000000000 + Math.random() * 9000000000
+    )}`;
+    const tempOrdersRef = collection(db, "tempOrders");
+
+    const qtyPerItem = numberQtty;
+    const pricePerItem = parseFloat((totalPrice / qtyPerItem).toFixed(2)); // Ensure this is a number
+
+    // Eto needs polishing pa ito!!!!
+    //
+    //
+
+    //
+    // Create a unique key for the product based on its configuration
+    //let uniqueProductKey = `${productId}-${selectedDrinkSize}-${document.querySelector("textarea")?.value || ""}`;
+    // Create a unique key for the product based on its configuration
+    let uniqueProductKey =
+      slug === "drinks"
+        ? `${productId}-${selectedDrinkSize}-${selectedAdditionals.join("-")}-${
+            selectedMilkOption || "Fresh Milk"
+          }-${document.querySelector("textarea")?.value || "none"}`
+        : slug === "maincourse"
+        ? `${productId}-${selectedMainCourseOption || "Rice"}-${
+            document.querySelector("textarea")?.value || "none"
+          }`
+        : `${productId}-${document.querySelector("textarea")?.value || "none"}`;
+
+    // Prepare order data for drinks or other products
+    let orderData = {
+      productImg: productData.img, // prio
+      productTitle: productData.title, // prio
+      itemQty: qtyPerItem, // prio
+      pricePerItem: pricePerItem, // prio
+      note: document.querySelector("textarea")?.value || "none", // prio
+      totalPrice: parseFloat(totalPrice.toFixed(2)), // Ensure this is a number
+    };
+
+    // If the product is a drink, add drink-specific options to the orderData
+    if (slug === "drinks") {
+      orderData = {
+        ...orderData,
+        selectedDrinkSize: selectedDrinkSize, // Optional
+        additionals: selectedAdditionals, // Contains options like Espresso, Syrup, etc.
+        milkOption: selectedMilkOption || "Fresh Milk",
+        slug: "drinks",
+      };
+    } else if (slug === "maincourse") {
+      orderData = {
+        ...orderData,
+        mainCourseOption: selectedMainCourseOption, // Add the selected main course option
+        slug: "maincourse",
+      };
+    } else if (slug === "pasta") {
+      orderData = {
+        ...orderData,
+        slug: "pasta",
+      };
+    } else if (slug === "snacks") {
+      orderData = {
+        ...orderData,
+        slug: "snacks",
+      };
+    } else if (slug === "sandwiches") {
+      orderData = {
+        ...orderData,
+        slug: "sandwiches",
+      };
+    }
+
+    try {
+      // Reference to the collection where orders for the user are stored
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+
+      let existingOrderDocId: string | null = null;
+      let existingOrderData: any = {};
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        // Check if the document belongs to the user
+        if (data.user === userEmail) {
+          existingOrderDocId = doc.id; // Store the document ID if an existing cart is found
+          existingOrderData = data;
+        }
+      });
+
+      if (existingOrderDocId) {
+        // Check if the product with the specific options already exists in the order
+        if (existingOrderData[uniqueProductKey]) {
+          // Update the quantity of the existing product
+          const existingProductData = existingOrderData[uniqueProductKey];
+          const updatedProductData = {
+            ...existingProductData,
+            itemQty: existingProductData.itemQty + qtyPerItem,
+            totalPrice:
+              existingProductData.totalPrice +
+              parseFloat(totalPrice.toFixed(2)), // Add new price to existing total
+          };
+          const updatedOrderData = {
+            ...existingOrderData,
+            [uniqueProductKey]: updatedProductData,
+            user: userEmail,
+          };
+
+          // Recalculate totalItems and totalCartPrice (renaming fields)
+          const totalItems = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.itemQty)
+            .reduce((acc, item) => acc + (item.itemQty || 0), 0);
+          const totalCartPrice = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.totalPrice)
+            .reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+
+          updatedOrderData.totalItems = totalItems;
+          updatedOrderData.totalCartPrice = totalCartPrice;
+
+          await updateDoc(
+            doc(db, "tempOrders", existingOrderDocId),
+            updatedOrderData
+          );
+          console.log("Order updated in tempOrders collection!");
+        } else {
+          // Add the new product with different options to the existing order
+          const updatedOrderData = {
+            ...existingOrderData,
+            [uniqueProductKey]: orderData,
+            user: userEmail,
+          };
+
+          // Recalculate totalItems and totalCartPrice (renaming fields)
+          const totalItems = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.itemQty)
+            .reduce((acc, item) => acc + (item.itemQty || 0), 0);
+          const totalCartPrice = Object.values(updatedOrderData)
+            .filter((item) => typeof item === "object" && item.totalPrice)
+            .reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+
+          updatedOrderData.totalItems = totalItems;
+          updatedOrderData.totalCartPrice = totalCartPrice;
+
+          await updateDoc(
+            doc(db, "tempOrders", existingOrderDocId),
+            updatedOrderData
+          );
+          console.log("Order updated in tempOrders collection!");
+        }
+      } else {
+        // Create a new order if no document exists for the user
+        const newOrderData = {
+          [uniqueProductKey]: orderData,
+          user: userEmail,
+          totalItems: qtyPerItem, // Renamed field
+          totalCartPrice: parseFloat(totalPrice.toFixed(2)), // Renamed field
+        };
+        await setDoc(doc(db, "tempOrders", orderId), newOrderData);
+        console.log("Order added to tempOrders collection!");
+      }
+    } catch (error) {
+      console.error("Error processing order:", error);
     }
   };
 
@@ -294,44 +485,22 @@ const ProductPage: React.FC = () => {
               {desc}
             </p>
           </div>
-          {/* OPTIONS */}
-          <div>
-            {slug === "drinks" && (
-              <div className="flex flex-col gap-2">
-                <hr />
-                {/* DRINK SIZE CONTAINER */}
-                <div className="flex flex-col gap-2">
-                  <h1 className="text-gray-500">Drink size</h1>
-                  {/* DRINK SIZE CHOICES */}
-                  <div className="flex flex-col">
-                    {/* Always render the default size */}
-                    <div
-                      className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                        selectedDrinkSize === productData.currSize
-                          ? "bg-orange-50"
-                          : "bg-gray-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="drinkSize"
-                        id={productData.currSize}
-                        className="w-5 h-5"
-                        checked={selectedDrinkSize === productData.currSize}
-                        onChange={() =>
-                          handleDrinkSizeChange(productData.currSize)
-                        }
-                      />
-                      <span className="ml-4 font-semibold">
-                        {productData.currSize}
-                      </span>
-                    </div>
 
-                    {/* Conditionally render upsizable option */}
-                    {productData.upsizable && (
+          {/* OPTIONS */}
+          {productAvailable && (
+            <div>
+              {slug === "drinks" && (
+                <div className="flex flex-col gap-2">
+                  <hr />
+                  {/* DRINK SIZE CONTAINER */}
+                  <div className="flex flex-col gap-2">
+                    <h1 className="text-gray-500">Drink size</h1>
+                    {/* DRINK SIZE CHOICES */}
+                    <div className="flex flex-col">
+                      {/* Always render the default size */}
                       <div
                         className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                          selectedDrinkSize === productData.upsizeSize
+                          selectedDrinkSize === productData.currSize
                             ? "bg-orange-50"
                             : "bg-gray-50"
                         }`}
@@ -339,43 +508,74 @@ const ProductPage: React.FC = () => {
                         <input
                           type="radio"
                           name="drinkSize"
-                          id={productData.upsizeSize}
+                          id={productData.currSize}
                           className="w-5 h-5"
-                          checked={selectedDrinkSize === productData.upsizeSize}
+                          checked={selectedDrinkSize === productData.currSize}
                           onChange={() =>
-                            handleDrinkSizeChange(productData.upsizeSize)
+                            handleDrinkSizeChange(productData.currSize)
                           }
                         />
                         <span className="ml-4 font-semibold">
-                          {productData.upsizeSize}
-                        </span>
-                        <span className="ml-2">
-                          {" "}
-                          (+{productData.upsizePrice})
+                          {productData.currSize}
                         </span>
                       </div>
-                    )}
-                  </div>
-                </div>
-                {/* DrinksOptions component with props */}
-                <DrinksOptions
-                  addEspresso={addEspresso}
-                  addSyrup={addSyrup}
-                  milkAlmond={milkAlmond}
-                  milkOat={milkOat}
-                  addVanilla={addVanilla}
-                  onAdditionalCostChange={handleAdditionalCostChange}
-                />
-              </div>
-            )}
 
-            {slug === "maincourse" && (
-              <div className="flex flex-col gap-2">
-                <hr />
-                <MainCourseOptions />
-              </div>
-            )}
-          </div>
+                      {/* Conditionally render upsizable option */}
+                      {productData.upsizable && (
+                        <div
+                          className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                            selectedDrinkSize === productData.upsizeSize
+                              ? "bg-orange-50"
+                              : "bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="drinkSize"
+                            id={productData.upsizeSize}
+                            className="w-5 h-5"
+                            checked={
+                              selectedDrinkSize === productData.upsizeSize
+                            }
+                            onChange={() =>
+                              handleDrinkSizeChange(productData.upsizeSize)
+                            }
+                          />
+                          <span className="ml-4 font-semibold">
+                            {productData.upsizeSize}
+                          </span>
+                          <span className="ml-2">
+                            {" "}
+                            (+{productData.upsizePrice})
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* DrinksOptions component with props */}
+                  <DrinksOptions
+                    addEspresso={productData?.addEspresso || 0}
+                    addSyrup={productData?.addSyrup || 0}
+                    milkAlmond={productData?.milkAlmond || 0}
+                    milkOat={productData?.milkOat || 0}
+                    addVanilla={productData?.addVanilla || 0}
+                    onAdditionalCostChange={setAdditionalCost}
+                    onOptionsChange={handleOptionsChange}
+                  />
+                </div>
+              )}
+
+              {slug === "maincourse" && (
+                <div className="flex flex-col gap-2">
+                  <hr />
+                  <MainCourseOptions
+                    onOptionChange={handleMainCourseOptionChange}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {/* QUANTITY, NOTE, AND BUTTON */}
           <div className="flex flex-col gap-2 my-2">
             <span className="text-gray-500">Note</span>
@@ -387,15 +587,16 @@ const ProductPage: React.FC = () => {
               style={{ resize: "none" }}
               className="bg-gray-50 w-full pl-2"
               placeholder="Any requests for this order?"
+              disabled={!productAvailable} // Make textarea editable only if the product is available
             ></textarea>
           </div>
+
           {/* QUANTITY CONTAINER */}
           <div className="flex items-center justify-center gap-4 pt-2 pb-4">
             {/* SUBTRACT BUTTON */}
             <button
               onClick={subQtty}
-              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2
-    border-gray-100 pb-1 rounded-lg shadow-md"
+              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2 border-gray-100 pb-1 rounded-lg shadow-md"
             >
               -
             </button>
@@ -424,21 +625,23 @@ const ProductPage: React.FC = () => {
             {/* ADD BUTTON */}
             <button
               onClick={addQtty}
-              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2
-    border-gray-100 pb-1 rounded-lg shadow-md"
+              className="bg-white text-gray-700 font-bold text-4xl w-14 aspect-square border-2 border-gray-100 pb-1 rounded-lg shadow-md"
             >
               +
             </button>
           </div>
 
-          {/* KAPAG PININDOT DAPAT MA-REDIRECT SA MENU CATEGORY NA ACCORDING SA SLUG */}
+          {/* BUTTON FOR CART UPDATE */}
           <button
-            className="w-full bg-orange-950 text-white py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md xl:mt-2"
-            onClick={handleCartClick}
+            className={`w-full py-4 mt-6 font-bold text-xl space-x-4 rounded-lg cursor-pointer shadow-md ${
+              productAvailable
+                ? "bg-orange-950 text-white"
+                : "bg-gray-300 text-gray-600 cursor-not-allowed"
+            }`}
+            onClick={productAvailable ? handleCartClick : undefined}
           >
             <i className="fa-solid fa-cart-shopping"></i>
             <span>Update Cart (+P{totalPrice.toFixed(2)})</span>
-            {/*PAKI-LAGAY DITO ANG TOTAL PRICE*/}
           </button>
         </div>
       </div>
@@ -464,7 +667,11 @@ const ProductPage: React.FC = () => {
                 Sign in
               </Link>
               <button
+<<<<<<< HEAD
                 className="bg-white  text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+=======
+                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+>>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
                 onClick={() => setShowLoginModal(false)}
               >
                 Close

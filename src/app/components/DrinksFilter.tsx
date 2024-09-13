@@ -2,111 +2,44 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import AllergyFilter from "./AllergyFilter";
 import { usePathname } from "next/navigation";
-import CaloriesFilter from "./CaloriesFilter";
 
 interface DrinksFilterProps {
   onFilterChange: (filter: string) => void;
+  onCalorieChange: (calorie: string) => void;
 }
 
-// #region Declaration of Filters based on Slug
-
-type Filter = {
-  name: string;
-  id: string;
-  onChange: string;
-  checked: string;
-  title: string;
+// Define a unified filter array with categories
+const Filters = {
+  drinks: [
+    { name: "drinktype", id: "radioAllDrinks", onChange: "all", checked: "all", title: "All" },
+    { name: "drinktype", id: "radioCoffee", onChange: "Coffee", checked: "Coffee", title: "Coffee" },
+    { name: "drinktype", id: "radioNonCoffee", onChange: "Non-Coffee", checked: "Non-Coffee", title: "Non-Coffee" },
+  ],
+  pasta: [
+    { name: "pastatype", id: "radioAllPasta", onChange: "all", checked: "all", title: "All Pasta" },
+    { name: "pastatype", id: "radioPesto", onChange: "Pesto", checked: "Pesto", title: "Pesto" },
+    { name: "pastatype", id: "radioNonPesto", onChange: "Non-Pesto", checked: "Non-Pesto", title: "Non-Pesto" },
+  ],
+  maincourse: [
+    { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", checked: "all", title: "All" },
+    { name: "maincoursetype", id: "radioMeat", onChange: "Meat", checked: "Meat", title: "Meat" },
+    { name: "maincoursetype", id: "radioSeaFood", onChange: "Sea Food", checked: "Sea Food", title: "Sea Food" },
+  ],
 };
 
-type Filters = Filter[];
-
-// FILTER FOR DRINKS
-const FilterDrink: Filters = [
-  {
-    name: "drinktype",
-    id: "radioBoth",
-    onChange: "all",
-    checked: "all",
-    title: "All",
-  },
-  {
-    name: "drinktype",
-    id: "radioBoth",
-    onChange: "Coffee",
-    checked: "Coffee",
-    title: "Coffee",
-  },
-
-  {
-    name: "drinktype",
-    id: "radioNonCoffee",
-    onChange: "Non-Coffee",
-    checked: "Non-Coffee",
-    title: "Non-Coffee",
-  },
+const FilterCalories = [
+  { name: "caloriecount", id: "radioLow", onChange: "low", checked: "low", title: "Low" },
+  { name: "caloriecount", id: "radioMedium", onChange: "med", checked: "med", title: "Medium" },
+  { name: "caloriecount", id: "radioHigh", onChange: "high", checked: "high", title: "High" },
 ];
 
-// FILTER FOR PASTA
-const FilterPasta: Filters = [
-  {
-    name: "pastatype",
-    id: "radioAllPasta",
-    onChange: "allPasta",
-    checked: "allPasta",
-    title: "All Pasta",
-  },
-  {
-    name: "pastatype",
-    id: "radioPesto",
-    onChange: "Pesto",
-    checked: "Pesto",
-    title: "Pesto",
-  },
-
-  {
-    name: "pastatype",
-    id: "radioNonPesto",
-    onChange: "Non-Pesto",
-    checked: "Non-Pesto",
-    title: "Non-Pesto",
-  },
-];
-
-// FILTER FOR MAIN COURSE
-
-const FilterMainCourse: Filters = [
-  {
-    name: "maincoursetype",
-    id: "radioAllMainCourse",
-    onChange: "allMainCourse",
-    checked: "allMainCourse",
-    title: "All",
-  },
-  {
-    name: "maincoursetype",
-    id: "radioMeat",
-    onChange: "Meat",
-    checked: "Meat",
-    title: "Meat",
-  },
-
-  {
-    name: "maincoursetype",
-    id: "radioSeaFood",
-    onChange: "SeaFood",
-    checked: "SeaFood",
-    title: "Sea Food",
-  },
-];
-
-//#endregion
-
-const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange }) => {
+const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange, onCalorieChange }) => {
   const [open, setOpen] = useState(false);
   const [selectedDrinkType, setSelectedDrinkType] = useState("all");
+  const [selectedCalorie, setSelectedCalorie] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const pathname = usePathname();
-  const slug = pathname.split("/").pop();
+  const slug = pathname.split("/").pop()?.toLowerCase() || "";
 
   // DRINK FILTER CHANGE HANDLER
   const handleDrinkFilterChange = (filter: string) => {
@@ -114,14 +47,19 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange }) => {
     onFilterChange(filter);
   };
 
-  // MAKO-CLOSE ANG FORM KAPAG PININDOT OUTSIDE OF FORM
+  // CALORIE FILTER CHANGE HANDLER
+  const handleCalorieFilterChange = (calorie: string) => {
+    setSelectedCalorie(calorie);
+    onCalorieChange(calorie);
+  };
+
+  // CLOSE FORM WHEN CLICK OUTSIDE
   const handleClickOutside = (event: MouseEvent) => {
     if (formRef.current && !formRef.current.contains(event.target as Node)) {
       setOpen(false);
     }
   };
 
-  // USEEFFECT PARA SA PAG-CLOSE NG FORM OUTSIDE FORM
   useEffect(() => {
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
@@ -133,6 +71,9 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open]);
+
+  // Determine which filters to show based on slug
+  const currentFilters = Filters[slug] || [];
 
   return (
     <div className="relative w-6 h-6 cursor-pointer">
@@ -163,78 +104,43 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange }) => {
                 : ""}
             </h1>
             <hr
-              className={`mb-4 ${
-                slug === "pastries"
-                  ? "hidden"
-                  : slug === "sandwiches"
-                  ? "hidden"
-                  : slug === "snacks"
-                  ? "hidden"
-                  : "visible"
-              }`}
+              className={`mb-4 ${slug === "pastries" || slug === "sandwiches" || slug === "snacks" ? "hidden" : "visible"}`}
             />
             <div className="flex gap-2 justify-around">
-              {slug === "drinks" &&
-                FilterDrink.map((filters) => (
-                  <div className="flex items-center justify-start space-x-2">
-                    <input
-                      type="radio"
-                      name={filters.name}
-                      id={filters.id}
-                      className="w-4 h-4"
-                      checked={selectedDrinkType === filters.checked}
-                      onChange={() =>
-                        handleDrinkFilterChange(`${filters.onChange}`)
-                      }
-                    />
-                    <span className="text-lg">{filters.title}</span>
-                  </div>
-                ))}
-              {slug === "pasta" &&
-                FilterPasta.map((filters) => (
-                  <div className="flex items-center justify-start space-x-2">
-                    <input
-                      type="radio"
-                      name={filters.name}
-                      id={filters.id}
-                      className="w-4 h-4"
-                      checked={selectedDrinkType === filters.checked}
-                      onChange={() =>
-                        handleDrinkFilterChange(`${filters.onChange}`)
-                      }
-                    />
-                    <span className="text-lg">{filters.title}</span>
-                  </div>
-                ))}
-              {slug === "maincourse" &&
-                FilterMainCourse.map((filters) => (
-                  <div className="flex items-center justify-start space-x-2">
-                    <input
-                      type="radio"
-                      name={filters.name}
-                      id={filters.id}
-                      className="w-4 h-4"
-                      checked={selectedDrinkType === filters.checked}
-                      onChange={() =>
-                        handleDrinkFilterChange(`${filters.onChange}`)
-                      }
-                    />
-                    <span className="text-lg">{filters.title}</span>
-                  </div>
-                ))}
+              {currentFilters.map((filter) => (
+                <div className="flex items-center justify-start space-x-2" key={filter.id}>
+                  <input
+                    type="radio"
+                    name={filter.name}
+                    id={filter.id}
+                    className="w-4 h-4"
+                    checked={selectedDrinkType === filter.checked}
+                    onChange={() => handleDrinkFilterChange(filter.onChange)}
+                  />
+                  <span className="text-lg">{filter.title}</span>
+                </div>
+              ))}
             </div>
             <hr
-              className={`mt-4 ${
-                slug === "pastries"
-                  ? "hidden"
-                  : slug === "sandwiches"
-                  ? "hidden"
-                  : slug === "snacks"
-                  ? "hidden"
-                  : "visible"
-              }`}
+              className={`mt-4 ${slug === "pastries" || slug === "sandwiches" || slug === "snacks" ? "hidden" : "visible"}`}
             />
-            <CaloriesFilter />
+            <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">Calories</h1>
+            <hr />
+            <div className="flex justify-around items-center">
+              {FilterCalories.map((filter) => (
+                <div className="flex items-center justify-start space-x-2 mx-1 my-3" key={filter.id}>
+                  <input
+                    type="radio"
+                    name={filter.name}
+                    id={filter.id}
+                    className="w-4 h-4"
+                    checked={selectedCalorie === filter.checked}
+                    onChange={() => handleCalorieFilterChange(filter.onChange)}
+                  />
+                  <span className="text-lg">{filter.title}</span>
+                </div>
+              ))}
+            </div>
             <AllergyFilter />
             <button
               type="button"

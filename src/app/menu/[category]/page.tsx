@@ -65,6 +65,7 @@ const MenuCategoryPage: React.FC = () => {
 
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [searchText, setSearchText] = useState<string>("");
+  const [selectedCalorie, setSelectedCalorie] = useState(null);
 
   const { hotDrinks } = useHotDrinks();
   const { icedDrinks } = useIcedDrinks();
@@ -114,10 +115,12 @@ const MenuCategoryPage: React.FC = () => {
           .filter((drink) => {
             const matchesFilter =
               selectedFilter === "all" || drink.type === selectedFilter;
+            const matchesCalorie =
+              selectedCalorie === null || drink.calorie === selectedCalorie;
             const matchesSearch = drink.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesSearch;
+            return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -128,7 +131,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, drinks]
+    [selectedFilter, selectedCalorie, searchText, drinks]
   );
 
   const filteredPastas = useMemo(
@@ -139,10 +142,12 @@ const MenuCategoryPage: React.FC = () => {
           .filter((pasta) => {
             const matchesFilter =
               selectedFilter === "all" || pasta.type === selectedFilter;
+            const matchesCalorie =
+              selectedCalorie === null || pasta.calorie === selectedCalorie;
             const matchesSearch = pasta.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesSearch;
+            return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -153,7 +158,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, pastas]
+    [selectedFilter, selectedCalorie, searchText, pastas]
   );
 
   const filteredSandwiches = useMemo(
@@ -164,10 +169,12 @@ const MenuCategoryPage: React.FC = () => {
           .filter((sandwich) => {
             const matchesFilter =
               selectedFilter === "all" || sandwich.type === selectedFilter;
+            const matchesCalorie =
+              selectedCalorie === null || sandwich.calorie === selectedCalorie;  
             const matchesSearch = sandwich.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesSearch;
+            return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -178,7 +185,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, sandwiches]
+    [selectedFilter, searchText, selectedCalorie, sandwiches]
   );
 
   const filteredMainCourses = useMemo(
@@ -189,10 +196,12 @@ const MenuCategoryPage: React.FC = () => {
           .filter((mainCourse) => {
             const matchesFilter =
               selectedFilter === "all" || mainCourse.type === selectedFilter;
+              const matchesCalorie =
+              selectedCalorie === null || mainCourse.calorie === selectedCalorie;  
             const matchesSearch = mainCourse.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesSearch;
+            return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -203,7 +212,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, mainCourses]
+    [selectedFilter, searchText, selectedCalorie, mainCourses]
   );
 
   const filteredSnacks = useMemo(
@@ -214,10 +223,12 @@ const MenuCategoryPage: React.FC = () => {
           .filter((snack) => {
             const matchesFilter =
               selectedFilter === "all" || snack.type === selectedFilter;
+            const matchesCalorie =
+              selectedCalorie === null || snack.calorie === selectedCalorie;
             const matchesSearch = snack.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesSearch;
+            return matchesFilter && matchesCalorie &&matchesSearch;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -228,7 +239,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, snacks]
+    [selectedFilter, searchText, selectedCalorie, snacks]
   );
 
   if (!slug) return <p>No category found.</p>;
@@ -249,7 +260,7 @@ const MenuCategoryPage: React.FC = () => {
             value={searchText}
             onChange={handleSearchChange}
           />
-          <DrinksFilter onFilterChange={setSelectedFilter} />
+          <DrinksFilter onFilterChange={setSelectedFilter} onCalorieChange={setSelectedCalorie} />
         </div>
       </div>
       {slug === "drinks" &&
