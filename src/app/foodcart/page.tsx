@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   getDocs,
   query,
@@ -8,11 +9,13 @@ import {
   collection,
   updateDoc,
   doc,
-  getDoc,
+  deleteDoc,
+  deleteField,
+  increment,
 } from "firebase/firestore"; // Import Firestore functions
 import { db } from "@/app/firebase";
-import Image from "next/image";
 import Link from "next/link";
+import Image from "next/image";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
 
 const CartPage = () => {
@@ -30,12 +33,18 @@ const CartPage = () => {
   const [showError, setShowError] = useState(false);
   const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
   const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [subtotal, setSubtotal] = useState(0);
-  const [discountedPromo,  setDiscountedPromo] = useState(0);
+  const [discountedPromo, setDiscountedPromo] = useState(0);
+
+  const params = useParams();
+  const searchParams = useSearchParams();
+
+  const slug = params.slug as string | undefined; // Adjust if using searchParams
+  const cleanId = searchParams.get("cleanId") as string | undefined;
 
   //#endregion
 
+  //#region Handle Functions
   const handleOptionChange = (value: string) => {
     setSelectedOption(value);
   };
@@ -48,7 +57,7 @@ const CartPage = () => {
     setSelectedPayment(value);
   };
 
-  const showErrorPopup = () => {
+  const showErrorPopup = (message: string) => {
     setShowError(true);
     setTimeout(() => {
       setShowError(false);
@@ -62,11 +71,15 @@ const CartPage = () => {
     }
 
     if (promoApplied) {
-      showErrorPopup("A promo code has already been applied. You cannot apply another one.");
+      showErrorPopup(
+        "A promo code has already been applied. You cannot apply another one."
+      );
       return;
     }
 
-    const promoCode = document.querySelector<HTMLInputElement>('input[type="text"]')?.value.trim();
+    const promoCode = document
+      .querySelector<HTMLInputElement>('input[type="text"]')
+      ?.value.trim();
     if (!promoCode) {
       showErrorPopup("Please enter a promo code.");
       return;
@@ -76,7 +89,10 @@ const CartPage = () => {
 
     try {
       const promoCodesRef = collection(db, "promoCodes");
-      const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
+      const promoQuery = query(
+        promoCodesRef,
+        where("promoCode", "==", promoCode)
+      );
       const promoSnapshot = await getDocs(promoQuery);
 
       if (!promoSnapshot.empty) {
@@ -87,9 +103,9 @@ const CartPage = () => {
         const available = promoData?.available || false;
 
         if (available) {
-          const discountFraction = discountPercent; // Adjusted to use decimal value directly
+          const discountFraction = discountPercent / 100; // Convert percentage to decimal
           const newTotalCartPrice = subtotal * (1 - discountFraction);
-          const discountedPromo = subtotal - subtotal * (1 - discountFraction);
+          const discountedPromo = subtotal - newTotalCartPrice;
           setTotalCartPrice(newTotalCartPrice);
           setDiscountedPromo(discountedPromo);
 
@@ -114,6 +130,133 @@ const CartPage = () => {
       showErrorPopup("An error occurred. Please try again.");
     }
   };
+
+  const handleRemoveItem = async (itemId: string) => {
+    try {
+      console.log("Removing item with ID:", itemId);
+
+      // Reference to the tempOrders collection
+      const tempOrdersRef = collection(db, "tempOrders");
+
+      // Fetch all documents in the tempOrders collection
+      const querySnapshot = await getDocs(tempOrdersRef);
+
+      querySnapshot.forEach(async (doc) => {
+        const data = doc.data();
+
+        // Check if the document contains the itemId
+        if (data[itemId]) {
+          const itemData = data[itemId];
+          const itemQty = itemData.itemQty || 0;
+          const itemTotalPrice = itemData.totalPrice || 0;
+
+          // Calculate new totals
+          const newTotalCartPrice = (data.totalCartPrice || 0) - itemTotalPrice;
+          const newTotalItems = (data.totalItems || 0) - itemQty;
+
+          // Remove the item from the document
+          await updateDoc(doc.ref, {
+            [itemId]: deleteField(),
+            totalCartPrice: newTotalCartPrice,
+            totalItems: newTotalItems,
+          });
+
+          // Check if totals are zero and delete document if true
+          if (newTotalCartPrice === 0 && newTotalItems === 0) {
+            await deleteDoc(doc.ref);
+            console.log(`Document ${doc.id} deleted as the cart is empty.`);
+          }
+
+          // Refresh cart items and totals after deletion
+          await fetchCartItems();
+          console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
+        }
+      });
+    } catch (error) {
+      console.error("Error removing item:", error);
+      showErrorPopup("Failed to remove item. Please try again.");
+    }
+  };
+
+  const fetchCartItems = async () => {
+    if (!userEmail) {
+      setShowLoginModal(true); // Show login modal if user is not logged in
+      return;
+    }
+
+    try {
+      const tempOrdersRef = collection(db, "tempOrders");
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+
+      let cartItems: any[] = [];
+      let totalCartPrice = 0; // Initialize total price
+      let subtotal = 0; // Initialize subtotal
+
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        Object.keys(data).forEach((key) => {
+          if (
+            key !== "user" &&
+            key !== "totalItems" &&
+            key !== "totalCartPrice"
+          ) {
+            const itemData = data[key];
+            const slug = itemData.slug;
+
+            let tags = [];
+            if (slug === "drinks") {
+              tags = [
+                itemData.selectedDrinkSize,
+                ...(itemData.additionals || []),
+                itemData.milkOption || "Fresh Milk",
+                itemData.note && `"${itemData.note}"`,
+              ].filter(Boolean);
+            } else if (slug === "maincourse") {
+              tags = [
+                itemData.mainCourseOption || "Rice",
+                itemData.note && `"${itemData.note}"`,
+              ].filter(Boolean);
+            } else if (slug === "pasta") {
+              tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+            } else if (slug === "snacks") {
+              tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+            } else if (slug === "sandwiches") {
+              tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+            }
+
+            cartItems.push({
+              id: key,
+              title: itemData.productTitle,
+              img: itemData.productImg,
+              slug: slug,
+              tags: tags,
+              qtty: itemData.itemQty,
+              price: itemData.totalPrice,
+            });
+
+            subtotal += itemData.totalPrice; // Update subtotal
+          }
+        });
+        totalCartPrice = data.totalCartPrice; // Get the total price
+      });
+
+      setTotalCartPrice(totalCartPrice); // Set total price
+      setSubtotal(subtotal); // Set subtotal
+
+      if (cartItems.length > 0) {
+        setAddedToCart(cartItems);
+        setIsEmpty(false);
+      } else {
+        setIsEmpty(true);
+      }
+    } catch (error) {
+      console.error("Error fetching cart items:", error);
+    }
+  };
+
+  //#endregion
 
   useEffect(() => {
     console.log("Promo applied:", promoApplied);
@@ -150,85 +293,7 @@ const CartPage = () => {
   }, []);
 
   useEffect(() => {
-    const fetchCartItems = async () => {
-      if (!userEmail) {
-        setShowLoginModal(true); // Show login modal if user is not logged in
-        return;
-      }
-
-      try {
-        const tempOrdersRef = collection(db, "tempOrders");
-        const querySnapshot = await getDocs(
-          query(tempOrdersRef, where("user", "==", userEmail))
-        );
-
-        let cartItems: any[] = [];
-        let totalCartPrice = 0; // Initialize total price
-        let subtotal = 0; // Initialize subtotal
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          Object.keys(data).forEach((key) => {
-            if (
-              key !== "user" &&
-              key !== "totalItems" &&
-              key !== "totalCartPrice"
-            ) {
-              const itemData = data[key];
-              const slug = itemData.slug;
-
-              let tags = [];
-              if (slug === "drinks") {
-                tags = [
-                  itemData.selectedDrinkSize,
-                  ...(itemData.additionals || []),
-                  itemData.milkOption || "Fresh Milk",
-                  itemData.note && `"${itemData.note}"`,
-                ].filter(Boolean);
-              } else if (slug === "maincourse") {
-                tags = [
-                  itemData.mainCourseOption || "Rice",
-                  itemData.note && `"${itemData.note}"`,
-                ].filter(Boolean);
-              } else if (slug === "pasta") {
-                tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
-              } else if (slug === "snacks") {
-                tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
-              } else if (slug === "sandwiches") {
-                tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
-              }
-
-              cartItems.push({
-                id: key,
-                title: itemData.productTitle,
-                img: itemData.productImg,
-                slug: slug,
-                tags: tags,
-                qtty: itemData.itemQty,
-                price: itemData.totalPrice,
-              });
-
-              subtotal += itemData.totalPrice; // Update subtotal
-            }
-          });
-          totalCartPrice = data.totalCartPrice; // Get the total price
-        });
-
-        setTotalCartPrice(totalCartPrice); // Set total price
-        setSubtotal(subtotal); // Set subtotal
-
-        if (cartItems.length > 0) {
-          setAddedToCart(cartItems);
-          setIsEmpty(false);
-        } else {
-          setIsEmpty(true);
-        }
-      } catch (error) {
-        console.error("Error fetching cart items:", error);
-      }
-    };
-
-    fetchCartItems();
+    fetchCartItems(); // Fetch cart items when userEmail changes
   }, [userEmail]);
 
   return (
@@ -272,9 +337,8 @@ const CartPage = () => {
             </div>
             <div className="w-full flex flex-col gap-2 max-h-[550px] overflow-y-scroll pb-2">
               {addedToCart.map((items) => (
-                <Link
+                <div
                   key={items.id}
-                  href={`product/${items.slug}/${items.id}`}
                   className="p-2 shadow-md rounded-md bg-white grid grid-cols-5 border-2 border-gray-50"
                 >
                   {/* IMAGE CONTAINER */}
@@ -311,23 +375,34 @@ const CartPage = () => {
                     </span>
                   </div>
 
-                  {/* PRICE AND EDIT CONTAINER */}
+                  {/* PRICE AND ACTIONS CONTAINER */}
                   <div className="flex flex-col gap-2 justify-between items-end pr-2">
                     <div className="font-bold text-lg">
                       P{items.price.toFixed(2)}
                     </div>
-                    <div className="flex space-x-1 items-center justify-center">
-                      <i className="fas fa-edit text-xs text-gray-700"></i>
-                      <span className="text-md underline underline-offset-2 text-gray-600">
-                        Edit
-                      </span>
+                    <div className="flex flex-col space-y-1 items-center justify-center">
+                      <Link
+                        href={`product/${items.slug}/${items.id}`}
+                        className="flex space-x-1 items-center"
+                      >
+                        <i className="fas fa-edit text-xs text-gray-700"></i>
+                        <span className="text-md underline underline-offset-2 text-gray-600">
+                          Edit
+                        </span>
+                      </Link>
+                      <button
+                        className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mt-2"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent link click from firing
+                          handleRemoveItem(items.id);
+                        }}
+                      >
+                        <i className="fa fa-trash text-white text-xs"></i>
+                        <span className="text-xs text-white">Remove</span>
+                      </button>
                     </div>
-                    <button className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mr-[-8px] mt-2">
-                      <i className="fa fa-trash text-white text-xs"></i>
-                      <span className="text-xs text-white">Remove</span>
-                    </button>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
