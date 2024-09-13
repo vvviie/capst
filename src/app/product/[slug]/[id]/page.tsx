@@ -18,6 +18,7 @@ import {
 } from "firebase/firestore";
 import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
 const ProductPage: React.FC = () => {
   const pathname = usePathname();
@@ -130,6 +131,8 @@ const ProductPage: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [showCartUpdateNotif, setShowCartUpdateNotif] = useState(false);
+  const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const auth = getAuth();
@@ -328,7 +331,22 @@ const ProductPage: React.FC = () => {
     } catch (error) {
       console.error("Error processing order:", error);
     }
+
+    setShowCartUpdateNotif(true);
+
+    // Clear any existing timeout
+    clearTimeout(notificationTimeoutRef.current);
+
+    // Set timeout to hide notification after 2 seconds
+    notificationTimeoutRef.current = setTimeout(() => {
+      setShowCartUpdateNotif(false);
+    }, 1000); // 2 seconds in milliseconds
   };
+
+  useEffect(() => {
+    // Cleanup function to clear timeout if component unmounts
+    return () => clearTimeout(notificationTimeoutRef.current);
+  }, []);
 
   if (!productData) {
     return <div>Loading...</div>;
@@ -645,7 +663,9 @@ const ProductPage: React.FC = () => {
           </button>
         </div>
       </div>
-
+      {showCartUpdateNotif && (
+        <CartUpdateNotif onClick={() => setShowCartUpdateNotif(false)} />
+      )}
       {showLoginModal && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
@@ -667,11 +687,7 @@ const ProductPage: React.FC = () => {
                 Sign in
               </Link>
               <button
-<<<<<<< HEAD
-                className="bg-white  text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
-=======
                 className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
                 onClick={() => setShowLoginModal(false)}
               >
                 Close

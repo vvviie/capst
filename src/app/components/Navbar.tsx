@@ -92,13 +92,7 @@ const Navbar = () => {
     event.preventDefault();
     try {
       await signOut(auth);
-<<<<<<< HEAD
-
-      <Link href="/"></Link>;
-      // Optionally, you can handle any additional logic after signing out
-=======
       router.push("/");
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -134,36 +128,6 @@ const Navbar = () => {
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
           <div className="">
             <Link
-<<<<<<< HEAD
-              href="/"
-              className="relative flex gap-2 group hover:text-yellow-100 items-center"
-            >
-              {/* ITEMS IN CART */}
-              <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
-                20
-              </span>
-              {/* CART ICON */}
-              <i className="fa-solid fa-cart-shopping text-white text-lg mt-1 group-hover:text-yellow-100"></i>
-              {/* TOTAL PRICE */}
-              <span className="">(P1000.00)</span>
-            </Link>
-          </div>
-          <div>
-            <Link href="/" className="hover:text-yellow-100">
-              {firstName}
-            </Link>{" "}
-            {/* Display the user's first name */}
-          </div>
-          <div>
-            <Link
-              href="/"
-              className="hover:text-yellow-100"
-              onClick={handleLogout}
-            >
-              Logout
-            </Link>{" "}
-            {/* Logout functionality */}
-=======
               href="/foodcart"
               className="relative flex gap-2 group hover:text-yellow-100 items-center"
             >
@@ -189,7 +153,6 @@ const Navbar = () => {
             <Link href="/" onClick={handleLogout}>
               Logout
             </Link>
->>>>>>> 493e64e8095ccb7ef3d8effaca90b84bdbf4bf73
           </div>
         </div>
       ) : (
