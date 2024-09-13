@@ -179,10 +179,6 @@ const ProductPage: React.FC = () => {
     const qtyPerItem = numberQtty;
     const pricePerItem = parseFloat((totalPrice / qtyPerItem).toFixed(2)); // Ensure this is a number
 
-    // Eto needs polishing pa ito!!!!
-    //
-    //
-
     //
     // Create a unique key for the product based on its configuration
     //let uniqueProductKey = `${productId}-${selectedDrinkSize}-${document.querySelector("textarea")?.value || ""}`;
