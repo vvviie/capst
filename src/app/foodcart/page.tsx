@@ -17,6 +17,7 @@ import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
+import RemoveItemNotif from "../components/RemoveItemNotif";
 
 const CartPage = () => {
   //#region Use State Variables
@@ -35,6 +36,8 @@ const CartPage = () => {
   const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
+  const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
+  const [notificationTimeout, setNotificationTimeout] = useState(null);
 
   const params = useParams();
   const searchParams = useSearchParams();
@@ -133,6 +136,15 @@ const CartPage = () => {
 
   const handleRemoveItem = async (itemId: string) => {
     try {
+      // Show RemoveItemNotif component for 0.5 seconds
+      setShowRemoveItemNotif(true);
+      clearTimeout(notificationTimeout);
+      const newTimeout = setTimeout(() => {
+        clearTimeout(newTimeout);
+        setShowRemoveItemNotif(false);
+      }, 1000); // Adjust timeout duration to 0.5 seconds (500 milliseconds)
+      setNotificationTimeout(newTimeout);
+
       console.log("Removing item with ID:", itemId);
 
       // Reference to the tempOrders collection
@@ -175,6 +187,53 @@ const CartPage = () => {
     } catch (error) {
       console.error("Error removing item:", error);
       showErrorPopup("Failed to remove item. Please try again.");
+    }
+  };
+
+  const handleRemoveAllItems = async () => {
+    if (!userEmail) {
+      showErrorPopup("User email is not available.");
+      return;
+    }
+  
+    try {
+      // Show RemoveItemNotif component for 1 second
+      setShowRemoveItemNotif(true);
+      clearTimeout(notificationTimeout);
+      const newTimeout = setTimeout(() => {
+        clearTimeout(newTimeout);
+        setShowRemoveItemNotif(false);
+      }, 1000); // 1 second (1000 milliseconds)
+      setNotificationTimeout(newTimeout);
+  
+      console.log("Removing all items for user email:", userEmail);
+  
+      // Reference to the tempOrders collection
+      const tempOrdersRef = collection(db, "tempOrders");
+  
+      // Query documents where the user field matches the current user's email
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+  
+      if (querySnapshot.empty) {
+        console.log("No documents found for user:", userEmail);
+        return;
+      }
+  
+      // Iterate through each document and delete
+      for (const docSnapshot of querySnapshot.docs) {
+        await deleteDoc(docSnapshot.ref);
+        console.log(`Document with ID ${docSnapshot.id} deleted`);
+      }
+  
+      // Refresh cart items and totals after deletion
+      await fetchCartItems();
+      console.log("All items for user email removed");
+  
+    } catch (error) {
+      console.error("Error removing all items:", error);
+      showErrorPopup("Failed to remove all items. Please try again.");
     }
   };
 
@@ -405,7 +464,20 @@ const CartPage = () => {
                 </div>
               ))}
             </div>
+            {/* REMOVE ALL ITEMS IN THE FOOD CART */}
+            <button
+              className="shadow-md bg-red-500 space-x-2 text-gray-100
+                py-2 rounded-lg mt-3 mb-2"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent link click from firing
+                  handleRemoveAllItems();
+                }}
+            >
+              <i className="fa-solid fa-circle-xmark text-md"></i>
+              <span className="font-bold text-lg">Remove all items</span>
+            </button>
           </div>
+          {showRemoveItemNotif && <RemoveItemNotif />}
           {/* COMPUTATIONS CONTAINER */}
           <div className="pt-4 pb-10 flex flex-col gap-2 lg:w-1/2">
             <div className="font-bold text-gray-800 lg:space-x-2 lg:mb-6">
