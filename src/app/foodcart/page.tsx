@@ -190,6 +190,53 @@ const CartPage = () => {
     }
   };
 
+  const handleRemoveAllItems = async () => {
+    if (!userEmail) {
+      showErrorPopup("User email is not available.");
+      return;
+    }
+  
+    try {
+      // Show RemoveItemNotif component for 1 second
+      setShowRemoveItemNotif(true);
+      clearTimeout(notificationTimeout);
+      const newTimeout = setTimeout(() => {
+        clearTimeout(newTimeout);
+        setShowRemoveItemNotif(false);
+      }, 1000); // 1 second (1000 milliseconds)
+      setNotificationTimeout(newTimeout);
+  
+      console.log("Removing all items for user email:", userEmail);
+  
+      // Reference to the tempOrders collection
+      const tempOrdersRef = collection(db, "tempOrders");
+  
+      // Query documents where the user field matches the current user's email
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+  
+      if (querySnapshot.empty) {
+        console.log("No documents found for user:", userEmail);
+        return;
+      }
+  
+      // Iterate through each document and delete
+      for (const docSnapshot of querySnapshot.docs) {
+        await deleteDoc(docSnapshot.ref);
+        console.log(`Document with ID ${docSnapshot.id} deleted`);
+      }
+  
+      // Refresh cart items and totals after deletion
+      await fetchCartItems();
+      console.log("All items for user email removed");
+  
+    } catch (error) {
+      console.error("Error removing all items:", error);
+      showErrorPopup("Failed to remove all items. Please try again.");
+    }
+  };
+
   const fetchCartItems = async () => {
     if (!userEmail) {
       setShowLoginModal(true); // Show login modal if user is not logged in
@@ -421,6 +468,10 @@ const CartPage = () => {
             <button
               className="shadow-md bg-red-500 space-x-2 text-gray-100
                 py-2 rounded-lg mt-3 mb-2"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent link click from firing
+                  handleRemoveAllItems();
+                }}
             >
               <i className="fa-solid fa-circle-xmark text-md"></i>
               <span className="font-bold text-lg">Remove all items</span>
