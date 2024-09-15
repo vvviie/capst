@@ -1,5 +1,6 @@
 "use client";
 
+//#region Import stataments
 import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -12,12 +13,15 @@ import {
   deleteDoc,
   deleteField,
   increment,
+  addDoc,
+  setDoc,
 } from "firebase/firestore"; // Import Firestore functions
 import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
 import RemoveItemNotif from "../components/RemoveItemNotif";
+//#endregion
 
 const CartPage = () => {
   //#region Use State Variables
@@ -29,13 +33,16 @@ const CartPage = () => {
   const [selectedOption, setSelectedOption] = useState<string>("table");
   const [selectedServeTime, setSelectedServeTime] = useState<string>("now");
   const [selectedPayment, setSelectedPayment] = useState<string>("cash");
+  const [modeOfPayment, setModeOfPayment] = useState<string>("cash");
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
   const [showError, setShowError] = useState(false);
-  const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
-  const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [totalCartPrice, setTotalCartPrice] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
+  const [totalWithDiscount, setTotalWithDiscount] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
   const [notificationTimeout, setNotificationTimeout] = useState(null);
 
@@ -47,7 +54,9 @@ const CartPage = () => {
 
   //#endregion
 
-  //#region Handle Functions
+  //#region Handle Processes
+
+  //#region Handling of Order Options
   const handleOptionChange = (value: string) => {
     setSelectedOption(value);
   };
@@ -58,15 +67,20 @@ const CartPage = () => {
 
   const handlePaymentChange = (value: string) => {
     setSelectedPayment(value);
+    setModeOfPayment(value);
   };
+  //#endregion
 
+  //#region Handling of Error Notifications
   const showErrorPopup = (message: string) => {
     setShowError(true);
     setTimeout(() => {
       setShowError(false);
     }, 3000);
   };
+  //#endregion
 
+  //#region Handling of Processes for Promo Codes
   const handlePromoCodeSubmit = async () => {
     if (!userEmail) {
       showErrorPopup("Please log in to apply a promo code.");
@@ -102,15 +116,19 @@ const CartPage = () => {
         const promoDoc = promoSnapshot.docs[0];
         const promoDocRef = doc(db, "promoCodes", promoDoc.id);
         const promoData = promoDoc.data();
-        const discountPercent = promoData?.discountPercent || 0;
+        const discount = promoData?.discountPercent || 0; // Updated variable name
         const available = promoData?.available || false;
 
         if (available) {
-          const discountFraction = discountPercent / 100; // Convert percentage to decimal
+          setDiscountPercent(discount); // Set the discountPercent state
+
+          const discountFraction = discount;
           const newTotalCartPrice = subtotal * (1 - discountFraction);
           const discountedPromo = subtotal - newTotalCartPrice;
+          const totalWithDiscount = subtotal - newTotalCartPrice;
           setTotalCartPrice(newTotalCartPrice);
           setDiscountedPromo(discountedPromo);
+          setTotalWithDiscount(totalWithDiscount);
 
           setPromoApplied(true);
 
@@ -133,7 +151,9 @@ const CartPage = () => {
       showErrorPopup("An error occurred. Please try again.");
     }
   };
+  //#endregion
 
+  //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
     try {
       // Show RemoveItemNotif component for 0.5 seconds
@@ -189,13 +209,15 @@ const CartPage = () => {
       showErrorPopup("Failed to remove item. Please try again.");
     }
   };
+  //#endregion
 
+  //#region Handling of Removal of All Items in Cart
   const handleRemoveAllItems = async () => {
     if (!userEmail) {
       showErrorPopup("User email is not available.");
       return;
     }
-  
+
     try {
       // Show RemoveItemNotif component for 1 second
       setShowRemoveItemNotif(true);
@@ -205,38 +227,39 @@ const CartPage = () => {
         setShowRemoveItemNotif(false);
       }, 1000); // 1 second (1000 milliseconds)
       setNotificationTimeout(newTimeout);
-  
+
       console.log("Removing all items for user email:", userEmail);
-  
+
       // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
-  
+
       // Query documents where the user field matches the current user's email
       const querySnapshot = await getDocs(
         query(tempOrdersRef, where("user", "==", userEmail))
       );
-  
+
       if (querySnapshot.empty) {
         console.log("No documents found for user:", userEmail);
         return;
       }
-  
+
       // Iterate through each document and delete
       for (const docSnapshot of querySnapshot.docs) {
         await deleteDoc(docSnapshot.ref);
         console.log(`Document with ID ${docSnapshot.id} deleted`);
       }
-  
+
       // Refresh cart items and totals after deletion
       await fetchCartItems();
       console.log("All items for user email removed");
-  
     } catch (error) {
       console.error("Error removing all items:", error);
       showErrorPopup("Failed to remove all items. Please try again.");
     }
   };
+  //#endregion
 
+  //#region Handling of Fetching of All Items
   const fetchCartItems = async () => {
     if (!userEmail) {
       setShowLoginModal(true); // Show login modal if user is not logged in
@@ -295,10 +318,10 @@ const CartPage = () => {
               price: itemData.totalPrice,
             });
 
-            subtotal += itemData.totalPrice; // Update subtotal
+            subtotal += parseFloat(itemData.totalPrice); // Update subtotal
           }
         });
-        totalCartPrice = data.totalCartPrice; // Get the total price
+        totalCartPrice = parseFloat(data.totalCartPrice); // Get the total price
       });
 
       setTotalCartPrice(totalCartPrice); // Set total price
@@ -314,14 +337,174 @@ const CartPage = () => {
       console.error("Error fetching cart items:", error);
     }
   };
-
   //#endregion
 
+  //#region Handling of Options to be Passed in Orders
+  const handleSubmitOrder = () => {
+    const orderData = {
+      modeOfPayment: modeOfPayment,
+      selectedOption: selectedOption,
+      selectedServeTime: selectedServeTime,
+      finalSubtotal: promoApplied
+        ? subtotal - subtotal * discountPercent // Subtotal after discount
+        : subtotal, // Original subtotal without discount
+    };
+
+    console.log("Order submitted:", orderData);
+
+    // Pass the correct subtotal to handleCompleteOrder
+    handleCompleteOrder(
+      orderData.modeOfPayment,
+      orderData.selectedOption,
+      orderData.selectedServeTime,
+      orderData.finalSubtotal
+    );
+  };
+  //#endregion
+
+  //#region Handling of Completion of Orders
+  const handleCompleteOrder = async (
+    modeOfPayment: string,
+    selectedOption: string,
+    serveTime: string,
+    finalSubtotal: number
+  ) => {
+    if (!userEmail) {
+      showErrorPopup("User email is not available.");
+      return;
+    }
+
+    try {
+      setShowRemoveItemNotif(true);
+      clearTimeout(notificationTimeout);
+      const newTimeout = setTimeout(() => {
+        clearTimeout(newTimeout);
+        setShowRemoveItemNotif(false);
+      }, 1000);
+      setNotificationTimeout(newTimeout);
+
+      console.log("Completing order for user email:", userEmail);
+
+      const tempOrdersRef = collection(db, "tempOrders");
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+
+      if (querySnapshot.empty) {
+        console.log("No documents found in tempOrders.");
+        return;
+      }
+
+      let completedOrderItems: any[] = [];
+      let totalCartPrice = 0;
+      let totalItems = 0;
+      let customOrderId: string | null = null;
+      let originalOrderId: string | null = null;
+
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        const docId = docSnapshot.id;
+        const cleanedDocId = docId.startsWith("cart-")
+          ? docId.substring(5)
+          : docId;
+        const origDocId = docId;
+
+        let foundItem = false;
+
+        Object.keys(data).forEach((key) => {
+          if (
+            key !== "user" &&
+            key !== "totalItems" &&
+            key !== "totalCartPrice"
+          ) {
+            const itemData = data[key];
+
+            completedOrderItems.push({
+              productTitle: itemData.productTitle,
+              productImg: itemData.productImg,
+              slug: itemData.slug,
+              itemQty: itemData.itemQty,
+              totalPrice: itemData.totalPrice,
+              tags: itemData.tags || [],
+              note: itemData.note || null,
+              mainCourseOption: itemData.mainCourseOption || null,
+              selectedDrinkSize: itemData.selectedDrinkSize || null,
+              additionals: itemData.additionals || null,
+              milkOption: itemData.milkOption || null,
+            });
+
+            totalItems += itemData.itemQty;
+            totalCartPrice += itemData.totalPrice;
+            foundItem = true;
+          }
+        });
+
+        if (foundItem) {
+          const newTotalCartPrice = (data.totalCartPrice || 0) - totalCartPrice;
+          const newTotalItems = (data.totalItems || 0) - totalItems;
+
+          await updateDoc(docSnapshot.ref, {
+            totalCartPrice: newTotalCartPrice,
+            totalItems: newTotalItems,
+          });
+
+          if (newTotalCartPrice === 0 && newTotalItems === 0) {
+            await deleteDoc(docSnapshot.ref);
+            console.log(`Document ${docId} deleted as the cart is empty.`);
+          }
+
+          if (!customOrderId) {
+            customOrderId = cleanedDocId;
+            originalOrderId = origDocId;
+          }
+        }
+      }
+
+      if (!customOrderId) {
+        customOrderId = new Date().getTime().toString();
+      }
+
+      const completedOrdersRef = doc(db, "completedOrders", customOrderId);
+
+      await setDoc(completedOrdersRef, {
+        user: userEmail,
+        items: completedOrderItems,
+        totalItems: totalItems,
+        subtotal: finalSubtotal, // Use final subtotal with promo applied
+        totalCartPrice: totalCartPrice,
+        modeOfPayment: modeOfPayment,
+        selectedOption: selectedOption,
+        selectedServeTime: serveTime,
+        cartId: originalOrderId,
+        createdAt: new Date(),
+      });
+
+      console.log(
+        "Order successfully added to completedOrders with custom ID:",
+        customOrderId
+      );
+
+      await handleRemoveAllItems();
+      await fetchCartItems();
+    } catch (error) {
+      console.error("Error completing order:", error);
+      showErrorPopup("Failed to complete order. Please try again.");
+    }
+  };
+  //#endregion
+
+  //#endregion
+  //#region 
+
+  //#region Use Effects
+
+  //#region Apply Promos
   useEffect(() => {
     console.log("Promo applied:", promoApplied);
   }, [promoApplied]);
+  //#endregion
 
-  // CLOSE THE FORM WHEN CLICKED OUTSIDE
+  //#region Forms that can be Closed when Clicked Outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -338,7 +521,9 @@ const CartPage = () => {
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [discountPromoForm]);
+  //#endregion
 
+  //#region Checks if the user is logged in or not
   useEffect(() => {
     // Listen to authentication state
     const auth = getAuth();
@@ -350,10 +535,13 @@ const CartPage = () => {
 
     return () => unsubscribe();
   }, []);
+  //#endregion
 
+  //#region Fetching of All Items in Cart
   useEffect(() => {
     fetchCartItems(); // Fetch cart items when userEmail changes
   }, [userEmail]);
+  //#endregion
 
   return (
     <div
@@ -468,10 +656,10 @@ const CartPage = () => {
             <button
               className="shadow-md bg-red-500 space-x-2 text-gray-100
                 py-2 rounded-lg mt-3 mb-2"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent link click from firing
-                  handleRemoveAllItems();
-                }}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent link click from firing
+                handleRemoveAllItems();
+              }}
             >
               <i className="fa-solid fa-circle-xmark text-md"></i>
               <span className="font-bold text-lg">Remove all items</span>
@@ -695,12 +883,22 @@ const CartPage = () => {
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
                   P
                   {promoApplied
-                    ? (totalCartPrice - subtotal * discountPercent).toFixed(2)
+                    ? (subtotal - subtotal * discountPercent).toFixed(2)
                     : totalCartPrice.toFixed(2)}
                 </span>
               </div>
               {/* CHECKOUT BUTTON */}
-              <button className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg">
+              <button
+                className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg"
+                onClick={() => {
+                  handleCompleteOrder(
+                    modeOfPayment,
+                    selectedOption,
+                    selectedServeTime
+                  );
+                  handleSubmitOrder();
+                }}
+              >
                 Checkout
               </button>
             </div>
