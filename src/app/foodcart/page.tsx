@@ -20,6 +20,7 @@ import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
+import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
 //#endregion
@@ -48,7 +49,6 @@ const CartPage = () => {
   const [totalWithDiscount, setTotalWithDiscount] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
   const [notificationTimeout, setNotificationTimeout] = useState(null);
-
   const params = useParams();
   const searchParams = useSearchParams();
 
@@ -58,6 +58,21 @@ const CartPage = () => {
   //#endregion
 
   //#region Handle Processes
+
+  //#region 
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+      if (authUser && authUser.emailVerified) {
+        setUser(authUser);
+      } else {
+        router.push("/login"); // Redirect to login if user is not logged in
+      }
+    });
+
+    // Clean up the listener when component unmounts
+    return () => unsubscribeAuth();
+  }, [router]);
+  //#endregion
 
   //#region Handling of Order Options
   const handleOptionChange = (value: string) => {

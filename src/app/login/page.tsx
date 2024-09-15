@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword} from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
+import Cookies from "js-cookie"; // Import js-cookie
 
 // Firebase configuration
 const firebaseConfig = {
@@ -24,6 +25,12 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
+// To manually decode URL-encoded strings
+const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, ' '));
+
+// To manually encode URL-encoded strings
+const urlEncode = (str) => encodeURIComponent(str);
+
 const LoginPage = () => {
   const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -35,18 +42,23 @@ const LoginPage = () => {
 
   const fetchUserDetails = async (email) => {
     try {
-      const userRef = doc(firestore, "users", email); // Assuming the document ID is the email
+      const userRef = doc(firestore, "users", email); // Fetch user document by email
       const userDoc = await getDoc(userRef);
-
       if (userDoc.exists()) {
         const userData = userDoc.data();
         console.log("User details: ", userData); // Log the user details
+
+        // Extract the role from the user data
+        const role = userData.role;
+        return role; // Return the role
       } else {
         setMessage({ text: "No user details found in Firestore.", type: "error" });
+        return null; // Return null if no data found
       }
     } catch (error) {
       console.error("Error fetching user details: ", error);
       setMessage({ text: "Error fetching user details.", type: "error" });
+      return null; // Return null in case of error
     }
   };
 
@@ -54,6 +66,8 @@ const LoginPage = () => {
     event.preventDefault();
     const email = event.target.email.value;
     const password = event.target.password.value;
+
+    console.log("Original Email:", email);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
@@ -67,39 +81,23 @@ const LoginPage = () => {
         await auth.signOut(); // Log out the user
       } else {
         setMessage({ text: "Successfully logged in!", type: "success" });
-        await fetchUserDetails(user.email);
-        if (isMounted) {
-          router.push('/'); // Ensure router.push runs only on client-side
+
+        // Fetch user role from Firestore
+        const role = await fetchUserDetails(user.email);
+
+        if (role) {
+          // Encode role and set cookie with 10 minutes expiry
+          const encodedRole = urlEncode(role);
+          console.log("Encoded Role:", encodedRole);
+          Cookies.set(encodedRole, user.refreshToken, { expires: 10 / 1440 }); // 10 minutes = 10/1440 days
+
+          if (isMounted) {
+            router.push('/'); // Ensure router.push runs only on client-side
+          }
         }
       }
     } catch (error) {
       setMessage({ text: "Invalid username or password.", type: "error" });
-    }
-
-    // Remove message after 3 seconds
-    setTimeout(() => {
-      setMessage(null);
-    }, 3000);
-  };
-
-  const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      await user.reload();
-
-      if (!user.emailVerified) {
-        setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        await auth.signOut(); // Log out the user
-      } else {
-        setMessage({ text: "Successfully logged in!", type: "success" });
-        if (isMounted) {
-          router.push('/home'); // Ensure router.push runs only on client-side
-        }
-      }
-    } catch (error) {
-      setMessage({ text: "Error signing in with Google.", type: "error" });
     }
 
     // Remove message after 3 seconds
@@ -131,7 +129,6 @@ const LoginPage = () => {
 
           <button
             type="button"
-            onClick={handleGoogleSignIn}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
           shadow-md"
           >
