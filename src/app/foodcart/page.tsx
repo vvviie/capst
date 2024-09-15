@@ -21,10 +21,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
 import RemoveItemNotif from "../components/RemoveItemNotif";
+import { useRouter } from "next/navigation";
 //#endregion
 
 const CartPage = () => {
   //#region Use State Variables
+  const [user, setUser] = useState(null);
+  const router = useRouter();
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -494,7 +497,6 @@ const CartPage = () => {
   //#endregion
 
   //#endregion
-  //#region 
 
   //#region Use Effects
 
