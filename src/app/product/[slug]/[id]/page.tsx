@@ -495,7 +495,7 @@ const ProductPage: React.FC = () => {
               </div>
             </div>
             {/* DESCRIPTION OF THE ITEM */}
-            <p className="text-justify mb-2 xl:max-h-32 xl:overflow-y-scroll">
+            <p className="text-justify mb-2 xl:max-h-32 xl:overflow-y-auto">
               {desc}
             </p>
           </div>
