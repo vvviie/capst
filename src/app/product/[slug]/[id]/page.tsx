@@ -21,6 +21,8 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
 const ProductPage: React.FC = () => {
+
+  //#region Const Variables
   const pathname = usePathname();
   const parts = pathname.split("/");
   const slug = parts.length > 1 ? parts[parts.length - 2] : undefined;
@@ -38,6 +40,7 @@ const ProductPage: React.FC = () => {
   const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(
     null
   );
+  //#endregion
 
   const handleOptionsChange = (
     additionals: string[],
@@ -179,9 +182,6 @@ const ProductPage: React.FC = () => {
     const qtyPerItem = numberQtty;
     const pricePerItem = parseFloat((totalPrice / qtyPerItem).toFixed(2)); // Ensure this is a number
 
-    //
-    // Create a unique key for the product based on its configuration
-    //let uniqueProductKey = `${productId}-${selectedDrinkSize}-${document.querySelector("textarea")?.value || ""}`;
     // Create a unique key for the product based on its configuration
     let uniqueProductKey =
       slug === "drinks"
@@ -340,9 +340,30 @@ const ProductPage: React.FC = () => {
   };
 
   useEffect(() => {
-    // Cleanup function to clear timeout if component unmounts
-    return () => clearTimeout(notificationTimeoutRef.current);
-  }, []);
+    const fetchCartItems = async () => {
+      try {
+        const tempOrdersRef = collection(db, "tempOrders");
+        const querySnapshot = await getDocs(
+          query(tempOrdersRef, where("user", "==", userEmail))
+        );
+  
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+  
+          // Log the entire document including the document ID
+          console.log(`Document ID: ${doc.id}`);
+          console.log("Full Document Data:", JSON.stringify(data, null, 2));
+        });
+        
+      } catch (error) {
+        console.error("Error fetching cart items:", error);
+      }
+    };
+  
+    fetchCartItems();
+  }, [userEmail]);
+  
+  
 
   if (!productData) {
     return <div>Loading...</div>;
