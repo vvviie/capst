@@ -1,6 +1,6 @@
 "use client";
 
-//#region Import stataments
+//#region Import statements
 import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -23,12 +23,14 @@ import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase 
 import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie"; // Import js-cookie
 //#endregion
 
 const CartPage = () => {
   //#region Use State Variables
   const [user, setUser] = useState(null);
   const router = useRouter();
+  const [loading, setLoading] = useState(true); // Loading state
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -59,19 +61,28 @@ const CartPage = () => {
 
   //#region Handle Processes
 
-  //#region 
+  //#region Check if User is Logged in and Cookie Exists
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-      if (authUser && authUser.emailVerified) {
-        setUser(authUser);
-      } else {
-        router.push("/login"); // Redirect to login if user is not logged in
-      }
-    });
+    const authToken = Cookies.get("authToken");
 
-    // Clean up the listener when component unmounts
-    return () => unsubscribeAuth();
+    if (!authToken) {
+      // No cookie, set loading to false and show login modal
+      setLoading(false);
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setUser(authUser);
+          setIsLoggedIn(true);
+        }
+        setLoading(false); // Done checking, stop loading
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
   }, [router]);
+
   //#endregion
 
   //#region Handling of Order Options
@@ -538,6 +549,23 @@ const CartPage = () => {
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [discountPromoForm]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowLoginModal(false);
+      }
+    };
+
+    if (showLoginModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showLoginModal]);
   //#endregion
 
   //#region Checks if the user is logged in or not
@@ -560,6 +588,48 @@ const CartPage = () => {
   }, [userEmail]);
   //#endregion
 
+  if (!isLoggedIn) {
+    return (
+      <div
+        className={`flex flex-col ${
+          isEmpty
+            ? "min-h-[calc(100vh-280px)]"
+            : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+        } mt-14 bg-white items-center justify-center`}
+      >
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+          onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+        >
+          {/* SIGN IN REQUIRED CONTAINER */}
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+            ref={modalRef}
+            style={{ marginTop: '-8%' }}
+          >
+            <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+            <p className="mb-4">Please sign in to add items to your cart.</p>
+            <div className="flex justify-center items-center gap-4">
+              <Link
+                href="/login"
+                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+              >
+                Sign in
+              </Link>
+              <button
+                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex flex-col ${
@@ -570,20 +640,34 @@ const CartPage = () => {
     >
       {!isLoggedIn && showLoginModal && (
         <div
+        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+        onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+      >
+        {/* SIGN IN REQUIRED CONTAINER */}
+        <div
+          className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
           ref={modalRef}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          style={{ marginTop: '-8%' }}
         >
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">Login Required</h2>
-            <p className="mb-4">Please log in to view your cart.</p>
+          <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+          <p className="mb-4">Please sign in to add items to your cart.</p>
+          <div className="flex justify-center items-center gap-4">
+            <Link
+              href="/login"
+              className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+            >
+              Sign in
+            </Link>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
-              onClick={() => setShowLoginModal(false)} // Hide modal for now
+              className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+              onClick={() => setShowLoginModal(false)}
             >
               Close
             </button>
           </div>
         </div>
+      </div>
       )}
 
       {isEmpty && isLoggedIn ? (
