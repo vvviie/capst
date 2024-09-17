@@ -182,6 +182,14 @@ const ProductPage: React.FC = () => {
     const qtyPerItem = numberQtty;
     const pricePerItem = parseFloat((totalPrice / qtyPerItem).toFixed(2)); // Ensure this is a number
 
+    const now = new Date();
+
+    // Format date as MM/DD/YYYY
+    const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+
+    // Format time as HH:MM
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     // Create a unique key for the product based on its configuration
     let uniqueProductKey =
       slug === "drinks"
@@ -202,6 +210,8 @@ const ProductPage: React.FC = () => {
       pricePerItem: pricePerItem, // prio
       note: document.querySelector("textarea")?.value || "none", // prio
       totalPrice: parseFloat(totalPrice.toFixed(2)), // Ensure this is a number
+      dateCreated: date,
+      timeCreated: time
     };
 
     // If the product is a drink, add drink-specific options to the orderData

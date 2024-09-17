@@ -36,10 +36,10 @@ const CartPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>("table");
-  const [selectedServeTime, setSelectedServeTime] = useState<string>("now");
-  const [selectedPayment, setSelectedPayment] = useState<string>("cash");
-  const [modeOfPayment, setModeOfPayment] = useState<string>("cash");
+  const [selectedOption, setSelectedOption] = useState<string>("Table");
+  const [selectedServeTime, setSelectedServeTime] = useState<string>("Now");
+  const [selectedPayment, setSelectedPayment] = useState<string>("Cash");
+  const [modeOfPayment, setModeOfPayment] = useState<string>("Cash");
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -56,6 +56,14 @@ const CartPage = () => {
 
   const slug = params.slug as string | undefined; // Adjust if using searchParams
   const cleanId = searchParams.get("cleanId") as string | undefined;
+
+  const now = new Date();
+
+  // Format date as MM/DD/YYYY
+  const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+
+  // Format time as HH:MM
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   //#endregion
 
@@ -505,7 +513,10 @@ const CartPage = () => {
         selectedOption: selectedOption,
         selectedServeTime: serveTime,
         cartId: originalOrderId,
-        createdAt: new Date(),
+        dateCreated: date,
+        timeCreated: time,
+        status: "TO PAY",
+        promoDiscouted: discountedPromo
       });
 
       console.log(
@@ -726,7 +737,7 @@ const CartPage = () => {
                   {/* PRICE AND ACTIONS CONTAINER */}
                   <div className="flex flex-col gap-2 justify-between items-end pr-2">
                     <div className="font-bold text-lg">
-                      P{items.price.toFixed(2)}
+                      P{parseFloat(items.price).toFixed(2)}
                     </div>
                     <div className="flex flex-col space-y-1 items-center justify-center">
                       <Link
@@ -781,7 +792,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "table" ? "bg-orange-50" : "bg-gray-50"
+                    selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -789,14 +800,14 @@ const CartPage = () => {
                     name="tablePickup"
                     id="table"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedOption === "table"}
-                    onChange={() => handleOptionChange("table")}
+                    checked={selectedOption === "Table"}
+                    onChange={() => handleOptionChange("Table")}
                   />
                   <span className="ml-4 font-semibold">Table</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "pickup" ? "bg-orange-50" : "bg-gray-50"
+                    selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -804,8 +815,8 @@ const CartPage = () => {
                     name="tablePickup"
                     id="pickup"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedOption === "pickup"}
-                    onChange={() => handleOptionChange("pickup")}
+                    checked={selectedOption === "Pickup"}
+                    onChange={() => handleOptionChange("Pickup")}
                   />
                   <span className="ml-4 font-semibold">Pickup</span>
                 </div>
@@ -819,7 +830,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "now" ? "bg-orange-50" : "bg-gray-50"
+                    selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -827,14 +838,14 @@ const CartPage = () => {
                     name="serveTime"
                     id="now"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedServeTime === "now"}
-                    onChange={() => handleServeTimeChange("now")}
+                    checked={selectedServeTime === "Now"}
+                    onChange={() => handleServeTimeChange("Now")}
                   />
                   <span className="ml-4 font-semibold">Now</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "later"
+                    selectedServeTime === "Later"
                       ? "bg-orange-50"
                       : "bg-gray-50"
                   }`}
@@ -844,8 +855,8 @@ const CartPage = () => {
                     name="serveTime"
                     id="later"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedServeTime === "later"}
-                    onChange={() => handleServeTimeChange("later")}
+                    checked={selectedServeTime === "Later"}
+                    onChange={() => handleServeTimeChange("Later")}
                   />
                   <span className="ml-4 font-semibold">Later</span>
                 </div>
@@ -943,7 +954,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "cash" ? "bg-orange-50" : "bg-gray-50"
+                    selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -951,14 +962,14 @@ const CartPage = () => {
                     name="payment"
                     id="cash"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "cash"}
-                    onChange={() => handlePaymentChange("cash")}
+                    checked={selectedPayment === "Cash"}
+                    onChange={() => handlePaymentChange("Cash")}
                   />
                   <span className="ml-4 font-semibold">Cash</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "card" ? "bg-orange-50" : "bg-gray-50"
+                    selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -966,8 +977,8 @@ const CartPage = () => {
                     name="payment"
                     id="card"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "card"}
-                    onChange={() => handlePaymentChange("card")}
+                    checked={selectedPayment === "Card"}
+                    onChange={() => handlePaymentChange("Card")}
                   />
                   <span className="ml-4 font-semibold">Card</span>
                 </div>
