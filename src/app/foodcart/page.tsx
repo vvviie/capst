@@ -1,6 +1,6 @@
 "use client";
 
-//#region Import stataments
+//#region Import statements
 import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -23,21 +23,23 @@ import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase 
 import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie"; // Import js-cookie
 //#endregion
 
 const CartPage = () => {
   //#region Use State Variables
   const [user, setUser] = useState(null);
   const router = useRouter();
+  const [loading, setLoading] = useState(true); // Loading state
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>("table");
-  const [selectedServeTime, setSelectedServeTime] = useState<string>("now");
-  const [selectedPayment, setSelectedPayment] = useState<string>("cash");
-  const [modeOfPayment, setModeOfPayment] = useState<string>("cash");
+  const [selectedOption, setSelectedOption] = useState<string>("Table");
+  const [selectedServeTime, setSelectedServeTime] = useState<string>("Now");
+  const [selectedPayment, setSelectedPayment] = useState<string>("Cash");
+  const [modeOfPayment, setModeOfPayment] = useState<string>("Cash");
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -55,23 +57,40 @@ const CartPage = () => {
   const slug = params.slug as string | undefined; // Adjust if using searchParams
   const cleanId = searchParams.get("cleanId") as string | undefined;
 
+  const now = new Date();
+
+  // Format date as MM/DD/YYYY
+  const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+
+  // Format time as HH:MM
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
   //#endregion
 
   //#region Handle Processes
 
-  //#region 
+  //#region Check if User is Logged in and Cookie Exists
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-      if (authUser && authUser.emailVerified) {
-        setUser(authUser);
-      } else {
-        router.push("/login"); // Redirect to login if user is not logged in
-      }
-    });
+    const authToken = Cookies.get("authToken");
 
-    // Clean up the listener when component unmounts
-    return () => unsubscribeAuth();
+    if (!authToken) {
+      // No cookie, set loading to false and show login modal
+      setLoading(false);
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setUser(authUser);
+          setIsLoggedIn(true);
+        }
+        setLoading(false); // Done checking, stop loading
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
   }, [router]);
+
   //#endregion
 
   //#region Handling of Order Options
@@ -494,7 +513,10 @@ const CartPage = () => {
         selectedOption: selectedOption,
         selectedServeTime: serveTime,
         cartId: originalOrderId,
-        createdAt: new Date(),
+        dateCreated: date,
+        timeCreated: time,
+        status: "TO PAY",
+        promoDiscouted: discountedPromo
       });
 
       console.log(
@@ -538,6 +560,23 @@ const CartPage = () => {
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [discountPromoForm]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowLoginModal(false);
+      }
+    };
+
+    if (showLoginModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showLoginModal]);
   //#endregion
 
   //#region Checks if the user is logged in or not
@@ -560,6 +599,48 @@ const CartPage = () => {
   }, [userEmail]);
   //#endregion
 
+  if (!isLoggedIn) {
+    return (
+      <div
+        className={`flex flex-col ${
+          isEmpty
+            ? "min-h-[calc(100vh-280px)]"
+            : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+        } mt-14 bg-white items-center justify-center`}
+      >
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+          onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+        >
+          {/* SIGN IN REQUIRED CONTAINER */}
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+            ref={modalRef}
+            style={{ marginTop: '-8%' }}
+          >
+            <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+            <p className="mb-4">Please sign in to add items to your cart.</p>
+            <div className="flex justify-center items-center gap-4">
+              <Link
+                href="/login"
+                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+              >
+                Sign in
+              </Link>
+              <button
+                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`flex flex-col ${
@@ -570,20 +651,34 @@ const CartPage = () => {
     >
       {!isLoggedIn && showLoginModal && (
         <div
+        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+        onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+      >
+        {/* SIGN IN REQUIRED CONTAINER */}
+        <div
+          className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
           ref={modalRef}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          style={{ marginTop: '-8%' }}
         >
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">Login Required</h2>
-            <p className="mb-4">Please log in to view your cart.</p>
+          <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+          <p className="mb-4">Please sign in to add items to your cart.</p>
+          <div className="flex justify-center items-center gap-4">
+            <Link
+              href="/login"
+              className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+            >
+              Sign in
+            </Link>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
-              onClick={() => setShowLoginModal(false)} // Hide modal for now
+              className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+              onClick={() => setShowLoginModal(false)}
             >
               Close
             </button>
           </div>
         </div>
+      </div>
       )}
 
       {isEmpty && isLoggedIn ? (
@@ -642,7 +737,7 @@ const CartPage = () => {
                   {/* PRICE AND ACTIONS CONTAINER */}
                   <div className="flex flex-col gap-2 justify-between items-end pr-2">
                     <div className="font-bold text-lg">
-                      P{items.price.toFixed(2)}
+                      P{parseFloat(items.price).toFixed(2)}
                     </div>
                     <div className="flex flex-col space-y-1 items-center justify-center">
                       <Link
@@ -697,7 +792,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "table" ? "bg-orange-50" : "bg-gray-50"
+                    selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -705,14 +800,14 @@ const CartPage = () => {
                     name="tablePickup"
                     id="table"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedOption === "table"}
-                    onChange={() => handleOptionChange("table")}
+                    checked={selectedOption === "Table"}
+                    onChange={() => handleOptionChange("Table")}
                   />
                   <span className="ml-4 font-semibold">Table</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "pickup" ? "bg-orange-50" : "bg-gray-50"
+                    selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -720,8 +815,8 @@ const CartPage = () => {
                     name="tablePickup"
                     id="pickup"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedOption === "pickup"}
-                    onChange={() => handleOptionChange("pickup")}
+                    checked={selectedOption === "Pickup"}
+                    onChange={() => handleOptionChange("Pickup")}
                   />
                   <span className="ml-4 font-semibold">Pickup</span>
                 </div>
@@ -735,7 +830,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "now" ? "bg-orange-50" : "bg-gray-50"
+                    selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -743,14 +838,14 @@ const CartPage = () => {
                     name="serveTime"
                     id="now"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedServeTime === "now"}
-                    onChange={() => handleServeTimeChange("now")}
+                    checked={selectedServeTime === "Now"}
+                    onChange={() => handleServeTimeChange("Now")}
                   />
                   <span className="ml-4 font-semibold">Now</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "later"
+                    selectedServeTime === "Later"
                       ? "bg-orange-50"
                       : "bg-gray-50"
                   }`}
@@ -760,8 +855,8 @@ const CartPage = () => {
                     name="serveTime"
                     id="later"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedServeTime === "later"}
-                    onChange={() => handleServeTimeChange("later")}
+                    checked={selectedServeTime === "Later"}
+                    onChange={() => handleServeTimeChange("Later")}
                   />
                   <span className="ml-4 font-semibold">Later</span>
                 </div>
@@ -859,7 +954,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "cash" ? "bg-orange-50" : "bg-gray-50"
+                    selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -867,14 +962,14 @@ const CartPage = () => {
                     name="payment"
                     id="cash"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "cash"}
-                    onChange={() => handlePaymentChange("cash")}
+                    checked={selectedPayment === "Cash"}
+                    onChange={() => handlePaymentChange("Cash")}
                   />
                   <span className="ml-4 font-semibold">Cash</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "card" ? "bg-orange-50" : "bg-gray-50"
+                    selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -882,8 +977,8 @@ const CartPage = () => {
                     name="payment"
                     id="card"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "card"}
-                    onChange={() => handlePaymentChange("card")}
+                    checked={selectedPayment === "Card"}
+                    onChange={() => handlePaymentChange("Card")}
                   />
                   <span className="ml-4 font-semibold">Card</span>
                 </div>

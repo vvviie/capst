@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword} from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import Cookies from "js-cookie"; // Import js-cookie
+import Cookies from "js-cookie"; // NEEDED TO BE DOWNLOADED!
 
 // Firebase configuration
 const firebaseConfig = {
