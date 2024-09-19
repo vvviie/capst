@@ -1,5 +1,6 @@
 "use client";
 
+//#region Import statements
 import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -12,42 +13,87 @@ import {
   deleteDoc,
   deleteField,
   increment,
+  addDoc,
+  setDoc,
 } from "firebase/firestore"; // Import Firestore functions
 import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
 import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
+import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie"; // Import js-cookie
+//#endregion
 
 const CartPage = () => {
   //#region Use State Variables
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+  const [loading, setLoading] = useState(true); // Loading state
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [selectedOption, setSelectedOption] = useState<string>("table");
-  const [selectedServeTime, setSelectedServeTime] = useState<string>("now");
-  const [selectedPayment, setSelectedPayment] = useState<string>("cash");
+  const [selectedOption, setSelectedOption] = useState<string>("Table");
+  const [selectedServeTime, setSelectedServeTime] = useState<string>("Now");
+  const [selectedPayment, setSelectedPayment] = useState<string>("Cash");
+  const [modeOfPayment, setModeOfPayment] = useState<string>("Cash");
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
   const [showError, setShowError] = useState(false);
-  const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
-  const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [totalCartPrice, setTotalCartPrice] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
+  const [totalWithDiscount, setTotalWithDiscount] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
   const [notificationTimeout, setNotificationTimeout] = useState(null);
-
   const params = useParams();
   const searchParams = useSearchParams();
 
   const slug = params.slug as string | undefined; // Adjust if using searchParams
   const cleanId = searchParams.get("cleanId") as string | undefined;
 
+  const now = new Date();
+
+  // Format date as MM/DD/YYYY
+  const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+
+  // Format time as HH:MM
+  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
   //#endregion
 
-  //#region Handle Functions
+  //#region Handle Processes
+
+  //#region Check if User is Logged in and Cookie Exists
+  useEffect(() => {
+    const authToken = Cookies.get("authToken");
+
+    if (!authToken) {
+      // No cookie, set loading to false and show login modal
+      setLoading(false);
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setUser(authUser);
+          setIsLoggedIn(true);
+        }
+        setLoading(false); // Done checking, stop loading
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
+  }, [router]);
+
+  //#endregion
+
+  //#region Handling of Order Options
   const handleOptionChange = (value: string) => {
     setSelectedOption(value);
   };
@@ -58,15 +104,20 @@ const CartPage = () => {
 
   const handlePaymentChange = (value: string) => {
     setSelectedPayment(value);
+    setModeOfPayment(value);
   };
+  //#endregion
 
+  //#region Handling of Error Notifications
   const showErrorPopup = (message: string) => {
     setShowError(true);
     setTimeout(() => {
       setShowError(false);
     }, 3000);
   };
+  //#endregion
 
+  //#region Handling of Processes for Promo Codes
   const handlePromoCodeSubmit = async () => {
     if (!userEmail) {
       showErrorPopup("Please log in to apply a promo code.");
@@ -102,15 +153,19 @@ const CartPage = () => {
         const promoDoc = promoSnapshot.docs[0];
         const promoDocRef = doc(db, "promoCodes", promoDoc.id);
         const promoData = promoDoc.data();
-        const discountPercent = promoData?.discountPercent || 0;
+        const discount = promoData?.discountPercent || 0; // Updated variable name
         const available = promoData?.available || false;
 
         if (available) {
-          const discountFraction = discountPercent / 100; // Convert percentage to decimal
+          setDiscountPercent(discount); // Set the discountPercent state
+
+          const discountFraction = discount;
           const newTotalCartPrice = subtotal * (1 - discountFraction);
           const discountedPromo = subtotal - newTotalCartPrice;
+          const totalWithDiscount = subtotal - newTotalCartPrice;
           setTotalCartPrice(newTotalCartPrice);
           setDiscountedPromo(discountedPromo);
+          setTotalWithDiscount(totalWithDiscount);
 
           setPromoApplied(true);
 
@@ -133,7 +188,9 @@ const CartPage = () => {
       showErrorPopup("An error occurred. Please try again.");
     }
   };
+  //#endregion
 
+  //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
     try {
       // Show RemoveItemNotif component for 0.5 seconds
@@ -189,7 +246,9 @@ const CartPage = () => {
       showErrorPopup("Failed to remove item. Please try again.");
     }
   };
+  //#endregion
 
+  //#region Handling of Removal of All Items in Cart
   const handleRemoveAllItems = async () => {
     if (!userEmail) {
       showErrorPopup("User email is not available.");
@@ -235,7 +294,9 @@ const CartPage = () => {
       showErrorPopup("Failed to remove all items. Please try again.");
     }
   };
+  //#endregion
 
+  //#region Handling of Fetching of All Items
   const fetchCartItems = async () => {
     if (!userEmail) {
       setShowLoginModal(true); // Show login modal if user is not logged in
@@ -294,10 +355,10 @@ const CartPage = () => {
               price: itemData.totalPrice,
             });
 
-            subtotal += itemData.totalPrice; // Update subtotal
+            subtotal += parseFloat(itemData.totalPrice); // Update subtotal
           }
         });
-        totalCartPrice = data.totalCartPrice; // Get the total price
+        totalCartPrice = parseFloat(data.totalCartPrice); // Get the total price
       });
 
       setTotalCartPrice(totalCartPrice); // Set total price
@@ -313,14 +374,176 @@ const CartPage = () => {
       console.error("Error fetching cart items:", error);
     }
   };
+  //#endregion
+
+  //#region Handling of Options to be Passed in Orders
+  const handleSubmitOrder = () => {
+    const orderData = {
+      modeOfPayment: modeOfPayment,
+      selectedOption: selectedOption,
+      selectedServeTime: selectedServeTime,
+      finalSubtotal: promoApplied
+        ? subtotal - subtotal * discountPercent // Subtotal after discount
+        : subtotal, // Original subtotal without discount
+    };
+
+    console.log("Order submitted:", orderData);
+
+    // Pass the correct subtotal to handleCompleteOrder
+    handleCompleteOrder(
+      orderData.modeOfPayment,
+      orderData.selectedOption,
+      orderData.selectedServeTime,
+      orderData.finalSubtotal
+    );
+  };
+  //#endregion
+
+  //#region Handling of Completion of Orders
+  const handleCompleteOrder = async (
+    modeOfPayment: string,
+    selectedOption: string,
+    serveTime: string,
+    finalSubtotal: number
+  ) => {
+    if (!userEmail) {
+      showErrorPopup("User email is not available.");
+      return;
+    }
+
+    try {
+      setShowRemoveItemNotif(true);
+      clearTimeout(notificationTimeout);
+      const newTimeout = setTimeout(() => {
+        clearTimeout(newTimeout);
+        setShowRemoveItemNotif(false);
+      }, 1000);
+      setNotificationTimeout(newTimeout);
+
+      console.log("Completing order for user email:", userEmail);
+
+      const tempOrdersRef = collection(db, "tempOrders");
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
+
+      if (querySnapshot.empty) {
+        console.log("No documents found in tempOrders.");
+        return;
+      }
+
+      let completedOrderItems: any[] = [];
+      let totalCartPrice = 0;
+      let totalItems = 0;
+      let customOrderId: string | null = null;
+      let originalOrderId: string | null = null;
+
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        const docId = docSnapshot.id;
+        const cleanedDocId = docId.startsWith("cart-")
+          ? docId.substring(5)
+          : docId;
+        const origDocId = docId;
+
+        let foundItem = false;
+
+        Object.keys(data).forEach((key) => {
+          if (
+            key !== "user" &&
+            key !== "totalItems" &&
+            key !== "totalCartPrice"
+          ) {
+            const itemData = data[key];
+
+            completedOrderItems.push({
+              productTitle: itemData.productTitle,
+              productImg: itemData.productImg,
+              slug: itemData.slug,
+              itemQty: itemData.itemQty,
+              totalPrice: itemData.totalPrice,
+              tags: itemData.tags || [],
+              note: itemData.note || null,
+              mainCourseOption: itemData.mainCourseOption || null,
+              selectedDrinkSize: itemData.selectedDrinkSize || null,
+              additionals: itemData.additionals || null,
+              milkOption: itemData.milkOption || null,
+            });
+
+            totalItems += itemData.itemQty;
+            totalCartPrice += itemData.totalPrice;
+            foundItem = true;
+          }
+        });
+
+        if (foundItem) {
+          const newTotalCartPrice = (data.totalCartPrice || 0) - totalCartPrice;
+          const newTotalItems = (data.totalItems || 0) - totalItems;
+
+          await updateDoc(docSnapshot.ref, {
+            totalCartPrice: newTotalCartPrice,
+            totalItems: newTotalItems,
+          });
+
+          if (newTotalCartPrice === 0 && newTotalItems === 0) {
+            await deleteDoc(docSnapshot.ref);
+            console.log(`Document ${docId} deleted as the cart is empty.`);
+          }
+
+          if (!customOrderId) {
+            customOrderId = cleanedDocId;
+            originalOrderId = origDocId;
+          }
+        }
+      }
+
+      if (!customOrderId) {
+        customOrderId = new Date().getTime().toString();
+      }
+
+      const completedOrdersRef = doc(db, "completedOrders", customOrderId);
+
+      await setDoc(completedOrdersRef, {
+        user: userEmail,
+        items: completedOrderItems,
+        totalItems: totalItems,
+        subtotal: finalSubtotal, // Use final subtotal with promo applied
+        totalCartPrice: totalCartPrice,
+        modeOfPayment: modeOfPayment,
+        selectedOption: selectedOption,
+        selectedServeTime: serveTime,
+        cartId: originalOrderId,
+        dateCreated: date,
+        timeCreated: time,
+        status: "TO PAY",
+        promoDiscouted: discountedPromo
+      });
+
+      console.log(
+        "Order successfully added to completedOrders with custom ID:",
+        customOrderId
+      );
+
+      await handleRemoveAllItems();
+      await fetchCartItems();
+    } catch (error) {
+      console.error("Error completing order:", error);
+      showErrorPopup("Failed to complete order. Please try again.");
+    }
+  };
+  //#endregion
 
   //#endregion
 
+  //#region Use Effects
+
+  //#region Apply Promos
   useEffect(() => {
     console.log("Promo applied:", promoApplied);
   }, [promoApplied]);
+  //#endregion
 
-  // CLOSE THE FORM WHEN CLICKED OUTSIDE
+  //#region Forms that can be Closed when Clicked Outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -339,6 +562,25 @@ const CartPage = () => {
   }, [discountPromoForm]);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowLoginModal(false);
+      }
+    };
+
+    if (showLoginModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showLoginModal]);
+  //#endregion
+
+  //#region Checks if the user is logged in or not
+  useEffect(() => {
     // Listen to authentication state
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
@@ -349,10 +591,55 @@ const CartPage = () => {
 
     return () => unsubscribe();
   }, []);
+  //#endregion
 
+  //#region Fetching of All Items in Cart
   useEffect(() => {
     fetchCartItems(); // Fetch cart items when userEmail changes
   }, [userEmail]);
+  //#endregion
+
+  if (!isLoggedIn) {
+    return (
+      <div
+        className={`flex flex-col ${
+          isEmpty
+            ? "min-h-[calc(100vh-280px)]"
+            : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+        } mt-14 bg-white items-center justify-center`}
+      >
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+          onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+        >
+          {/* SIGN IN REQUIRED CONTAINER */}
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+            ref={modalRef}
+            style={{ marginTop: '-8%' }}
+          >
+            <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+            <p className="mb-4">Please sign in to add items to your cart.</p>
+            <div className="flex justify-center items-center gap-4">
+              <Link
+                href="/login"
+                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+              >
+                Sign in
+              </Link>
+              <button
+                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -364,20 +651,34 @@ const CartPage = () => {
     >
       {!isLoggedIn && showLoginModal && (
         <div
+        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+        onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+      >
+        {/* SIGN IN REQUIRED CONTAINER */}
+        <div
+          className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
           ref={modalRef}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+          style={{ marginTop: '-8%' }}
         >
-          <div className="bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">Login Required</h2>
-            <p className="mb-4">Please log in to view your cart.</p>
+          <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+          <p className="mb-4">Please sign in to add items to your cart.</p>
+          <div className="flex justify-center items-center gap-4">
+            <Link
+              href="/login"
+              className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+            >
+              Sign in
+            </Link>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md"
-              onClick={() => setShowLoginModal(false)} // Hide modal for now
+              className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+              onClick={() => setShowLoginModal(false)}
             >
               Close
             </button>
           </div>
         </div>
+      </div>
       )}
 
       {isEmpty && isLoggedIn ? (
@@ -436,7 +737,7 @@ const CartPage = () => {
                   {/* PRICE AND ACTIONS CONTAINER */}
                   <div className="flex flex-col gap-2 justify-between items-end pr-2">
                     <div className="font-bold text-lg">
-                      P{items.price.toFixed(2)}
+                      P{parseFloat(items.price).toFixed(2)}
                     </div>
                     <div className="flex flex-col space-y-1 items-center justify-center">
                       <Link
@@ -491,7 +792,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "table" ? "bg-orange-50" : "bg-gray-50"
+                    selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -499,14 +800,14 @@ const CartPage = () => {
                     name="tablePickup"
                     id="table"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedOption === "table"}
-                    onChange={() => handleOptionChange("table")}
+                    checked={selectedOption === "Table"}
+                    onChange={() => handleOptionChange("Table")}
                   />
                   <span className="ml-4 font-semibold">Table</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "pickup" ? "bg-orange-50" : "bg-gray-50"
+                    selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -514,8 +815,8 @@ const CartPage = () => {
                     name="tablePickup"
                     id="pickup"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedOption === "pickup"}
-                    onChange={() => handleOptionChange("pickup")}
+                    checked={selectedOption === "Pickup"}
+                    onChange={() => handleOptionChange("Pickup")}
                   />
                   <span className="ml-4 font-semibold">Pickup</span>
                 </div>
@@ -529,7 +830,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "now" ? "bg-orange-50" : "bg-gray-50"
+                    selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -537,14 +838,14 @@ const CartPage = () => {
                     name="serveTime"
                     id="now"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedServeTime === "now"}
-                    onChange={() => handleServeTimeChange("now")}
+                    checked={selectedServeTime === "Now"}
+                    onChange={() => handleServeTimeChange("Now")}
                   />
                   <span className="ml-4 font-semibold">Now</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "later"
+                    selectedServeTime === "Later"
                       ? "bg-orange-50"
                       : "bg-gray-50"
                   }`}
@@ -554,8 +855,8 @@ const CartPage = () => {
                     name="serveTime"
                     id="later"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedServeTime === "later"}
-                    onChange={() => handleServeTimeChange("later")}
+                    checked={selectedServeTime === "Later"}
+                    onChange={() => handleServeTimeChange("Later")}
                   />
                   <span className="ml-4 font-semibold">Later</span>
                 </div>
@@ -653,7 +954,7 @@ const CartPage = () => {
               <div className="flex flex-col">
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "cash" ? "bg-orange-50" : "bg-gray-50"
+                    selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -661,14 +962,14 @@ const CartPage = () => {
                     name="payment"
                     id="cash"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "cash"}
-                    onChange={() => handlePaymentChange("cash")}
+                    checked={selectedPayment === "Cash"}
+                    onChange={() => handlePaymentChange("Cash")}
                   />
                   <span className="ml-4 font-semibold">Cash</span>
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "card" ? "bg-orange-50" : "bg-gray-50"
+                    selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
                   }`}
                 >
                   <input
@@ -676,8 +977,8 @@ const CartPage = () => {
                     name="payment"
                     id="card"
                     className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "card"}
-                    onChange={() => handlePaymentChange("card")}
+                    checked={selectedPayment === "Card"}
+                    onChange={() => handlePaymentChange("Card")}
                   />
                   <span className="ml-4 font-semibold">Card</span>
                 </div>
@@ -694,12 +995,22 @@ const CartPage = () => {
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
                   P
                   {promoApplied
-                    ? (totalCartPrice - subtotal * discountPercent).toFixed(2)
+                    ? (subtotal - subtotal * discountPercent).toFixed(2)
                     : totalCartPrice.toFixed(2)}
                 </span>
               </div>
               {/* CHECKOUT BUTTON */}
-              <button className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg">
+              <button
+                className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg"
+                onClick={() => {
+                  handleCompleteOrder(
+                    modeOfPayment,
+                    selectedOption,
+                    selectedServeTime
+                  );
+                  handleSubmitOrder();
+                }}
+              >
                 Checkout
               </button>
             </div>

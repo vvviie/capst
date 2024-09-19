@@ -2,6 +2,21 @@
 import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  doc,
+  deleteDoc,
+  Timestamp,
+  setDoc,
+} from "firebase/firestore";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/app/firebase";
+import Cookies from "js-cookie"; // Import js-cookie
+import { useRouter } from "next/navigation";
 
 type Order = {
   date: string;
@@ -17,151 +32,28 @@ type Order = {
 
 type Orders = Order[];
 
-const userOrders: Orders = [
-  {
-    date: "09/13/2024",
-    time: "17:21",
-    price: 340,
-    status: "TO PAY",
-    where: "Table",
-    payment: "Cash",
-    promo: -20,
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "542352134124",
-  },
-  {
-    date: "09/13/2024",
-    time: "17:21",
-    price: 360,
-    status: "PAID",
-    where: "Table",
-    payment: "Card",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "522222134124",
-  },
-  {
-    date: "09/13/2024",
-    time: "16:21",
-    price: 360,
-    status: "PREP",
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "553352133124",
-  },
-  {
-    date: "09/13/2024",
-    time: "15:21",
-    price: 360,
-    status: "READY",
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "564552133124",
-  },
-  {
-    date: "09/13/2024",
-    time: "14:21",
-    price: 360,
-    status: "DONE",
-    where: "Pick-up",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "575452133124",
-  },
-];
-
-// KAPAG HINDI PA NAKAKAPAG-RATE ANG CUSTOMER NG ORDER EXPERIENCE NILA AFTER NILA UMORDER
-// PERO HINDI SIYA PER ORDER DAPAT MAY RATE. KUNYARI, KAPAG HINDI PA NAKAPAG-RATE PERO UMORDER ULIT,
-// COUNTED AS ONE RATE PA RIN, PARANG BOOLEAN LANG. KAPAG UMORDER, NAGIGING FALSE ANG HASRATED TAPOS
-// KAPAG NAG-RATE NA, MAGIGING FALSE NA ANG HASRATED
-const hasRated = false;
-
-// KUNG NAKAPAG-ORDER NA KAHIT ONCE ANG CUSTOMER
-const hasOrder = true;
-
 const OrdersPage = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [comment, setComment] = useState<string>("");
+  const [selected, setSelected] = useState<"like" | "dislike" | null>(null);
+  const [userOrders, setUserOrders] = useState<Orders>([]);
+  const [orderToCancel, setOrderToCancel] = useState(null);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
+  const [confirmPopup, setConfirmPopup] = useState(false);
+  const formRef = useRef<HTMLDivElement | null>(null);
+  const router = useRouter();
+
+  const hasRated = false;
+  const hasOrder = true;
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
-  };
-
-  // FOR OPENING NG POP UP
-  const [confirmPopup, setConfirmPopup] = useState(false);
-
-  // FOR CLOSING NG POP UP
-  const formRef = useRef<HTMLDivElement | null>(null);
-
-  // LIKE AND DISLIKE BUTTON
-  const [selected, setSelected] = useState<"like" | "dislike" | null>(null);
-
-  const handleLikeClick = () => {
-    setSelected(selected === "like" ? null : "like");
-  };
-
-  const handleDislikeClick = () => {
-    setSelected(selected === "dislike" ? null : "dislike");
   };
 
   // CLOSE FORM WHEN CLICK OUTSIDE
@@ -182,6 +74,187 @@ const OrdersPage = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [confirmPopup]);
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      const loggedIn = !!authUser && authUser.emailVerified;
+      setIsLoggedIn(loggedIn);
+      setUserEmail(authUser?.email || null);
+    });
+
+    // Clean up the listener when component unmounts
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const authToken = Cookies.get("authToken");
+
+    if (!authToken) {
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setUser(authUser);
+          setIsLoggedIn(true);
+        }
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!userEmail) return;
+
+      try {
+        const tempOrdersRef = collection(db, "completedOrders");
+        const querySnapshot = await getDocs(
+          query(tempOrdersRef, where("user", "==", userEmail))
+        );
+
+        const orders = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log("Full Document Data:", JSON.stringify(data, null, 2)); // Log for debugging
+
+          let orderItems = [];
+          let orderInfo = {
+            id: doc.id,
+            price: data.subtotal || 0,
+            status: data.status || "TO PAY",
+            date: data.dateCreated || "",
+            time: data.timeCreated || "",
+            where: data.selectedOption || "N/A",
+            payment: data.modeOfPayment || "N/A",
+            promo: data.promoDiscouted || "0.00",
+            items: [],
+          };
+
+          // Iterate through the `items` array and apply tag logic
+          if (Array.isArray(data.items)) {
+            orderInfo.items = data.items.map((item) => {
+              let tags = [];
+
+              // Determine tags based on slug
+              switch (item.slug) {
+                case "drinks":
+                  tags = [
+                    item.selectedDrinkSize,
+                    ...(item.additionals || []),
+                    item.milkOption || "Fresh Milk",
+                    item.note && `"${item.note}"`,
+                  ].filter(Boolean);
+                  break;
+                case "maincourse":
+                  tags = [
+                    item.mainCourseOption || "Rice",
+                    item.note && `"${item.note}"`,
+                  ].filter(Boolean);
+                  break;
+                case "pasta":
+                case "snacks":
+                case "sandwiches":
+                  tags = [item.note && `"${item.note}"`].filter(Boolean);
+                  break;
+                default:
+                  tags = item.tags.length > 0 ? item.tags : ["No tags"];
+              }
+
+              return {
+                productTitle: item.productTitle || "",
+                price: item.totalPrice || 0,
+                img: item.productImg || "",
+                note: item.note || "none",
+                qty: item.itemQty || 0,
+                size: item.selectedDrinkSize || "N/A",
+                milkOption: item.milkOption || "N/A",
+                slug: item.slug || "",
+                tags: tags.length > 0 ? tags : ["No tags"], // Handle empty tags
+              };
+            });
+          }
+
+          // Add the current order to the orders array
+          orders.push(orderInfo);
+        });
+
+        setUserOrders(orders);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+      }
+    };
+
+    fetchOrders();
+  }, [userEmail]);
+
+  const handleDeleteOrder = async (orderId) => {
+    try {
+      await deleteDoc(doc(db, "completedOrders", orderId));
+      setUserOrders(userOrders.filter((order) => order.id !== orderId));
+      setConfirmPopup(false);
+    } catch (error) {
+      console.error("Error deleting order:", error);
+    }
+  };
+
+  const handleLikeClick = () => {
+    setSelected("like");
+  };
+
+  const handleDislikeClick = () => {
+    setSelected("dislike");
+  };
+
+  const submitFeedback = async (positiveFeedback: boolean) => {
+    if (!userEmail) return;
+
+    const now = new Date();
+    const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+      now.getDate()
+    ).padStart(2, "0")}/${now.getFullYear()}`;
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
+
+    const feedbackType = positiveFeedback ? "like" : "dislike";
+    const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(
+      /\./g,
+      "_"
+    )}`; // Replace periods in email to avoid Firestore ID issues
+
+    try {
+      await setDoc(doc(db, "customerFeedbacks", feedbackId), {
+        positiveFeedback,
+        dateAdded: date,
+        timeAdded: time,
+        comments: comment,
+        userEmail,
+      });
+      console.log("Feedback submitted successfully.");
+    } catch (error) {
+      console.error("Error submitting feedback:", error);
+    }
+  };
+
+  const handleCommentChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    setComment(event.target.value);
+  };
+
+  const handleSubmitRating = async (event: React.FormEvent) => {
+    event.preventDefault(); // Prevent default form submission
+    if (selected === null) {
+      alert("Please select a rating before submitting.");
+      return;
+    }
+
+    await submitFeedback(selected === "like");
+  };
 
   return (
     <div
@@ -255,8 +328,13 @@ const OrdersPage = () => {
                     boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
                   }}
                   placeholder="Provide a brief description of your experience."
+                  value={comment}
+                  onChange={handleCommentChange}
                 ></textarea>
-                <button className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md">
+                <button
+                  className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md"
+                  onClick={handleSubmitRating}
+                >
                   Submit Rating
                 </button>
               </div>
@@ -377,19 +455,31 @@ const OrdersPage = () => {
                         <span>{order.promo}</span>
                       </div>
                     )}
-                    {order.items.map((items) => (
-                      <div className="flex flex-col gap-1">
+                    {/* Iterate through order items */}
+                    {order.items.map((item, itemIndex) => (
+                      <div className="flex flex-col gap-1" key={itemIndex}>
                         <hr />
                         {/* ITEM TITLE AND PRICE CONTAINER */}
                         <div className="font-bold text-sm flex justify-between items-center">
-                          <span className="font-semibold">{items.title}</span>
-                          <span>{items.price}</span>
+                          <span className="font-semibold">
+                            {item.productTitle}
+                          </span>
+                          <span>{item.price}</span>
                         </div>
-                        {items.tags.map((tags) => (
-                          <p className="text-xs">-{tags}</p>
-                        ))}
+
+                        {/* Show item tags if available */}
+                        {item.tags && item.tags.length > 0 ? (
+                          item.tags.map((tag, tagIndex) => (
+                            <p className="text-xs" key={tagIndex}>
+                              - {tag}
+                            </p>
+                          ))
+                        ) : (
+                          <p className="text-xs">No tags</p>
+                        )}
                       </div>
                     ))}
+
                     {/* CANCEL BUTTON */}
                     {(order.status === "TO PAY" || order.status === "PAID") && (
                       <button
@@ -397,7 +487,8 @@ const OrdersPage = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log("Cancel button clicked");
-                          setConfirmPopup(true);
+                          setOrderToCancel(order.id); // Set the order ID to cancel
+                          setConfirmPopup(true); // Show the confirmation popup
                         }}
                       >
                         Cancel Order
@@ -438,7 +529,10 @@ const OrdersPage = () => {
                 Are you sure you want to cancel this order?
               </span>
               <div className="flex gap-2 items-center justify-center mt-4">
-                <button className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500">
+                <button
+                  className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500"
+                  onClick={() => handleDeleteOrder(orderToCancel)}
+                >
                   Yes
                 </button>
                 <button

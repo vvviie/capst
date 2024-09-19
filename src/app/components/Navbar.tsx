@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
@@ -13,6 +13,8 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
@@ -21,8 +23,13 @@ const Navbar = () => {
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
 
+  // Use useRef to store unsubscribe functions
+  const unsubscribeAuthRef = useRef(null);
+  const unsubscribeCartRef = useRef(null);
+  const unsubscribeDocRef = useRef(null);
+
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (authUser) => {
+    unsubscribeAuthRef.current = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && authUser.emailVerified) {
         console.log("Authenticated user:", authUser.email);
 
@@ -37,7 +44,7 @@ const Navbar = () => {
             const tempOrdersRef = collection(db, "tempOrders");
             const q = query(tempOrdersRef, where("user", "==", authUser.email));
 
-            const unsubscribeCart = onSnapshot(q, (querySnapshot) => {
+            unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
               let tempOrderDocId = null;
 
               querySnapshot.forEach((doc) => {
@@ -46,34 +53,47 @@ const Navbar = () => {
 
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                const unsubscribeDoc = onSnapshot(tempOrderDocRef, (doc) => {
-                  if (doc.exists()) {
-                    const tempOrderData = doc.data();
-                    console.log("Fetched tempOrder data:", tempOrderData);
-                    setTotalItems(tempOrderData.totalItems || 0);
-                    setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                  } else {
-                    console.log("No tempOrder document found!");
-                    setTotalItems(0);
-                    setTotalCartPrice(0);
+                unsubscribeDocRef.current = onSnapshot(
+                  tempOrderDocRef,
+                  (doc) => {
+                    if (doc.exists()) {
+                      const tempOrderData = doc.data();
+                      console.log("Fetched tempOrder data:", tempOrderData);
+                      setTotalItems(tempOrderData.totalItems || 0);
+                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+                    } else {
+                      console.log("No tempOrder document found!");
+                      setTotalItems(0);
+                      setTotalCartPrice(0);
+                    }
                   }
-                });
-
-                // Clean up the snapshot listener
-                return () => unsubscribeDoc();
+                );
               } else {
                 console.log("No tempOrder document found!");
                 setTotalItems(0);
                 setTotalCartPrice(0);
+
+                // Unsubscribe from tempOrderDocRef listener if it exists
+                if (unsubscribeDocRef.current) {
+                  unsubscribeDocRef.current();
+                  unsubscribeDocRef.current = null;
+                }
               }
             });
-
-            // Clean up the snapshot listener
-            return () => unsubscribeCart();
           } else {
             console.log("No user document found!");
             setUser(null);
             setFirstName("");
+
+            // Unsubscribe from listeners if user document doesn't exist
+            if (unsubscribeCartRef.current) {
+              unsubscribeCartRef.current();
+              unsubscribeCartRef.current = null;
+            }
+            if (unsubscribeDocRef.current) {
+              unsubscribeDocRef.current();
+              unsubscribeDocRef.current = null;
+            }
           }
         } catch (error) {
           console.error("Error fetching user or tempOrder data:", error);
@@ -81,18 +101,60 @@ const Navbar = () => {
       } else {
         setUser(null);
         setFirstName("");
+
+        // Unsubscribe from listeners when user logs out
+        if (unsubscribeCartRef.current) {
+          unsubscribeCartRef.current();
+          unsubscribeCartRef.current = null;
+        }
+        if (unsubscribeDocRef.current) {
+          unsubscribeDocRef.current();
+          unsubscribeDocRef.current = null;
+        }
       }
     });
 
-    // Clean up the authentication listener
-    return () => unsubscribeAuth();
+    // Clean up all listeners when the component unmounts
+    return () => {
+      if (unsubscribeAuthRef.current) {
+        unsubscribeAuthRef.current();
+        unsubscribeAuthRef.current = null;
+      }
+      if (unsubscribeCartRef.current) {
+        unsubscribeCartRef.current();
+        unsubscribeCartRef.current = null;
+      }
+      if (unsubscribeDocRef.current) {
+        unsubscribeDocRef.current();
+        unsubscribeDocRef.current = null;
+      }
+    };
   }, []);
 
-  const handleLogout = async (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleLogout = async (event) => {
     event.preventDefault();
     try {
+      // Get the encoded role from the cookies
+      const encodedRole = Object.keys(Cookies.get())[0]; // Assuming it's the only custom cookie
+
+      if (encodedRole) {
+        // Remove the cookie using the encoded role name
+        console.log("Cookie role: ", encodedRole);
+        Cookies.remove(encodedRole);
+      }
+
+      // Unsubscribe from Firestore listeners
+      if (unsubscribeCartRef.current) {
+        unsubscribeCartRef.current();
+        unsubscribeCartRef.current = null;
+      }
+      if (unsubscribeDocRef.current) {
+        unsubscribeDocRef.current();
+        unsubscribeDocRef.current = null;
+      }
+
       await signOut(auth);
-      router.push("/");
+      router.push("/"); // Redirect to the homepage
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -106,8 +168,13 @@ const Navbar = () => {
       <div className="font-bold text-xl hover:text-yellow-100">
         <Link href="/">fikaställe</Link>
       </div>
-      <div className="md:hidden hover:text-yellow-100">
-        <BurgerMenu />
+      <div className="flex items-center justify-center gap-6">
+        <div className="md:hidden">
+          <NotificationBell />
+        </div>
+        <div className="md:hidden hover:text-yellow-100">
+          <BurgerMenu />
+        </div>
       </div>
       <div className="hidden md:flex font-semibold">
         <div className="px-4 hover:text-yellow-100">
@@ -120,7 +187,7 @@ const Navbar = () => {
           <Link href="/">Book</Link>
         </div>
         <div className="px-4 hover:text-yellow-100">
-          <Link href="/">Orders</Link>
+          <Link href="/orders">Orders</Link>
         </div>
       </div>
 
@@ -139,12 +206,15 @@ const Navbar = () => {
               </span>
               <i
                 key="cart-icon"
-                className="fa-solid fa-cart-shopping text-white text-lg mt-1 group-hover:text-yellow-100"
+                className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"
               ></i>
               <span key="cart-total-price" className="">
                 (P{totalCartPrice.toFixed(2)})
               </span>
             </Link>
+          </div>
+          <div key="notif-bell">
+            <NotificationBell />
           </div>
           <div key="user-firstname">
             <Link href="/">{firstName}</Link>
