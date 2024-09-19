@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithEmailAndPassword} from "firebase/auth";
+import { useRouter } from 'next/navigation';
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import Cookies from "js-cookie"; // NEEDED TO BE DOWNLOADED!
+import Cookies from "js-cookie";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -25,40 +25,40 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-// To manually decode URL-encoded strings
 const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, ' '));
-
-// To manually encode URL-encoded strings
 const urlEncode = (str) => encodeURIComponent(str);
 
 const LoginPage = () => {
   const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const router = useRouter(); // Initialize the router
+  const router = useRouter();
 
   useEffect(() => {
-    setIsMounted(true); // Set the state to true when the component mounts
-  }, []);
+    setIsMounted(true);
+
+    // Check if the user is already logged in by checking cookies
+    const userSession = Cookies.get("userSession");
+    if (userSession) {
+      router.push('/'); // Redirect to homepage if user is already logged in
+    }
+  }, [router]);
 
   const fetchUserDetails = async (email) => {
     try {
-      const userRef = doc(firestore, "users", email); // Fetch user document by email
+      const userRef = doc(firestore, "users", email);
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        console.log("User details: ", userData); // Log the user details
-
-        // Extract the role from the user data
         const role = userData.role;
-        return role; // Return the role
+        return role;
       } else {
         setMessage({ text: "No user details found in Firestore.", type: "error" });
-        return null; // Return null if no data found
+        return null;
       }
     } catch (error) {
       console.error("Error fetching user details: ", error);
       setMessage({ text: "Error fetching user details.", type: "error" });
-      return null; // Return null in case of error
+      return null;
     }
   };
 
@@ -67,33 +67,24 @@ const LoginPage = () => {
     const email = event.target.email.value;
     const password = event.target.password.value;
 
-    console.log("Original Email:", email);
-
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Reload user to get the latest information
       await user.reload();
-
       if (!user.emailVerified) {
-        setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        await auth.signOut(); // Log out the user
+        setMessage({ text: "Please verify your email.", type: "error" });
+        await auth.signOut();
       } else {
-        setMessage({ text: "Successfully logged in!", type: "success" });
+        setMessage({ text: "Login successful!", type: "success" });
+        await user.getIdToken(true);
 
-        // Fetch user role from Firestore
         const role = await fetchUserDetails(user.email);
-
         if (role) {
-          // Encode role and set cookie with 10 minutes expiry
           const encodedRole = urlEncode(role);
-          console.log("Encoded Role:", encodedRole);
-          Cookies.set(encodedRole, user.refreshToken, { expires: 10 / 1440 }); // 10 minutes = 10/1440 days
-
-          if (isMounted) {
-            router.push('/'); // Ensure router.push runs only on client-side
-          }
+          Cookies.set("userSession", user.refreshToken, { expires: 10 / 1440 });
+          Cookies.set("userRole", encodedRole, { expires: 10 / 1440 });
+          router.push('/');
         }
       }
     } catch (error) {
@@ -126,26 +117,6 @@ const LoginPage = () => {
               {message.text}
             </span>
           )}
-
-          <button
-            type="button"
-            className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
-          shadow-md"
-          >
-            <i
-              className="fa-brands fa-google text-sm"
-              style={{ color: "#431407" }}
-            ></i>
-            <span className="font-bold text-md text-orange-950">
-              Google Sign-in
-            </span>
-          </button>
-
-          <div className="flex items-center gap-4 justify-center w-full">
-            <span className="w-20 h-[1px] bg-slate-400"></span>
-            <span>or</span>
-            <span className="w-20 h-[1px] bg-slate-400"></span>
-          </div>
 
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label

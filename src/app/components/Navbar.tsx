@@ -130,15 +130,14 @@ const Navbar = () => {
   const handleLogout = async (event) => {
     event.preventDefault();
     try {
-      // Get the encoded role from the cookies
-      const encodedRole = Object.keys(Cookies.get())[0]; // Assuming it's the only custom cookie
-
-      if (encodedRole) {
-        // Remove the cookie using the encoded role name
-        console.log("Cookie role: ", encodedRole);
-        Cookies.remove(encodedRole);
-      }
-
+      // Get all cookies
+      const allCookies = Cookies.get();
+  
+      // Remove all cookies
+      Object.keys(allCookies).forEach(cookieName => {
+        Cookies.remove(cookieName);
+      });
+  
       // Unsubscribe from Firestore listeners
       if (unsubscribeCartRef.current) {
         unsubscribeCartRef.current();
@@ -148,7 +147,8 @@ const Navbar = () => {
         unsubscribeDocRef.current();
         unsubscribeDocRef.current = null;
       }
-
+  
+      // Sign out from Firebase
       await signOut(auth);
       router.push("/"); // Redirect to the homepage
     } catch (error) {
