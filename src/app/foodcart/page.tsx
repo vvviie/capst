@@ -1,8 +1,10 @@
+//foodcart
+
 "use client";
 
 //#region Import statements
 import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, usePathname } from "next/navigation";
 import {
   getDocs,
   query,
@@ -31,6 +33,7 @@ const CartPage = () => {
   const [user, setUser] = useState(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true); // Loading state
+
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -44,26 +47,36 @@ const CartPage = () => {
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
   const [showError, setShowError] = useState(false);
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [totalCartPrice, setTotalCartPrice] = useState(0);
+  const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
+  const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
   const [totalWithDiscount, setTotalWithDiscount] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
   const [notificationTimeout, setNotificationTimeout] = useState(null);
+
   const params = useParams();
   const searchParams = useSearchParams();
 
   const slug = params.slug as string | undefined; // Adjust if using searchParams
   const cleanId = searchParams.get("cleanId") as string | undefined;
 
+  const [productId, setProductId] = useState<string | undefined>(undefined);
+  const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
+  const [productIds, setProductIds] = useState<string[]>([]);
+  const [basePrice, setBasePrice] = useState(0);
+
   const now = new Date();
 
   // Format date as MM/DD/YYYY
-  const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+  const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+    now.getDate()
+  ).padStart(2, "0")}/${now.getFullYear()}`;
 
   // Format time as HH:MM
-  const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+    now.getMinutes()
+  ).padStart(2, "0")}`;
 
   //#endregion
 
@@ -355,10 +368,10 @@ const CartPage = () => {
               price: itemData.totalPrice,
             });
 
-            subtotal += parseFloat(itemData.totalPrice); // Update subtotal
+            subtotal += itemData.totalPrice; // Update subtotal
           }
         });
-        totalCartPrice = parseFloat(data.totalCartPrice); // Get the total price
+        totalCartPrice = data.totalCartPrice; // Get the total price
       });
 
       setTotalCartPrice(totalCartPrice); // Set total price
@@ -374,7 +387,61 @@ const CartPage = () => {
       console.error("Error fetching cart items:", error);
     }
   };
+
+  /*
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        if (!userEmail) return; // Ensure userEmail is present
+
+        const tempOrdersRef = collection(db, "tempOrders");
+        const querySnapshot = await getDocs(
+          query(tempOrdersRef, where("user", "==", userEmail))
+        );
+
+        // Array to hold all found product IDs
+        const productIdsArray: string[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log(`Document ID: ${doc.id}`);
+          console.log("Full Document Data:", JSON.stringify(data, null, 2));
+
+          // Check each product in the document data
+          for (const key in data) {
+            if (
+              data.hasOwnProperty(key) &&
+              key !== "totalCartPrice" &&
+              key !== "totalItems" &&
+              key !== "user"
+            ) {
+              const cartItem = data[key];
+              const itemProductIdInCart = cartItem.productId;
+
+              // Add to productIdsArray if not already included
+              if (
+                itemProductIdInCart &&
+                !productIdsArray.includes(itemProductIdInCart)
+              ) {
+                productIdsArray.push(itemProductIdInCart);
+              }
+            }
+          }
+        });
+
+        console.log("Product IDs found:", productIdsArray);
+
+        // Set the product IDs in state
+        setProductIds(productIdsArray);
+      } catch (error) {
+        console.error("Error fetching cart items:", error);
+      }
+    };
+
+    fetchCartItems();
+  }, [userEmail]); // Run the effect when userEmail changes
   //#endregion
+  */
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
@@ -516,7 +583,7 @@ const CartPage = () => {
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
-        promoDiscouted: discountedPromo
+        promoDiscouted: discountedPromo,
       });
 
       console.log(
@@ -599,6 +666,84 @@ const CartPage = () => {
   }, [userEmail]);
   //#endregion
 
+  useEffect(() => {
+    const checkExistingOrders = async () => {
+      try {
+        if (!userEmail) return; // Ensure userEmail is present
+
+        const tempOrdersRef = collection(db, "tempOrders");
+        const querySnapshot = await getDocs(
+          query(tempOrdersRef, where("user", "==", userEmail))
+        );
+
+        if (querySnapshot.empty) {
+          console.log("No existing orders found.");
+          setNeedsOrder(true); // No orders found, flag for further action
+        } else {
+          console.log("Existing orders found.");
+          setNeedsOrder(false); // Orders found, no need to handle new order
+        }
+      } catch (error) {
+        console.error("Error checking existing orders:", error);
+      }
+    };
+
+    checkExistingOrders(); // Call the function to check existing orders
+  }, [userEmail]);
+
+  useEffect(() => {
+    if (needsOrder && userEmail && productId) {
+      const handleNewOrder = async () => {
+        try {
+          const tempOrdersRef = collection(db, "tempOrders");
+          const querySnapshot = await getDocs(
+            query(tempOrdersRef, where("user", "==", userEmail))
+          );
+
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            console.log(`Document ID: ${doc.id}`);
+            console.log("Full Document Data:", JSON.stringify(data, null, 2));
+
+            // Check each product in the document data
+            for (const key in data) {
+              if (
+                data.hasOwnProperty(key) &&
+                key !== "totalCartPrice" &&
+                key !== "totalItems" &&
+                key !== "user"
+              ) {
+                const cartItem = data[key];
+                let itemProductIdInCart = cartItem.productId;
+                const selectedDrinkSize = cartItem.selectedDrinkSize;
+
+                // Format product ID if needed
+                itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0]; // Truncate before the number
+
+                console.log("Formatted Product ID:", itemProductIdInCart);
+                console.log("Comparing Product ID:", itemProductIdInCart);
+                console.log("Comparing Size:", selectedDrinkSize);
+
+                // Check if productId matches and selectedDrinkSize is '8oz'
+                if (
+                  itemProductIdInCart === productId &&
+                  selectedDrinkSize === "8oz"
+                ) {
+                  console.log("Found Cart Data:", cartItem);
+                  // Handle found cart item
+                }
+              }
+            }
+          });
+        } catch (error) {
+          console.error("Error handling new order:", error);
+        }
+      };
+
+      handleNewOrder(); // Call the function to handle new order
+    }
+  }, [needsOrder, userEmail, productId]);
+
   if (!isLoggedIn) {
     return (
       <div
@@ -617,7 +762,7 @@ const CartPage = () => {
             className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
             ref={modalRef}
-            style={{ marginTop: '-8%' }}
+            style={{ marginTop: "-8%" }}
           >
             <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
             <p className="mb-4">Please sign in to add items to your cart.</p>
@@ -651,34 +796,34 @@ const CartPage = () => {
     >
       {!isLoggedIn && showLoginModal && (
         <div
-        className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
-        onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
-      >
-        {/* SIGN IN REQUIRED CONTAINER */}
-        <div
-          className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
-          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-          ref={modalRef}
-          style={{ marginTop: '-8%' }}
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+          onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
         >
-          <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
-          <p className="mb-4">Please sign in to add items to your cart.</p>
-          <div className="flex justify-center items-center gap-4">
-            <Link
-              href="/login"
-              className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
-            >
-              Sign in
-            </Link>
-            <button
-              className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
-              onClick={() => setShowLoginModal(false)}
-            >
-              Close
-            </button>
+          {/* SIGN IN REQUIRED CONTAINER */}
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+            ref={modalRef}
+            style={{ marginTop: "-8%" }}
+          >
+            <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+            <p className="mb-4">Please sign in to add items to your cart.</p>
+            <div className="flex justify-center items-center gap-4">
+              <Link
+                href="/login"
+                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+              >
+                Sign in
+              </Link>
+              <button
+                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       )}
 
       {isEmpty && isLoggedIn ? (
@@ -695,53 +840,55 @@ const CartPage = () => {
               <span className="text-xl lg:text-3xl">Order Cart</span>
             </div>
             <div className="w-full flex flex-col gap-2 max-h-[550px] overflow-y-scroll pb-2">
-              {addedToCart.map((items) => (
-                <div
-                  key={items.id}
-                  className="p-2 shadow-md rounded-md bg-white grid grid-cols-5 border-2 border-gray-50"
-                >
-                  {/* IMAGE CONTAINER */}
-                  <div className="relative w-20 aspect-square rounded-md overflow-hidden">
-                    <Image
-                      src={items.img}
-                      alt={items.title}
-                      fill
-                      className="object-contain"
-                    />
-                  </div>
+              {addedToCart.map((items) => {
 
-                  {/* ITEM NAME AND ADDITONALS/OPTIONS CONTAINER */}
-                  <div className="col-span-2 px-4">
-                    <h1 className="font-bold text-lg">{items.title}</h1>
-                    <div>
-                      {items.tags.map((tag, index) => (
-                        <p key={index} className="text-sm text-gray-600">
-                          {tag}
-                        </p>
-                      ))}
-                      {items.notes && (
-                        <p className="text-sm text-gray-500 italic">
-                          Notes: {items.notes}
-                        </p>
-                      )}
+                return (
+                  <div
+                    key={items.id}
+                    className="p-2 shadow-md rounded-md bg-white grid grid-cols-5 border-2 border-gray-50"
+                  >
+                    {/* IMAGE CONTAINER */}
+                    <div className="relative w-20 aspect-square rounded-md overflow-hidden">
+                      <Image
+                        src={items.img}
+                        alt={items.title}
+                        fill
+                        className="object-contain"
+                      />
                     </div>
-                  </div>
 
-                  {/* QUANTITY */}
-                  <div className="h-20 flex items-center">
-                    <span className="text-center w-full text-sm font-semibold lg:text-lg">
-                      {items.qtty}x
-                    </span>
-                  </div>
-
-                  {/* PRICE AND ACTIONS CONTAINER */}
-                  <div className="flex flex-col gap-2 justify-between items-end pr-2">
-                    <div className="font-bold text-lg">
-                      P{parseFloat(items.price).toFixed(2)}
+                    {/* ITEM NAME AND ADDITONALS/OPTIONS CONTAINER */}
+                    <div className="col-span-2 px-4">
+                      <h1 className="font-bold text-lg">{items.title}</h1>
+                      <div>
+                        {items.tags.map((tag, index) => (
+                          <p key={index} className="text-sm text-gray-600">
+                            {tag}
+                          </p>
+                        ))}
+                        {items.notes && (
+                          <p className="text-sm text-gray-500 italic">
+                            Notes: {items.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-col space-y-1 items-center justify-center">
-                      <Link
-                        href={`product/${items.slug}/${items.id}`}
+
+                    {/* QUANTITY */}
+                    <div className="h-20 flex items-center">
+                      <span className="text-center w-full text-sm font-semibold lg:text-lg">
+                        {items.qtty}x
+                      </span>
+                    </div>
+
+                    {/* PRICE AND ACTIONS CONTAINER */}
+                    <div className="flex flex-col gap-2 justify-between items-end pr-2">
+                      <div className="font-bold text-lg">
+                        P{parseFloat(items.price).toFixed(2)}
+                      </div>
+                      <div className="flex flex-col space-y-1 items-center justify-center">
+                        <Link
+                        href={`product/${items.slug}/${items.id}?edit=true`}
                         className="flex space-x-1 items-center"
                       >
                         <i className="fas fa-edit text-xs text-gray-700"></i>
@@ -749,20 +896,21 @@ const CartPage = () => {
                           Edit
                         </span>
                       </Link>
-                      <button
-                        className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mt-2"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent link click from firing
-                          handleRemoveItem(items.id);
-                        }}
-                      >
-                        <i className="fa fa-trash text-white text-xs"></i>
-                        <span className="text-xs text-white">Remove</span>
-                      </button>
+                        <button
+                          className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mt-2"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent link click from firing
+                            handleRemoveItem(items.id);
+                          }}
+                        >
+                          <i className="fa fa-trash text-white text-xs"></i>
+                          <span className="text-xs text-white">Remove</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {/* REMOVE ALL ITEMS IN THE FOOD CART */}
             <button

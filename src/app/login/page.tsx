@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { initializeApp } from "firebase/app";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import Cookies from "js-cookie";
@@ -13,11 +13,12 @@ import Cookies from "js-cookie";
 const firebaseConfig = {
   apiKey: "AIzaSyAWhVssqbS2QQ7NkI1CwiOHTq6sN31gsVg",
   authDomain: "testingcapstonejg.firebaseapp.com",
-  databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL:
+    "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "testingcapstonejg",
   storageBucket: "testingcapstonejg.appspot.com",
   messagingSenderId: "1006906116033",
-  appId: "1:1006906116033:web:825eeeeeed8c4221a71140"
+  appId: "1:1006906116033:web:825eeeeeed8c4221a71140",
 };
 
 // Initialize Firebase
@@ -25,11 +26,13 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, ' '));
+const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, " "));
 const urlEncode = (str) => encodeURIComponent(str);
 
 const LoginPage = () => {
-  const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: string } | null>(
+    null
+  );
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
@@ -39,7 +42,7 @@ const LoginPage = () => {
     // Check if the user is already logged in by checking cookies
     const userSession = Cookies.get("userSession");
     if (userSession) {
-      router.push('/'); // Redirect to homepage if user is already logged in
+      router.push("/"); // Redirect to homepage if user is already logged in
     }
   }, [router]);
 
@@ -52,7 +55,10 @@ const LoginPage = () => {
         const role = userData.role;
         return role;
       } else {
-        setMessage({ text: "No user details found in Firestore.", type: "error" });
+        setMessage({
+          text: "No user details found in Firestore.",
+          type: "error",
+        });
         return null;
       }
     } catch (error) {
@@ -68,7 +74,11 @@ const LoginPage = () => {
     const password = event.target.password.value;
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       await user.reload();
@@ -82,9 +92,9 @@ const LoginPage = () => {
         const role = await fetchUserDetails(user.email);
         if (role) {
           const encodedRole = urlEncode(role);
-          Cookies.set("userSession", user.refreshToken, { expires: 10 / 1440 });
-          Cookies.set("userRole", encodedRole, { expires: 10 / 1440 });
-          router.push('/');
+          Cookies.set("userSession", user.refreshToken, { expires: 1 / 24 });
+          Cookies.set("userRole", encodedRole, { expires: 1 / 24 });
+          router.push("/");
         }
       }
     } catch (error) {
@@ -113,7 +123,11 @@ const LoginPage = () => {
           </h1>
 
           {message && (
-            <span className={`font-bold mt-[-20px] ${message.type === "success" ? "text-green-500" : "text-red-500"} text-xl`}>
+            <span
+              className={`font-bold mt-[-20px] ${
+                message.type === "success" ? "text-green-500" : "text-red-500"
+              } text-xl`}
+            >
               {message.text}
             </span>
           )}
