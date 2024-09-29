@@ -22,16 +22,24 @@ const Navbar = () => {
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
 
-  // Use useRef to store unsubscribe functions
   const unsubscribeAuthRef = useRef(null);
   const unsubscribeCartRef = useRef(null);
   const unsubscribeDocRef = useRef(null);
 
+  const checkCookiesAndLogout = async () => {
+    // Check if there are any cookies present
+    const allCookies = Cookies.get();
+
+    // If no cookies are found, logout the user
+    if (Object.keys(allCookies).length === 0) {
+      console.log("No cookies detected, logging out...");
+      await handleLogout();
+    }
+  };
+
   useEffect(() => {
     unsubscribeAuthRef.current = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && authUser.emailVerified) {
-        console.log("Authenticated user:", authUser.email);
-
         try {
           const userDoc = await getDoc(doc(db, "users", authUser.email));
           if (userDoc.exists()) {
@@ -55,17 +63,14 @@ const Navbar = () => {
                 unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
                   if (doc.exists()) {
                     const tempOrderData = doc.data();
-                    console.log("Fetched tempOrder data:", tempOrderData);
                     setTotalItems(tempOrderData.totalItems || 0);
                     setTotalCartPrice(tempOrderData.totalCartPrice || 0);
                   } else {
-                    console.log("No tempOrder document found!");
                     setTotalItems(0);
                     setTotalCartPrice(0);
                   }
                 });
               } else {
-                console.log("No tempOrder document found!");
                 setTotalItems(0);
                 setTotalCartPrice(0);
 
@@ -77,7 +82,6 @@ const Navbar = () => {
               }
             });
           } else {
-            console.log("No user document found!");
             setUser(null);
             setFirstName("");
 
@@ -110,6 +114,9 @@ const Navbar = () => {
       }
     });
 
+    // Check for cookies when the component mounts
+    checkCookiesAndLogout();
+
     // Clean up all listeners when the component unmounts
     return () => {
       if (unsubscribeAuthRef.current) {
@@ -127,14 +134,13 @@ const Navbar = () => {
     };
   }, []);
 
-  const handleLogout = async (event) => {
-    event.preventDefault();
+  const handleLogout = async (event?: React.SyntheticEvent) => {
+    if (event) event.preventDefault();  // Prevent default only if event exists
+  
     try {
       // Get all cookies
       const allCookies = Cookies.get();
-  
-      // Remove all cookies
-      Object.keys(allCookies).forEach(cookieName => {
+      Object.keys(allCookies).forEach((cookieName) => {
         Cookies.remove(cookieName);
       });
   
@@ -150,7 +156,7 @@ const Navbar = () => {
   
       // Sign out from Firebase
       await signOut(auth);
-      router.push("/"); // Redirect to the homepage
+      router.push("/");  // Redirect to homepage
     } catch (error) {
       console.error("Error signing out:", error);
     }

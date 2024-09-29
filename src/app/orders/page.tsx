@@ -11,7 +11,8 @@ import {
   doc,
   deleteDoc,
   Timestamp,
-  setDoc
+  setDoc,
+  runTransaction
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
@@ -209,27 +210,61 @@ const OrdersPage = () => {
 
   const submitFeedback = async (positiveFeedback: boolean) => {
     if (!userEmail) return;
-
+  
     const now = new Date();
     const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
     const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-  const feedbackType = positiveFeedback ? 'like' : 'dislike';
-  const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(/\./g, '_')}`; // Replace periods in email to avoid Firestore ID issues
-
-  try {
-    await setDoc(doc(db, "customerFeedbacks", feedbackId), {
-      positiveFeedback,
-      dateAdded: date,
-      timeAdded: time,
-      comments: comment,
-      userEmail
-    });
-    console.log("Feedback submitted successfully.");
-  } catch (error) {
-    console.error("Error submitting feedback:", error);
-  }
-};
+  
+    const feedbackType = positiveFeedback ? 'like' : 'dislike';
+    const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(/\./g, '_')}`; // Replace periods in email to avoid Firestore ID issues
+  
+    try {
+      // Submit individual feedback document
+      await setDoc(doc(db, "customerFeedbacks", feedbackId), {
+        positiveFeedback,
+        dateAdded: date,
+        timeAdded: time,
+        comments: comment,
+        userEmail
+      });
+      console.log("Feedback submitted successfully.");
+  
+      // Update or create feedbackRating document in customerFeedbacks
+      const feedbackRatingRef = doc(db, "customerFeedbacks", "feedbackRating");
+  
+      await runTransaction(db, async (transaction) => {
+        const ratingDoc = await transaction.get(feedbackRatingRef);
+  
+        let likeTally = positiveFeedback ? 1 : 0;
+        let dislikeTally = positiveFeedback ? 0 : 1;
+  
+        if (ratingDoc.exists()) {
+          // Update tallies if document exists
+          const currentData = ratingDoc.data();
+          likeTally += currentData.likeTally || 0;
+          dislikeTally += currentData.dislikeTally || 0;
+        }
+  
+        // Calculate the total tallies and the ratio of likes
+        const totalTallies = likeTally + dislikeTally;
+        const tallyRatio = totalTallies > 0 ? (likeTally / totalTallies) * 100 : 0;
+  
+        // Update or create the feedbackRating document
+        transaction.set(feedbackRatingRef, {
+          likeTally,
+          dislikeTally,
+          totalTallies,
+          tallyRatio: `${tallyRatio.toFixed(2)}%`  // Store as a percentage
+        });
+  
+        console.log("Feedback rating and ratio updated.");
+      });
+    } catch (error) {
+      console.error("Error submitting feedback or updating tally:", error);
+    }
+  };
+  
+  
 
   const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setComment(event.target.value);

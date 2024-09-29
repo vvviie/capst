@@ -8,6 +8,8 @@ interface DrinksOptionsProps {
   addVanilla?: number; // Optional
   onAdditionalCostChange: (cost: number) => void;
   onOptionsChange: (additionals: string[], milkOption: string | null) => void; // New callback
+  selectedMilkOption?: string | null; // New prop
+  selectedAdditionals?: string[]; // New prop
 }
 
 const DrinksOptions: React.FC<DrinksOptionsProps> = ({
@@ -18,28 +20,37 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
   addVanilla,
   onAdditionalCostChange,
   onOptionsChange,
+  selectedMilkOption,
+  selectedAdditionals,
 }) => {
-  const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
-  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(null);
+  const selectedAdditionalsProp = selectedAdditionals ?? [];
+  const selectedMilkOptionProp = selectedMilkOption ?? null;
+
+  const [selectedAdditionalsState, setSelectedAdditionals] = useState(
+    selectedAdditionalsProp
+  );
+  const [selectedMilkOptionState, setSelectedMilkOption] = useState(
+    selectedMilkOptionProp
+  );
 
   useEffect(() => {
     let price = 0;
 
-    if (selectedAdditionals.includes("Espresso")) {
+    if (selectedAdditionalsState.includes("Espresso")) {
       price += addEspresso;
     }
 
-    if (selectedAdditionals.includes("Syrup")) {
+    if (selectedAdditionalsState.includes("Syrup")) {
       price += addSyrup;
     }
 
-    if (addVanilla && selectedAdditionals.includes("Vanilla")) {
+    if (addVanilla && selectedAdditionalsState.includes("Vanilla")) {
       price += addVanilla;
     }
 
-    if (selectedMilkOption === "Almond Milk") {
+    if (selectedMilkOptionState === "Almond Milk") {
       price += milkAlmond;
-    } else if (selectedMilkOption === "Oat Milk") {
+    } else if (selectedMilkOptionState === "Oat Milk") {
       price += milkOat;
     }
 
@@ -47,12 +58,24 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
     onAdditionalCostChange(price);
 
     // Pass the selected options back to the parent
-    onOptionsChange(selectedAdditionals, selectedMilkOption);
-  }, [selectedAdditionals, selectedMilkOption, addEspresso, addSyrup, addVanilla, milkAlmond, milkOat, onAdditionalCostChange, onOptionsChange]);
+    onOptionsChange(selectedAdditionalsState, selectedMilkOptionState);
+  }, [
+    selectedAdditionalsState,
+    selectedMilkOptionState,
+    addEspresso,
+    addSyrup,
+    addVanilla,
+    milkAlmond,
+    milkOat,
+    onAdditionalCostChange,
+    onOptionsChange,
+  ]);
 
   const handleAdditionalsChange = (value: string) => {
     setSelectedAdditionals((prev) =>
-      prev.includes(value) ? prev.filter((item) => item !== value) : [...prev, value]
+      prev.includes(value)
+        ? prev.filter((item) => item !== value)
+        : [...prev, value]
     );
   };
 
@@ -72,7 +95,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
           {/* ADDITIONAL ESPRESSO */}
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-              selectedAdditionals.includes("Espresso")
+              selectedAdditionalsState.includes("Espresso")
                 ? "bg-orange-50"
                 : "bg-gray-50"
             }`}
@@ -83,7 +106,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
               id="Espresso"
               className="w-5 h-5 cursor-pointer"
               onChange={() => handleAdditionalsChange("Espresso")}
-              checked={selectedAdditionals.includes("Espresso")}
+              checked={selectedAdditionalsState.includes("Espresso")}
             />
             <span className="ml-4 font-semibold">Espresso</span>
             <span className="ml-2"> (+{addEspresso})</span>
@@ -91,7 +114,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
           {/* ADDITIONAL SYRUP */}
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-              selectedAdditionals.includes("Syrup")
+              selectedAdditionalsState.includes("Syrup")
                 ? "bg-orange-50"
                 : "bg-gray-50"
             }`}
@@ -102,7 +125,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
               id="Syrup"
               className="w-5 h-5 cursor-pointer"
               onChange={() => handleAdditionalsChange("Syrup")}
-              checked={selectedAdditionals.includes("Syrup")}
+              checked={selectedAdditionalsState.includes("Syrup")}
             />
             <span className="ml-4 font-semibold">Syrup</span>
             <span className="ml-2"> (+{addSyrup})</span>
@@ -111,7 +134,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
           {addVanilla > 0 && ( // Conditionally render if addVanilla exists and is greater than 0
             <div
               className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                selectedAdditionals.includes("Vanilla")
+                selectedAdditionalsState.includes("Vanilla")
                   ? "bg-orange-50"
                   : "bg-gray-50"
               }`}
@@ -122,7 +145,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
                 id="Vanilla"
                 className="w-5 h-5 cursor-pointer"
                 onChange={() => handleAdditionalsChange("Vanilla")}
-                checked={selectedAdditionals.includes("Vanilla")}
+                checked={selectedAdditionalsState.includes("Vanilla")}
               />
               <span className="ml-4 font-semibold">Vanilla</span>
               <span className="ml-2"> (+{addVanilla})</span>
@@ -138,20 +161,40 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
         <h1 className="text-gray-500">Milk Options</h1>
         {/* MILK OPTIONS CHOICES */}
         <div className="flex flex-col">
-          {/* ALMOND MILK OPTION */}
+          {/* FRESH MILK OPTION */}
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-              selectedMilkOption === "Almond Milk"
+              selectedMilkOptionState === "Fresh Milk"
                 ? "bg-orange-50"
                 : "bg-gray-50"
             }`}
           >
             <input
-              type="checkbox"
+              type="radio"
+              name="milkOptions"
+              id="FreshMilk"
+              className="w-5 h-5 cursor-pointer"
+              value="Fresh Milk"
+              checked={selectedMilkOptionState === "Fresh Milk"}
+              onChange={() => handleMilkOptionChange("Fresh Milk")}
+            />
+            <span className="ml-4 font-semibold">Fresh Milk</span>
+          </div>
+          {/* ALMOND MILK OPTION */}
+          <div
+            className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+              selectedMilkOptionState === "Almond Milk"
+                ? "bg-orange-50"
+                : "bg-gray-50"
+            }`}
+          >
+            <input
+              type="radio"
               name="milkOptions"
               id="AlmondMilk"
               className="w-5 h-5 cursor-pointer"
-              checked={selectedMilkOption === "Almond Milk"}
+              value="Almond Milk"
+              checked={selectedMilkOptionState === "Almond Milk"}
               onChange={() => handleMilkOptionChange("Almond Milk")}
             />
             <span className="ml-4 font-semibold">Almond Milk</span>
@@ -160,15 +203,18 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
           {/* OAT MILK OPTION */}
           <div
             className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-              selectedMilkOption === "Oat Milk" ? "bg-orange-50" : "bg-gray-50"
+              selectedMilkOptionState === "Oat Milk"
+                ? "bg-orange-50"
+                : "bg-gray-50"
             }`}
           >
             <input
-              type="checkbox"
+              type="radio"
               name="milkOptions"
               id="OatMilk"
               className="w-5 h-5 cursor-pointer"
-              checked={selectedMilkOption === "Oat Milk"}
+              value="Oat Milk"
+              checked={selectedMilkOptionState === "Oat Milk"}
               onChange={() => handleMilkOptionChange("Oat Milk")}
             />
             <span className="ml-4 font-semibold">Oat Milk</span>

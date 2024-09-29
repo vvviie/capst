@@ -1,6 +1,10 @@
 import React from "react";
 
-const CartUpdateNotif = () => {
+interface CartUpdateNotifProps {
+  isUpdate?: boolean;
+}
+
+const CartUpdateNotif: React.FC<CartUpdateNotifProps> = ({ isUpdate }) => {
   return (
     <div
       className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-center justify-center z-20"
@@ -12,7 +16,7 @@ const CartUpdateNotif = () => {
       >
         <i className="far fa-check-circle text-[150px] text-gray-100"></i>
         <h1 className="font-bold text-2xl text-gray-100">
-          Item added to cart!
+          {isUpdate ? "Item updated in cart!" : "Item added to cart!"}
         </h1>
       </div>
     </div>

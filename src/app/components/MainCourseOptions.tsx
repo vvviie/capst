@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from "react";
 
 interface MainCourseOptionsProps {
+  initialOption: string; // Add this prop to receive the initial selected option
   onOptionChange: (option: string) => void; // Callback to notify the parent about the selected option
 }
 
 const MainCourseOptions: React.FC<MainCourseOptionsProps> = ({
+  initialOption,
   onOptionChange,
 }) => {
-  const [selectedOption, setSelectedOption] = useState<string>("Rice");
+  const [selectedOption, setSelectedOption] = useState<string>(initialOption); // Set the initial state with the passed initialOption
 
   useEffect(() => {
     onOptionChange(selectedOption);
@@ -36,7 +38,7 @@ const MainCourseOptions: React.FC<MainCourseOptionsProps> = ({
               id="rice"
               className="w-5 h-5 cursor-pointer"
               checked={selectedOption === "Rice"}
-              onChange={() => handleOptionChange("Rice")}
+              onChange={() => handleOptionChange("Rice")} // Fix the typo here
             />
             <span className="ml-4 font-semibold">Rice</span>
           </div>
