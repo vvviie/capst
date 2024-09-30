@@ -574,7 +574,7 @@ const CartPage = () => {
         user: userEmail,
         items: completedOrderItems,
         totalItems: totalItems,
-        subtotal: finalSubtotal, // Use final subtotal with promo applied
+        subtotal: finalSubtotal || 0, // Add a fallback value like 0
         totalCartPrice: totalCartPrice,
         modeOfPayment: modeOfPayment,
         selectedOption: selectedOption,
