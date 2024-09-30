@@ -14,6 +14,7 @@ import {
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
@@ -209,6 +210,9 @@ const Navbar = () => {
                 (P{totalCartPrice.toFixed(2)})
               </span>
             </Link>
+          </div>
+          <div key="notif-bell">
+            <NotificationBell />
           </div>
           <div key="user-firstname">
             <Link href="/">{firstName}</Link>
