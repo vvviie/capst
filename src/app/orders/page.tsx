@@ -47,7 +47,7 @@ const OrdersPage = () => {
   const router = useRouter();
 
   const hasRated = false;
-  const hasOrder = true;
+  const hasOrder = false;
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
