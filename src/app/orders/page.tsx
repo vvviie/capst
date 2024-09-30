@@ -543,7 +543,7 @@ const OrdersPage = () => {
         {confirmPopup && (
           <div
             className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-center justify-center"
-            style={{ background: "rgba(0, 0, 0, 0.1)" }}
+            style={{ background: "rgba(0, 0, 0, 0.5)" }}
           >
             <div
               ref={formRef}
