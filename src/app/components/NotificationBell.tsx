@@ -99,7 +99,7 @@ const NotificationBell = () => {
                 );
             }
         } catch (error) {
-            console.error("Error toggling notification read status:", error);
+            //console.error("Error toggling notification read status:", error);
         }
     };
 
@@ -124,7 +124,7 @@ const NotificationBell = () => {
                 setNotifItems((prevNotifs) => prevNotifs.filter((notif) => notif.id !== notificationId));
             }
         } catch (error) {
-            console.error("Error deleting notification:", error);
+            //console.error("Error deleting notification:", error);
         }
     };
 
@@ -149,7 +149,7 @@ const NotificationBell = () => {
                 prevNotifs.map((notif) => ({ ...notif, read: true }))
             );
         } catch (error) {
-            console.error("Error marking all notifications as read:", error);
+            //console.error("Error marking all notifications as read:", error);
         }
     };
 
@@ -172,7 +172,7 @@ const NotificationBell = () => {
 
             setNotifItems([]); // Clear all notifications from local state
         } catch (error) {
-            console.error("Error deleting all notifications:", error);
+            //console.error("Error deleting all notifications:", error);
         }
     };
 

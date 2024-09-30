@@ -14,7 +14,7 @@ const useSandwich = () => {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          console.log("No matching documents.");
+          //console.log("No matching documents.");
           setSandwich([]);
           return;
         }
@@ -24,10 +24,10 @@ const useSandwich = () => {
           ...(doc.data() as Omit<Sandwiches, "id">),
         }));
 
-        console.log("Fetched sandwiches:", sandwiches);
+        //console.log("Fetched sandwiches:", sandwiches);
         setSandwich(sandwiches);
       } catch (err) {
-        console.error("Error fetching sandwiches:", err);
+        //console.error("Error fetching sandwiches:", err);
       }
     };
 
