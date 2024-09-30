@@ -44,9 +44,8 @@ const OrdersPage = () => {
   const [confirmPopup, setConfirmPopup] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
-
-  const hasRated = false;
-  const hasOrder = true;
+  const [hasOrder, setHasOrder] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
@@ -120,7 +119,6 @@ const OrdersPage = () => {
           const data = doc.data();
           console.log("Full Document Data:", JSON.stringify(data, null, 2)); // Log for debugging
 
-          let orderItems = [];
           let orderInfo = {
             id: doc.id,
             price: data.subtotal || 0,
@@ -181,7 +179,11 @@ const OrdersPage = () => {
           orders.push(orderInfo);
         });
 
+        // Update the orders state
         setUserOrders(orders);
+        
+        // Set hasOrder based on whether there are any orders
+        setHasOrder(orders.length > 0);
       } catch (error) {
         console.error("Error fetching orders:", error);
       }
@@ -189,6 +191,11 @@ const OrdersPage = () => {
 
     fetchOrders();
   }, [userEmail]);
+
+  // Check orders length on state change
+  useEffect(() => {
+    setHasOrder(userOrders.length > 0); // Update hasOrder based on orders
+  }, [userOrders]);
 
   const handleDeleteOrder = async (orderId) => {
     try {
@@ -258,14 +265,13 @@ const OrdersPage = () => {
         });
   
         console.log("Feedback rating and ratio updated.");
+        setHasRated(true);
       });
     } catch (error) {
       console.error("Error submitting feedback or updating tally:", error);
     }
   };
   
-  
-
   const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setComment(event.target.value);
   };
@@ -287,12 +293,12 @@ const OrdersPage = () => {
     >
       {/* RATING CONTAINER */}
       <div className="w-full lg:max-w-[350px]">
-        {!hasRated ? (
+        {!hasRated && hasOrder ? (
           // ITO LALABAS KAPAG HINDI PA NAKAKAPAG-RATE ANG CUSTOMER TAPOS MAY ORDERS NA SIYA
           <div className="flex flex-col gap-2">
             <h1 className="font-bold text-2xl text-orange-950 flex gap-1 items-center">
               <i className="fa fa-star text-lg mb-[1px]" aria-hidden="true"></i>
-              <span>Rate your order</span>
+              <span>Rate your Order</span>
             </h1>
             <form className="bg-white border-2 border-gray-50 shadow-lg rounded-lg px-6 py-4">
               <h1 className="font-bold text-2xl text-center mb-4">
@@ -366,37 +372,38 @@ const OrdersPage = () => {
           </div>
         ) : (
           // ITO NAMAN ANG LALABAS KAPAG WALA PA SIYANG ORDERS OR NAKAPAG-RATE NA SIYA
+        
           <div className="flex flex-col gap-2">
-            <div className="">
-              <h1 className="font-bold text-2xl text-orange-950 mb-2 flex gap-2 items-center">
-                <i className="fa-solid fa-cart-shopping text-xl"></i>
-                <span>Order {hasOrder ? "Again" : "Now"}</span>
-              </h1>
-              <Link
-                href={"/menu"}
-                className="bg-orange-950 border-2 border-orange-950 shadow-lg rounded-lg px-6 py-4
+          <div className="">
+            <h1 className="font-bold text-2xl text-orange-950 mb-2 flex gap-2 items-center">
+              <i className="fa-solid fa-cart-shopping text-xl"></i>
+              <span>Order {hasOrder ? "Again" : "Now"}</span>
+            </h1>
+            <Link
+              href={"/menu"}
+              className="bg-orange-950 border-2 border-orange-950 shadow-lg rounded-lg px-6 py-4
             text-white text-center flex flex-col items-center"
-              >
-                <h1 className="font-bold text-2xl mb-4">
-                  Craving some {hasOrder && "more"} of our offerings?
-                </h1>
-                {/* IMAGE CONTAINER */}
-                <div className="relative w-48 aspect-square">
-                  <Image
-                    src={"/coffee.png"}
-                    alt="foodimage"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <p className="text-xs font-light text-orange-200">
-                  Click this to order.
-                </p>
-              </Link>
-            </div>
+            >
+              <h1 className="font-bold text-2xl mb-4">
+                Craving some {hasOrder && "more"} of our offerings?
+              </h1>
+              {/* IMAGE CONTAINER */}
+              <div className="relative w-48 aspect-square">
+                <Image
+                  src={"/coffee.png"}
+                  alt="foodimage"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <p className="text-xs font-light text-orange-200">
+                Click this to order.
+              </p>
+            </Link>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
 
       {/* BACKGROUND IMAGE CONTAINER */}
       <div
