@@ -12,6 +12,10 @@ import {
   deleteDoc,
   Timestamp,
   setDoc,
+<<<<<<< HEAD
+=======
+  runTransaction
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
@@ -39,15 +43,23 @@ const OrdersPage = () => {
   const [selected, setSelected] = useState<"like" | "dislike" | null>(null);
   const [userOrders, setUserOrders] = useState<Orders>([]);
   const [orderToCancel, setOrderToCancel] = useState(null);
+<<<<<<< HEAD
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
+=======
+  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
   const [confirmPopup, setConfirmPopup] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
 
   const hasRated = false;
+<<<<<<< HEAD
   const hasOrder = false;
+=======
+  const hasOrder = true;
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
@@ -211,6 +223,7 @@ const OrdersPage = () => {
 
   const submitFeedback = async (positiveFeedback: boolean) => {
     if (!userEmail) return;
+<<<<<<< HEAD
 
     const now = new Date();
     const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
@@ -227,11 +240,24 @@ const OrdersPage = () => {
     )}`; // Replace periods in email to avoid Firestore ID issues
 
     try {
+=======
+  
+    const now = new Date();
+    const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
+    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  
+    const feedbackType = positiveFeedback ? 'like' : 'dislike';
+    const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(/\./g, '_')}`; // Replace periods in email to avoid Firestore ID issues
+  
+    try {
+      // Submit individual feedback document
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
       await setDoc(doc(db, "customerFeedbacks", feedbackId), {
         positiveFeedback,
         dateAdded: date,
         timeAdded: time,
         comments: comment,
+<<<<<<< HEAD
         userEmail,
       });
       console.log("Feedback submitted successfully.");
@@ -243,6 +269,50 @@ const OrdersPage = () => {
   const handleCommentChange = (
     event: React.ChangeEvent<HTMLTextAreaElement>
   ) => {
+=======
+        userEmail
+      });
+      console.log("Feedback submitted successfully.");
+  
+      // Update or create feedbackRating document in customerFeedbacks
+      const feedbackRatingRef = doc(db, "customerFeedbacks", "feedbackRating");
+  
+      await runTransaction(db, async (transaction) => {
+        const ratingDoc = await transaction.get(feedbackRatingRef);
+  
+        let likeTally = positiveFeedback ? 1 : 0;
+        let dislikeTally = positiveFeedback ? 0 : 1;
+  
+        if (ratingDoc.exists()) {
+          // Update tallies if document exists
+          const currentData = ratingDoc.data();
+          likeTally += currentData.likeTally || 0;
+          dislikeTally += currentData.dislikeTally || 0;
+        }
+  
+        // Calculate the total tallies and the ratio of likes
+        const totalTallies = likeTally + dislikeTally;
+        const tallyRatio = totalTallies > 0 ? (likeTally / totalTallies) * 100 : 0;
+  
+        // Update or create the feedbackRating document
+        transaction.set(feedbackRatingRef, {
+          likeTally,
+          dislikeTally,
+          totalTallies,
+          tallyRatio: `${tallyRatio.toFixed(2)}%`  // Store as a percentage
+        });
+  
+        console.log("Feedback rating and ratio updated.");
+      });
+    } catch (error) {
+      console.error("Error submitting feedback or updating tally:", error);
+    }
+  };
+  
+  
+
+  const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
     setComment(event.target.value);
   };
 
@@ -331,9 +401,15 @@ const OrdersPage = () => {
                   value={comment}
                   onChange={handleCommentChange}
                 ></textarea>
+<<<<<<< HEAD
                 <button
                   className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md"
                   onClick={handleSubmitRating}
+=======
+                <button 
+                className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md"
+                onClick={handleSubmitRating}
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
                 >
                   Submit Rating
                 </button>

@@ -3,21 +3,28 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
 import { initializeApp } from "firebase/app";
+<<<<<<< HEAD
 import { getAuth, signInWithEmailAndPassword} from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import Cookies from "js-cookie"; // NEEDED TO BE DOWNLOADED!
+=======
+import { useRouter } from "next/navigation";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import Cookies from "js-cookie";
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
 
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAWhVssqbS2QQ7NkI1CwiOHTq6sN31gsVg",
   authDomain: "testingcapstonejg.firebaseapp.com",
-  databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL:
+    "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "testingcapstonejg",
   storageBucket: "testingcapstonejg.appspot.com",
   messagingSenderId: "1006906116033",
-  appId: "1:1006906116033:web:825eeeeeed8c4221a71140"
+  appId: "1:1006906116033:web:825eeeeeed8c4221a71140",
 };
 
 // Initialize Firebase
@@ -25,23 +32,36 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
+<<<<<<< HEAD
 // To manually decode URL-encoded strings
 const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, ' '));
 
 // To manually encode URL-encoded strings
+=======
+const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, " "));
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
 const urlEncode = (str) => encodeURIComponent(str);
 
 const LoginPage = () => {
-  const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: string } | null>(
+    null
+  );
   const [isMounted, setIsMounted] = useState(false);
-  const router = useRouter(); // Initialize the router
+  const router = useRouter();
 
   useEffect(() => {
-    setIsMounted(true); // Set the state to true when the component mounts
-  }, []);
+    setIsMounted(true);
+
+    // Check if the user is already logged in by checking cookies
+    const userSession = Cookies.get("userSession");
+    if (userSession) {
+      router.push("/"); // Redirect to homepage if user is already logged in
+    }
+  }, [router]);
 
   const fetchUserDetails = async (email) => {
     try {
+<<<<<<< HEAD
       const userRef = doc(firestore, "users", email); // Fetch user document by email
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
@@ -54,11 +74,29 @@ const LoginPage = () => {
       } else {
         setMessage({ text: "No user details found in Firestore.", type: "error" });
         return null; // Return null if no data found
+=======
+      const userRef = doc(firestore, "users", email);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const role = userData.role;
+        return role;
+      } else {
+        setMessage({
+          text: "No user details found in Firestore.",
+          type: "error",
+        });
+        return null;
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
       }
     } catch (error) {
       console.error("Error fetching user details: ", error);
       setMessage({ text: "Error fetching user details.", type: "error" });
+<<<<<<< HEAD
       return null; // Return null in case of error
+=======
+      return null;
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
     }
   };
 
@@ -70,16 +108,19 @@ const LoginPage = () => {
     console.log("Original Email:", email);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
-      // Reload user to get the latest information
       await user.reload();
-
       if (!user.emailVerified) {
-        setMessage({ text: "Please verify your email before logging in.", type: "error" });
-        await auth.signOut(); // Log out the user
+        setMessage({ text: "Please verify your email.", type: "error" });
+        await auth.signOut();
       } else {
+<<<<<<< HEAD
         setMessage({ text: "Successfully logged in!", type: "success" });
 
         // Fetch user role from Firestore
@@ -94,6 +135,17 @@ const LoginPage = () => {
           if (isMounted) {
             router.push('/'); // Ensure router.push runs only on client-side
           }
+=======
+        setMessage({ text: "Login successful!", type: "success" });
+        await user.getIdToken(true);
+
+        const role = await fetchUserDetails(user.email);
+        if (role) {
+          const encodedRole = urlEncode(role);
+          Cookies.set("userSession", user.refreshToken, { expires: 1 / 24 });
+          Cookies.set("userRole", encodedRole, { expires: 1 / 24 });
+          router.push("/");
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
         }
       }
     } catch (error) {
@@ -122,11 +174,16 @@ const LoginPage = () => {
           </h1>
 
           {message && (
-            <span className={`font-bold mt-[-20px] ${message.type === "success" ? "text-green-500" : "text-red-500"} text-xl`}>
+            <span
+              className={`font-bold mt-[-20px] ${
+                message.type === "success" ? "text-green-500" : "text-red-500"
+              } text-xl`}
+            >
               {message.text}
             </span>
           )}
 
+<<<<<<< HEAD
           <button
             type="button"
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
@@ -147,6 +204,8 @@ const LoginPage = () => {
             <span className="w-20 h-[1px] bg-slate-400"></span>
           </div>
 
+=======
+>>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"

@@ -274,7 +274,7 @@ const MenuCategoryPage: React.FC = () => {
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.drinks.map((item) => (
                     <Link
-                      href={`/product/${slug}/${item.id}`}
+                      href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
                       className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
@@ -338,7 +338,7 @@ const MenuCategoryPage: React.FC = () => {
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.pastas.map((item) => (
                     <Link
-                      href={`/product/${slug}/${item.id}`}
+                      href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
                       className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
@@ -402,7 +402,7 @@ const MenuCategoryPage: React.FC = () => {
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.sandwiches.map((item) => (
                     <Link
-                      href={`/product/${slug}/${item.id}`}
+                      href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
                       className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
@@ -466,7 +466,7 @@ const MenuCategoryPage: React.FC = () => {
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.mainCourses.map((item) => (
                     <Link
-                      href={`/product/${slug}/${item.id}`}
+                      href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
                       className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
@@ -530,7 +530,7 @@ const MenuCategoryPage: React.FC = () => {
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.snacks.map((item) => (
                     <Link
-                      href={`/product/${slug}/${item.id}`}
+                      href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
                       className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >

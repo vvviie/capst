@@ -32,10 +32,10 @@ type ProductType =
     useEffect(() => {
       const fetchProduct = async () => {
         try {
-          console.log('Fetching product:', slug, type);
+          //console.log('Fetching product:', slug, type);
   
           if (!db) {
-            console.error('Firebase db instance is null or undefined');
+            //console.error('Firebase db instance is null or undefined');
             return;
           }
   
@@ -60,18 +60,18 @@ type ProductType =
               collectionRef = collection(db, "snacks");
               break;
             default:
-              console.error("Invalid product type:", type);
+              //console.error("Invalid product type:", type);
               return;
           }
   
           const productDocRef = doc(collectionRef, slug);
           const productSnapshot = await getDoc(productDocRef);
   
-          console.log(slug);
-          console.log(type);
+          //console.log(slug);
+          //console.log(type);
           
           if (!productSnapshot.exists()) {
-            console.log("No matching document.");
+            //console.log("No matching document.");
             setProduct(null);
             return;
           }
@@ -80,7 +80,7 @@ type ProductType =
           const { title, price, desc, availability, calorie, addEspresso, addSyrup, milkAlmond, milkOat, img, prodCategory, prodID } = productData;
           setProduct({ title, price, desc, availability, calorie, addEspresso, addSyrup, milkAlmond, milkOat, img, prodCategory, prodID });
         } catch (err) {
-          console.error("Error fetching Product:", err);
+          //console.error("Error fetching Product:", err);
         }
       };
   

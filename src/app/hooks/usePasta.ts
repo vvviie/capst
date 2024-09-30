@@ -14,7 +14,7 @@ const usePasta = () => {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          console.log("No matching documents.");
+          //console.log("No matching documents.");
           setPasta([]);
           return;
         }
@@ -24,10 +24,10 @@ const usePasta = () => {
           ...(doc.data() as Omit<Pasta, "id">),
         }));
 
-        console.log("Fetched pasta:", pastas);
+        //console.log("Fetched pasta:", pastas);
         setPasta(pastas);
       } catch (err) {
-        console.error("Error fetching pasta:", err);
+        //console.error("Error fetching pasta:", err);
       }
     };
 
