@@ -152,7 +152,7 @@ const CartPage = () => {
       return;
     }
 
-    console.log("Entered promo code:", promoCode);
+    //console.log("Entered promo code:", promoCode);
 
     try {
       const promoCodesRef = collection(db, "promoCodes");
@@ -196,7 +196,7 @@ const CartPage = () => {
         showErrorPopup("Promo code is invalid!");
       }
     } catch (error) {
-      console.error("Error validating promo code:", error);
+      //console.error("Error validating promo code:", error);
       setPromoApplied(false);
       showErrorPopup("An error occurred. Please try again.");
     }
@@ -215,7 +215,7 @@ const CartPage = () => {
       }, 1000); // Adjust timeout duration to 0.5 seconds (500 milliseconds)
       setNotificationTimeout(newTimeout);
 
-      console.log("Removing item with ID:", itemId);
+      //console.log("Removing item with ID:", itemId);
 
       // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
@@ -246,16 +246,16 @@ const CartPage = () => {
           // Check if totals are zero and delete document if true
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(doc.ref);
-            console.log(`Document ${doc.id} deleted as the cart is empty.`);
+            //console.log(`Document ${doc.id} deleted as the cart is empty.`);
           }
 
           // Refresh cart items and totals after deletion
           await fetchCartItems();
-          console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
+          //console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
         }
       });
     } catch (error) {
-      console.error("Error removing item:", error);
+      //console.error("Error removing item:", error);
       showErrorPopup("Failed to remove item. Please try again.");
     }
   };
@@ -278,7 +278,7 @@ const CartPage = () => {
       }, 1000); // 1 second (1000 milliseconds)
       setNotificationTimeout(newTimeout);
 
-      console.log("Removing all items for user email:", userEmail);
+      //console.log("Removing all items for user email:", userEmail);
 
       // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
@@ -289,21 +289,21 @@ const CartPage = () => {
       );
 
       if (querySnapshot.empty) {
-        console.log("No documents found for user:", userEmail);
+        //console.log("No documents found for user:", userEmail);
         return;
       }
 
       // Iterate through each document and delete
       for (const docSnapshot of querySnapshot.docs) {
         await deleteDoc(docSnapshot.ref);
-        console.log(`Document with ID ${docSnapshot.id} deleted`);
+        //console.log(`Document with ID ${docSnapshot.id} deleted`);
       }
 
       // Refresh cart items and totals after deletion
       await fetchCartItems();
-      console.log("All items for user email removed");
+      //console.log("All items for user email removed");
     } catch (error) {
-      console.error("Error removing all items:", error);
+      //console.error("Error removing all items:", error);
       showErrorPopup("Failed to remove all items. Please try again.");
     }
   };
@@ -384,64 +384,9 @@ const CartPage = () => {
         setIsEmpty(true);
       }
     } catch (error) {
-      console.error("Error fetching cart items:", error);
+      //console.error("Error fetching cart items:", error);
     }
   };
-
-  /*
-  useEffect(() => {
-    const fetchCartItems = async () => {
-      try {
-        if (!userEmail) return; // Ensure userEmail is present
-
-        const tempOrdersRef = collection(db, "tempOrders");
-        const querySnapshot = await getDocs(
-          query(tempOrdersRef, where("user", "==", userEmail))
-        );
-
-        // Array to hold all found product IDs
-        const productIdsArray: string[] = [];
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          console.log(`Document ID: ${doc.id}`);
-          console.log("Full Document Data:", JSON.stringify(data, null, 2));
-
-          // Check each product in the document data
-          for (const key in data) {
-            if (
-              data.hasOwnProperty(key) &&
-              key !== "totalCartPrice" &&
-              key !== "totalItems" &&
-              key !== "user"
-            ) {
-              const cartItem = data[key];
-              const itemProductIdInCart = cartItem.productId;
-
-              // Add to productIdsArray if not already included
-              if (
-                itemProductIdInCart &&
-                !productIdsArray.includes(itemProductIdInCart)
-              ) {
-                productIdsArray.push(itemProductIdInCart);
-              }
-            }
-          }
-        });
-
-        console.log("Product IDs found:", productIdsArray);
-
-        // Set the product IDs in state
-        setProductIds(productIdsArray);
-      } catch (error) {
-        console.error("Error fetching cart items:", error);
-      }
-    };
-
-    fetchCartItems();
-  }, [userEmail]); // Run the effect when userEmail changes
-  //#endregion
-  */
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
@@ -454,7 +399,7 @@ const CartPage = () => {
         : subtotal, // Original subtotal without discount
     };
 
-    console.log("Order submitted:", orderData);
+    //console.log("Order submitted:", orderData);
 
     // Pass the correct subtotal to handleCompleteOrder
     handleCompleteOrder(
@@ -487,7 +432,7 @@ const CartPage = () => {
       }, 1000);
       setNotificationTimeout(newTimeout);
 
-      console.log("Completing order for user email:", userEmail);
+      //console.log("Completing order for user email:", userEmail);
 
       const tempOrdersRef = collection(db, "tempOrders");
       const querySnapshot = await getDocs(
@@ -495,7 +440,7 @@ const CartPage = () => {
       );
 
       if (querySnapshot.empty) {
-        console.log("No documents found in tempOrders.");
+        //console.log("No documents found in tempOrders.");
         return;
       }
 
@@ -554,7 +499,7 @@ const CartPage = () => {
 
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(docSnapshot.ref);
-            console.log(`Document ${docId} deleted as the cart is empty.`);
+            //console.log(`Document ${docId} deleted as the cart is empty.`);
           }
 
           if (!customOrderId) {
@@ -586,15 +531,12 @@ const CartPage = () => {
         promoDiscouted: discountedPromo,
       });
 
-      console.log(
-        "Order successfully added to completedOrders with custom ID:",
-        customOrderId
-      );
+      //console.log("Order successfully added to completedOrders with custom ID:",customOrderId);
 
       await handleRemoveAllItems();
       await fetchCartItems();
     } catch (error) {
-      console.error("Error completing order:", error);
+      //console.error("Error completing order:", error);
       showErrorPopup("Failed to complete order. Please try again.");
     }
   };
@@ -606,7 +548,7 @@ const CartPage = () => {
 
   //#region Apply Promos
   useEffect(() => {
-    console.log("Promo applied:", promoApplied);
+    //console.log("Promo applied:", promoApplied);
   }, [promoApplied]);
   //#endregion
 
@@ -677,14 +619,14 @@ const CartPage = () => {
         );
 
         if (querySnapshot.empty) {
-          console.log("No existing orders found.");
+          //console.log("No existing orders found.");
           setNeedsOrder(true); // No orders found, flag for further action
         } else {
-          console.log("Existing orders found.");
+          //console.log("Existing orders found.");
           setNeedsOrder(false); // Orders found, no need to handle new order
         }
       } catch (error) {
-        console.error("Error checking existing orders:", error);
+        //console.error("Error checking existing orders:", error);
       }
     };
 
@@ -702,8 +644,8 @@ const CartPage = () => {
 
           querySnapshot.forEach((doc) => {
             const data = doc.data();
-            console.log(`Document ID: ${doc.id}`);
-            console.log("Full Document Data:", JSON.stringify(data, null, 2));
+            //console.log(`Document ID: ${doc.id}`);
+            //console.log("Full Document Data:", JSON.stringify(data, null, 2));
 
             // Check each product in the document data
             for (const key in data) {
@@ -720,23 +662,23 @@ const CartPage = () => {
                 // Format product ID if needed
                 itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0]; // Truncate before the number
 
-                console.log("Formatted Product ID:", itemProductIdInCart);
-                console.log("Comparing Product ID:", itemProductIdInCart);
-                console.log("Comparing Size:", selectedDrinkSize);
+                //console.log("Formatted Product ID:", itemProductIdInCart);
+                //console.log("Comparing Product ID:", itemProductIdInCart);
+                //console.log("Comparing Size:", selectedDrinkSize);
 
                 // Check if productId matches and selectedDrinkSize is '8oz'
                 if (
                   itemProductIdInCart === productId &&
                   selectedDrinkSize === "8oz"
                 ) {
-                  console.log("Found Cart Data:", cartItem);
+                  //console.log("Found Cart Data:", cartItem);
                   // Handle found cart item
                 }
               }
             }
           });
         } catch (error) {
-          console.error("Error handling new order:", error);
+          //console.error("Error handling new order:", error);
         }
       };
 

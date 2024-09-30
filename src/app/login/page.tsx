@@ -62,7 +62,7 @@ const LoginPage = () => {
         return null;
       }
     } catch (error) {
-      console.error("Error fetching user details: ", error);
+      //console.error("Error fetching user details: ", error);
       setMessage({ text: "Error fetching user details.", type: "error" });
       return null;
     }

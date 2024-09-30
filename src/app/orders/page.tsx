@@ -117,7 +117,7 @@ const OrdersPage = () => {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          console.log("Full Document Data:", JSON.stringify(data, null, 2)); // Log for debugging
+          //console.log("Full Document Data:", JSON.stringify(data, null, 2)); // Log for debugging
 
           let orderInfo = {
             id: doc.id,
@@ -185,7 +185,7 @@ const OrdersPage = () => {
         // Set hasOrder based on whether there are any orders
         setHasOrder(orders.length > 0);
       } catch (error) {
-        console.error("Error fetching orders:", error);
+        //console.error("Error fetching orders:", error);
       }
     };
 
@@ -203,7 +203,7 @@ const OrdersPage = () => {
       setUserOrders(userOrders.filter((order) => order.id !== orderId));
       setConfirmPopup(false);
     } catch (error) {
-      console.error("Error deleting order:", error);
+      //console.error("Error deleting order:", error);
     }
   };
 
@@ -234,7 +234,7 @@ const OrdersPage = () => {
         comments: comment,
         userEmail
       });
-      console.log("Feedback submitted successfully.");
+      //console.log("Feedback submitted successfully.");
   
       // Update or create feedbackRating document in customerFeedbacks
       const feedbackRatingRef = doc(db, "customerFeedbacks", "feedbackRating");
@@ -264,11 +264,11 @@ const OrdersPage = () => {
           tallyRatio: `${tallyRatio.toFixed(2)}%`  // Store as a percentage
         });
   
-        console.log("Feedback rating and ratio updated.");
+        //console.log("Feedback rating and ratio updated.");
         setHasRated(true);
       });
     } catch (error) {
-      console.error("Error submitting feedback or updating tally:", error);
+      //console.error("Error submitting feedback or updating tally:", error);
     }
   };
   
@@ -517,7 +517,7 @@ const OrdersPage = () => {
                         className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md"
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log("Cancel button clicked");
+                          //console.log("Cancel button clicked");
                           setOrderToCancel(order.id); // Set the order ID to cancel
                           setConfirmPopup(true); // Show the confirmation popup
                         }}
