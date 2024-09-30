@@ -33,7 +33,7 @@ const Navbar = () => {
 
     // If no cookies are found, logout the user
     if (Object.keys(allCookies).length === 0) {
-      console.log("No cookies detected, logging out...");
+      //console.log("No cookies detected, logging out...");
       await handleLogout();
     }
   };
@@ -97,7 +97,7 @@ const Navbar = () => {
             }
           }
         } catch (error) {
-          console.error("Error fetching user or tempOrder data:", error);
+          //console.error("Error fetching user or tempOrder data:", error);
         }
       } else {
         setUser(null);
@@ -159,7 +159,7 @@ const Navbar = () => {
       await signOut(auth);
       router.push("/");  // Redirect to homepage
     } catch (error) {
-      console.error("Error signing out:", error);
+      //console.error("Error signing out:", error);
     }
   };
 

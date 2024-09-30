@@ -22,6 +22,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
 const ProductPage: React.FC = () => {
+  
   //#region Const Variables
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -806,7 +807,7 @@ const ProductPage: React.FC = () => {
               </div>
             </div>
             {/* DESCRIPTION OF THE ITEM */}
-            <p className="text-justify mb-2 xl:max-h-32 xl:overflow-y-scroll">
+            <p className="text-justify mb-2 xl:max-h-32 xl:overflow-y-auto">
               {productData.description || desc || "No description available"}
             </p>
           </div>

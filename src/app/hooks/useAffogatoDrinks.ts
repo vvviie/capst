@@ -15,7 +15,7 @@ const useAffogatoDrinks = () => {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          console.log('No matching documents.');
+          //console.log('No matching documents.');
           setAffogatoDrinks([]);
           return;
         }
@@ -25,10 +25,10 @@ const useAffogatoDrinks = () => {
           ...doc.data() as Omit<Drinks, 'id'>,
         }));
 
-        console.log('Fetched drinks:', drinks);
+        //console.log('Fetched drinks:', drinks);
         setAffogatoDrinks(drinks);
       } catch (err) {
-        console.error('Error fetching iced drinks:', err);
+        //console.error('Error fetching iced drinks:', err);
       }
     };
 

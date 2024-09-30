@@ -14,7 +14,7 @@ const useMainCourse = () => {
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {
-          console.log("No matching documents.");
+          //console.log("No matching documents.");
           setMainCourse([]);
           return;
         }
@@ -24,10 +24,10 @@ const useMainCourse = () => {
           ...(doc.data() as Omit<MainCourse, "id">),
         }));
 
-        console.log("Fetched main courses:", mainCourses);
+        //console.log("Fetched main courses:", mainCourses);
         setMainCourse(mainCourses);
       } catch (err) {
-        console.error("Error fetching main courses:", err);
+        //console.error("Error fetching main courses:", err);
       }
     };
 
