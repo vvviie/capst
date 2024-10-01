@@ -23,21 +23,9 @@ const Navbar = () => {
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
 
-<<<<<<< HEAD
-  // Use useRef to store unsubscribe functions
   const unsubscribeAuthRef = useRef(null);
   const unsubscribeCartRef = useRef(null);
   const unsubscribeDocRef = useRef(null);
-
-  useEffect(() => {
-    unsubscribeAuthRef.current = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser && authUser.emailVerified) {
-        console.log("Authenticated user:", authUser.email);
-=======
-  const unsubscribeAuthRef = useRef(null);
-  const unsubscribeCartRef = useRef(null);
-  const unsubscribeDocRef = useRef(null);
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
 
   const checkCookiesAndLogout = async () => {
     // Check if there are any cookies present
@@ -73,34 +61,19 @@ const Navbar = () => {
 
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-<<<<<<< HEAD
                 unsubscribeDocRef.current = onSnapshot(
                   tempOrderDocRef,
                   (doc) => {
                     if (doc.exists()) {
                       const tempOrderData = doc.data();
-                      console.log("Fetched tempOrder data:", tempOrderData);
                       setTotalItems(tempOrderData.totalItems || 0);
                       setTotalCartPrice(tempOrderData.totalCartPrice || 0);
                     } else {
-                      console.log("No tempOrder document found!");
                       setTotalItems(0);
                       setTotalCartPrice(0);
                     }
                   }
                 );
-=======
-                unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
-                  if (doc.exists()) {
-                    const tempOrderData = doc.data();
-                    setTotalItems(tempOrderData.totalItems || 0);
-                    setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                  } else {
-                    setTotalItems(0);
-                    setTotalCartPrice(0);
-                  }
-                });
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
               } else {
                 setTotalItems(0);
                 setTotalCartPrice(0);
@@ -145,12 +118,9 @@ const Navbar = () => {
       }
     });
 
-<<<<<<< HEAD
-=======
     // Check for cookies when the component mounts
     checkCookiesAndLogout();
 
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
     // Clean up all listeners when the component unmounts
     return () => {
       if (unsubscribeAuthRef.current) {
@@ -168,31 +138,16 @@ const Navbar = () => {
     };
   }, []);
 
-<<<<<<< HEAD
-  const handleLogout = async (event) => {
-    event.preventDefault();
-    try {
-      // Get the encoded role from the cookies
-      const encodedRole = Object.keys(Cookies.get())[0]; // Assuming it's the only custom cookie
-
-      if (encodedRole) {
-        // Remove the cookie using the encoded role name
-        console.log("Cookie role: ", encodedRole);
-        Cookies.remove(encodedRole);
-      }
-
-=======
   const handleLogout = async (event?: React.SyntheticEvent) => {
-    if (event) event.preventDefault();  // Prevent default only if event exists
-  
+    if (event) event.preventDefault(); // Prevent default only if event exists
+
     try {
       // Get all cookies
       const allCookies = Cookies.get();
       Object.keys(allCookies).forEach((cookieName) => {
         Cookies.remove(cookieName);
       });
-  
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
+
       // Unsubscribe from Firestore listeners
       if (unsubscribeCartRef.current) {
         unsubscribeCartRef.current();
@@ -202,16 +157,10 @@ const Navbar = () => {
         unsubscribeDocRef.current();
         unsubscribeDocRef.current = null;
       }
-<<<<<<< HEAD
 
-      await signOut(auth);
-      router.push("/"); // Redirect to the homepage
-=======
-  
       // Sign out from Firebase
       await signOut(auth);
-      router.push("/");  // Redirect to homepage
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
+      router.push("/"); // Redirect to homepage
     } catch (error) {
       //console.error("Error signing out:", error);
     }

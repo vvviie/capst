@@ -22,11 +22,6 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
 const ProductPage: React.FC = () => {
-<<<<<<< HEAD
-
-=======
-  
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
   //#region Const Variables
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -44,18 +39,10 @@ const ProductPage: React.FC = () => {
 
   // For getting the additionals in the DrinksOptions
   const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
-<<<<<<< HEAD
-  const [selectedMilkOption, setSelectedMilkOption] = useState<string | null>(
-    null
-  );
-  //#endregion
-=======
-  const [selectedMilkOption, setSelectedMilkOption] =
-    useState("Fresh Milk");
+  const [selectedMilkOption, setSelectedMilkOption] = useState("Fresh Milk");
 
   // QUANTITY NUMBER ADJUSTMENT
   const [numberQtty, setNumberQtty] = useState<number>(1);
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
 
   const handleOptionsChange = (
     additionals: string[],
@@ -313,18 +300,6 @@ const ProductPage: React.FC = () => {
     const qtyPerItem = numberQtty;
     const pricePerItem = parseFloat((totalPrice / qtyPerItem).toFixed(2)); // Ensure this is a number
 
-<<<<<<< HEAD
-    const now = new Date();
-
-    // Format date as MM/DD/YYYY
-    const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
-
-    // Format time as HH:MM
-    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    // Create a unique key for the product based on its configuration
-=======
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
     let uniqueProductKey =
       slug === "drinks"
         ? `${encodeURIComponent(productId || "")}-${encodeURIComponent(
@@ -348,16 +323,6 @@ const ProductPage: React.FC = () => {
 
     // Prepare order data for drinks or other products
     let orderData = {
-<<<<<<< HEAD
-      productImg: productData.img, // prio
-      productTitle: productData.title, // prio
-      itemQty: qtyPerItem, // prio
-      pricePerItem: pricePerItem, // prio
-      note: document.querySelector("textarea")?.value || "none", // prio
-      totalPrice: parseFloat(totalPrice.toFixed(2)), // Ensure this is a number
-      dateCreated: date,
-      timeCreated: time
-=======
       slug: productData.slug || "", // needed
       productImg: productData.productImg || productData.img || "", // needed
       productTitle: productData.productTitle || title, // needed
@@ -383,7 +348,6 @@ const ProductPage: React.FC = () => {
         milkOat: 40,
         addVanilla: 25,
       },
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
     };
 
     if (slug === "drinks") {
@@ -677,34 +641,6 @@ const ProductPage: React.FC = () => {
     }, 1000); // 2 seconds
   };
 
-<<<<<<< HEAD
-  useEffect(() => {
-    const fetchCartItems = async () => {
-      try {
-        const tempOrdersRef = collection(db, "tempOrders");
-        const querySnapshot = await getDocs(
-          query(tempOrdersRef, where("user", "==", userEmail))
-        );
-  
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-  
-          // Log the entire document including the document ID
-          console.log(`Document ID: ${doc.id}`);
-          console.log("Full Document Data:", JSON.stringify(data, null, 2));
-        });
-        
-      } catch (error) {
-        console.error("Error fetching cart items:", error);
-      }
-    };
-  
-    fetchCartItems();
-  }, [userEmail]);
-  
-  
-
-=======
   const handleCartClick = async () => {
     if (isComingFromCartPage) {
       await handleUpdateCart();
@@ -712,7 +648,6 @@ const ProductPage: React.FC = () => {
       await handleAddToCart();
     }
   };
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
   if (!productData) {
     return <div>Loading...</div>;
   }
@@ -871,11 +806,7 @@ const ProductPage: React.FC = () => {
             </div>
             {/* DESCRIPTION OF THE ITEM */}
             <p className="text-justify mb-2 xl:max-h-32 xl:overflow-y-auto">
-<<<<<<< HEAD
-              {desc}
-=======
               {productData.description || desc || "No description available"}
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
             </p>
           </div>
 
