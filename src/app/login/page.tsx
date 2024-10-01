@@ -167,11 +167,17 @@ const LoginPage = () => {
               placeholder="●●●●●●●●●●"
             />
           </div>
-
+          <p
+            className="text-sm font-semibold text-gray-600 underline-offset-2 underline
+          hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"
+          >
+            Forgot your password?
+          </p>
           <button
             type="submit"
             className="flex items-center justify-center space-x-2 w-full h-10 rounded-md
-          shadow-md text-white bg-orange-950"
+          shadow-md text-white bg-orange-950
+          hover:bg-orange-900 duration-300 hover:scale-[1.02]"
           >
             <i className="fa fa-sign-in text-sm"></i>
             <span className="font-bold text-md">Username Login</span>
@@ -180,7 +186,8 @@ const LoginPage = () => {
           <Link
             href={"/signup"}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
-          shadow-md text-orange-950"
+          shadow-md text-orange-950
+          hover:bg-gray-50 duration-300 hover:scale-[1.02]"
           >
             <i className="fa fa-user-plus text-sm"></i>
             <span className="font-bold text-md">Create an account</span>

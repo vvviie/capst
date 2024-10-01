@@ -22,7 +22,10 @@ const NewsSubscription = () => {
           placeholder="ex. juandelacruz@gmail.com"
           className=" border-orange-900 border-solid border-2 rounded-md pl-4 w-full h-10 bg-white"
         />
-        <button className="bg-orange-950 w-full text-white text-xl font-bold py-2 rounded-md">
+        <button
+          className="bg-orange-950 w-full text-white text-xl font-bold py-2 rounded-md
+                  hover:bg-orange-900 duration-300 hover:scale-[1.02]"
+        >
           Subscribe
         </button>
       </form>

@@ -223,16 +223,25 @@ const Navbar = () => {
             <NotificationBell />
           </div>
           <div key="user-firstname">
-            <Link href="/">{firstName}</Link>
+            <Link href="/profile">
+              <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
+            </Link>
           </div>
           <div key="logout">
-            <Link href="/" onClick={handleLogout}>
+            <Link
+              href="/"
+              onClick={handleLogout}
+              className="hover:text-yellow-100"
+            >
               Logout
             </Link>
           </div>
         </div>
       ) : (
-        <div className="hidden md:block font-semibold" key="login">
+        <div
+          className="hidden md:block font-semibold hover:text-yellow-100"
+          key="login"
+        >
           <Link href="/login">Login</Link>
         </div>
       )}

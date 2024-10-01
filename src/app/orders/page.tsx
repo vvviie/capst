@@ -12,10 +12,7 @@ import {
   deleteDoc,
   Timestamp,
   setDoc,
-<<<<<<< HEAD
-=======
-  runTransaction
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
+  runTransaction,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
@@ -43,23 +40,14 @@ const OrdersPage = () => {
   const [selected, setSelected] = useState<"like" | "dislike" | null>(null);
   const [userOrders, setUserOrders] = useState<Orders>([]);
   const [orderToCancel, setOrderToCancel] = useState(null);
-<<<<<<< HEAD
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
-=======
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>({});
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
   const [confirmPopup, setConfirmPopup] = useState(false);
   const formRef = useRef<HTMLDivElement | null>(null);
   const router = useRouter();
-
-  const hasRated = false;
-<<<<<<< HEAD
-  const hasOrder = false;
-=======
-  const hasOrder = true;
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
+  const [hasOrder, setHasOrder] = useState(false);
+  const [hasRated, setHasRated] = useState(false);
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
@@ -133,7 +121,6 @@ const OrdersPage = () => {
           const data = doc.data();
           console.log("Full Document Data:", JSON.stringify(data, null, 2)); // Log for debugging
 
-          let orderItems = [];
           let orderInfo = {
             id: doc.id,
             price: data.subtotal || 0,
@@ -194,7 +181,11 @@ const OrdersPage = () => {
           orders.push(orderInfo);
         });
 
+        // Update the orders state
         setUserOrders(orders);
+
+        // Set hasOrder based on whether there are any orders
+        setHasOrder(orders.length > 0);
       } catch (error) {
         console.error("Error fetching orders:", error);
       }
@@ -202,6 +193,11 @@ const OrdersPage = () => {
 
     fetchOrders();
   }, [userEmail]);
+
+  // Check orders length on state change
+  useEffect(() => {
+    setHasOrder(userOrders.length > 0); // Update hasOrder based on orders
+  }, [userOrders]);
 
   const handleDeleteOrder = async (orderId) => {
     try {
@@ -223,7 +219,6 @@ const OrdersPage = () => {
 
   const submitFeedback = async (positiveFeedback: boolean) => {
     if (!userEmail) return;
-<<<<<<< HEAD
 
     const now = new Date();
     const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
@@ -240,79 +235,56 @@ const OrdersPage = () => {
     )}`; // Replace periods in email to avoid Firestore ID issues
 
     try {
-=======
-  
-    const now = new Date();
-    const date = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}`;
-    const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  
-    const feedbackType = positiveFeedback ? 'like' : 'dislike';
-    const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(/\./g, '_')}`; // Replace periods in email to avoid Firestore ID issues
-  
-    try {
       // Submit individual feedback document
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
       await setDoc(doc(db, "customerFeedbacks", feedbackId), {
         positiveFeedback,
         dateAdded: date,
         timeAdded: time,
         comments: comment,
-<<<<<<< HEAD
         userEmail,
       });
       console.log("Feedback submitted successfully.");
-    } catch (error) {
-      console.error("Error submitting feedback:", error);
-    }
-  };
 
-  const handleCommentChange = (
-    event: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
-=======
-        userEmail
-      });
-      console.log("Feedback submitted successfully.");
-  
       // Update or create feedbackRating document in customerFeedbacks
       const feedbackRatingRef = doc(db, "customerFeedbacks", "feedbackRating");
-  
+
       await runTransaction(db, async (transaction) => {
         const ratingDoc = await transaction.get(feedbackRatingRef);
-  
+
         let likeTally = positiveFeedback ? 1 : 0;
         let dislikeTally = positiveFeedback ? 0 : 1;
-  
+
         if (ratingDoc.exists()) {
           // Update tallies if document exists
           const currentData = ratingDoc.data();
           likeTally += currentData.likeTally || 0;
           dislikeTally += currentData.dislikeTally || 0;
         }
-  
+
         // Calculate the total tallies and the ratio of likes
         const totalTallies = likeTally + dislikeTally;
-        const tallyRatio = totalTallies > 0 ? (likeTally / totalTallies) * 100 : 0;
-  
+        const tallyRatio =
+          totalTallies > 0 ? (likeTally / totalTallies) * 100 : 0;
+
         // Update or create the feedbackRating document
         transaction.set(feedbackRatingRef, {
           likeTally,
           dislikeTally,
           totalTallies,
-          tallyRatio: `${tallyRatio.toFixed(2)}%`  // Store as a percentage
+          tallyRatio: `${tallyRatio.toFixed(2)}%`, // Store as a percentage
         });
-  
+
         console.log("Feedback rating and ratio updated.");
+        setHasRated(true);
       });
     } catch (error) {
       console.error("Error submitting feedback or updating tally:", error);
     }
   };
-  
-  
 
-  const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
+  const handleCommentChange = (
+    event: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
     setComment(event.target.value);
   };
 
@@ -333,12 +305,12 @@ const OrdersPage = () => {
     >
       {/* RATING CONTAINER */}
       <div className="w-full lg:max-w-[350px]">
-        {!hasRated ? (
+        {!hasRated && hasOrder ? (
           // ITO LALABAS KAPAG HINDI PA NAKAKAPAG-RATE ANG CUSTOMER TAPOS MAY ORDERS NA SIYA
           <div className="flex flex-col gap-2">
             <h1 className="font-bold text-2xl text-orange-950 flex gap-1 items-center">
               <i className="fa fa-star text-lg mb-[1px]" aria-hidden="true"></i>
-              <span>Rate your order</span>
+              <span>Rate your Order</span>
             </h1>
             <form className="bg-white border-2 border-gray-50 shadow-lg rounded-lg px-6 py-4">
               <h1 className="font-bold text-2xl text-center mb-4">
@@ -357,9 +329,12 @@ const OrdersPage = () => {
                   <button
                     type="button"
                     onClick={handleLikeClick}
-                    className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10 ${
-                      selected === "like" ? "text-orange-700" : "text-gray-500"
-                    }`}
+                    className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10
+                      hover:scale-[1.03] duration-300 hover:bg-gray-50 ${
+                        selected === "like"
+                          ? "text-orange-700"
+                          : "text-gray-500"
+                      }`}
                   >
                     <i
                       className="fa fa-thumbs-up text-md"
@@ -371,11 +346,12 @@ const OrdersPage = () => {
                   <button
                     type="button"
                     onClick={handleDislikeClick}
-                    className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10 ${
-                      selected === "dislike"
-                        ? "text-orange-700"
-                        : "text-gray-500"
-                    }`}
+                    className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10
+                      hover:scale-[1.03] duration-300 hover:bg-gray-50 ${
+                        selected === "dislike"
+                          ? "text-orange-700"
+                          : "text-gray-500"
+                      }`}
                   >
                     <i
                       className="fa fa-thumbs-down text-md"
@@ -401,15 +377,10 @@ const OrdersPage = () => {
                   value={comment}
                   onChange={handleCommentChange}
                 ></textarea>
-<<<<<<< HEAD
                 <button
-                  className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md"
+                  className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md
+                  hover:scale-[1.03] duration-300 hover:bg-orange-900"
                   onClick={handleSubmitRating}
-=======
-                <button 
-                className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md"
-                onClick={handleSubmitRating}
->>>>>>> 30bd19175445487e515afaf7fdb7898aa908237c
                 >
                   Submit Rating
                 </button>
@@ -418,6 +389,7 @@ const OrdersPage = () => {
           </div>
         ) : (
           // ITO NAMAN ANG LALABAS KAPAG WALA PA SIYANG ORDERS OR NAKAPAG-RATE NA SIYA
+
           <div className="flex flex-col gap-2">
             <div className="">
               <h1 className="font-bold text-2xl text-orange-950 mb-2 flex gap-2 items-center">
@@ -427,7 +399,7 @@ const OrdersPage = () => {
               <Link
                 href={"/menu"}
                 className="bg-orange-950 border-2 border-orange-950 shadow-lg rounded-lg px-6 py-4
-            text-white text-center flex flex-col items-center"
+            text-white text-center flex flex-col items-center hover:bg-orange-900 duration-500"
               >
                 <h1 className="font-bold text-2xl mb-4">
                   Craving some {hasOrder && "more"} of our offerings?
@@ -468,7 +440,8 @@ const OrdersPage = () => {
           {hasOrder ? (
             userOrders.map((order) => (
               <div
-                className="w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer"
+                className="w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
+                hover:scale-[0.98] duration-300"
                 key={order.id}
                 onClick={() => toggleOrder(order.id)}
               >
@@ -559,7 +532,8 @@ const OrdersPage = () => {
                     {/* CANCEL BUTTON */}
                     {(order.status === "TO PAY" || order.status === "PAID") && (
                       <button
-                        className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md"
+                        className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md
+                        hover:scale-[1.03] duration-300"
                         onClick={(e) => {
                           e.stopPropagation();
                           console.log("Cancel button clicked");
@@ -606,14 +580,16 @@ const OrdersPage = () => {
               </span>
               <div className="flex gap-2 items-center justify-center mt-4">
                 <button
-                  className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500"
+                  className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500
+                  hover:scale-[1.05] duration-300 hover:bg-gray-50"
                   onClick={() => handleDeleteOrder(orderToCancel)}
                 >
                   Yes
                 </button>
                 <button
                   onClick={() => setConfirmPopup(false)}
-                  className="w-24 py-2 rounded-md shadow-md bg-orange-950 border-2 border-orange-950 font-bold text-white"
+                  className="w-24 py-2 rounded-md shadow-md bg-orange-950 border-2 border-orange-950 font-bold text-white
+                  hover:scale-[1.05] duration-300 hover:bg-orange-900"
                 >
                   No
                 </button>

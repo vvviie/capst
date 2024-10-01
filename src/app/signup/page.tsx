@@ -2,23 +2,28 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image"; 
+import Image from "next/image";
 import classNames from "classnames";
 
 // Import Firebase modules from npm
 import { initializeApp } from "firebase/app";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
 
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAWhVssqbS2QQ7NkI1CwiOHTq6sN31gsVg",
   authDomain: "testingcapstonejg.firebaseapp.com",
-  databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL:
+    "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "testingcapstonejg",
   storageBucket: "testingcapstonejg.appspot.com",
   messagingSenderId: "1006906116033",
-  appId: "1:1006906116033:web:825eeeeeed8c4221a71140"
+  appId: "1:1006906116033:web:825eeeeeed8c4221a71140",
 };
 
 // Initialize Firebase
@@ -35,7 +40,7 @@ const SignupPage: React.FC = () => {
     firstName: "",
     lastName: "",
     phoneNumber: "",
-    address: ""
+    address: "",
   });
   const [message, setMessage] = useState("");
   const [messageColor, setMessageColor] = useState("");
@@ -61,24 +66,36 @@ const SignupPage: React.FC = () => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-  
-    const { email, password, confirmPassword, firstName, lastName, phoneNumber, address } = formData;
-  
+
+    const {
+      email,
+      password,
+      confirmPassword,
+      firstName,
+      lastName,
+      phoneNumber,
+      address,
+    } = formData;
+
     if (password !== confirmPassword) {
       setMessage("Passwords do not match!");
       setMessageColor("red");
       return;
     }
-  
+
     try {
       // Create user in Firebase Authentication
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       // Send email verification
@@ -110,7 +127,7 @@ const SignupPage: React.FC = () => {
       }
 
       clearTimeout(verificationTimeout);
-      
+
       // Save user data to Firestore with email as the document ID after verification
       await setDoc(doc(db, "users", email), {
         username: email,
@@ -125,9 +142,9 @@ const SignupPage: React.FC = () => {
       setMessageColor("green");
     } catch (error) {
       if (error instanceof Error) {
-        if (error.message.includes('auth/weak-password')) {
+        if (error.message.includes("auth/weak-password")) {
           setMessage("Password should be at least 6 characters.");
-        } else if (error.message.includes('auth/email-already-in-use')) {
+        } else if (error.message.includes("auth/email-already-in-use")) {
           setMessage("Email is already in use.");
         } else {
           setMessage(error.message);
@@ -157,10 +174,12 @@ const SignupPage: React.FC = () => {
 
           {/* ERROR/SUCCESS MESSAGE */}
           {message && (
-            <span className={classNames("font-bold mt-[-20px] text-xl", {
-              "text-red-500": messageColor === "red",
-              "text-green-500": messageColor === "green",
-            })}>
+            <span
+              className={classNames("font-bold mt-[-20px] text-xl", {
+                "text-red-500": messageColor === "red",
+                "text-green-500": messageColor === "green",
+              })}
+            >
               {message}
             </span>
           )}
@@ -229,7 +248,8 @@ const SignupPage: React.FC = () => {
               <button
                 type="button"
                 onClick={nextStep}
-                className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950"
+                className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
+                hover:bg-orange-900 duration-300 hover:scale-[1.02]"
               >
                 <span className="font-bold text-md">Next</span>
               </button>
@@ -279,14 +299,16 @@ const SignupPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950"
+                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-gray-500 bg-white
+                  hover:bg-gray-50 duration-300 hover:scale-[1.02] border-gray-50 border-2"
                 >
                   <span className="font-bold text-md">Previous</span>
                 </button>
                 <button
                   type="button"
                   onClick={nextStep}
-                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950"
+                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
+                  hover:bg-orange-900 duration-300 hover:scale-[1.02]"
                 >
                   <span className="font-bold text-md">Next</span>
                 </button>
@@ -337,13 +359,15 @@ const SignupPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950"
+                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-gray-500 bg-white
+                  hover:bg-gray-50 duration-300 hover:scale-[1.02] border-gray-50 border-2"
                 >
                   <span className="font-bold text-md">Previous</span>
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950"
+                  className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
+                  hover:bg-orange-900 duration-300 hover:scale-[1.02]"
                 >
                   <span className="font-bold text-md">Submit</span>
                 </button>
