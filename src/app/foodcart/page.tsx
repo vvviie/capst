@@ -17,6 +17,7 @@ import {
   increment,
   addDoc,
   setDoc,
+  getDoc
 } from "firebase/firestore"; // Import Firestore functions
 import { db } from "@/app/firebase";
 import Link from "next/link";
@@ -30,47 +31,11 @@ import CheckoutPopup from "../components/CheckoutPopup";
 //#endregion
 
 //#region Sample Vouchers
-type vouch = {
+type Vouch = {
   id: string;
   title: string;
   desc: string;
 };
-
-type vouchs = vouch[];
-
-// SAMPLE VOUCHERS
-const vouchers = [
-  {
-    id: "1",
-    title: "FIKSTALLVCHR",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "2",
-    title: "ASDASDAS",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "3",
-    title: "NNNNNNNN",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "4",
-    title: "TTTTTTTTTT",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "5",
-    title: "AAAAAAAAAAAA",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "6",
-    title: "VVVVVVVVVVVV",
-    desc: "Get P20 off when ordering a drink",
-  },
-];
 //#endregion
 
 const CartPage = () => {
@@ -79,7 +44,8 @@ const CartPage = () => {
   const [user, setUser] = useState(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true); // Loading state
-  const [selectedVoucher, setSelectedVoucher] = useState<vouch>(vouchers[0]);
+  const [vouchers, setVouchers] = useState<Vouch[]>([]);
+  const [selectedVoucher, setSelectedVoucher] = useState<Vouch | null>(null);
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -124,7 +90,6 @@ const CartPage = () => {
   const time = `${String(now.getHours()).padStart(2, "0")}:${String(
     now.getMinutes()
   ).padStart(2, "0")}`;
-
   //#endregion
 
   //#region Handle Processes
@@ -445,60 +410,45 @@ const CartPage = () => {
     }
   };
 
-  /*
   useEffect(() => {
-    const fetchCartItems = async () => {
+    const fetchVouchers = async () => {
       try {
-        if (!userEmail) return; // Ensure userEmail is present
-
-        const tempOrdersRef = collection(db, "tempOrders");
-        const querySnapshot = await getDocs(
-          query(tempOrdersRef, where("user", "==", userEmail))
-        );
-
-        // Array to hold all found product IDs
-        const productIdsArray: string[] = [];
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          console.log(`Document ID: ${doc.id}`);
-          console.log("Full Document Data:", JSON.stringify(data, null, 2));
-
-          // Check each product in the document data
-          for (const key in data) {
-            if (
-              data.hasOwnProperty(key) &&
-              key !== "totalCartPrice" &&
-              key !== "totalItems" &&
-              key !== "user"
-            ) {
-              const cartItem = data[key];
-              const itemProductIdInCart = cartItem.productId;
-
-              // Add to productIdsArray if not already included
-              if (
-                itemProductIdInCart &&
-                !productIdsArray.includes(itemProductIdInCart)
-              ) {
-                productIdsArray.push(itemProductIdInCart);
-              }
-            }
-          }
-        });
-
-        console.log("Product IDs found:", productIdsArray);
-
-        // Set the product IDs in state
-        setProductIds(productIdsArray);
+        // Check if userEmail is valid
+        if (!userEmail) {
+          console.error('User email is missing.');
+          return;
+        }
+  
+        // Reference the 'users' collection and fetch the document with userEmail as the ID
+        const userDocRef = doc(db, 'users', userEmail);
+        const userDoc = await getDoc(userDocRef);
+  
+        // Check if a user document exists
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userVouchers = userData.vouchers;
+  
+          // Transform the vouchers into the required format
+          const formattedVouchers: Vouch[] = Object.entries(userVouchers).map(
+            ([key, value]: any) => ({
+              id: value.voucherID,
+              title: value.voucherID,
+              desc: value.voucherDescription,
+            })
+          );
+  
+          // Update state with fetched vouchers
+          setVouchers(formattedVouchers);
+        }
       } catch (error) {
-        console.error("Error fetching cart items:", error);
+        console.error('Error fetching vouchers:', error);
       }
     };
-
-    fetchCartItems();
-  }, [userEmail]); // Run the effect when userEmail changes
-  //#endregion
-  */
+  
+    if (voucherForm) {
+      fetchVouchers();
+    }
+  }, [voucherForm, userEmail]);
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
@@ -821,11 +771,10 @@ const CartPage = () => {
   if (!isLoggedIn) {
     return (
       <div
-        className={`flex flex-col ${
-          isEmpty
+        className={`flex flex-col ${isEmpty
             ? "min-h-[calc(100vh-280px)]"
             : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
-        } mt-14 bg-white items-center justify-center`}
+          } mt-14 bg-white items-center justify-center`}
       >
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
@@ -862,11 +811,10 @@ const CartPage = () => {
 
   return (
     <div
-      className={`flex flex-col ${
-        isEmpty
+      className={`flex flex-col ${isEmpty
           ? "min-h-[calc(100vh-280px)]"
           : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
-      } mt-14 bg-white items-center justify-center`}
+        } mt-14 bg-white items-center justify-center`}
     >
       {!isLoggedIn && showLoginModal && (
         <div
@@ -1013,9 +961,8 @@ const CartPage = () => {
               {/* TABLE OR PICKUP */}
               <div className="flex flex-col">
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
-                  }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1028,9 +975,8 @@ const CartPage = () => {
                   <span className="ml-4 font-semibold">Table</span>
                 </div>
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
-                  }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1051,9 +997,8 @@ const CartPage = () => {
               {/* NOW OR LATER */}
               <div className="flex flex-col">
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
-                  }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1066,11 +1011,10 @@ const CartPage = () => {
                   <span className="ml-4 font-semibold">Now</span>
                 </div>
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedServeTime === "Later"
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedServeTime === "Later"
                       ? "bg-orange-50"
                       : "bg-gray-50"
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1154,9 +1098,8 @@ const CartPage = () => {
                   />
                   {showError && (
                     <p
-                      className={`${
-                        promoApplied ? "text-green-600" : "text-red-500"
-                      } mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100`}
+                      className={`${promoApplied ? "text-green-600" : "text-red-500"
+                        } mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100`}
                     >
                       {promoApplied
                         ? "Promo code successfully redeemed!"
@@ -1207,10 +1150,10 @@ const CartPage = () => {
                       <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
                       {/* VOUCHER TITLE */}
                       <h1 className="font-bold text-orange-950 text-xl">
-                        {selectedVoucher.title}
+                        {selectedVoucher?.title}
                       </h1>
                       {/* VOUCHER DESCRIPTION */}
-                      <p className="text-sm">{selectedVoucher.desc}</p>
+                      <p className="text-sm">{selectedVoucher?.desc}</p>
                     </div>
                     <hr className="my-4" />
                     {/* SELECT VOUCHER HEADER */}
@@ -1224,12 +1167,11 @@ const CartPage = () => {
                         <span
                           key={vouch.id}
                           onClick={() => setSelectedVoucher(vouch)}
-                          className={`${
-                            selectedVoucher.id === vouch.id
-                              ? "bg-gray-700 text-white hover:bg-gray-600"
+                          className={`${selectedVoucher?.id === vouch.id
+                              ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
                               : "bg-white text-gray-700 hover:bg-gray-50"
-                          }  font-bold text-center
-            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                            }  font-bold text-center text-xs
+                rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
                         >
                           {vouch.title}
                         </span>
@@ -1241,14 +1183,14 @@ const CartPage = () => {
                     <button
                       type="button"
                       className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
                       onClick={handlePromoCodeSubmit}
                     >
                       Apply Voucher
                     </button>
                     <button
                       className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
+          hover:bg-gray-50 hover:scale-[1.1] duration-300"
                       onClick={() => openVoucherForm(false)}
                     >
                       Close
@@ -1258,15 +1200,15 @@ const CartPage = () => {
               </div>
             )}
 
+
             {/* PAYMENT OPTIONS CONTAINER */}
             <div className="flex flex-col gap-2">
               <h1 className="text-gray-500">Payment Options</h1>
               {/* CASH OR CARD */}
               <div className="flex flex-col">
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
-                  }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1279,9 +1221,8 @@ const CartPage = () => {
                   <span className="ml-4 font-semibold">Cash</span>
                 </div>
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
-                    selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
-                  }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
+                    }`}
                 >
                   <input
                     type="radio"
