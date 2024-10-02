@@ -150,11 +150,12 @@ const SignupPage: React.FC = () => {
               voucherDescription: firstTimeVoucher.voucherDescription,
               voucherID: firstTimeVoucher.voucherID,
               voucherType: firstTimeVoucher.voucherType,
+              used: false
             },
           },
         });
   
-        setMessage("User created successfully, and voucher added!");
+        setMessage("User created successfully!");
         setMessageColor("green");
       } else {
         setMessage("Voucher not found.");
