@@ -166,6 +166,15 @@ const LoginPage = () => {
             />
           </div>
 
+          <div className="text-left mb-4">
+            <Link
+              href={"/forgot-password"}
+              className="text-orange-950 text-sm hover:text-orange-700 transition duration-300"
+            >
+              Forgot password?
+            </Link>
+          </div>
+
           <button
             type="submit"
             className="flex items-center justify-center space-x-2 w-full h-10 rounded-md
