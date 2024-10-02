@@ -26,14 +26,60 @@ import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie"; // Import js-cookie
+import CheckoutPopup from "../components/CheckoutPopup";
+//#endregion
+
+//#region Sample Vouchers
+type vouch = {
+  id: string;
+  title: string;
+  desc: string;
+};
+
+type vouchs = vouch[];
+
+// SAMPLE VOUCHERS
+const vouchers = [
+  {
+    id: "1",
+    title: "FIKSTALLVCHR",
+    desc: "Get P20 off when ordering a drink",
+  },
+  {
+    id: "2",
+    title: "ASDASDAS",
+    desc: "Get P20 off when ordering a drink",
+  },
+  {
+    id: "3",
+    title: "NNNNNNNN",
+    desc: "Get P20 off when ordering a drink",
+  },
+  {
+    id: "4",
+    title: "TTTTTTTTTT",
+    desc: "Get P20 off when ordering a drink",
+  },
+  {
+    id: "5",
+    title: "AAAAAAAAAAAA",
+    desc: "Get P20 off when ordering a drink",
+  },
+  {
+    id: "6",
+    title: "VVVVVVVVVVVV",
+    desc: "Get P20 off when ordering a drink",
+  },
+];
 //#endregion
 
 const CartPage = () => {
   //#region Use State Variables
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [user, setUser] = useState(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true); // Loading state
-
+  const [selectedVoucher, setSelectedVoucher] = useState<vouch>(vouchers[0]);
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -44,6 +90,7 @@ const CartPage = () => {
   const [selectedPayment, setSelectedPayment] = useState<string>("Cash");
   const [modeOfPayment, setModeOfPayment] = useState<string>("Cash");
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
+  const [voucherForm, openVoucherForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
   const [showError, setShowError] = useState(false);
@@ -81,7 +128,17 @@ const CartPage = () => {
   //#endregion
 
   //#region Handle Processes
+  // Handle form submission
+  const handleSubmit = () => {
+    // Show the popup when the form is submitted
+    setIsPopupVisible(true);
 
+    // Hide the popup after 1.5 seconds
+    setTimeout(() => {
+      setIsPopupVisible(false);
+    }, 750);
+  };
+  //#endregion
   //#region Check if User is Logged in and Cookie Exists
   useEffect(() => {
     const authToken = Cookies.get("authToken");
@@ -152,7 +209,7 @@ const CartPage = () => {
       return;
     }
 
-    //console.log("Entered promo code:", promoCode);
+    console.log("Entered promo code:", promoCode);
 
     try {
       const promoCodesRef = collection(db, "promoCodes");
@@ -196,7 +253,7 @@ const CartPage = () => {
         showErrorPopup("Promo code is invalid!");
       }
     } catch (error) {
-      //console.error("Error validating promo code:", error);
+      console.error("Error validating promo code:", error);
       setPromoApplied(false);
       showErrorPopup("An error occurred. Please try again.");
     }
@@ -215,7 +272,7 @@ const CartPage = () => {
       }, 1000); // Adjust timeout duration to 0.5 seconds (500 milliseconds)
       setNotificationTimeout(newTimeout);
 
-      //console.log("Removing item with ID:", itemId);
+      console.log("Removing item with ID:", itemId);
 
       // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
@@ -246,16 +303,16 @@ const CartPage = () => {
           // Check if totals are zero and delete document if true
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(doc.ref);
-            //console.log(`Document ${doc.id} deleted as the cart is empty.`);
+            console.log(`Document ${doc.id} deleted as the cart is empty.`);
           }
 
           // Refresh cart items and totals after deletion
           await fetchCartItems();
-          //console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
+          console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
         }
       });
     } catch (error) {
-      //console.error("Error removing item:", error);
+      console.error("Error removing item:", error);
       showErrorPopup("Failed to remove item. Please try again.");
     }
   };
@@ -278,7 +335,7 @@ const CartPage = () => {
       }, 1000); // 1 second (1000 milliseconds)
       setNotificationTimeout(newTimeout);
 
-      //console.log("Removing all items for user email:", userEmail);
+      console.log("Removing all items for user email:", userEmail);
 
       // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
@@ -289,21 +346,21 @@ const CartPage = () => {
       );
 
       if (querySnapshot.empty) {
-        //console.log("No documents found for user:", userEmail);
+        console.log("No documents found for user:", userEmail);
         return;
       }
 
       // Iterate through each document and delete
       for (const docSnapshot of querySnapshot.docs) {
         await deleteDoc(docSnapshot.ref);
-        //console.log(`Document with ID ${docSnapshot.id} deleted`);
+        console.log(`Document with ID ${docSnapshot.id} deleted`);
       }
 
       // Refresh cart items and totals after deletion
       await fetchCartItems();
-      //console.log("All items for user email removed");
+      console.log("All items for user email removed");
     } catch (error) {
-      //console.error("Error removing all items:", error);
+      console.error("Error removing all items:", error);
       showErrorPopup("Failed to remove all items. Please try again.");
     }
   };
@@ -384,9 +441,64 @@ const CartPage = () => {
         setIsEmpty(true);
       }
     } catch (error) {
-      //console.error("Error fetching cart items:", error);
+      console.error("Error fetching cart items:", error);
     }
   };
+
+  /*
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      try {
+        if (!userEmail) return; // Ensure userEmail is present
+
+        const tempOrdersRef = collection(db, "tempOrders");
+        const querySnapshot = await getDocs(
+          query(tempOrdersRef, where("user", "==", userEmail))
+        );
+
+        // Array to hold all found product IDs
+        const productIdsArray: string[] = [];
+
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          console.log(`Document ID: ${doc.id}`);
+          console.log("Full Document Data:", JSON.stringify(data, null, 2));
+
+          // Check each product in the document data
+          for (const key in data) {
+            if (
+              data.hasOwnProperty(key) &&
+              key !== "totalCartPrice" &&
+              key !== "totalItems" &&
+              key !== "user"
+            ) {
+              const cartItem = data[key];
+              const itemProductIdInCart = cartItem.productId;
+
+              // Add to productIdsArray if not already included
+              if (
+                itemProductIdInCart &&
+                !productIdsArray.includes(itemProductIdInCart)
+              ) {
+                productIdsArray.push(itemProductIdInCart);
+              }
+            }
+          }
+        });
+
+        console.log("Product IDs found:", productIdsArray);
+
+        // Set the product IDs in state
+        setProductIds(productIdsArray);
+      } catch (error) {
+        console.error("Error fetching cart items:", error);
+      }
+    };
+
+    fetchCartItems();
+  }, [userEmail]); // Run the effect when userEmail changes
+  //#endregion
+  */
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
@@ -399,7 +511,7 @@ const CartPage = () => {
         : subtotal, // Original subtotal without discount
     };
 
-    //console.log("Order submitted:", orderData);
+    console.log("Order submitted:", orderData);
 
     // Pass the correct subtotal to handleCompleteOrder
     handleCompleteOrder(
@@ -432,7 +544,7 @@ const CartPage = () => {
       }, 1000);
       setNotificationTimeout(newTimeout);
 
-      //console.log("Completing order for user email:", userEmail);
+      console.log("Completing order for user email:", userEmail);
 
       const tempOrdersRef = collection(db, "tempOrders");
       const querySnapshot = await getDocs(
@@ -440,7 +552,7 @@ const CartPage = () => {
       );
 
       if (querySnapshot.empty) {
-        //console.log("No documents found in tempOrders.");
+        console.log("No documents found in tempOrders.");
         return;
       }
 
@@ -499,7 +611,7 @@ const CartPage = () => {
 
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(docSnapshot.ref);
-            //console.log(`Document ${docId} deleted as the cart is empty.`);
+            console.log(`Document ${docId} deleted as the cart is empty.`);
           }
 
           if (!customOrderId) {
@@ -531,12 +643,15 @@ const CartPage = () => {
         promoDiscouted: discountedPromo,
       });
 
-      //console.log("Order successfully added to completedOrders with custom ID:",customOrderId);
+      console.log(
+        "Order successfully added to completedOrders with custom ID:",
+        customOrderId
+      );
 
       await handleRemoveAllItems();
       await fetchCartItems();
     } catch (error) {
-      //console.error("Error completing order:", error);
+      console.error("Error completing order:", error);
       showErrorPopup("Failed to complete order. Please try again.");
     }
   };
@@ -548,7 +663,7 @@ const CartPage = () => {
 
   //#region Apply Promos
   useEffect(() => {
-    //console.log("Promo applied:", promoApplied);
+    console.log("Promo applied:", promoApplied);
   }, [promoApplied]);
   //#endregion
 
@@ -569,6 +684,23 @@ const CartPage = () => {
         document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [discountPromoForm]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        openVoucherForm(false);
+      }
+    };
+
+    if (voucherForm) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [voucherForm]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -619,14 +751,14 @@ const CartPage = () => {
         );
 
         if (querySnapshot.empty) {
-          //console.log("No existing orders found.");
+          console.log("No existing orders found.");
           setNeedsOrder(true); // No orders found, flag for further action
         } else {
-          //console.log("Existing orders found.");
+          console.log("Existing orders found.");
           setNeedsOrder(false); // Orders found, no need to handle new order
         }
       } catch (error) {
-        //console.error("Error checking existing orders:", error);
+        console.error("Error checking existing orders:", error);
       }
     };
 
@@ -644,8 +776,8 @@ const CartPage = () => {
 
           querySnapshot.forEach((doc) => {
             const data = doc.data();
-            //console.log(`Document ID: ${doc.id}`);
-            //console.log("Full Document Data:", JSON.stringify(data, null, 2));
+            console.log(`Document ID: ${doc.id}`);
+            console.log("Full Document Data:", JSON.stringify(data, null, 2));
 
             // Check each product in the document data
             for (const key in data) {
@@ -662,23 +794,23 @@ const CartPage = () => {
                 // Format product ID if needed
                 itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0]; // Truncate before the number
 
-                //console.log("Formatted Product ID:", itemProductIdInCart);
-                //console.log("Comparing Product ID:", itemProductIdInCart);
-                //console.log("Comparing Size:", selectedDrinkSize);
+                console.log("Formatted Product ID:", itemProductIdInCart);
+                console.log("Comparing Product ID:", itemProductIdInCart);
+                console.log("Comparing Size:", selectedDrinkSize);
 
                 // Check if productId matches and selectedDrinkSize is '8oz'
                 if (
                   itemProductIdInCart === productId &&
                   selectedDrinkSize === "8oz"
                 ) {
-                  //console.log("Found Cart Data:", cartItem);
+                  console.log("Found Cart Data:", cartItem);
                   // Handle found cart item
                 }
               }
             }
           });
         } catch (error) {
-          //console.error("Error handling new order:", error);
+          console.error("Error handling new order:", error);
         }
       };
 
@@ -783,7 +915,6 @@ const CartPage = () => {
             </div>
             <div className="w-full flex flex-col gap-2 max-h-[550px] overflow-y-scroll pb-2">
               {addedToCart.map((items) => {
-
                 return (
                   <div
                     key={items.id}
@@ -830,16 +961,17 @@ const CartPage = () => {
                       </div>
                       <div className="flex flex-col space-y-1 items-center justify-center">
                         <Link
-                        href={`product/${items.slug}/${items.id}?edit=true`}
-                        className="flex space-x-1 items-center"
-                      >
-                        <i className="fas fa-edit text-xs text-gray-700"></i>
-                        <span className="text-md underline underline-offset-2 text-gray-600">
-                          Edit
-                        </span>
-                      </Link>
+                          href={`product/${items.slug}/${items.id}?edit=true`}
+                          className="flex space-x-1 items-center"
+                        >
+                          <i className="fas fa-edit text-xs text-gray-700"></i>
+                          <span className="text-md underline underline-offset-2 text-gray-600">
+                            Edit
+                          </span>
+                        </Link>
                         <button
-                          className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mt-2"
+                          className="flex space-x-1 items-center justify-center px-2 py-2 rounded-md shadow-md bg-red-500 mt-2
+                          hover:scale-[1.02] duration-300"
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent link click from firing
                             handleRemoveItem(items.id);
@@ -857,7 +989,7 @@ const CartPage = () => {
             {/* REMOVE ALL ITEMS IN THE FOOD CART */}
             <button
               className="shadow-md bg-red-500 space-x-2 text-gray-100
-                py-2 rounded-lg mt-3 mb-2"
+                py-2 rounded-lg mt-3 mb-2 hover:scale-[1.03] duration-300"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent link click from firing
                 handleRemoveAllItems();
@@ -976,14 +1108,27 @@ const CartPage = () => {
               )}
             </div>
 
-            {/* PROMO CODE BUTTON */}
-            <button
-              onClick={() => openDiscountPromoForm(true)}
-              className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
-                py-2 rounded-lg mt-3 mb-2"
-            >
-              <span className="font-bold text-lg">% Enter Promo Code</span>
-            </button>
+            {/* CODE AND VOUCHER BUTTON CONTAINER */}
+            <div className="w-full flex gap-2 items-center">
+              {/* VOUCHER BUTTON */}
+              <button
+                onClick={() => openVoucherForm(true)}
+                className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
+                py-2 rounded-lg mt-3 mb-2 flex-1 flex items-center justify-center
+                hover:scale-[1.03] duration-300 hover:bg-gray-50"
+              >
+                <i className="fa-solid fa-ticket text-gray-600 text-xl"></i>
+                <span className="font-bold text-lg"> Use Voucher</span>
+              </button>
+              {/* PROMO CODE BUTTON */}
+              <button
+                onClick={() => openDiscountPromoForm(true)}
+                className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
+                py-2 rounded-lg mt-3 mb-2 flex-1 hover:scale-[1.03] duration-300 hover:bg-gray-50"
+              >
+                <span className="font-bold text-lg">!% Use Promo Code</span>
+              </button>
+            </div>
 
             {/* PROMO CODE FORM */}
             {discountPromoForm && (
@@ -1021,14 +1166,90 @@ const CartPage = () => {
                   <div className="flex justify-center items-center gap-4">
                     <button
                       type="button"
-                      className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+                      className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
                       onClick={handlePromoCodeSubmit}
                     >
                       Enter Code
                     </button>
                     <button
-                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
                       onClick={() => openDiscountPromoForm(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* VOUCHER FORM */}
+            {voucherForm && (
+              <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
+              >
+                {/* PROMO CONTAINER */}
+                <form
+                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                  ref={modalRef}
+                >
+                  <div className="flex flex-col mb-6">
+                    {/* VOUCHER INFO DISPLAY HEADER */}
+                    <h1 className="text-lg font-bold text-orange-900 text-center">
+                      Selected Voucher
+                    </h1>
+                    {/* VOUCHER INFO DISPLAY CONTAINER */}
+                    <div className="flex flex-col items-center">
+                      {/* ICON */}
+                      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
+                      {/* VOUCHER TITLE */}
+                      <h1 className="font-bold text-orange-950 text-xl">
+                        {selectedVoucher.title}
+                      </h1>
+                      {/* VOUCHER DESCRIPTION */}
+                      <p className="text-sm">{selectedVoucher.desc}</p>
+                    </div>
+                    <hr className="my-4" />
+                    {/* SELECT VOUCHER HEADER */}
+                    <h1 className="text-lg font-bold text-orange-900 text-center mb-4">
+                      Select a voucher
+                    </h1>
+                    {/* VOUCHERS CONTAINER */}
+                    <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
+                      {vouchers.map((vouch) => (
+                        // VOUCHERS
+                        <span
+                          key={vouch.id}
+                          onClick={() => setSelectedVoucher(vouch)}
+                          className={`${
+                            selectedVoucher.id === vouch.id
+                              ? "bg-gray-700 text-white hover:bg-gray-600"
+                              : "bg-white text-gray-700 hover:bg-gray-50"
+                          }  font-bold text-center
+            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                        >
+                          {vouch.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <hr className="mb-6" />
+                  <div className="flex justify-center items-center gap-4">
+                    <button
+                      type="button"
+                      className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+                      onClick={handlePromoCodeSubmit}
+                    >
+                      Apply Voucher
+                    </button>
+                    <button
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
+                      onClick={() => openVoucherForm(false)}
                     >
                       Close
                     </button>
@@ -1091,7 +1312,8 @@ const CartPage = () => {
               </div>
               {/* CHECKOUT BUTTON */}
               <button
-                className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg"
+                className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg
+                hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.03] duration-300"
                 onClick={() => {
                   handleCompleteOrder(
                     modeOfPayment,
@@ -1099,6 +1321,7 @@ const CartPage = () => {
                     selectedServeTime
                   );
                   handleSubmitOrder();
+                  handleSubmit();
                 }}
               >
                 Checkout
@@ -1107,6 +1330,8 @@ const CartPage = () => {
           </div>
         </div>
       )}
+      {/* CHANGES MADE POP UP */}
+      {isPopupVisible && <CheckoutPopup />}
     </div>
   );
 };
