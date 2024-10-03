@@ -27,6 +27,7 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
+  voucher?: number,
   items: { title: string; price: number; tags: string[] }[];
   id: string;
 };
@@ -129,7 +130,8 @@ const OrdersPage = () => {
             time: data.timeCreated || "",
             where: data.selectedOption || "N/A",
             payment: data.modeOfPayment || "N/A",
-            promo: data.promoDiscouted || "0.00",
+            promo: (data.promoDiscounted || 0).toFixed(2),
+            voucher: (data.voucherDiscounted || 0).toFixed(2),
             items: [],
           };
 
@@ -502,6 +504,12 @@ const OrdersPage = () => {
                       <div className="font-bold text-sm flex justify-between items-center">
                         <span className="font-semibold">Promo discount</span>
                         <span>{order.promo}</span>
+                      </div>
+                    )}
+                    {order.voucher && (
+                      <div className="font-bold text-sm flex justify-between items-center">
+                        <span className="font-semibold">Voucher discount</span>
+                        <span>{order.voucher}</span>
                       </div>
                     )}
                     {/* Iterate through order items */}
