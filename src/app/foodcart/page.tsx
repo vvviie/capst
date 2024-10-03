@@ -287,23 +287,34 @@ const handleVoucherSubmit = async () => {
   try {
     console.log("Selected Voucher:", selectedVoucher);
 
+    // Ensure voucherType is correctly accessed
     const deduction = selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
-    const voucherType = selectedVoucher.voucherType || "minus"; // Default to "minus" if undefined
-    setVoucherType(voucherType); // Ensure this is set correctly
+    const voucherType = selectedVoucher.type; // Ensure this matches the property name
+
+    // Check if the selected voucher exists in the fetched vouchers
+    const isVoucherValid = vouchers.some(v => v.id === selectedVoucher.id);
+    
+    if (!isVoucherValid) {
+      showErrorPopup("Selected voucher is invalid.");
+      console.log("Invalid voucher selected.");
+      return;
+    }
 
     console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
 
     // Use the voucher type and deduction right after setting them
     let newTotalCartPrice = totalCartPrice;
+    let calculatedDiscount = 0;
 
     if (voucherType === "percent") {
-      const voucherDiscount = newTotalCartPrice * deduction; // Calculate voucher discount based on totalCartPrice
-      newTotalCartPrice -= voucherDiscount; // Deduct the calculated voucher discount
-      setDiscountedVoucher(voucherDiscount.toFixed(2));
-      console.log(`Discount applied (percent): ${voucherDiscount}`);
+      // Ensure deduction is treated as a percentage
+      calculatedDiscount = totalCartPrice * (deduction); // Calculate based on totalCartPrice
+      newTotalCartPrice -= calculatedDiscount; // Deduct the calculated voucher discount
+      setDiscountedVoucher(calculatedDiscount.toFixed(2)); // Store the calculated discount
+      console.log(`Discount applied (percent): ${calculatedDiscount}`);
     } else if (voucherType === "minus") {
       newTotalCartPrice -= deduction; // Deduct the fixed amount
-      setDiscountedVoucher(deduction.toFixed(2));
+      setDiscountedVoucher(deduction.toFixed(2)); // Store the fixed deduction
       console.log(`Discount applied (minus): ${deduction}`);
     }
 
@@ -323,6 +334,7 @@ const handleVoucherSubmit = async () => {
     showErrorPopup("An error occurred. Please try again.");
   }
 };
+
 
   //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
