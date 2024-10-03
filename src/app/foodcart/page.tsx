@@ -35,6 +35,8 @@ type Vouch = {
   id: string;
   title: string;
   desc: string;
+  deduction: number;
+  type: string;
 };
 //#endregion
 
@@ -59,8 +61,15 @@ const CartPage = () => {
   const [voucherForm, openVoucherForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [promoCodeInput, setPromoCodeInput] = useState(''); // For input field
   const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
+  const [voucherApplied, setVoucherApplied] = useState(false);
+  const [voucherDeduction, setVoucherDeduction] = useState(0);
+  const [voucherType, setVoucherType] = useState(""); // "minus" or "percent"
+  const [discountedVoucher, setDiscountedVoucher] = useState<number>(0);
   const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
@@ -154,76 +163,174 @@ const CartPage = () => {
 
   //#region Handling of Processes for Promo Codes
   const handlePromoCodeSubmit = async () => {
+    console.log("Current promoApplied state:", promoApplied); // Debugging log
+
+    // Check if the user is logged in
     if (!userEmail) {
-      showErrorPopup("Please log in to apply a promo code.");
-      return;
+        showErrorPopup("Please log in to apply a promo code.");
+        return;
     }
 
+    // Check if promo code has already been applied
     if (promoApplied) {
-      showErrorPopup(
-        "A promo code has already been applied. You cannot apply another one."
-      );
-      return;
+        setShowError(true);
+        setErrorMessage("A promo code has already been applied. You cannot apply another one.");
+        setPromoCodeInput(''); // Clear the input field
+        setTimeout(() => {
+            setShowError(false); // Hide the error message after 3 seconds
+        }, 3000);
+        return;
     }
 
-    const promoCode = document
-      .querySelector<HTMLInputElement>('input[type="text"]')
-      ?.value.trim();
+    // Get the promo code from the state
+    const promoCode = promoCodeInput.trim();
+
+    // Reset the error message on each submission attempt
+    setShowError(false);
+    setErrorMessage("");
+
     if (!promoCode) {
-      showErrorPopup("Please enter a promo code.");
-      return;
+        setShowError(true);
+        setErrorMessage("Please enter a promo code.");
+        setPromoCodeInput(''); // Clear the input field
+        setTimeout(() => {
+            setShowError(false); // Hide the error message after 3 seconds
+        }, 3000);
+        return;
     }
 
     console.log("Entered promo code:", promoCode);
 
     try {
-      const promoCodesRef = collection(db, "promoCodes");
-      const promoQuery = query(
-        promoCodesRef,
-        where("promoCode", "==", promoCode)
-      );
-      const promoSnapshot = await getDocs(promoQuery);
+        const promoCodesRef = collection(db, "promoCodes");
+        const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
+        const promoSnapshot = await getDocs(promoQuery);
 
-      if (!promoSnapshot.empty) {
-        const promoDoc = promoSnapshot.docs[0];
-        const promoDocRef = doc(db, "promoCodes", promoDoc.id);
-        const promoData = promoDoc.data();
-        const discount = promoData?.discountPercent || 0; // Updated variable name
-        const available = promoData?.available || false;
+        console.log("Promo snapshot:", promoSnapshot); // Log promo snapshot
 
-        if (available) {
-          setDiscountPercent(discount); // Set the discountPercent state
+        if (!promoSnapshot.empty) {
+            const promoDoc = promoSnapshot.docs[0];
+            const promoDocRef = doc(db, "promoCodes", promoDoc.id);
+            const promoData = promoDoc.data();
+            const discount = promoData?.discountPercent || 0;
+            const available = promoData?.available || false;
 
-          const discountFraction = discount;
-          const newTotalCartPrice = subtotal * (1 - discountFraction);
-          const discountedPromo = subtotal - newTotalCartPrice;
-          const totalWithDiscount = subtotal - newTotalCartPrice;
-          setTotalCartPrice(newTotalCartPrice);
-          setDiscountedPromo(discountedPromo);
-          setTotalWithDiscount(totalWithDiscount);
+            console.log("Promo data:", promoData); // Log promo data
 
-          setPromoApplied(true);
+            if (available) {
+                const discountFraction = discount;
+                const newTotalCartPrice = subtotal * (1 - discountFraction);
+                const discountedPromo = subtotal - newTotalCartPrice;
+                const totalWithDiscount = newTotalCartPrice;
 
-          await updateDoc(promoDocRef, {
-            timesUsed: (promoData?.timesUsed || 0) + 1,
-          });
+                // Set new state values
+                setDiscountPercent(discount);
+                setTotalCartPrice(newTotalCartPrice);
+                setDiscountedPromo(discountedPromo);
+                setTotalWithDiscount(totalWithDiscount);
 
-          showErrorPopup("Promo code successfully redeemed!");
+                // Mark that the promo has been applied
+                setPromoApplied(true);
+                setShowSuccess(true);
+
+                // Set success message
+                setErrorMessage("Promo code successfully redeemed!");
+                setTimeout(() => {
+                    setShowSuccess(false); // Hide the success message after 3 seconds
+                }, 3000);
+
+                // Update promo usage in the database
+                await updateDoc(promoDocRef, {
+                    timesUsed: (promoData?.timesUsed || 0) + 1,
+                });
+
+                // Reset the input field after processing
+                setPromoCodeInput(''); // Clear the input field
+            } else {
+                setShowError(true);
+                setErrorMessage("Promo code is no longer available!");
+                setPromoCodeInput(''); // Clear the input field
+                setTimeout(() => {
+                    setShowError(false); // Hide the error message after 3 seconds
+                }, 3000);
+            }
         } else {
-          setPromoApplied(false);
-          showErrorPopup("Promo code is no longer available!");
+            setShowError(true);
+            setErrorMessage("Promo code is invalid!");
+            setPromoCodeInput(''); // Clear the input field
+            setTimeout(() => {
+                setShowError(false); // Hide the error message after 3 seconds
+            }, 3000);
         }
-      } else {
-        setPromoApplied(false);
-        showErrorPopup("Promo code is invalid!");
-      }
     } catch (error) {
-      console.error("Error validating promo code:", error);
-      setPromoApplied(false);
+        console.error("Error validating promo code:", error);
+        showErrorPopup("An error occurred. Please try again.");
+        setPromoCodeInput(''); // Clear the input field
+    }
+};
+  //#endregion
+
+
+  const handleVoucherSubmit = async () => {
+    if (!userEmail) {
+      showErrorPopup("Please log in to apply a voucher.");
+      console.log("No user email found.");
+      return;
+    }
+
+    if (voucherApplied) {
+      showErrorPopup("A voucher has already been applied. You cannot apply another one.");
+      console.log("Voucher already applied.");
+      return;
+    }
+
+    if (!selectedVoucher) {
+      showErrorPopup("Please select a voucher.");
+      console.log("No voucher selected.");
+      return;
+    }
+
+    try {
+      console.log("Selected Voucher:", selectedVoucher); // Log the selected voucher details
+
+      // Adjust this part to ensure deduction is correctly extracted from the voucher
+      const deduction = selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
+      const voucherType = selectedVoucher.voucherType || "minus";
+
+      console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
+
+      let newTotalCartPrice = subtotal;
+
+      if (voucherType === "percent") {
+        const discountFraction = deduction;
+        newTotalCartPrice = subtotal * (1 - discountFraction);
+        setDiscountedVoucher(subtotal * discountFraction); // Set the discount value
+        console.log(`Discount applied (percent): ${subtotal * discountFraction}`);
+      } else if (voucherType === "minus") {
+        newTotalCartPrice = subtotal - deduction;
+        setDiscountedVoucher(deduction); // Set the discount value
+        console.log(`Discount applied (minus): ${deduction}`);
+      }
+
+      const totalWithDiscount = newTotalCartPrice;
+
+      console.log(`New total cart price after voucher: ${newTotalCartPrice}`);
+
+      setTotalCartPrice(newTotalCartPrice);
+      setTotalWithDiscount(totalWithDiscount);
+      setVoucherApplied(true);
+
+      showErrorPopup("Voucher successfully applied!");
+      console.log("Voucher successfully applied.");
+
+    } catch (error) {
+      console.error("Error applying voucher:", error);
+      setVoucherApplied(false);
       showErrorPopup("An error occurred. Please try again.");
+      console.log("Error occurred while applying voucher.");
     }
   };
-  //#endregion
+
 
   //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
@@ -418,25 +525,27 @@ const CartPage = () => {
           console.error('User email is missing.');
           return;
         }
-  
+
         // Reference the 'users' collection and fetch the document with userEmail as the ID
         const userDocRef = doc(db, 'users', userEmail);
         const userDoc = await getDoc(userDocRef);
-  
+
         // Check if a user document exists
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const userVouchers = userData.vouchers;
-  
+
           // Transform the vouchers into the required format
           const formattedVouchers: Vouch[] = Object.entries(userVouchers).map(
             ([key, value]: any) => ({
               id: value.voucherID,
               title: value.voucherID,
               desc: value.voucherDescription,
+              deduction: value.voucherDeduction,
+              type: value.voucherType
             })
           );
-  
+
           // Update state with fetched vouchers
           setVouchers(formattedVouchers);
         }
@@ -444,7 +553,7 @@ const CartPage = () => {
         console.error('Error fetching vouchers:', error);
       }
     };
-  
+
     if (voucherForm) {
       fetchVouchers();
     }
@@ -452,13 +561,26 @@ const CartPage = () => {
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
+    let finalTotal = subtotal;
+
+    if (promoApplied) {
+      finalTotal = subtotal - subtotal * discountPercent; // Apply promo discount
+    }
+
+    if (voucherApplied) {
+      // If voucher is applied, subtract it based on the type (percent or minus)
+      if (voucherType === "percent") {
+        finalTotal -= finalTotal * voucherDeduction; // Apply voucher discount (percentage)
+      } else if (voucherType === "minus") {
+        finalTotal -= voucherDeduction; // Apply voucher deduction (fixed amount)
+      }
+    }
+
     const orderData = {
       modeOfPayment: modeOfPayment,
       selectedOption: selectedOption,
       selectedServeTime: selectedServeTime,
-      finalSubtotal: promoApplied
-        ? subtotal - subtotal * discountPercent // Subtotal after discount
-        : subtotal, // Original subtotal without discount
+      finalSubtotal: finalTotal,
     };
 
     console.log("Order submitted:", orderData);
@@ -772,8 +894,8 @@ const CartPage = () => {
     return (
       <div
         className={`flex flex-col ${isEmpty
-            ? "min-h-[calc(100vh-280px)]"
-            : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+          ? "min-h-[calc(100vh-280px)]"
+          : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
           } mt-14 bg-white items-center justify-center`}
       >
         <div
@@ -812,8 +934,8 @@ const CartPage = () => {
   return (
     <div
       className={`flex flex-col ${isEmpty
-          ? "min-h-[calc(100vh-280px)]"
-          : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+        ? "min-h-[calc(100vh-280px)]"
+        : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
         } mt-14 bg-white items-center justify-center`}
     >
       {!isLoggedIn && showLoginModal && (
@@ -1012,8 +1134,8 @@ const CartPage = () => {
                 </div>
                 <div
                   className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedServeTime === "Later"
-                      ? "bg-orange-50"
-                      : "bg-gray-50"
+                    ? "bg-orange-50"
+                    : "bg-gray-50"
                     }`}
                 >
                   <input
@@ -1080,7 +1202,6 @@ const CartPage = () => {
                 className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
                 onClick={() => openDiscountPromoForm(false)} // Close modal when clicking on the background
               >
-                {/* PROMO CONTAINER */}
                 <form
                   className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
                   onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
@@ -1090,34 +1211,36 @@ const CartPage = () => {
                   <p className="mb-4">Please enter a valid promo code:</p>
                   <input
                     type="text"
+                    value={promoCodeInput}
+                    onChange={(e) => setPromoCodeInput(e.target.value)}
                     className="text-center font-bold text-2xl inline-block w-64 border-2 border-gray-100 rounded-sm mb-4"
                     style={{
                       MozAppearance: "textfield",
                       boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
                     }}
                   />
+                  {showSuccess && ( // Change from promoApplied to showSuccess
+                    <p className="text-green-600 mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100">
+                      Promo code successfully redeemed!
+                    </p>
+                  )}
                   {showError && (
-                    <p
-                      className={`${promoApplied ? "text-green-600" : "text-red-500"
-                        } mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100`}
-                    >
-                      {promoApplied
-                        ? "Promo code successfully redeemed!"
-                        : "Promo code is invalid!"}
+                    <p className="text-red-500 mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100">
+                      {errorMessage}
                     </p>
                   )}
                   <div className="flex justify-center items-center gap-4">
                     <button
                       type="button"
                       className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
                       onClick={handlePromoCodeSubmit}
                     >
                       Enter Code
                     </button>
                     <button
                       className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
+          hover:bg-gray-50 hover:scale-[1.1] duration-300"
                       onClick={() => openDiscountPromoForm(false)}
                     >
                       Close
@@ -1126,7 +1249,6 @@ const CartPage = () => {
                 </form>
               </div>
             )}
-
             {/* VOUCHER FORM */}
             {voucherForm && (
               <div
@@ -1168,8 +1290,8 @@ const CartPage = () => {
                           key={vouch.id}
                           onClick={() => setSelectedVoucher(vouch)}
                           className={`${selectedVoucher?.id === vouch.id
-                              ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
-                              : "bg-white text-gray-700 hover:bg-gray-50"
+                            ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
+                            : "bg-white text-gray-700 hover:bg-gray-50"
                             }  font-bold text-center text-xs
                 rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
                         >
@@ -1184,7 +1306,7 @@ const CartPage = () => {
                       type="button"
                       className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
           hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
-                      onClick={handlePromoCodeSubmit}
+                      onClick={handleVoucherSubmit}
                     >
                       Apply Voucher
                     </button>
@@ -1246,9 +1368,28 @@ const CartPage = () => {
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
                   P
-                  {promoApplied
-                    ? (subtotal - subtotal * discountPercent).toFixed(2)
-                    : totalCartPrice.toFixed(2)}
+                  {(() => {
+                    let total = totalCartPrice;
+
+                    // Deduct promo if applied
+                    if (promoApplied) {
+                      total -= subtotal * discountPercent; // Deduct promo discount
+                      console.log("After promo discount:", total);
+                    }
+
+                    // Deduct voucher if applied
+                    if (voucherApplied && selectedVoucher) {
+                      const deduction = selectedVoucher.voucherDeduction || 0;
+                      if (selectedVoucher.voucherType === "percent") {
+                        total -= subtotal * deduction; // Deduct percentage discount
+                      } else if (selectedVoucher.voucherType === "minus") {
+                        total -= deduction; // Deduct fixed amount
+                      }
+                      console.log("After voucher discount:", total);
+                    }
+
+                    return total.toFixed(2);
+                  })()}
                 </span>
               </div>
               {/* CHECKOUT BUTTON */}
