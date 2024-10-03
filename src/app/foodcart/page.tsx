@@ -163,174 +163,166 @@ const CartPage = () => {
 
   //#region Handling of Processes for Promo Codes
   const handlePromoCodeSubmit = async () => {
-    console.log("Current promoApplied state:", promoApplied); // Debugging log
+  console.log("Current promoApplied state:", promoApplied); // Debugging log
 
-    // Check if the user is logged in
-    if (!userEmail) {
-        showErrorPopup("Please log in to apply a promo code.");
-        return;
-    }
+  // Check if the user is logged in
+  if (!userEmail) {
+    showErrorPopup("Please log in to apply a promo code.");
+    return;
+  }
 
-    // Check if promo code has already been applied
-    if (promoApplied) {
+  // Check if promo code has already been applied
+  if (promoApplied) {
+    setShowError(true);
+    setErrorMessage("A promo code has already been applied. You cannot apply another one.");
+    setPromoCodeInput(''); // Clear the input field
+    setTimeout(() => {
+      setShowError(false); // Hide the error message after 3 seconds
+    }, 3000);
+    return;
+  }
+
+  // Get the promo code from the state
+  const promoCode = promoCodeInput.trim();
+
+  // Reset the error message on each submission attempt
+  setShowError(false);
+  setErrorMessage("");
+
+  if (!promoCode) {
+    setShowError(true);
+    setErrorMessage("Please enter a promo code.");
+    setPromoCodeInput(''); // Clear the input field
+    setTimeout(() => {
+      setShowError(false); // Hide the error message after 3 seconds
+    }, 3000);
+    return;
+  }
+
+  console.log("Entered promo code:", promoCode);
+
+  try {
+    const promoCodesRef = collection(db, "promoCodes");
+    const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
+    const promoSnapshot = await getDocs(promoQuery);
+
+    console.log("Promo snapshot:", promoSnapshot); // Log promo snapshot
+
+    if (!promoSnapshot.empty) {
+      const promoDoc = promoSnapshot.docs[0];
+      const promoDocRef = doc(db, "promoCodes", promoDoc.id);
+      const promoData = promoDoc.data();
+      const discount = promoData?.discountPercent || 0;
+      const available = promoData?.available || false;
+
+      console.log("Promo data:", promoData); // Log promo data
+
+      if (available) {
+        const promoDiscount = subtotal * discount; // Calculate promo discount on subtotal
+        const newTotalCartPrice = subtotal - promoDiscount; // Apply promo discount to subtotal
+    
+        // Update state values
+        setDiscountPercent(discount);
+        setDiscountedPromo(promoDiscount); // Use 2 decimals
+        setTotalCartPrice(newTotalCartPrice); // The final price with promo applied
+        setPromoApplied(true); // Mark promo as applied
+    
+        // Mark that the promo has been applied
+        setShowSuccess(true);
+        setErrorMessage("Promo code successfully redeemed!");
+        setTimeout(() => {
+            setShowSuccess(false); // Hide the success message after 3 seconds
+        }, 3000);
+    
+        // Update promo usage in the database
+        await updateDoc(promoDocRef, {
+            timesUsed: (promoData?.timesUsed || 0) + 1,
+        });
+
+        // Reset the input field after processing
+        setPromoCodeInput(''); // Clear the input field
+      } else {
         setShowError(true);
-        setErrorMessage("A promo code has already been applied. You cannot apply another one.");
+        setErrorMessage("Promo code is no longer available!");
         setPromoCodeInput(''); // Clear the input field
         setTimeout(() => {
-            setShowError(false); // Hide the error message after 3 seconds
+          setShowError(false); // Hide the error message after 3 seconds
         }, 3000);
-        return;
-    }
-
-    // Get the promo code from the state
-    const promoCode = promoCodeInput.trim();
-
-    // Reset the error message on each submission attempt
-    setShowError(false);
-    setErrorMessage("");
-
-    if (!promoCode) {
-        setShowError(true);
-        setErrorMessage("Please enter a promo code.");
-        setPromoCodeInput(''); // Clear the input field
-        setTimeout(() => {
-            setShowError(false); // Hide the error message after 3 seconds
-        }, 3000);
-        return;
-    }
-
-    console.log("Entered promo code:", promoCode);
-
-    try {
-        const promoCodesRef = collection(db, "promoCodes");
-        const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
-        const promoSnapshot = await getDocs(promoQuery);
-
-        console.log("Promo snapshot:", promoSnapshot); // Log promo snapshot
-
-        if (!promoSnapshot.empty) {
-            const promoDoc = promoSnapshot.docs[0];
-            const promoDocRef = doc(db, "promoCodes", promoDoc.id);
-            const promoData = promoDoc.data();
-            const discount = promoData?.discountPercent || 0;
-            const available = promoData?.available || false;
-
-            console.log("Promo data:", promoData); // Log promo data
-
-            if (available) {
-                const discountFraction = discount;
-                const newTotalCartPrice = subtotal * (1 - discountFraction);
-                const discountedPromo = subtotal - newTotalCartPrice;
-                const totalWithDiscount = newTotalCartPrice;
-
-                // Set new state values
-                setDiscountPercent(discount);
-                setTotalCartPrice(newTotalCartPrice);
-                setDiscountedPromo(discountedPromo);
-                setTotalWithDiscount(totalWithDiscount);
-
-                // Mark that the promo has been applied
-                setPromoApplied(true);
-                setShowSuccess(true);
-
-                // Set success message
-                setErrorMessage("Promo code successfully redeemed!");
-                setTimeout(() => {
-                    setShowSuccess(false); // Hide the success message after 3 seconds
-                }, 3000);
-
-                // Update promo usage in the database
-                await updateDoc(promoDocRef, {
-                    timesUsed: (promoData?.timesUsed || 0) + 1,
-                });
-
-                // Reset the input field after processing
-                setPromoCodeInput(''); // Clear the input field
-            } else {
-                setShowError(true);
-                setErrorMessage("Promo code is no longer available!");
-                setPromoCodeInput(''); // Clear the input field
-                setTimeout(() => {
-                    setShowError(false); // Hide the error message after 3 seconds
-                }, 3000);
-            }
-        } else {
-            setShowError(true);
-            setErrorMessage("Promo code is invalid!");
-            setPromoCodeInput(''); // Clear the input field
-            setTimeout(() => {
-                setShowError(false); // Hide the error message after 3 seconds
-            }, 3000);
-        }
-    } catch (error) {
-        console.error("Error validating promo code:", error);
-        showErrorPopup("An error occurred. Please try again.");
-        setPromoCodeInput(''); // Clear the input field
-    }
-};
-  //#endregion
-
-
-  const handleVoucherSubmit = async () => {
-    if (!userEmail) {
-      showErrorPopup("Please log in to apply a voucher.");
-      console.log("No user email found.");
-      return;
-    }
-
-    if (voucherApplied) {
-      showErrorPopup("A voucher has already been applied. You cannot apply another one.");
-      console.log("Voucher already applied.");
-      return;
-    }
-
-    if (!selectedVoucher) {
-      showErrorPopup("Please select a voucher.");
-      console.log("No voucher selected.");
-      return;
-    }
-
-    try {
-      console.log("Selected Voucher:", selectedVoucher); // Log the selected voucher details
-
-      // Adjust this part to ensure deduction is correctly extracted from the voucher
-      const deduction = selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
-      const voucherType = selectedVoucher.voucherType || "minus";
-
-      console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
-
-      let newTotalCartPrice = subtotal;
-
-      if (voucherType === "percent") {
-        const discountFraction = deduction;
-        newTotalCartPrice = subtotal * (1 - discountFraction);
-        setDiscountedVoucher(subtotal * discountFraction); // Set the discount value
-        console.log(`Discount applied (percent): ${subtotal * discountFraction}`);
-      } else if (voucherType === "minus") {
-        newTotalCartPrice = subtotal - deduction;
-        setDiscountedVoucher(deduction); // Set the discount value
-        console.log(`Discount applied (minus): ${deduction}`);
       }
-
-      const totalWithDiscount = newTotalCartPrice;
-
-      console.log(`New total cart price after voucher: ${newTotalCartPrice}`);
-
-      setTotalCartPrice(newTotalCartPrice);
-      setTotalWithDiscount(totalWithDiscount);
-      setVoucherApplied(true);
-
-      showErrorPopup("Voucher successfully applied!");
-      console.log("Voucher successfully applied.");
-
-    } catch (error) {
-      console.error("Error applying voucher:", error);
-      setVoucherApplied(false);
-      showErrorPopup("An error occurred. Please try again.");
-      console.log("Error occurred while applying voucher.");
+    } else {
+      setShowError(true);
+      setErrorMessage("Promo code is invalid!");
+      setPromoCodeInput(''); // Clear the input field
+      setTimeout(() => {
+        setShowError(false); // Hide the error message after 3 seconds
+      }, 3000);
     }
-  };
+  } catch (error) {
+    console.error("Error validating promo code:", error);
+    showErrorPopup("An error occurred. Please try again.");
+    setPromoCodeInput(''); // Clear the input field
+  }
+};
+//#endregion
 
+const handleVoucherSubmit = async () => {
+  if (!userEmail) {
+    showErrorPopup("Please log in to apply a voucher.");
+    console.log("No user email found.");
+    return;
+  }
+
+  if (voucherApplied) {
+    showErrorPopup("A voucher has already been applied. You cannot apply another one.");
+    console.log("Voucher already applied.");
+    return;
+  }
+
+  if (!selectedVoucher) {
+    showErrorPopup("Please select a voucher.");
+    console.log("No voucher selected.");
+    return;
+  }
+
+  try {
+    console.log("Selected Voucher:", selectedVoucher);
+
+    const deduction = selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
+    const voucherType = selectedVoucher.voucherType || "minus"; // Default to "minus" if undefined
+    setVoucherType(voucherType); // Ensure this is set correctly
+
+    console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
+
+    // Use the voucher type and deduction right after setting them
+    let newTotalCartPrice = totalCartPrice;
+
+    if (voucherType === "percent") {
+      const voucherDiscount = newTotalCartPrice * deduction; // Calculate voucher discount based on totalCartPrice
+      newTotalCartPrice -= voucherDiscount; // Deduct the calculated voucher discount
+      setDiscountedVoucher(voucherDiscount.toFixed(2));
+      console.log(`Discount applied (percent): ${voucherDiscount}`);
+    } else if (voucherType === "minus") {
+      newTotalCartPrice -= deduction; // Deduct the fixed amount
+      setDiscountedVoucher(deduction.toFixed(2));
+      console.log(`Discount applied (minus): ${deduction}`);
+    }
+
+    setTotalCartPrice(newTotalCartPrice);
+    setVoucherApplied(true);
+
+    showErrorPopup("Voucher successfully applied!");
+    console.log("Voucher successfully applied.");
+
+    // Store the voucher type and deduction in state if needed
+    setVoucherType(voucherType);
+    setVoucherDeduction(deduction);
+
+  } catch (error) {
+    console.error("Error applying voucher:", error);
+    setVoucherApplied(false);
+    showErrorPopup("An error occurred. Please try again.");
+  }
+};
 
   //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
@@ -561,38 +553,53 @@ const CartPage = () => {
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
-    let finalTotal = subtotal;
+    let finalTotal = subtotal; // Start with the subtotal
 
+    console.log("Initial subtotal:", subtotal);
+    console.log("Promo applied:", promoApplied);
+    console.log("Discount percent:", discountPercent);
+    console.log("Voucher applied:", voucherApplied);
+    console.log("Voucher type:", voucherType);
+    console.log("Voucher deduction:", voucherDeduction);
+
+    // Apply promo discount if applicable
     if (promoApplied) {
-      finalTotal = subtotal - subtotal * discountPercent; // Apply promo discount
+        const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
+        finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+        console.log("Applied promo discount:", promoDiscount);
     }
 
+    // Apply voucher discount if applicable
     if (voucherApplied) {
-      // If voucher is applied, subtract it based on the type (percent or minus)
-      if (voucherType === "percent") {
-        finalTotal -= finalTotal * voucherDeduction; // Apply voucher discount (percentage)
-      } else if (voucherType === "minus") {
-        finalTotal -= voucherDeduction; // Apply voucher deduction (fixed amount)
-      }
+        if (voucherType === "percent") {
+            const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
+            finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+            console.log("Applied voucher discount (percent):", voucherDiscount);
+        } else if (voucherType === "minus") {
+            finalTotal -= voucherDeduction; // Deduct the fixed amount
+            console.log("Applied voucher discount (minus):", voucherDeduction);
+        }
     }
+
+    finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
 
     const orderData = {
-      modeOfPayment: modeOfPayment,
-      selectedOption: selectedOption,
-      selectedServeTime: selectedServeTime,
-      finalSubtotal: finalTotal,
+        modeOfPayment: modeOfPayment,
+        selectedOption: selectedOption,
+        selectedServeTime: selectedServeTime,
+        finalSubtotal: finalTotal,
     };
 
+    console.log("Final subtotal before completing order:", finalTotal);
     console.log("Order submitted:", orderData);
 
-    // Pass the correct subtotal to handleCompleteOrder
     handleCompleteOrder(
-      orderData.modeOfPayment,
-      orderData.selectedOption,
-      orderData.selectedServeTime,
-      orderData.finalSubtotal
+        orderData.modeOfPayment,
+        orderData.selectedOption,
+        orderData.selectedServeTime,
+        orderData.finalSubtotal
     );
-  };
+};
   //#endregion
 
   //#region Handling of Completion of Orders
@@ -608,13 +615,6 @@ const CartPage = () => {
     }
 
     try {
-      setShowRemoveItemNotif(true);
-      clearTimeout(notificationTimeout);
-      const newTimeout = setTimeout(() => {
-        clearTimeout(newTimeout);
-        setShowRemoveItemNotif(false);
-      }, 1000);
-      setNotificationTimeout(newTimeout);
 
       console.log("Completing order for user email:", userEmail);
 
@@ -703,7 +703,7 @@ const CartPage = () => {
         user: userEmail,
         items: completedOrderItems,
         totalItems: totalItems,
-        subtotal: finalSubtotal || 0, // Add a fallback value like 0
+        subtotal: finalSubtotal || 0, // Updated to include the final subtotal after discounts
         totalCartPrice: totalCartPrice,
         modeOfPayment: modeOfPayment,
         selectedOption: selectedOption,
@@ -712,7 +712,8 @@ const CartPage = () => {
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
-        promoDiscouted: discountedPromo,
+        promoDiscounted: Math.round(discountedPromo * 100) / 100,  // Promo discount rounded to 2 decimal places
+        voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0, // Voucher discount rounded to 2 decimal places, or 0 if not applied
       });
 
       console.log(
@@ -1172,6 +1173,16 @@ const CartPage = () => {
                   </span>
                 </div>
               )}
+
+              {/* ONLY SHOW VOUCHER IF APPLIED */}
+              {voucherApplied && (
+                <div className="flex justify-between items-center px-4">
+                  <span>Voucher</span>
+                  <span className="font-bold text-lg text-gray-600">
+                    -P{discountedVoucher}
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* CODE AND VOUCHER BUTTON CONTAINER */}
@@ -1363,35 +1374,39 @@ const CartPage = () => {
 
             {/* TOTAL AND CHECKOUT BUTTON */}
             <div>
-              {/* TOTAL AMOUNT */}
-              <div className="flex justify-between items-center px-4 py-4">
-                <span className="font-semibold text-lg">Total (VAT Inc.)</span>
-                <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-                  P
-                  {(() => {
-                    let total = totalCartPrice;
+   {/* TOTAL AMOUNT */}
+<div className="flex justify-between items-center px-4 py-4">
+    <span className="font-semibold text-lg">Total (VAT Inc.)</span>
+    <span className="font-bold text-lg text-gray-800 lg:text-2xl">
+      P
+      {(() => {
+        let finalTotal = subtotal; // Start with the subtotal
 
-                    // Deduct promo if applied
-                    if (promoApplied) {
-                      total -= subtotal * discountPercent; // Deduct promo discount
-                      console.log("After promo discount:", total);
-                    }
+        // Apply promo discount if applicable
+        if (promoApplied) {
+            const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
+            finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+            console.log("Applied promo discount:", promoDiscount);
+        }
 
-                    // Deduct voucher if applied
-                    if (voucherApplied && selectedVoucher) {
-                      const deduction = selectedVoucher.voucherDeduction || 0;
-                      if (selectedVoucher.voucherType === "percent") {
-                        total -= subtotal * deduction; // Deduct percentage discount
-                      } else if (selectedVoucher.voucherType === "minus") {
-                        total -= deduction; // Deduct fixed amount
-                      }
-                      console.log("After voucher discount:", total);
-                    }
+        // Apply voucher discount if applicable
+        if (voucherApplied) {
+            if (voucherType === "percent") {
+                const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
+                finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+                console.log("Applied voucher discount (percent):", voucherDiscount);
+            } else if (voucherType === "minus") {
+                finalTotal -= voucherDeduction; // Deduct the fixed amount
+                console.log("Applied voucher discount (minus):", voucherDeduction);
+            }
+        }
 
-                    return total.toFixed(2);
-                  })()}
-                </span>
-              </div>
+        finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
+
+        return finalTotal.toFixed(2); // Return formatted total with two decimal places
+      })()}
+    </span>
+</div>
               {/* CHECKOUT BUTTON */}
               <button
                 className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg
