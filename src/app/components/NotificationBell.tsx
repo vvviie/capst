@@ -33,6 +33,7 @@ type VoucherNotification = {
     time: string;
     date: string;
     read: boolean;
+    deleted: boolean;
 };
 
 const NotificationBell = () => {
@@ -64,11 +65,12 @@ const NotificationBell = () => {
                         ([key, value]: any) => ({
                             id: value.voucherID,
                             type: "Voucher",
-                            subject: New Voucher: ${value.voucherID},
+                            subject: `New Voucher: ${value.voucherID}`,
                             details: value.voucherDescription,
                             time: value.timeCreated,
                             date: value.dateCreated,
-                            read: false // Default to unread
+                            read: value.isRead,
+                            deleted: value.isNotifDeleted,
                         })
                     );
 
@@ -115,10 +117,10 @@ const NotificationBell = () => {
                     items.forEach((item: any, index: number) => {
                         if (!item.isNotifDeleted) {
                             const notification = {
-                                id: ${doc.id}-${index},
+                                id: `${doc.id}-${index}`,
                                 type: "Order Item",
-                                subject: Order Status: ${data.status || "Unknown"},
-                                details: Your order '${doc.id}' with subtotal P${data.subtotal || 0} is ${data.status || "in progress"}. Please proceed to the cashier and settle your orders.,
+                                subject: `Order Status: ${data.status || "Unknown"}`,
+                                details: `Your order '${doc.id}' with subtotal P${data.subtotal || 0} is ${data.status || "in progress"}. Please proceed to the cashier and settle your orders.`,
                                 time: data.timeCreated || "N/A",
                                 date: data.dateCreated || "N/A",
                                 read: item.isRead || false,
@@ -134,9 +136,9 @@ const NotificationBell = () => {
                         id: voucher.id,
                         type: "Voucher",
                         subject: "New Voucher Claimed",
-                        details: Congratulations! ${voucher.details},
-                        time: voucher.time || new Date().toLocaleTimeString(), // Use current time if not provided
-                        date: voucher.date || new Date().toLocaleDateString(), // Use current date if not provided
+                        details: `Congratulations! ${voucher.details}`,
+                        time: voucher.time,
+                        date: voucher.date,
                         read: voucher.read, // Use the actual read status
                     };
                     fetchedNotifications.push(voucherNotification);
@@ -144,8 +146,8 @@ const NotificationBell = () => {
 
                 // Sort notifications by date and time in descending order
                 fetchedNotifications.sort((a, b) => {
-                    const dateA = new Date(${a.date} ${a.time});
-                    const dateB = new Date(${b.date} ${b.time});
+                    const dateA = new Date(`${a.date} ${a.time}`);
+                    const dateB = new Date(`${b.date} ${b.time}`);
                     return dateB.getTime() - dateA.getTime(); // Descending order
                 });
 
@@ -165,10 +167,28 @@ const NotificationBell = () => {
             if (voucherIndex > -1) {
                 // Voucher notification toggle
                 const updatedVouchers = [...voucherNotifs];
-                updatedVouchers[voucherIndex] = { ...updatedVouchers[voucherIndex], read: !currentReadStatus };
+                const updatedReadStatus = !currentReadStatus;
+    
+                // Update locally
+                updatedVouchers[voucherIndex] = { ...updatedVouchers[voucherIndex], read: updatedReadStatus };
                 setVoucherNotifs(updatedVouchers);
+    
+                // Update Firestore
+                const userDocRef = doc(db, 'users', userEmail); // Use the userEmail to get the correct user document
+                const userDoc = await getDoc(userDocRef);
+    
+                if (userDoc.exists()) {
+                    const userVouchers = userDoc.data().vouchers;
+    
+                    // Update the specific voucher in Firestore
+                    const voucherID = updatedVouchers[voucherIndex].id; // Assuming `id` corresponds to `voucherID`
+                    if (userVouchers[voucherID]) {
+                        userVouchers[voucherID].isRead = updatedReadStatus; // Update isRead status
+                        await updateDoc(userDocRef, { vouchers: userVouchers });
+                    }
+                }
             } else {
-                // Order notification toggle
+                // Handle order notification toggle
                 const [docId, itemIndex] = notificationId.split('-');
                 const completedOrderRef = doc(db, "completedOrders", docId);
                 const notifDoc = await getDoc(completedOrderRef);
@@ -177,7 +197,8 @@ const NotificationBell = () => {
                     const updatedItems = [...notifData.items];
                     updatedItems[itemIndex] = { ...updatedItems[itemIndex], isRead: !currentReadStatus };
                     await updateDoc(completedOrderRef, { items: updatedItems });
-
+    
+                    // Update state locally
                     setNotifItems((prevNotifs) =>
                         prevNotifs.map((notif) =>
                             notif.id === notificationId ? { ...notif, read: !currentReadStatus } : notif
@@ -189,15 +210,17 @@ const NotificationBell = () => {
             console.error("Error toggling notification read status:", error);
         }
     };
-
+    
     const deleteNotification = async (notificationId: string) => {
         try {
             const voucherIndex = voucherNotifs.findIndex((voucher) => voucher.id === notificationId);
             if (voucherIndex > -1) {
-                // Delete voucher notification
-                setVoucherNotifs((prevNotifs) => prevNotifs.filter((notif) => notif.id !== notificationId));
+                // Just mark the voucher as deleted locally
+                const updatedVouchers = [...voucherNotifs];
+                updatedVouchers[voucherIndex] = { ...updatedVouchers[voucherIndex], read: false, isNotifDeleted: true };
+                setVoucherNotifs(updatedVouchers);
             } else {
-                // Delete order notification
+                // Delete order notification in Firestore
                 const [docId, itemIndex] = notificationId.split('-');
                 const completedOrderRef = doc(db, "completedOrders", docId);
                 const notifDoc = await getDoc(completedOrderRef);
@@ -206,7 +229,8 @@ const NotificationBell = () => {
                     const updatedItems = [...notifData.items];
                     updatedItems[itemIndex] = { ...updatedItems[itemIndex], isNotifDeleted: true };
                     await updateDoc(completedOrderRef, { items: updatedItems });
-
+    
+                    // Remove the notification from state
                     setNotifItems((prevNotifs) => prevNotifs.filter((notif) => notif.id !== notificationId));
                 }
             }
@@ -331,24 +355,24 @@ const NotificationBell = () => {
                                         <hr className="my-4" />
                                         <div className="relative flex items-start">
                                             <div
-                                                className={h-14 rounded-full aspect-square
+                                                className={`h-14 rounded-full aspect-square
                                                 flex items-center justify-center mr-3 mt-1
-                                                ${notif.read ? "bg-gray-300" : "bg-orange-900"}}
+                                                ${notif.read ? "bg-gray-300" : "bg-orange-900"}`}
                                             >
                                                 <i
-                                                    className={fa fa-mug-hot ml-1 text-xl ${notif.read ? "text-gray-100" : "text-yellow-100"}}
+                                                    className={`fa fa-mug-hot ml-1 text-xl ${notif.read ? "text-gray-100" : "text-yellow-100"}`}
                                                     aria-hidden="true"
                                                 ></i>
                                             </div>
                                             <div className="w-[300px] md:w-[320px] lg:w-[340px] pr-2">
-                                                <h1 className={${notif.read ? "text-gray-500 font-semibold" : "text-orange-950 font-bold"}}>
+                                                <h1 className={`${notif.read ? "text-gray-500 font-semibold" : "text-orange-950 font-bold"}`}>
                                                     {notif.subject}
                                                 </h1>
-                                                <p className={${notif.read ? "text-gray-400 font-normal" : "text-gray-700 font-semibold"} text-sm}>
+                                                <p className={`${notif.read ? "text-gray-400 font-normal" : "text-gray-700 font-semibold"} text-sm`}>
                                                     {notif.details}
                                                 </p>
                                                 <div className="mt-1 flex justify-between items-center">
-                                                    <span className={${notif.read ? "text-gray-300" : "text-gray-500"} text-xs}>
+                                                    <span className={`${notif.read ? "text-gray-300" : "text-gray-500"} text-xs`}>
                                                         {notif.date} | {notif.time}
                                                     </span>
                                                     <span
