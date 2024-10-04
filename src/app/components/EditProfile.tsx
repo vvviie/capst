@@ -1,26 +1,59 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ChangesMadePopup from "./ChangeMadePopup";
+import { auth, db } from "../firebase"; // Import your Firebase config
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 const EditProfile = () => {
   // State to manage popup visibility
   const [isPopupVisible, setIsPopupVisible] = useState(false);
+  
+  // State to store user details
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [address, setAddress] = useState("");
+
+  // Fetch user data when component mounts
+  useEffect(() => {
+    const fetchUserData = async () => {
+      onAuthStateChanged(auth, async (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          const userDocRef = doc(db, "users", authUser.email);
+          const userDoc = await getDoc(userDocRef);
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setFirstName(userData.firstName || "");
+            setLastName(userData.lastName || "");
+            setPhoneNumber(userData.phoneNumber || "");
+            setAddress(userData.address || "");
+          }
+        }
+      });
+    };
+
+    fetchUserData();
+  }, []);
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Show the popup when the form is submitted
     setIsPopupVisible(true);
 
-    // Hide the popup after 1.5 seconds
+    // Hide the popup after 0.75 seconds
     setTimeout(() => {
       setIsPopupVisible(false);
     }, 750);
+
+    // Add logic to save updated data to Firebase
   };
 
   return (
     <>
       {/* EDIT PROFILE FORM */}
-      <form onSubmit={handleSubmit} className="">
+      <form onSubmit={handleSubmit}>
         {/* HEADER */}
         <h1 className="text-2xl font-bold mb-2 text-orange-900">
           Edit Profile
@@ -35,8 +68,9 @@ const EditProfile = () => {
               name="firstName"
               id="editFirstName"
               type="text"
-              placeholder="Juan"
-              value={"Juan"}
+              placeholder="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
               required
             />
           </div>
@@ -48,8 +82,9 @@ const EditProfile = () => {
               name="lastName"
               id="editLastName"
               type="text"
-              placeholder="Dela Cruz"
-              value={"Dela Cruz"}
+              placeholder="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
               required
             />
           </div>
@@ -62,7 +97,8 @@ const EditProfile = () => {
               id="editPhoneNumber"
               type="number"
               placeholder="Phone Number"
-              value={"09123456789"}
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
               required
             />
           </div>
@@ -75,7 +111,8 @@ const EditProfile = () => {
               id="editAddress"
               type="text"
               placeholder="Address"
-              value={"246 Magnolia St., Fiore"}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
               required
             />
           </div>
