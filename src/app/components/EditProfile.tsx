@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import ChangesMadePopup from "./ChangeMadePopup";
 import { auth, db } from "../firebase"; // Import your Firebase config
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import updateDoc
 
 const EditProfile = () => {
   // State to manage popup visibility
@@ -37,17 +37,36 @@ const EditProfile = () => {
   }, []);
 
   // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     // Show the popup when the form is submitted
     setIsPopupVisible(true);
+
+    // Update Firebase with new user data
+    try {
+      const authUser = auth.currentUser;
+
+      if (authUser && authUser.emailVerified) {
+        const userDocRef = doc(db, "users", authUser.email);
+        await updateDoc(userDocRef, {
+          firstName,
+          lastName,
+          phoneNumber,
+          address,
+        });
+
+        console.log("Profile updated successfully!");
+      }
+
+    } catch (error) {
+      console.error("Error updating profile: ", error);
+    }
 
     // Hide the popup after 0.75 seconds
     setTimeout(() => {
       setIsPopupVisible(false);
     }, 750);
-
-    // Add logic to save updated data to Firebase
   };
 
   return (
