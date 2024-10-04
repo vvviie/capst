@@ -1,10 +1,7 @@
-//foodcart
-
 "use client";
 
 //#region Import statements
 import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams, usePathname } from "next/navigation";
 import {
   getDocs,
   query,
@@ -14,23 +11,21 @@ import {
   doc,
   deleteDoc,
   deleteField,
-  increment,
-  addDoc,
   setDoc,
   getDoc
-} from "firebase/firestore"; // Import Firestore functions
+} from "firebase/firestore"; 
 import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
-import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
+import { getAuth, onAuthStateChanged } from "firebase/auth"; 
 import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie"; // Import js-cookie
+import Cookies from "js-cookie"; 
 import CheckoutPopup from "../components/CheckoutPopup";
 //#endregion
 
-//#region Sample Vouchers
+//#region Voucher data form
 type Vouch = {
   id: string;
   title: string;
@@ -64,29 +59,19 @@ const CartPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [promoCodeInput, setPromoCodeInput] = useState(''); // For input field
-  const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
+  const [promoCodeInput, setPromoCodeInput] = useState(''); 
+  const [promoApplied, setPromoApplied] = useState(false); 
   const [voucherApplied, setVoucherApplied] = useState(false);
   const [voucherDeduction, setVoucherDeduction] = useState(0);
-  const [voucherType, setVoucherType] = useState(""); // "minus" or "percent"
+  const [voucherType, setVoucherType] = useState(""); 
   const [discountedVoucher, setDiscountedVoucher] = useState<number>(0);
-  const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
+  const [totalCartPrice, setTotalCartPrice] = useState(0); 
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
-  const [totalWithDiscount, setTotalWithDiscount] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
   const [notificationTimeout, setNotificationTimeout] = useState(null);
-
-  const params = useParams();
-  const searchParams = useSearchParams();
-
-  const slug = params.slug as string | undefined; // Adjust if using searchParams
-  const cleanId = searchParams.get("cleanId") as string | undefined;
-
-  const [productId, setProductId] = useState<string | undefined>(undefined);
+  const [productId] = useState<string | undefined>(undefined);
   const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
-  const [productIds, setProductIds] = useState<string[]>([]);
-  const [basePrice, setBasePrice] = useState(0);
 
   const now = new Date();
 
@@ -101,36 +86,35 @@ const CartPage = () => {
   ).padStart(2, "0")}`;
   //#endregion
 
+  //#region Handling of All Methods
+
   //#region Handle Processes
+  
   // Handle form submission
   const handleSubmit = () => {
-    // Show the popup when the form is submitted
     setIsPopupVisible(true);
 
-    // Hide the popup after 1.5 seconds
     setTimeout(() => {
       setIsPopupVisible(false);
     }, 750);
   };
   //#endregion
+
   //#region Check if User is Logged in and Cookie Exists
   useEffect(() => {
     const authToken = Cookies.get("authToken");
 
     if (!authToken) {
-      // No cookie, set loading to false and show login modal
       setLoading(false);
     } else {
-      // Cookie is found, proceed to check Firebase auth state
       const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
         if (authUser && authUser.emailVerified) {
           setUser(authUser);
           setIsLoggedIn(true);
         }
-        setLoading(false); // Done checking, stop loading
+        setLoading(false); 
       });
 
-      // Clean up the listener when component unmounts
       return () => unsubscribeAuth();
     }
   }, [router]);
@@ -162,10 +146,9 @@ const CartPage = () => {
   //#endregion
 
   //#region Handling of Processes for Promo Codes
-  const handlePromoCodeSubmit = async () => {
-  console.log("Current promoApplied state:", promoApplied); // Debugging log
+const handlePromoCodeSubmit = async () => {
+  console.log("Current promoApplied state:", promoApplied); 
 
-  // Check if the user is logged in
   if (!userEmail) {
     showErrorPopup("Please log in to apply a promo code.");
     return;
@@ -175,26 +158,24 @@ const CartPage = () => {
   if (promoApplied) {
     setShowError(true);
     setErrorMessage("A promo code has already been applied. You cannot apply another one.");
-    setPromoCodeInput(''); // Clear the input field
+    setPromoCodeInput(''); 
     setTimeout(() => {
-      setShowError(false); // Hide the error message after 3 seconds
+      setShowError(false); 
     }, 3000);
     return;
   }
 
-  // Get the promo code from the state
   const promoCode = promoCodeInput.trim();
 
-  // Reset the error message on each submission attempt
   setShowError(false);
   setErrorMessage("");
 
   if (!promoCode) {
     setShowError(true);
     setErrorMessage("Please enter a promo code.");
-    setPromoCodeInput(''); // Clear the input field
+    setPromoCodeInput(''); 
     setTimeout(() => {
-      setShowError(false); // Hide the error message after 3 seconds
+      setShowError(false); 
     }, 3000);
     return;
   }
@@ -206,7 +187,7 @@ const CartPage = () => {
     const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
     const promoSnapshot = await getDocs(promoQuery);
 
-    console.log("Promo snapshot:", promoSnapshot); // Log promo snapshot
+    console.log("Promo snapshot:", promoSnapshot); 
 
     if (!promoSnapshot.empty) {
       const promoDoc = promoSnapshot.docs[0];
@@ -215,66 +196,64 @@ const CartPage = () => {
       const discount = promoData?.discountPercent || 0;
       const available = promoData?.available || false;
 
-      console.log("Promo data:", promoData); // Log promo data
+      console.log("Promo data:", promoData);
 
       if (available) {
-        const promoDiscount = subtotal * discount; // Calculate promo discount on subtotal
-        const newTotalCartPrice = subtotal - promoDiscount; // Apply promo discount to subtotal
-    
-        // Update state values
+        const promoDiscount = subtotal * discount; 
+        const newTotalCartPrice = subtotal - promoDiscount; 
+
+        setVoucherApplied(false); 
+        setVoucherDeduction(0); 
+        setVoucherType('');
+        setDiscountedVoucher(0);
+
         setDiscountPercent(discount);
-        setDiscountedPromo(promoDiscount); // Use 2 decimals
-        setTotalCartPrice(newTotalCartPrice); // The final price with promo applied
-        setPromoApplied(true); // Mark promo as applied
-    
-        // Mark that the promo has been applied
+        setDiscountedPromo(promoDiscount.toFixed(2)); 
+        setTotalCartPrice(newTotalCartPrice); 
+        setPromoApplied(true); 
+
         setShowSuccess(true);
         setErrorMessage("Promo code successfully redeemed!");
         setTimeout(() => {
-            setShowSuccess(false); // Hide the success message after 3 seconds
+            setShowSuccess(false);
         }, 3000);
-    
-        // Update promo usage in the database
+
         await updateDoc(promoDocRef, {
             timesUsed: (promoData?.timesUsed || 0) + 1,
         });
 
-        // Reset the input field after processing
-        setPromoCodeInput(''); // Clear the input field
+        openDiscountPromoForm(false);
+
+        setPromoCodeInput(''); 
       } else {
         setShowError(true);
         setErrorMessage("Promo code is no longer available!");
-        setPromoCodeInput(''); // Clear the input field
+        setPromoCodeInput(''); 
         setTimeout(() => {
-          setShowError(false); // Hide the error message after 3 seconds
+          setShowError(false); 
         }, 3000);
       }
     } else {
       setShowError(true);
       setErrorMessage("Promo code is invalid!");
-      setPromoCodeInput(''); // Clear the input field
+      setPromoCodeInput(''); 
       setTimeout(() => {
-        setShowError(false); // Hide the error message after 3 seconds
+        setShowError(false); 
       }, 3000);
     }
   } catch (error) {
     console.error("Error validating promo code:", error);
     showErrorPopup("An error occurred. Please try again.");
-    setPromoCodeInput(''); // Clear the input field
+    setPromoCodeInput(''); 
   }
 };
 //#endregion
 
+  //#region Handling of Processes for Vouchers
 const handleVoucherSubmit = async () => {
   if (!userEmail) {
     showErrorPopup("Please log in to apply a voucher.");
     console.log("No user email found.");
-    return;
-  }
-
-  if (voucherApplied) {
-    showErrorPopup("A voucher has already been applied. You cannot apply another one.");
-    console.log("Voucher already applied.");
     return;
   }
 
@@ -287,11 +266,9 @@ const handleVoucherSubmit = async () => {
   try {
     console.log("Selected Voucher:", selectedVoucher);
 
-    // Ensure voucherType is correctly accessed
     const deduction = selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
-    const voucherType = selectedVoucher.type; // Ensure this matches the property name
+    const voucherType = selectedVoucher.type; 
 
-    // Check if the selected voucher exists in the fetched vouchers
     const isVoucherValid = vouchers.some(v => v.id === selectedVoucher.id);
     
     if (!isVoucherValid) {
@@ -302,19 +279,21 @@ const handleVoucherSubmit = async () => {
 
     console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
 
-    // Use the voucher type and deduction right after setting them
+    setPromoApplied(false);
+    setDiscountPercent(0);
+    setDiscountedPromo(0);
+
     let newTotalCartPrice = totalCartPrice;
     let calculatedDiscount = 0;
 
     if (voucherType === "percent") {
-      // Ensure deduction is treated as a percentage
-      calculatedDiscount = totalCartPrice * (deduction); // Calculate based on totalCartPrice
-      newTotalCartPrice -= calculatedDiscount; // Deduct the calculated voucher discount
-      setDiscountedVoucher(calculatedDiscount.toFixed(2)); // Store the calculated discount
+      calculatedDiscount = totalCartPrice * (deduction); 
+      newTotalCartPrice -= calculatedDiscount; 
+      setDiscountedVoucher(calculatedDiscount.toFixed(2)); 
       console.log(`Discount applied (percent): ${calculatedDiscount}`);
     } else if (voucherType === "minus") {
-      newTotalCartPrice -= deduction; // Deduct the fixed amount
-      setDiscountedVoucher(deduction.toFixed(2)); // Store the fixed deduction
+      newTotalCartPrice -= deduction; 
+      setDiscountedVoucher(deduction.toFixed(2)); 
       console.log(`Discount applied (minus): ${deduction}`);
     }
 
@@ -324,9 +303,10 @@ const handleVoucherSubmit = async () => {
     showErrorPopup("Voucher successfully applied!");
     console.log("Voucher successfully applied.");
 
-    // Store the voucher type and deduction in state if needed
     setVoucherType(voucherType);
     setVoucherDeduction(deduction);
+
+    openVoucherForm(false);
 
   } catch (error) {
     console.error("Error applying voucher:", error);
@@ -334,55 +314,47 @@ const handleVoucherSubmit = async () => {
     showErrorPopup("An error occurred. Please try again.");
   }
 };
-
+//#endregion
 
   //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
     try {
-      // Show RemoveItemNotif component for 0.5 seconds
       setShowRemoveItemNotif(true);
       clearTimeout(notificationTimeout);
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
-      }, 1000); // Adjust timeout duration to 0.5 seconds (500 milliseconds)
+      }, 1000); 
       setNotificationTimeout(newTimeout);
 
       console.log("Removing item with ID:", itemId);
 
-      // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
 
-      // Fetch all documents in the tempOrders collection
       const querySnapshot = await getDocs(tempOrdersRef);
 
       querySnapshot.forEach(async (doc) => {
         const data = doc.data();
 
-        // Check if the document contains the itemId
         if (data[itemId]) {
           const itemData = data[itemId];
           const itemQty = itemData.itemQty || 0;
           const itemTotalPrice = itemData.totalPrice || 0;
 
-          // Calculate new totals
           const newTotalCartPrice = (data.totalCartPrice || 0) - itemTotalPrice;
           const newTotalItems = (data.totalItems || 0) - itemQty;
 
-          // Remove the item from the document
           await updateDoc(doc.ref, {
             [itemId]: deleteField(),
             totalCartPrice: newTotalCartPrice,
             totalItems: newTotalItems,
           });
 
-          // Check if totals are zero and delete document if true
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(doc.ref);
             console.log(`Document ${doc.id} deleted as the cart is empty.`);
           }
 
-          // Refresh cart items and totals after deletion
           await fetchCartItems();
           console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
         }
@@ -402,21 +374,18 @@ const handleVoucherSubmit = async () => {
     }
 
     try {
-      // Show RemoveItemNotif component for 1 second
       setShowRemoveItemNotif(true);
       clearTimeout(notificationTimeout);
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
-      }, 1000); // 1 second (1000 milliseconds)
+      }, 1000);
       setNotificationTimeout(newTimeout);
 
       console.log("Removing all items for user email:", userEmail);
 
-      // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
 
-      // Query documents where the user field matches the current user's email
       const querySnapshot = await getDocs(
         query(tempOrdersRef, where("user", "==", userEmail))
       );
@@ -426,13 +395,11 @@ const handleVoucherSubmit = async () => {
         return;
       }
 
-      // Iterate through each document and delete
       for (const docSnapshot of querySnapshot.docs) {
         await deleteDoc(docSnapshot.ref);
         console.log(`Document with ID ${docSnapshot.id} deleted`);
       }
 
-      // Refresh cart items and totals after deletion
       await fetchCartItems();
       console.log("All items for user email removed");
     } catch (error) {
@@ -445,7 +412,7 @@ const handleVoucherSubmit = async () => {
   //#region Handling of Fetching of All Items
   const fetchCartItems = async () => {
     if (!userEmail) {
-      setShowLoginModal(true); // Show login modal if user is not logged in
+      setShowLoginModal(true); 
       return;
     }
 
@@ -456,8 +423,8 @@ const handleVoucherSubmit = async () => {
       );
 
       let cartItems: any[] = [];
-      let totalCartPrice = 0; // Initialize total price
-      let subtotal = 0; // Initialize subtotal
+      let totalCartPrice = 0; 
+      let subtotal = 0; 
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -501,14 +468,14 @@ const handleVoucherSubmit = async () => {
               price: itemData.totalPrice,
             });
 
-            subtotal += itemData.totalPrice; // Update subtotal
+            subtotal += itemData.totalPrice; 
           }
         });
-        totalCartPrice = data.totalCartPrice; // Get the total price
+        totalCartPrice = data.totalCartPrice; 
       });
 
-      setTotalCartPrice(totalCartPrice); // Set total price
-      setSubtotal(subtotal); // Set subtotal
+      setTotalCartPrice(totalCartPrice);
+      setSubtotal(subtotal); 
 
       if (cartItems.length > 0) {
         setAddedToCart(cartItems);
@@ -520,26 +487,24 @@ const handleVoucherSubmit = async () => {
       console.error("Error fetching cart items:", error);
     }
   };
+  //#endregion
 
+  //#region Fetching of All Vouchers
   useEffect(() => {
     const fetchVouchers = async () => {
       try {
-        // Check if userEmail is valid
         if (!userEmail) {
           console.error('User email is missing.');
           return;
         }
 
-        // Reference the 'users' collection and fetch the document with userEmail as the ID
         const userDocRef = doc(db, 'users', userEmail);
         const userDoc = await getDoc(userDocRef);
 
-        // Check if a user document exists
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const userVouchers = userData.vouchers;
 
-          // Transform the vouchers into the required format
           const formattedVouchers: Vouch[] = Object.entries(userVouchers).map(
             ([key, value]: any) => ({
               id: value.voucherID,
@@ -550,7 +515,6 @@ const handleVoucherSubmit = async () => {
             })
           );
 
-          // Update state with fetched vouchers
           setVouchers(formattedVouchers);
         }
       } catch (error) {
@@ -562,10 +526,11 @@ const handleVoucherSubmit = async () => {
       fetchVouchers();
     }
   }, [voucherForm, userEmail]);
+  //#endregion
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
-    let finalTotal = subtotal; // Start with the subtotal
+    let finalTotal = subtotal; 
 
     console.log("Initial subtotal:", subtotal);
     console.log("Promo applied:", promoApplied);
@@ -574,26 +539,24 @@ const handleVoucherSubmit = async () => {
     console.log("Voucher type:", voucherType);
     console.log("Voucher deduction:", voucherDeduction);
 
-    // Apply promo discount if applicable
     if (promoApplied) {
-        const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
-        finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+        const promoDiscount = subtotal * discountPercent; 
+        finalTotal -= promoDiscount; 
         console.log("Applied promo discount:", promoDiscount);
     }
 
-    // Apply voucher discount if applicable
     if (voucherApplied) {
         if (voucherType === "percent") {
-            const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
-            finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+            const voucherDiscount = finalTotal * voucherDeduction; 
+            finalTotal -= voucherDiscount; 
             console.log("Applied voucher discount (percent):", voucherDiscount);
         } else if (voucherType === "minus") {
-            finalTotal -= voucherDeduction; // Deduct the fixed amount
+            finalTotal -= voucherDeduction;
             console.log("Applied voucher discount (minus):", voucherDeduction);
         }
     }
 
-    finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
+    finalTotal = Math.max(finalTotal, 0);
 
     const orderData = {
         modeOfPayment: modeOfPayment,
@@ -715,7 +678,7 @@ const handleVoucherSubmit = async () => {
         user: userEmail,
         items: completedOrderItems,
         totalItems: totalItems,
-        subtotal: finalSubtotal || 0, // Updated to include the final subtotal after discounts
+        subtotal: finalSubtotal || 0, 
         totalCartPrice: totalCartPrice,
         modeOfPayment: modeOfPayment,
         selectedOption: selectedOption,
@@ -724,8 +687,8 @@ const handleVoucherSubmit = async () => {
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
-        promoDiscounted: Math.round(discountedPromo * 100) / 100,  // Promo discount rounded to 2 decimal places
-        voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0, // Voucher discount rounded to 2 decimal places, or 0 if not applied
+        promoDiscounted: Math.round(discountedPromo * 100) / 100,  
+        voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0, 
       });
 
       console.log(
@@ -745,7 +708,7 @@ const handleVoucherSubmit = async () => {
   //#endregion
 
   //#region Use Effects
-
+  
   //#region Apply Promos
   useEffect(() => {
     console.log("Promo applied:", promoApplied);
@@ -807,12 +770,11 @@ const handleVoucherSubmit = async () => {
 
   //#region Checks if the user is logged in or not
   useEffect(() => {
-    // Listen to authentication state
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const loggedIn = !!authUser && authUser.emailVerified;
       setIsLoggedIn(loggedIn);
-      setUserEmail(authUser?.email || null); // Sets user email
+      setUserEmail(authUser?.email || null); 
     });
 
     return () => unsubscribe();
@@ -821,10 +783,11 @@ const handleVoucherSubmit = async () => {
 
   //#region Fetching of All Items in Cart
   useEffect(() => {
-    fetchCartItems(); // Fetch cart items when userEmail changes
+    fetchCartItems(); 
   }, [userEmail]);
   //#endregion
 
+  //#region Check All Existing Orders for Display
   useEffect(() => {
     const checkExistingOrders = async () => {
       try {
@@ -837,19 +800,21 @@ const handleVoucherSubmit = async () => {
 
         if (querySnapshot.empty) {
           console.log("No existing orders found.");
-          setNeedsOrder(true); // No orders found, flag for further action
+          setNeedsOrder(true); 
         } else {
           console.log("Existing orders found.");
-          setNeedsOrder(false); // Orders found, no need to handle new order
+          setNeedsOrder(false); 
         }
       } catch (error) {
         console.error("Error checking existing orders:", error);
       }
     };
 
-    checkExistingOrders(); // Call the function to check existing orders
+    checkExistingOrders(); 
   }, [userEmail]);
+  //#endregion
 
+  //#region Receive All New Orders
   useEffect(() => {
     if (needsOrder && userEmail && productId) {
       const handleNewOrder = async () => {
@@ -876,20 +841,17 @@ const handleVoucherSubmit = async () => {
                 let itemProductIdInCart = cartItem.productId;
                 const selectedDrinkSize = cartItem.selectedDrinkSize;
 
-                // Format product ID if needed
-                itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0]; // Truncate before the number
+                itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0];
 
                 console.log("Formatted Product ID:", itemProductIdInCart);
                 console.log("Comparing Product ID:", itemProductIdInCart);
                 console.log("Comparing Size:", selectedDrinkSize);
 
-                // Check if productId matches and selectedDrinkSize is '8oz'
                 if (
                   itemProductIdInCart === productId &&
                   selectedDrinkSize === "8oz"
                 ) {
                   console.log("Found Cart Data:", cartItem);
-                  // Handle found cart item
                 }
               }
             }
@@ -899,9 +861,12 @@ const handleVoucherSubmit = async () => {
         }
       };
 
-      handleNewOrder(); // Call the function to handle new order
+      handleNewOrder(); 
     }
   }, [needsOrder, userEmail, productId]);
+  //#endregion
+
+  //#endregion
 
   if (!isLoggedIn) {
     return (
@@ -1181,7 +1146,7 @@ const handleVoucherSubmit = async () => {
                 <div className="flex justify-between items-center px-4">
                   <span>Promo</span>
                   <span className="font-bold text-lg text-gray-600">
-                    -P{discountedPromo.toFixed(2)}
+                    -P{Number(discountedPromo).toFixed(2)} {/* Ensure discountedPromo is treated as a number */}
                   </span>
                 </div>
               )}
