@@ -213,7 +213,6 @@ const handlePromoCodeSubmit = async () => {
         setPromoApplied(true); 
 
         setShowSuccess(true);
-        setErrorMessage("Promo code successfully redeemed!");
         setTimeout(() => {
             setShowSuccess(false);
         }, 3000);
