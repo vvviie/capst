@@ -61,16 +61,19 @@ const Navbar = () => {
 
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
-                  if (doc.exists()) {
-                    const tempOrderData = doc.data();
-                    setTotalItems(tempOrderData.totalItems || 0);
-                    setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                  } else {
-                    setTotalItems(0);
-                    setTotalCartPrice(0);
+                unsubscribeDocRef.current = onSnapshot(
+                  tempOrderDocRef,
+                  (doc) => {
+                    if (doc.exists()) {
+                      const tempOrderData = doc.data();
+                      setTotalItems(tempOrderData.totalItems || 0);
+                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+                    } else {
+                      setTotalItems(0);
+                      setTotalCartPrice(0);
+                    }
                   }
-                });
+                );
               } else {
                 setTotalItems(0);
                 setTotalCartPrice(0);
@@ -136,15 +139,15 @@ const Navbar = () => {
   }, []);
 
   const handleLogout = async (event?: React.SyntheticEvent) => {
-    if (event) event.preventDefault();  // Prevent default only if event exists
-  
+    if (event) event.preventDefault(); // Prevent default only if event exists
+
     try {
       // Get all cookies
       const allCookies = Cookies.get();
       Object.keys(allCookies).forEach((cookieName) => {
         Cookies.remove(cookieName);
       });
-  
+
       // Unsubscribe from Firestore listeners
       if (unsubscribeCartRef.current) {
         unsubscribeCartRef.current();
@@ -154,10 +157,10 @@ const Navbar = () => {
         unsubscribeDocRef.current();
         unsubscribeDocRef.current = null;
       }
-  
+
       // Sign out from Firebase
       await signOut(auth);
-      router.push("/");  // Redirect to homepage
+      router.push("/"); // Redirect to homepage
     } catch (error) {
       //console.error("Error signing out:", error);
     }
@@ -171,8 +174,13 @@ const Navbar = () => {
       <div className="font-bold text-xl hover:text-yellow-100">
         <Link href="/">fikaställe</Link>
       </div>
-      <div className="md:hidden hover:text-yellow-100">
-        <BurgerMenu />
+      <div className="flex items-center justify-center gap-6">
+        <div className="md:hidden">
+          <NotificationBell />
+        </div>
+        <div className="md:hidden hover:text-yellow-100">
+          <BurgerMenu />
+        </div>
       </div>
       <div className="hidden md:flex font-semibold">
         <div className="px-4 hover:text-yellow-100">
@@ -204,7 +212,7 @@ const Navbar = () => {
               </span>
               <i
                 key="cart-icon"
-                className="fa-solid fa-cart-shopping text-white text-lg mt-1 group-hover:text-yellow-100"
+                className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"
               ></i>
               <span key="cart-total-price" className="">
                 (P{totalCartPrice.toFixed(2)})
@@ -215,16 +223,25 @@ const Navbar = () => {
             <NotificationBell />
           </div>
           <div key="user-firstname">
-            <Link href="/">{firstName}</Link>
+            <Link href="/profile">
+              <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
+            </Link>
           </div>
           <div key="logout">
-            <Link href="/" onClick={handleLogout}>
+            <Link
+              href="/"
+              onClick={handleLogout}
+              className="hover:text-yellow-100"
+            >
               Logout
             </Link>
           </div>
         </div>
       ) : (
-        <div className="hidden md:block font-semibold" key="login">
+        <div
+          className="hidden md:block font-semibold hover:text-yellow-100"
+          key="login"
+        >
           <Link href="/login">Login</Link>
         </div>
       )}
