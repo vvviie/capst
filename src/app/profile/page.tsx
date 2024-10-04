@@ -1,10 +1,13 @@
 "use client";
 
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import React, { useState } from "react";
 import EditProfile from "../components/EditProfile";
 import ViewVouchers from "../components/ViewVouchers";
 import ChangePassword from "../components/ChangePassword";
+import { auth, db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 type NavItem = {
   title: string;
@@ -26,16 +29,36 @@ const navi: NavItem[] = [
   },
 ];
 
-const user = {
-  firstName: "Juan",
-  lastName: "Dela Cruz",
-  phoneNumber: "09123456789",
-  address: "246 Magnolia St., Fiore",
-};
-
 const ProfilePage = () => {
-  // Set initial state to 0 to show View Vouchers by default
+  // State for active tab and user information
   const [activeIndex, setActiveIndex] = useState<number>(0);
+  const [firstName, setFirstName] = useState<string>("Guest");
+  const [lastName, setLastName] = useState<string>("");
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser && authUser.emailVerified) {
+        try {
+          // Fetch user data from Firestore
+          const userDoc = await getDoc(doc(db, "users", authUser.email));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setFirstName(userData.firstName || "Guest");
+            setLastName(userData.lastName || "");
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+        }
+      } else {
+        // Default to Guest if no authenticated user
+        setFirstName("Guest");
+        setLastName("");
+      }
+    });
+
+    // Cleanup the listener on unmount
+    return () => unsubscribe();
+  }, []);
 
   const handleNavClick = (index: number) => {
     setActiveIndex(index); // Set the active nav item
@@ -57,7 +80,7 @@ const ProfilePage = () => {
           <div className="flex justify-start items-center gap-4 px-4 py-2">
             <i className="fa-solid fa-circle-user text-5xl text-orange-950"></i>
             <h1 className="font-bold text-2xl text-orange-950 w-56 text-center">
-              {user.firstName} {user.lastName}
+              {firstName} {lastName}
             </h1>
           </div>
           {/* NAV CONTAINER */}
