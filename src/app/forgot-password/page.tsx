@@ -16,6 +16,23 @@ const ForgotPasswordPage: React.FC = () => {
   const [message, setMessage] = useState("");
   const [messageColor, setMessageColor] = useState("");
   const [isCodeValid, setIsCodeValid] = useState(false); // New flag to check if the token is valid
+  const [disableButton, setDisableButton] = useState(false);
+  const [countdown, setCountdown] = useState(15);
+
+  useEffect(() => {
+    if (disableButton) {
+      const timer = setInterval(() => {
+        setCountdown((prevCountdown) => prevCountdown - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [disableButton]);
+
+  useEffect(() => {
+    if (countdown === 0) {
+      setDisableButton(false);
+    }
+  }, [countdown]);
 
   useEffect(() => {
     if (message) {
@@ -54,9 +71,16 @@ const ForgotPasswordPage: React.FC = () => {
       return;
     }
 
+    if (disableButton) {
+      return;
+    }
+
+    setDisableButton(true);
+    setCountdown(15);
+
     try {
       // Send password reset email with a valid continue URL
-      const url = `${window.location.origin}/forgot-password?mode=reset`;
+      const url = `${window.location.origin}/`;
       await sendPasswordResetEmail(auth, email, {
         url,
         handleCodeInApp: true, // Ensures the code is handled within your app
@@ -66,7 +90,7 @@ const ForgotPasswordPage: React.FC = () => {
       setMessageColor("green");
     } catch (error: any) {
       if (error.message.includes("auth/user-not-found")) {
-        setMessage("User  not found");
+        setMessage("User      not found");
       } else {
         setMessage(error.message);
       }
@@ -121,13 +145,21 @@ const ForgotPasswordPage: React.FC = () => {
               onChange={handleEmailChange}
               required
             />
+            {disableButton && (
+              <span className="text-orange-950 text-sm">
+                {countdown} (please wait before sending again)
+              </span>
+            )}
           </div>
 
           <button
             type="submit"
-            className="bg-orange-950 text-white text-sm font-bold py-2 px-4 rounded-md w-full"
+            className={`bg-orange-950 text-white text-sm font-bold py-2 px-4 rounded-md w-full ${
+              disableButton ? "bg-gray-500" : "bg-orange-950"
+            }`}
+            disabled={disableButton}
           >
-            Send Password Reset Email
+            {disableButton ? "Waiting..." : "Send Password Reset Email"}
           </button>
         </div>
       </form>
