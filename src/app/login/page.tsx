@@ -123,7 +123,6 @@ const LoginPage = () => {
           <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
             Hello, there! Welcome back!
           </h1>
-
           {message && (
             <span
               className={`font-bold mt-[-20px] ${
@@ -133,7 +132,6 @@ const LoginPage = () => {
               {message.text}
             </span>
           )}
-
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -150,7 +148,6 @@ const LoginPage = () => {
               placeholder="ex. juandelacruz@gmail.com"
             />
           </div>
-
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -169,9 +166,9 @@ const LoginPage = () => {
           </div>
           <p
             className="text-sm font-semibold text-gray-600 underline-offset-2 underline
-          hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"
+    hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"
           >
-            Forgot your password?
+            <Link href="/forgot-password">Forgot your password?</Link>
           </p>
           <button
             type="submit"
@@ -182,7 +179,6 @@ const LoginPage = () => {
             <i className="fa fa-sign-in text-sm"></i>
             <span className="font-bold text-md">Username Login</span>
           </button>
-
           <Link
             href={"/signup"}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
