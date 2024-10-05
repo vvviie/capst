@@ -4,24 +4,22 @@ import { auth, db } from "../firebase"; // Import your Firebase config
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore"; // Import updateDoc
 
-const EditProfile = () => {
+const EditProfile = ({ onProfileUpdate }: { onProfileUpdate: (firstName: string, lastName: string) => void }) => {
   // State to manage popup visibility
   const [isPopupVisible, setIsPopupVisible] = useState(false);
-  
   // State to store user details
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [address, setAddress] = useState("");
 
-  // Fetch user data when component mounts
+    // Fetch user data when component mounts
   useEffect(() => {
     const fetchUserData = async () => {
       onAuthStateChanged(auth, async (authUser) => {
         if (authUser && authUser.emailVerified) {
-          const userDocRef = doc(db, "users", authUser.email);
+          const userDocRef = doc(db, "users", authUser.email ?? "");
           const userDoc = await getDoc(userDocRef);
-          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setFirstName(userData.firstName || "");
@@ -46,8 +44,7 @@ const EditProfile = () => {
     // Update Firebase with new user data
     try {
       const authUser = auth.currentUser;
-
-      if (authUser && authUser.emailVerified) {
+      if (authUser && authUser.email) {
         const userDocRef = doc(db, "users", authUser.email);
         await updateDoc(userDocRef, {
           firstName,
@@ -55,6 +52,9 @@ const EditProfile = () => {
           phoneNumber,
           address,
         });
+
+        // Notify parent component about the update
+        onProfileUpdate(firstName, lastName);
 
         console.log("Profile updated successfully!");
       }
@@ -153,3 +153,4 @@ const EditProfile = () => {
 };
 
 export default EditProfile;
+

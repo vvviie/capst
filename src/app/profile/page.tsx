@@ -38,16 +38,21 @@ const ProfilePage = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && authUser.emailVerified) {
-        try {
-          // Fetch user data from Firestore
-          const userDoc = await getDoc(doc(db, "users", authUser.email));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setFirstName(userData.firstName || "Guest");
-            setLastName(userData.lastName || "");
+        if (authUser.email) {
+          try {
+            const userDocRef = doc(db, "users", authUser.email);
+            const userDoc = await getDoc(userDocRef);
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setFirstName(userData.firstName || "Guest");
+              setLastName(userData.lastName || "");
+            }
+          } catch (error) {
+            console.error("Error fetching user data:", error);
           }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
+        } else {
+          // Handle the case where authUser .email is null
+          console.error("authUser .email is null");
         }
       } else {
         // Default to Guest if no authenticated user
@@ -59,6 +64,12 @@ const ProfilePage = () => {
     // Cleanup the listener on unmount
     return () => unsubscribe();
   }, []);
+
+  // Function to handle profile updates
+  const handleProfileUpdate = (updatedFirstName: string, updatedLastName: string) => {
+    setFirstName(updatedFirstName);
+    setLastName(updatedLastName);
+  };
 
   const handleNavClick = (index: number) => {
     setActiveIndex(index); // Set the active nav item
@@ -109,7 +120,7 @@ const ProfilePage = () => {
         >
           {/* Conditionally render based on activeIndex */}
           {activeIndex === 0 && <ViewVouchers />}
-          {activeIndex === 1 && <EditProfile />}
+          {activeIndex === 1 && <EditProfile onProfileUpdate={handleProfileUpdate} />}
           {activeIndex === 2 && <ChangePassword />}
         </div>
       </div>
