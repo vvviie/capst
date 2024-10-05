@@ -20,7 +20,7 @@ const navi: NavItem[] = [
     link: "",
   },
   {
-    title: "Change user info",
+    title: "Personal Details",
     link: "",
   },
   {
