@@ -1,10 +1,12 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
 import { collection, getDocs, query, where, doc, updateDoc, getDoc } from "firebase/firestore";
 import { onSnapshot } from "firebase/firestore";
 
+//#region Variable Arrays for Retrieving Purposes
 type deets = {
     id: string;
     type: string;
@@ -35,17 +37,20 @@ type VoucherNotification = {
     read: boolean;
     deleted: boolean;
 };
+//#endregion
 
 const NotificationBell = () => {
+
+    //#region Constant Variables
     const [open, setOpen] = useState(false);
     const [notifItems, setNotifItems] = useState<notifs>([]);
     const [hasUnreadNotifs, setHasUnreadNotifs] = useState(false);
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-    const [vouchers, setVouchers] = useState<Vouch[]>([]);
     const [voucherNotifs, setVoucherNotifs] = useState<VoucherNotification[]>([]);
+    //#endregion
 
-    // Fetch vouchers when userEmail changes
+    //#region Fetching of All Vouchers
     useEffect(() => {
         const fetchVouchers = () => {
             if (!userEmail) return;
@@ -57,11 +62,11 @@ const NotificationBell = () => {
                     const userData = userDoc.data();
                     const userVouchers = userData.vouchers || {};
     
-                    console.log("Fetched Vouchers:", userVouchers); // Log fetched vouchers
+                    //console.log("Fetched Vouchers:", userVouchers); // Log fetched vouchers
     
                     const formattedVouchers: VoucherNotification[] = Object.entries(userVouchers)
                         .filter(([, value]: any) => {
-                            console.log(`Voucher ${value.voucherID} isNotifDeleted:`, value.isNotifDeleted); // Log isNotifDeleted status
+                            //console.log(`Voucher ${value.voucherID} isNotifDeleted:`, value.isNotifDeleted); // Log isNotifDeleted status
                             return !value.isNotifDeleted;
                         })
                         .map(([key, value]: any) => ({
@@ -78,7 +83,7 @@ const NotificationBell = () => {
                     setVoucherNotifs(formattedVouchers); // Update state with filtered vouchers
                 }
             }, (error) => {
-                console.error('Error fetching vouchers:', error);
+                //console.error('Error fetching vouchers:', error);
             });
     
             return () => unsubscribe(); // Cleanup listener on unmount
@@ -88,7 +93,9 @@ const NotificationBell = () => {
             fetchVouchers();
         }
     }, [userEmail]);
+    //#endregion
 
+    //#region Logging In - Storing of Email
     useEffect(() => {
         // Listen to authentication state
         const auth = getAuth();
@@ -100,8 +107,9 @@ const NotificationBell = () => {
 
         return () => unsubscribe();
     }, []);
+    //#endregion
 
-    // Fetch orders and voucher notifications
+    //#region Fetching of Orders
     useEffect(() => {
         const fetchOrders = async () => {
             if (!userEmail) return;
@@ -162,11 +170,13 @@ const NotificationBell = () => {
 
         fetchOrders();
     }, [userEmail, voucherNotifs]);
+    //#endregion
 
+    //#region Mark Notification as Read and Unread
     const toggleReadStatus = async (notificationId: string, currentReadStatus: boolean) => {
         try {
             if (!userEmail) {
-                console.error('User email is null or undefined.');
+                //console.error('User email is null or undefined.');
                 return; // Exit the function if userEmail is invalid
             }
     
@@ -195,7 +205,7 @@ const NotificationBell = () => {
                         userVouchers[voucherKey].isRead = updatedReadStatus;
                         await updateDoc(userDocRef, { vouchers: userVouchers });
                     } else {
-                        console.error(`Voucher with ID ${notificationId} does not exist in Firestore.`);
+                        //console.error(`Voucher with ID ${notificationId} does not exist in Firestore.`);
                     }
                 }
             } else {
@@ -218,14 +228,16 @@ const NotificationBell = () => {
                 }
             }
         } catch (error) {
-            console.error("Error toggling notification read status:", error);
+            //console.error("Error toggling notification read status:", error);
         }
     };
+    //#endregion
     
+    //#region Delete a Notification
     const deleteNotification = async (notificationId: string) => {
         try {
             if (!userEmail) {
-                console.error('User email is null or undefined.');
+                //console.error('User email is null or undefined.');
                 return; // Exit the function if userEmail is invalid
             }
     
@@ -251,7 +263,7 @@ const NotificationBell = () => {
                         userVouchers[voucherKey].isNotifDeleted = true;
                         await updateDoc(userDocRef, { vouchers: userVouchers });
                     } else {
-                        console.error(`Voucher with ID ${notificationId} does not exist in Firestore.`);
+                        //console.error(`Voucher with ID ${notificationId} does not exist in Firestore.`);
                     }
                 }
             } else {
@@ -270,15 +282,16 @@ const NotificationBell = () => {
                 }
             }
         } catch (error) {
-            console.error("Error deleting notification:", error);
+            //console.error("Error deleting notification:", error);
         }
     };    
+    //#endregion
 
-    // Function to mark all notifications as read
+    //#region Mark All Notifications as Read
     const markAllAsRead = async () => {
         try {
             if (!userEmail) {
-                console.error('User email is missing.');
+                //console.error('User email is missing.');
                 return; // Exit if userEmail is not available
             }
     
@@ -328,15 +341,16 @@ const NotificationBell = () => {
             );
             setHasUnreadNotifs(false);
         } catch (error) {
-            console.error("Error marking all notifications as read:", error);
+            //console.error("Error marking all notifications as read:", error);
         }
     };
+    //#endregion
 
-    // Function to delete all notifications
+    //#region Delete All Notifications
     const deleteAllNotifs = async () => {
         try {
             if (!userEmail) {
-                console.error('User email is missing.');
+                //console.error('User email is missing.');
                 return; // Exit if userEmail is not available
             }
     
@@ -378,9 +392,10 @@ const NotificationBell = () => {
             );
             setNotifItems([]); // Clear the notification items from the local state
         } catch (error) {
-            console.error("Error deleting all notifications:", error);
+            //console.error("Error deleting all notifications:", error);
         }
     };
+    //#endregion
 
     return (
         <div className="cursor-pointer">
