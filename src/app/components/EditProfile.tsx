@@ -94,17 +94,22 @@ const EditProfile = ({
   const handleEditMode = () => {
     setIsEditMode(!isEditMode);
   };
+
   return (
     <>
       {/* PROFILE DETAILS */}
       <div className="flex justify-between mb-2">
-        <h1 className="text-2xl font-bold text-orange-900">Your Personal Details</h1>
-        
+        <h1 className="text-2xl font-bold text-orange-900">
+          Your Personal Details
+        </h1>
+
         <button
           type="button"
-          className={`bg-${isEditMode ? "red-600" : "orange-950"} hover:bg-${
-            isEditMode ? "red-500" : "orange-900"
-          } text-${isEditMode ? "white" : "white"} font-bold py-2 px-4 rounded`}
+          className={`bg-${isEditMode ? "gray-500" : "orange-950"} hover:bg-${
+            isEditMode ? "gray-600" : "orange-900"
+          } text-${
+            isEditMode ? "white" : "white"
+          } font-bold py-2 px-4 rounded transition duration-300 ease-in-out`}
           onClick={handleEditMode}
         >
           {isEditMode ? "Cancel" : "Edit Info"}
@@ -119,7 +124,7 @@ const EditProfile = ({
             <div className="flex flex-col gap-0.5">
               <span className="text-sm text-gray-500">First Name</span>
               <input
-                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50 transition duration-300 ease-in-out"
                 name="firstName"
                 id="editFirstName"
                 type="text"
@@ -133,7 +138,7 @@ const EditProfile = ({
             <div className="flex flex-col gap-0.5">
               <span className="text-sm text-gray-500">Last Name</span>
               <input
-                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50 transition duration-300 ease-in-out"
                 name="lastName"
                 id="editLastName"
                 type="text"
@@ -147,7 +152,7 @@ const EditProfile = ({
             <div className="flex flex-col gap-0.5">
               <span className="text-sm text-gray-500">Phone Number</span>
               <input
-                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50 transition duration-300 ease-in-out"
                 name="phoneNumber"
                 id="editPhoneNumber"
                 type="number"
@@ -161,7 +166,7 @@ const EditProfile = ({
             <div className="flex flex-col gap-0.5">
               <span className="text-sm text-gray-500">Address</span>
               <input
-                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+                className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50 transition duration-300 ease-in-out"
                 name="address"
                 id="editAddress"
                 type="text"
@@ -176,7 +181,7 @@ const EditProfile = ({
           <button
             type="submit"
             className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
-              hover:bg-orange-900 duration-100 mt-6"
+            hover:bg-orange-900 transition duration-300 ease-in-out mt-6"
           >
             <span className="font-bold text-md">Update Info</span>
           </button>
@@ -208,7 +213,7 @@ const EditProfile = ({
 
       {/* CONFIRMATION POPUP */}
       {isConfirmingUpdate && (
-        <div className="fixed top-0 left-0 w-full h-full bg-gray-900 bg-opacity-50 flex justify-center items-center">
+        <div className="fixed top-0 left-0 w-full h-full bg-black bg-opacity-50 flex justify-center items-center z-50">
           <div className="bg-white rounded-md p-4 w-1/2 max-w-md md:w-1/2">
             <h2 className="text-lg font-bold mb-2">Confirm Update</h2>
             <p className="text-sm text-gray-500 mb-4">
@@ -216,13 +221,13 @@ const EditProfile = ({
             </p>
             <div className="flex flex-col md:flex-row justify-center md:justify-between">
               <button
-                className="bg-orange-950 hover:bg-orange-900 text-white font-bold py-1.5 px-3 rounded text-sm mb-2 md:mb-0 md:mr-2"
+                className="bg-orange-950 hover:bg-orange-900 text-white font-bold py-1.5 px-3 rounded text-sm mb-2 md:mb-0 md:mr-2 transition duration-300 ease-in-out"
                 onClick={handleConfirmUpdate}
               >
                 Yes, Update
               </button>
               <button
-                className="bg-red-600 hover:bg-red-500 text-white font-bold py-1.5 px-3 rounded text-sm"
+                className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1.5 px-3 rounded text-sm transition duration-300 ease-in-out"
                 onClick={handleCancelUpdate}
               >
                 Cancel

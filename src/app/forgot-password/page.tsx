@@ -17,7 +17,7 @@ const ForgotPasswordPage: React.FC = () => {
   const [messageColor, setMessageColor] = useState("");
   const [isCodeValid, setIsCodeValid] = useState(false); // New flag to check if the token is valid
   const [disableButton, setDisableButton] = useState(false);
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(20);
 
   useEffect(() => {
     if (disableButton) {
@@ -76,7 +76,7 @@ const ForgotPasswordPage: React.FC = () => {
     }
 
     setDisableButton(true);
-    setCountdown(15);
+    setCountdown(20);
 
     try {
       // Send password reset email with a valid continue URL
