@@ -109,19 +109,19 @@ const OrdersPage = () => {
   useEffect(() => {
     const fetchOrders = async () => {
       if (!userEmail) return;
-
+  
       try {
         const tempOrdersRef = collection(db, "completedOrders");
         const querySnapshot = await getDocs(
           query(tempOrdersRef, where("user", "==", userEmail))
         );
-
+  
         const orders = [];
-
+  
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           console.log("Full Document Data:", JSON.stringify(data, null, 2)); // Log for debugging
-
+  
           let orderInfo = {
             id: doc.id,
             price: data.subtotal || 0,
@@ -134,12 +134,12 @@ const OrdersPage = () => {
             voucher: (data.voucherDiscounted || 0).toFixed(2),
             items: [],
           };
-
+  
           // Iterate through the `items` array and apply tag logic
           if (Array.isArray(data.items)) {
             orderInfo.items = data.items.map((item) => {
               let tags = [];
-
+  
               // Determine tags based on slug
               switch (item.slug) {
                 case "drinks":
@@ -164,7 +164,7 @@ const OrdersPage = () => {
                 default:
                   tags = item.tags.length > 0 ? item.tags : ["No tags"];
               }
-
+  
               return {
                 productTitle: item.productTitle || "",
                 price: item.totalPrice || 0,
@@ -178,23 +178,30 @@ const OrdersPage = () => {
               };
             });
           }
-
+  
           // Add the current order to the orders array
           orders.push(orderInfo);
         });
-
+  
+        // Sort orders in descending order based on timeCreated and dateCreated
+        orders.sort((a, b) => {
+          const dateA = new Date(`${a.date} ${a.time}`);
+          const dateB = new Date(`${b.date} ${b.time}`);
+          return dateB - dateA; // Sort in descending order
+        });
+  
         // Update the orders state
         setUserOrders(orders);
-
+  
         // Set hasOrder based on whether there are any orders
         setHasOrder(orders.length > 0);
       } catch (error) {
         console.error("Error fetching orders:", error);
       }
     };
-
+  
     fetchOrders();
-  }, [userEmail]);
+  }, [userEmail]);  
 
   // Check orders length on state change
   useEffect(() => {
