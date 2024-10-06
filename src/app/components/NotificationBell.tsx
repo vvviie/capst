@@ -47,22 +47,24 @@ const NotificationBell = () => {
 
     // Fetch vouchers when userEmail changes
     useEffect(() => {
-        const fetchVouchers = async () => {
-            try {
-                if (!userEmail) {
-                    console.error('User email is missing.');
-                    return;
-                }
-
-                const userDocRef = doc(db, 'users', userEmail);
-                const userDoc = await getDoc(userDocRef);
-
+        const fetchVouchers = () => {
+            if (!userEmail) return;
+    
+            const userDocRef = doc(db, 'users', userEmail);
+    
+            const unsubscribe = onSnapshot(userDocRef, (userDoc) => {
                 if (userDoc.exists()) {
                     const userData = userDoc.data();
-                    const userVouchers = userData.vouchers;
-
-                    const formattedVouchers: VoucherNotification[] = Object.entries(userVouchers).map(
-                        ([key, value]: any) => ({
+                    const userVouchers = userData.vouchers || {};
+    
+                    console.log("Fetched Vouchers:", userVouchers); // Log fetched vouchers
+    
+                    const formattedVouchers: VoucherNotification[] = Object.entries(userVouchers)
+                        .filter(([, value]: any) => {
+                            console.log(`Voucher ${value.voucherID} isNotifDeleted:`, value.isNotifDeleted); // Log isNotifDeleted status
+                            return !value.isNotifDeleted;
+                        })
+                        .map(([key, value]: any) => ({
                             id: value.voucherID,
                             type: "Voucher",
                             subject: `New Voucher: ${value.voucherID}`,
@@ -71,21 +73,21 @@ const NotificationBell = () => {
                             date: value.dateCreated,
                             read: value.isRead,
                             deleted: value.isNotifDeleted,
-                        })
-                    );
-
-                    setVoucherNotifs(formattedVouchers);
+                        }));
+    
+                    setVoucherNotifs(formattedVouchers); // Update state with filtered vouchers
                 }
-            } catch (error) {
+            }, (error) => {
                 console.error('Error fetching vouchers:', error);
-            }
+            });
+    
+            return () => unsubscribe(); // Cleanup listener on unmount
         };
-
+    
         if (userEmail) {
             fetchVouchers();
         }
     }, [userEmail]);
-
 
     useEffect(() => {
         // Listen to authentication state
@@ -163,6 +165,11 @@ const NotificationBell = () => {
 
     const toggleReadStatus = async (notificationId: string, currentReadStatus: boolean) => {
         try {
+            if (!userEmail) {
+                console.error('User email is null or undefined.');
+                return; // Exit the function if userEmail is invalid
+            }
+    
             const voucherIndex = voucherNotifs.findIndex((voucher) => voucher.id === notificationId);
             if (voucherIndex > -1) {
                 // Voucher notification toggle
@@ -178,13 +185,17 @@ const NotificationBell = () => {
                 const userDoc = await getDoc(userDocRef);
     
                 if (userDoc.exists()) {
-                    const userVouchers = userDoc.data().vouchers;
+                    const userVouchers = userDoc.data().vouchers || {};
     
-                    // Update the specific voucher in Firestore
-                    const voucherID = updatedVouchers[voucherIndex].id; // Assuming `id` corresponds to `voucherID`
-                    if (userVouchers[voucherID]) {
-                        userVouchers[voucherID].isRead = updatedReadStatus; // Update isRead status
+                    // Find the voucher by searching within the map
+                    const voucherKey = Object.keys(userVouchers).find((key) => userVouchers[key].voucherID === notificationId);
+    
+                    if (voucherKey) {
+                        // Update the isRead status for the found voucher
+                        userVouchers[voucherKey].isRead = updatedReadStatus;
                         await updateDoc(userDocRef, { vouchers: userVouchers });
+                    } else {
+                        console.error(`Voucher with ID ${notificationId} does not exist in Firestore.`);
                     }
                 }
             } else {
@@ -213,14 +224,38 @@ const NotificationBell = () => {
     
     const deleteNotification = async (notificationId: string) => {
         try {
+            if (!userEmail) {
+                console.error('User email is null or undefined.');
+                return; // Exit the function if userEmail is invalid
+            }
+    
             const voucherIndex = voucherNotifs.findIndex((voucher) => voucher.id === notificationId);
             if (voucherIndex > -1) {
-                // Just mark the voucher as deleted locally
+                // Mark the voucher as deleted locally
                 const updatedVouchers = [...voucherNotifs];
-                updatedVouchers[voucherIndex] = { ...updatedVouchers[voucherIndex], read: false, isNotifDeleted: true };
-                setVoucherNotifs(updatedVouchers);
+                updatedVouchers[voucherIndex] = { ...updatedVouchers[voucherIndex], isNotifDeleted: true };
+                setVoucherNotifs(updatedVouchers); // Update local state
+    
+                // Update Firestore
+                const userDocRef = doc(db, 'users', userEmail); // Get the correct user document
+                const userDoc = await getDoc(userDocRef);
+    
+                if (userDoc.exists()) {
+                    const userVouchers = userDoc.data().vouchers || {};
+    
+                    // Find the voucher by searching within the map
+                    const voucherKey = Object.keys(userVouchers).find((key) => userVouchers[key].voucherID === notificationId);
+    
+                    if (voucherKey) {
+                        // Update the isNotifDeleted status for the found voucher
+                        userVouchers[voucherKey].isNotifDeleted = true;
+                        await updateDoc(userDocRef, { vouchers: userVouchers });
+                    } else {
+                        console.error(`Voucher with ID ${notificationId} does not exist in Firestore.`);
+                    }
+                }
             } else {
-                // Delete order notification in Firestore
+                // Handle order notification deletion in Firestore
                 const [docId, itemIndex] = notificationId.split('-');
                 const completedOrderRef = doc(db, "completedOrders", docId);
                 const notifDoc = await getDoc(completedOrderRef);
@@ -230,25 +265,50 @@ const NotificationBell = () => {
                     updatedItems[itemIndex] = { ...updatedItems[itemIndex], isNotifDeleted: true };
                     await updateDoc(completedOrderRef, { items: updatedItems });
     
-                    // Remove the notification from state
+                    // Remove the notification from local state
                     setNotifItems((prevNotifs) => prevNotifs.filter((notif) => notif.id !== notificationId));
                 }
             }
         } catch (error) {
             console.error("Error deleting notification:", error);
         }
-    };
+    };    
 
     // Function to mark all notifications as read
     const markAllAsRead = async () => {
         try {
+            if (!userEmail) {
+                console.error('User email is missing.');
+                return; // Exit if userEmail is not available
+            }
+    
             await Promise.all(
                 notifItems.map(async (notif) => {
                     if (notif.type === "Voucher") {
-                        const updatedVouchers = [...voucherNotifs].map((voucher) =>
+                        // Update read status for vouchers in Firestore
+                        const userDocRef = doc(db, 'users', userEmail);
+                        const userDoc = await getDoc(userDocRef);
+    
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            const userVouchers = userData.vouchers;
+    
+                            // Update read status in vouchers
+                            const updatedVouchers = Object.entries(userVouchers).map(([key, value]) => {
+                                if (value.voucherID === notif.id) {
+                                    return { ...value, isRead: true }; // Mark as read
+                                }
+                                return value;
+                            });
+    
+                            await updateDoc(userDocRef, { vouchers: updatedVouchers });
+                        }
+    
+                        // Update local state
+                        const newVoucherNotifs = [...voucherNotifs].map((voucher) =>
                             voucher.id === notif.id ? { ...voucher, read: true } : voucher
                         );
-                        setVoucherNotifs(updatedVouchers);
+                        setVoucherNotifs(newVoucherNotifs);
                     } else {
                         const [docId, itemIndex] = notif.id.split('-');
                         const completedOrderRef = doc(db, "completedOrders", docId);
@@ -262,6 +322,7 @@ const NotificationBell = () => {
                     }
                 })
             );
+    
             setNotifItems((prevNotifs) =>
                 prevNotifs.map((notif) => ({ ...notif, read: true }))
             );
@@ -274,10 +335,34 @@ const NotificationBell = () => {
     // Function to delete all notifications
     const deleteAllNotifs = async () => {
         try {
+            if (!userEmail) {
+                console.error('User email is missing.');
+                return; // Exit if userEmail is not available
+            }
+    
             await Promise.all(
                 notifItems.map(async (notif) => {
                     if (notif.type === "Voucher") {
-                        setVoucherNotifs([]);
+                        // Remove vouchers from the local state and Firestore
+                        const userDocRef = doc(db, 'users', userEmail);
+                        const userDoc = await getDoc(userDocRef);
+    
+                        if (userDoc.exists()) {
+                            const userData = userDoc.data();
+                            const userVouchers = userData.vouchers;
+    
+                            // Update each voucher's isNotifDeleted property
+                            const updatedVouchers = Object.entries(userVouchers).map(([key, value]) => {
+                                if (value.voucherID === notif.id) {
+                                    return { ...value, isNotifDeleted: true }; // Mark as deleted
+                                }
+                                return value;
+                            });
+    
+                            await updateDoc(userDocRef, { vouchers: updatedVouchers });
+                        }
+    
+                        setVoucherNotifs((prev) => prev.filter(voucher => voucher.id !== notif.id)); // Update local state
                     } else {
                         const [docId, itemIndex] = notif.id.split('-');
                         const completedOrderRef = doc(db, "completedOrders", docId);
@@ -291,7 +376,7 @@ const NotificationBell = () => {
                     }
                 })
             );
-            setNotifItems([]);
+            setNotifItems([]); // Clear the notification items from the local state
         } catch (error) {
             console.error("Error deleting all notifications:", error);
         }
@@ -348,16 +433,15 @@ const NotificationBell = () => {
                             </div>
                         </div>
 
+                        {/* NOTIFICATIONS LIST */}
                         {notifItems.length > 0 ? (
-                            <div className="max-h-[1560px] overflow-y-auto overflow-x-clip">
+                            <div className="max-h-[1560px] overflow-y-auto">
                                 {notifItems.map((notif) => (
                                     <div key={notif.id}>
                                         <hr className="my-4" />
                                         <div className="relative flex items-start">
                                             <div
-                                                className={`h-14 rounded-full aspect-square
-                                                flex items-center justify-center mr-3 mt-1
-                                                ${notif.read ? "bg-gray-300" : "bg-orange-900"}`}
+                                                className={`h-14 rounded-full aspect-square flex items-center justify-center mr-3 mt-1 ${notif.read ? "bg-gray-300" : "bg-orange-900"}`}
                                             >
                                                 <i
                                                     className={`fa fa-mug-hot ml-1 text-xl ${notif.read ? "text-gray-100" : "text-yellow-100"}`}
@@ -377,13 +461,13 @@ const NotificationBell = () => {
                                                     </span>
                                                     <span
                                                         className="text-xs underline underline-offset-2 text-gray-500 cursor-pointer hover:text-gray-400 duration-150"
-                                                        onClick={() => toggleReadStatus(notif.id, notif.read)}  // Call the toggleReadStatus function
+                                                        onClick={() => toggleReadStatus(notif.id, notif.read)}
                                                     >
                                                         Mark as {notif.read ? "unread" : "read"}
                                                     </span>
                                                     <span
                                                         className="text-xs underline underline-offset-2 text-red-300 cursor-pointer hover:text-red-400 duration-150"
-                                                        onClick={() => deleteNotification(notif.id)}  // Call the deleteNotification function
+                                                        onClick={() => deleteNotification(notif.id)}
                                                     >
                                                         Delete
                                                     </span>
