@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ReservationDetails } from "@/app/data";
 
-// KUNG NAKAPAG-ORDER NA KAHIT ONCE ANG CUSTOMER
+// KUNG MAY RESERVATION/S ANG CUSTOMER
 const hasReservation = true;
 
 const ReservationsPage = () => {
@@ -53,7 +53,7 @@ const ReservationsPage = () => {
       lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
       ></div>
 
-      {/* HEADER AND ORDERS CONTAINER */}
+      {/* HEADER AND RESERVATIONS CONTAINER */}
       <div className="w-full  lg:max-w-[800px]">
         <div className="flex gap-2 justify-start items-center">
           <Link
@@ -192,10 +192,10 @@ const ReservationsPage = () => {
                 aria-hidden="true"
               ></i>
               <h1 className="font-bold text-2xl text-orange-950">
-                Cancel Order?
+                Cancel Reservation?
               </h1>
               <span className="text-md text-gray-700">
-                Are you sure you want to cancel this order?
+                Are you sure you want to cancel this reservation?
               </span>
               <div className="flex gap-2 items-center justify-center mt-4">
                 <button className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500">
