@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import EditProfile from "../components/EditProfile";
 import ViewVouchers from "../components/ViewVouchers";
 import ChangePassword from "../components/ChangePassword";
+import { doc, getDoc } from "firebase/firestore"; // Import Firestore methods
+import { getAuth, onAuthStateChanged } from "firebase/auth"; 
+import { db } from "@/app/firebase";
 
 type NavItem = {
     title: string;
@@ -26,20 +29,52 @@ const navi: NavItem[] = [
     },
 ];
 
-const user = {
-    firstName: "Juan",
-    lastName: "Dela Cruz",
-    phoneNumber: "09123456789",
-    address: "246 Magnolia St., Fiore",
-};
-
 const ProfilePage = () => {
     // Set initial state to 0 to show View Vouchers by default
     const [activeIndex, setActiveIndex] = useState<number>(0);
+    const [userEmail, setUserEmail] = useState<string | null>(null);
+    const [userData, setUserData] = useState<{ firstName: string; lastName: string } | null>(null);
 
     const handleNavClick = (index: number) => {
         setActiveIndex(index); // Set the active nav item
     };
+
+    // Fetch user data from Firestore
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                if (!userEmail) return;
+
+                const userDocRef = doc(db, "users", userEmail);
+                const userDoc = await getDoc(userDocRef);
+
+                if (userDoc.exists()) {
+                    const { firstName, lastName } = userDoc.data();
+                    setUserData({ firstName, lastName });
+                }
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+            }
+        };
+
+        if (userEmail) {
+            fetchUserData();
+        }
+    }, [userEmail]);
+
+    // Check if the user is logged in
+    useEffect(() => {
+        const auth = getAuth();
+        const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+            if (authUser && authUser.emailVerified) {
+                setUserEmail(authUser.email); 
+            } else {
+                setUserEmail(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     return (
         <div
@@ -57,7 +92,7 @@ const ProfilePage = () => {
                     <div className="flex justify-start items-center gap-4 px-4 py-2">
                         <i className="fa-solid fa-circle-user text-5xl text-orange-950"></i>
                         <h1 className="font-bold text-2xl text-orange-950 w-56 text-center">
-                            {user.firstName} {user.lastName}
+                            {userData ? `${userData.firstName} ${userData.lastName}` : "Juan Dela Cruz"}
                         </h1>
                     </div>
                     {/* NAV CONTAINER */}

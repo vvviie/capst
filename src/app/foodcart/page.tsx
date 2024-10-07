@@ -1257,165 +1257,168 @@ const handleCompleteOrder = async (
             )}
             {/* VOUCHER FORM */}
               {voucherForm && (
-              <div
-                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
-                onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
-              >
-                {/* PROMO CONTAINER */}
-                <form
-                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
-                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-                  ref={modalRef}
+                <div
+                  className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                  onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
                 >
-                  <div className="flex flex-col mb-6">
-                    {/* ICON - Keep this always visible */}
-                    <div className="flex flex-col items-center">
-                      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
-                    </div>
-
-                    {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
-                    {selectedVoucher && (
-                      <>
-                        {/* VOUCHER INFO DISPLAY HEADER */}
-                        <h1 className="text-lg font-bold text-orange-900 text-center">
-                          Selected Voucher
-                        </h1>
-                        {/* VOUCHER INFO DISPLAY CONTAINER */}
-                        <div className="flex flex-col items-center">
-                          {/* VOUCHER TITLE */}
-                          <h1 className="font-bold text-orange-950 text-xl">
-                            {selectedVoucher?.title}
-                          </h1>
-                          {/* VOUCHER DESCRIPTION */}
-                          <p className="text-sm">{selectedVoucher?.desc}</p>
-                        </div>
-                        <hr className="my-4" />
-                      </>
-                    )}
-
-                    {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
-                    <h1 className="text-lg font-bold text-orange-900 text-center mb-4">
-                      {vouchers.length > 0 ? "Select a voucher" : "No vouchers available"}
-                    </h1>
-
-                    {/* VOUCHERS CONTAINER */}
-                    {vouchers.length > 0 && (
-                      <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
-                        {vouchers.map((vouch) => (
-                          // VOUCHERS
-                          <span
-                            key={vouch.id}
-                            onClick={() => setSelectedVoucher(vouch)}
-                            className={`${
-                              selectedVoucher?.id === vouch.id
-                                ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
-                                : "bg-white text-gray-700 hover:bg-gray-50"
-                            } font-bold text-center text-xs
-                            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
-                          >
-                            {vouch.title}
-                          </span>
-                        ))}
+                  {/* PROMO CONTAINER */}
+                  <form
+                    className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                    onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                    ref={modalRef}
+                  >
+                    <div className="flex flex-col mb-6">
+                      {/* ICON - Keep this always visible */}
+                      <div className="flex flex-col items-center">
+                        <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
                       </div>
-                    )}
-                  </div>
-                  <hr className="mb-6" />
-                  <div className="flex justify-center items-center gap-4">
-                    {/* Apply Voucher button should only be shown if there are vouchers available */}
-                    {vouchers.length > 0 && (
+
+                      {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
+                      {selectedVoucher && (
+                        <>
+                          {/* VOUCHER INFO DISPLAY HEADER */}
+                          <h1 className="text-lg font-bold text-orange-900 text-center">
+                            Selected Voucher
+                          </h1>
+                          {/* VOUCHER INFO DISPLAY CONTAINER */}
+                          <div className="flex flex-col items-center">
+                            {/* VOUCHER TITLE */}
+                            <h1 className="font-bold text-orange-950 text-xl">
+                              {selectedVoucher?.title}
+                            </h1>
+                            {/* VOUCHER DESCRIPTION */}
+                            <p className="text-sm">{selectedVoucher?.desc}</p>
+                          </div>
+                          <hr className="my-4" />
+                        </>
+                      )}
+
+                      {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
+                      <div className="flex items-center justify-center h-12"> {/* Set a fixed height */}
+                        <h1 className="text-lg font-bold text-orange-900 text-center">
+                          {vouchers.length > 0 ? "Select a voucher" : "No vouchers available"}
+                        </h1>
+                      </div>
+
+                      {/* VOUCHERS CONTAINER */}
+                      {vouchers.length > 0 && (
+                        <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
+                          {vouchers.map((vouch) => (
+                            // VOUCHERS
+                            <span
+                              key={vouch.id}
+                              onClick={() => setSelectedVoucher(vouch)}
+                              className={`${
+                                selectedVoucher?.id === vouch.id
+                                  ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
+                                  : "bg-white text-gray-700 hover:bg-gray-50"
+                              } font-bold text-center text-xs
+                              rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                            >
+                              {vouch.title}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <hr className="mb-6" />
+                    <div className="flex justify-center items-center gap-4">
+                      {/* Apply Voucher button should only be shown if there are vouchers available */}
+                      {vouchers.length > 0 && (
+                        <button
+                          type="button"
+                          className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+                          onClick={handleVoucherSubmit}
+                        >
+                          Apply Voucher
+                        </button>
+                      )}
                       <button
-                        type="button"
-                        className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
-                        onClick={handleVoucherSubmit}
+                        className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+                        hover:bg-gray-50 hover:scale-[1.1] duration-300"
+                        onClick={closeVoucherForm}
                       >
-                        Apply Voucher
+                        Close
                       </button>
-                    )}
-                    <button
-                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
-                      onClick={closeVoucherForm}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-            {/* PAYMENT OPTIONS CONTAINER */}
-            <div className="flex flex-col gap-2">
-              <h1 className="text-gray-500">Payment Options</h1>
-              {/* CASH OR CARD */}
-              <div className="flex flex-col">
-                <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
-                    }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    id="cash"
-                    className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "Cash"}
-                    onChange={() => handlePaymentChange("Cash")}
-                  />
-                  <span className="ml-4 font-semibold">Cash</span>
+                    </div>
+                  </form>
                 </div>
-                <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
-                    }`}
-                >
-                  <input
-                    type="radio"
-                    name="payment"
-                    id="card"
-                    className="w-5 h-5 cursor-pointer"
-                    checked={selectedPayment === "Card"}
-                    onChange={() => handlePaymentChange("Card")}
-                  />
-                  <span className="ml-4 font-semibold">Card</span>
-                </div>
+              )}
+
+                          {/* PAYMENT OPTIONS CONTAINER */}
+                          <div className="flex flex-col gap-2">
+                            <h1 className="text-gray-500">Payment Options</h1>
+                            {/* CASH OR CARD */}
+                            <div className="flex flex-col">
+                              <div
+                                className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
+                                  }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="payment"
+                                  id="cash"
+                                  className="w-5 h-5 cursor-pointer"
+                                  checked={selectedPayment === "Cash"}
+                                  onChange={() => handlePaymentChange("Cash")}
+                                />
+                                <span className="ml-4 font-semibold">Cash</span>
+                              </div>
+                              <div
+                                className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
+                                  }`}
+                              >
+                                <input
+                                  type="radio"
+                                  name="payment"
+                                  id="card"
+                                  className="w-5 h-5 cursor-pointer"
+                                  checked={selectedPayment === "Card"}
+                                  onChange={() => handlePaymentChange("Card")}
+                                />
+                                <span className="ml-4 font-semibold">Card</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <hr />
+
+                          {/* TOTAL AND CHECKOUT BUTTON */}
+                          <div>
+                {/* TOTAL AMOUNT */}
+              <div className="flex justify-between items-center px-4 py-4">
+                  <span className="font-semibold text-lg">Total (VAT Inc.)</span>
+                  <span className="font-bold text-lg text-gray-800 lg:text-2xl">
+                    P
+                    {(() => {
+                      let finalTotal = subtotal; // Start with the subtotal
+
+                      // Apply promo discount if applicable
+                      if (promoApplied) {
+                          const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
+                          finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+                          console.log("Applied promo discount:", promoDiscount);
+                      }
+
+                      // Apply voucher discount if applicable
+                      if (voucherApplied) {
+                          if (voucherType === "percent") {
+                              const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
+                              finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+                              console.log("Applied voucher discount (percent):", voucherDiscount);
+                          } else if (voucherType === "minus") {
+                              finalTotal -= voucherDeduction; // Deduct the fixed amount
+                              console.log("Applied voucher discount (minus):", voucherDeduction);
+                          }
+                      }
+
+                      finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
+
+                      return finalTotal.toFixed(2); // Return formatted total with two decimal places
+                    })()}
+                  </span>
               </div>
-            </div>
-
-            <hr />
-
-            {/* TOTAL AND CHECKOUT BUTTON */}
-            <div>
-   {/* TOTAL AMOUNT */}
-<div className="flex justify-between items-center px-4 py-4">
-    <span className="font-semibold text-lg">Total (VAT Inc.)</span>
-    <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-      P
-      {(() => {
-        let finalTotal = subtotal; // Start with the subtotal
-
-        // Apply promo discount if applicable
-        if (promoApplied) {
-            const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
-            finalTotal -= promoDiscount; // Deduct promo discount from subtotal
-            console.log("Applied promo discount:", promoDiscount);
-        }
-
-        // Apply voucher discount if applicable
-        if (voucherApplied) {
-            if (voucherType === "percent") {
-                const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
-                finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
-                console.log("Applied voucher discount (percent):", voucherDiscount);
-            } else if (voucherType === "minus") {
-                finalTotal -= voucherDeduction; // Deduct the fixed amount
-                console.log("Applied voucher discount (minus):", voucherDeduction);
-            }
-        }
-
-        finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
-
-        return finalTotal.toFixed(2); // Return formatted total with two decimal places
-      })()}
-    </span>
-</div>
               {/* CHECKOUT BUTTON */}
               <button
                 className="w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg
