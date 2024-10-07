@@ -195,7 +195,7 @@ const LoginPage = () => {
           <Link
             href={"/signup"}
             className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
-          shadow-md text-orange-950
+          shadow-md text-gray-500
           hover:bg-gray-50 duration-300 hover:scale-[1.02]"
           >
             <i className="fa fa-user-plus text-sm"></i>
