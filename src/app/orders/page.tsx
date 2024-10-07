@@ -27,7 +27,7 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  voucher?: number,
+  voucher?: number;
   items: { title: string; price: number; tags: string[] }[];
   id: string;
 };
@@ -181,6 +181,13 @@ const OrdersPage = () => {
 
           // Add the current order to the orders array
           orders.push(orderInfo);
+        });
+
+        // Sort orders in descending order based on timeCreated and dateCreated
+        orders.sort((a, b) => {
+          const dateA = new Date(`${a.date} ${a.time}`);
+          const dateB = new Date(`${b.date} ${b.time}`);
+          return dateB - dateA; // Sort in descending order
         });
 
         // Update the orders state

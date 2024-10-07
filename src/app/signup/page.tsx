@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import classNames from "classnames";
 import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
+import Link from "next/link";
 
 // Import Firebase modules from npm
 import { initializeApp } from "firebase/app";
@@ -75,122 +76,126 @@ const SignupPage: React.FC = () => {
     e.preventDefault();
 
     const {
-        email,
-        password,
-        confirmPassword,
-        firstName,
-        lastName,
-        phoneNumber,
-        address,
+      email,
+      password,
+      confirmPassword,
+      firstName,
+      lastName,
+      phoneNumber,
+      address,
     } = formData;
 
     if (password !== confirmPassword) {
-        setMessage("Passwords do not match!");
-        setMessageColor("red");
-        return;
+      setMessage("Passwords do not match!");
+      setMessageColor("red");
+      return;
     }
 
     try {
-        // Create user in Firebase Authentication
-        const userCredential = await createUserWithEmailAndPassword(
-            auth,
-            email,
-            password
-        );
-        const user = userCredential.user;
+      // Create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
 
-        // Send email verification
-        await sendEmailVerification(user);
+      // Send email verification
+      await sendEmailVerification(user);
 
-        setMessage("Verification email sent. Please verify your email.");
-        setMessageColor("green");
+      setMessage("Verification email sent. Please verify your email.");
+      setMessageColor("green");
 
-        // Wait for email verification
-        const verificationTimeout = setTimeout(() => {
-            setMessage("Email verification timed out. Please try again.");
-            setMessageColor("red");
-        }, 30000); // 30 seconds timeout
+      // Wait for email verification
+      const verificationTimeout = setTimeout(() => {
+        setMessage("Email verification timed out. Please try again.");
+        setMessageColor("red");
+      }, 30000); // 30 seconds timeout
 
-        const verified = await new Promise<boolean>((resolve) => {
-            const interval = setInterval(async () => {
-                await user.reload();
-                if (user.emailVerified) {
-                    resolve(true);
-                    clearInterval(interval);
-                }
-            }, 1000); // Check every 1 second
+      const verified = await new Promise<boolean>((resolve) => {
+        const interval = setInterval(async () => {
+          await user.reload();
+          if (user.emailVerified) {
+            resolve(true);
+            clearInterval(interval);
+          }
+        }, 1000); // Check every 1 second
+      });
+
+      if (!verified) {
+        setMessage("Email verification failed. Please try again.");
+        setMessageColor("red");
+        return;
+      }
+
+      clearTimeout(verificationTimeout);
+
+      // Fetch the first-time voucher from the vouchers collection
+      const firstTimeVoucherRef = doc(db, "vouchers", "firstTimeVoucher");
+      const voucherSnap = await getDoc(firstTimeVoucherRef);
+
+      if (voucherSnap.exists()) {
+        const firstTimeVoucher = voucherSnap.data();
+
+        // Get current date and time
+        const now = new Date();
+        const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+          now.getDate()
+        ).padStart(2, "0")}/${now.getFullYear()}`;
+        const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+          now.getMinutes()
+        ).padStart(2, "0")}`;
+
+        // Save user data to Firestore with email as the document ID after verification
+        await setDoc(doc(db, "users", email), {
+          username: email,
+          firstName,
+          lastName,
+          address,
+          phoneNumber,
+          role: "user", // Add role to user document
+          vouchers: {
+            firstTimeVoucher: {
+              available: firstTimeVoucher.available,
+              voucherDeduction: firstTimeVoucher.voucherDeduction,
+              voucherDescription: firstTimeVoucher.voucherDescription,
+              voucherID: firstTimeVoucher.voucherID,
+              voucherType: firstTimeVoucher.voucherType,
+              used: false,
+              isRead: false,
+              isNotifDeleted: false,
+              dateCreated: date,
+              timeCreated: time,
+            },
+          },
         });
 
-        if (!verified) {
-            setMessage("Email verification failed. Please try again.");
-            setMessageColor("red");
-            return;
-        }
+        setMessage("User created successfully!");
+        setMessageColor("green");
 
-        clearTimeout(verificationTimeout);
-
-        // Fetch the first-time voucher from the vouchers collection
-        const firstTimeVoucherRef = doc(db, "vouchers", "firstTimeVoucher");
-        const voucherSnap = await getDoc(firstTimeVoucherRef);
-
-        if (voucherSnap.exists()) {
-            const firstTimeVoucher = voucherSnap.data();
-
-            // Get current date and time
-            const now = new Date();
-            const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
-            const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-            // Save user data to Firestore with email as the document ID after verification
-            await setDoc(doc(db, "users", email), {
-                username: email,
-                firstName,
-                lastName,
-                address,
-                phoneNumber,
-                role: "user", // Add role to user document
-                vouchers: {
-                    firstTimeVoucher: {
-                        available: firstTimeVoucher.available,
-                        voucherDeduction: firstTimeVoucher.voucherDeduction,
-                        voucherDescription: firstTimeVoucher.voucherDescription,
-                        voucherID: firstTimeVoucher.voucherID,
-                        voucherType: firstTimeVoucher.voucherType,
-                        used: false,
-                        isRead: false,
-                        isNotifDeleted: false,
-                        dateCreated: date,
-                        timeCreated: time,
-                    },
-                },
-            });
-
-            setMessage("User created successfully!");
-            setMessageColor("green");
-
-            // Navigate to login page after successful account creation
-            setTimeout(() => {
-                router.push("/login"); // Navigate to the login page
-            }, 3000); // Optional: delay before redirecting
-        } else {
-            setMessage("Voucher not found.");
-            setMessageColor("red");
-        }
-    } catch (error) {
-        if (error instanceof Error) {
-            if (error.message.includes("auth/weak-password")) {
-                setMessage("Password should be at least 6 characters.");
-            } else if (error.message.includes("auth/email-already-in-use")) {
-                setMessage("Email is already in use.");
-            } else {
-                setMessage(error.message);
-            }
-        } else {
-            setMessage("An unexpected error occurred");
-        }
+        // Navigate to login page after successful account creation
+        setTimeout(() => {
+          router.push("/login"); // Navigate to the login page
+        }, 3000); // Optional: delay before redirecting
+      } else {
+        setMessage("Voucher not found.");
         setMessageColor("red");
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("auth/weak-password")) {
+          setMessage("Password should be at least 6 characters.");
+        } else if (error.message.includes("auth/email-already-in-use")) {
+          setMessage("Email is already in use.");
+        } else {
+          setMessage(error.message);
+        }
+      } else {
+        setMessage("An unexpected error occurred");
+      }
+      setMessageColor("red");
     }
-};
+  };
 
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 lg:flex-row xl:px-56">
@@ -289,6 +294,15 @@ const SignupPage: React.FC = () => {
               >
                 <span className="font-bold text-md">Next</span>
               </button>
+
+              <Link
+                    href={"/login"}
+                    className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
+                        shadow-md text-orange-950
+                        hover:bg-gray-50 duration-300 hover:scale-[1.02]"
+                    >
+                        <span className="font-bold text-md">Back</span>
+              </Link>
             </>
           )}
 
