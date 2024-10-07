@@ -180,7 +180,7 @@ const LoginPage = () => {
             className="text-sm font-semibold text-gray-600 underline-offset-2 underline
           hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"
           >
-            Forgot your password?
+            <Link href="/forgot-password">Forgot your password?</Link>
           </p>
           <button
             type="submit"
