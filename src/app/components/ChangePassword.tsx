@@ -66,7 +66,7 @@ const ChangePassword = () => {
       <button
         type="submit"
         className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
-          hover:bg-orange-900 duration-100 mt-6"
+                    hover:bg-orange-900 duration-100 mt-6"
       >
         <span className="font-bold text-md">Update Password</span>
       </button>

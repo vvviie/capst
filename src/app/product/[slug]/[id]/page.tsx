@@ -321,34 +321,36 @@ const ProductPage: React.FC = () => {
             document.querySelector("textarea")?.value || "none"
           )}`;
 
-    // Prepare order data for drinks or other products
-    let orderData = {
-      slug: productData.slug || "", // needed
-      productImg: productData.productImg || productData.img || "", // needed
-      productTitle: productData.productTitle || title, // needed
-      description: productData.description || desc, // needed
-      note: document.querySelector("textarea")?.value || "none", // needed
-      itemQty: qtyPerItem, // needed
-      pricePerItem: productData.pricePerItem || price, // needed
-      totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
-      calorie: productData.calorie || 0, // needed
-      availability: productData.availability || "", // needed
-      ...(slug === "drinks" && {
-        currSize: productData.currSize || "",
-        upsizable: productData.upsizable,
-        upsizeSize: productData.upsizeSize || "12oz",
-        upsizePrice: productData.upsizePrice || 20,
-        selectedDrinkSize: selectedDrinkSize,
-        additionalCost: additionalCost,
-      }),
-      options: {
-        addEspresso: 30,
-        addSyrup: 30,
-        milkAlmond: 30,
-        milkOat: 40,
-        addVanilla: 25,
-      },
-    };
+    // Log productData to verify its structure and content
+console.log('Product Data:', productData);
+
+let orderData = {
+  slug: productData.slug || "", // needed
+  productImg: productData.productImg || productData.img || "", // needed
+  productTitle: productData.productTitle || title, // needed
+  description: productData.description || desc, // needed
+  note: document.querySelector("textarea")?.value || "none", // needed
+  itemQty: qtyPerItem, // needed
+  pricePerItem: productData.pricePerItem || price, // needed
+  totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
+  calorie: productData.calorie || 0, // needed
+  availability: productData.availability || "", // needed
+  ...(slug === "drinks" && {
+    currSize: productData.currSize || "",
+    upsizable: productData.upsizable,
+    upsizeSize: productData.upsizeSize || "12oz",
+    upsizePrice: productData.upsizePrice || 20,
+    selectedDrinkSize: selectedDrinkSize,
+    additionalCost: additionalCost,
+  }),
+  options: {
+    addEspresso: 30,
+    addSyrup: 30,
+    milkAlmond: 30,
+    milkOat: 40,
+    ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
+  },
+};
 
     if (slug === "drinks") {
       orderData = {
@@ -503,7 +505,7 @@ const ProductPage: React.FC = () => {
         addSyrup: 30,
         milkAlmond: 30,
         milkOat: 40,
-        addVanilla: 25,
+        ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
       },
     };
 
@@ -934,7 +936,7 @@ const ProductPage: React.FC = () => {
               style={{ resize: "none" }}
               className="bg-gray-50 w-full pl-2"
               placeholder="Any requests for this order?"
-              defaultValue={productData.note || ""}
+              defaultValue={productData.note === "none" ? "" : productData.note} // Conditional rendering
               disabled={!productAvailable} // Make textarea editable only if the product is available
             ></textarea>
           </div>

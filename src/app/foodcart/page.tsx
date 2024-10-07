@@ -1,10 +1,7 @@
-//foodcart
-
 "use client";
 
 //#region Import statements
 import { useEffect, useState, useRef } from "react";
-import { useParams, useSearchParams, usePathname } from "next/navigation";
 import {
   getDocs,
   query,
@@ -14,63 +11,28 @@ import {
   doc,
   deleteDoc,
   deleteField,
-  increment,
-  addDoc,
   setDoc,
-} from "firebase/firestore"; // Import Firestore functions
+  getDoc,
+} from "firebase/firestore";
 import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
-import { getAuth, onAuthStateChanged } from "firebase/auth"; // Import Firebase Auth
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie"; // Import js-cookie
+import Cookies from "js-cookie";
 import CheckoutPopup from "../components/CheckoutPopup";
 //#endregion
 
-//#region Sample Vouchers
-type vouch = {
+//#region Voucher data form
+type Vouch = {
   id: string;
   title: string;
   desc: string;
+  deduction: number;
+  type: string;
 };
-
-type vouchs = vouch[];
-
-// SAMPLE VOUCHERS
-const vouchers = [
-  {
-    id: "1",
-    title: "FIKSTALLVCHR",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "2",
-    title: "ASDASDAS",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "3",
-    title: "NNNNNNNN",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "4",
-    title: "TTTTTTTTTT",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "5",
-    title: "AAAAAAAAAAAA",
-    desc: "Get P20 off when ordering a drink",
-  },
-  {
-    id: "6",
-    title: "VVVVVVVVVVVV",
-    desc: "Get P20 off when ordering a drink",
-  },
-];
 //#endregion
 
 const CartPage = () => {
@@ -79,7 +41,8 @@ const CartPage = () => {
   const [user, setUser] = useState(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true); // Loading state
-  const [selectedVoucher, setSelectedVoucher] = useState<vouch>(vouchers[0]);
+  const [vouchers, setVouchers] = useState<Vouch[]>([]);
+  const [selectedVoucher, setSelectedVoucher] = useState<Vouch | null>(null);
   const [addedToCart, setAddedToCart] = useState<any[]>([]);
   const [isEmpty, setIsEmpty] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -93,25 +56,28 @@ const CartPage = () => {
   const [voucherForm, openVoucherForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
   const modalRef = useRef<HTMLDivElement>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
-  const [promoApplied, setPromoApplied] = useState(false); // Track if promo is applied
-  const [totalCartPrice, setTotalCartPrice] = useState(0); // Track total price
+  const [errorMessage, setErrorMessage] = useState("");
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [voucherApplied, setVoucherApplied] = useState(false);
+  const [voucherDeduction, setVoucherDeduction] = useState(0);
+  const [voucherType, setVoucherType] = useState("");
+  const [discountedVoucher, setDiscountedVoucher] = useState<number>(0);
+  const [totalCartPrice, setTotalCartPrice] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
-  const [totalWithDiscount, setTotalWithDiscount] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
   const [notificationTimeout, setNotificationTimeout] = useState(null);
-
-  const params = useParams();
-  const searchParams = useSearchParams();
-
-  const slug = params.slug as string | undefined; // Adjust if using searchParams
-  const cleanId = searchParams.get("cleanId") as string | undefined;
-
-  const [productId, setProductId] = useState<string | undefined>(undefined);
+  const [productId] = useState<string | undefined>(undefined);
   const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
-  const [productIds, setProductIds] = useState<string[]>([]);
-  const [basePrice, setBasePrice] = useState(0);
+  const closeVoucherForm = () => {
+    if (!voucherApplied) {
+      setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
+    }
+    openVoucherForm(false); // Close the voucher form
+  };
 
   const now = new Date();
 
@@ -124,39 +90,37 @@ const CartPage = () => {
   const time = `${String(now.getHours()).padStart(2, "0")}:${String(
     now.getMinutes()
   ).padStart(2, "0")}`;
-
   //#endregion
 
+  //#region Handling of All Methods
+
   //#region Handle Processes
+
   // Handle form submission
   const handleSubmit = () => {
-    // Show the popup when the form is submitted
     setIsPopupVisible(true);
 
-    // Hide the popup after 1.5 seconds
     setTimeout(() => {
       setIsPopupVisible(false);
     }, 750);
   };
   //#endregion
+
   //#region Check if User is Logged in and Cookie Exists
   useEffect(() => {
     const authToken = Cookies.get("authToken");
 
     if (!authToken) {
-      // No cookie, set loading to false and show login modal
       setLoading(false);
     } else {
-      // Cookie is found, proceed to check Firebase auth state
       const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
         if (authUser && authUser.emailVerified) {
           setUser(authUser);
           setIsLoggedIn(true);
         }
-        setLoading(false); // Done checking, stop loading
+        setLoading(false);
       });
 
-      // Clean up the listener when component unmounts
       return () => unsubscribeAuth();
     }
   }, [router]);
@@ -189,23 +153,38 @@ const CartPage = () => {
 
   //#region Handling of Processes for Promo Codes
   const handlePromoCodeSubmit = async () => {
+    console.log("Current promoApplied state:", promoApplied);
+
     if (!userEmail) {
       showErrorPopup("Please log in to apply a promo code.");
       return;
     }
 
+    // Check if promo code has already been applied
     if (promoApplied) {
-      showErrorPopup(
+      setShowError(true);
+      setErrorMessage(
         "A promo code has already been applied. You cannot apply another one."
       );
+      setPromoCodeInput("");
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
       return;
     }
 
-    const promoCode = document
-      .querySelector<HTMLInputElement>('input[type="text"]')
-      ?.value.trim();
+    const promoCode = promoCodeInput.trim();
+
+    setShowError(false);
+    setErrorMessage("");
+
     if (!promoCode) {
-      showErrorPopup("Please enter a promo code.");
+      setShowError(true);
+      setErrorMessage("Please enter a promo code.");
+      setPromoCodeInput("");
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
       return;
     }
 
@@ -219,42 +198,129 @@ const CartPage = () => {
       );
       const promoSnapshot = await getDocs(promoQuery);
 
+      console.log("Promo snapshot:", promoSnapshot);
+
       if (!promoSnapshot.empty) {
         const promoDoc = promoSnapshot.docs[0];
         const promoDocRef = doc(db, "promoCodes", promoDoc.id);
         const promoData = promoDoc.data();
-        const discount = promoData?.discountPercent || 0; // Updated variable name
+        const discount = promoData?.discountPercent || 0;
         const available = promoData?.available || false;
 
+        console.log("Promo data:", promoData);
+
         if (available) {
-          setDiscountPercent(discount); // Set the discountPercent state
+          const promoDiscount = subtotal * discount;
+          const newTotalCartPrice = subtotal - promoDiscount;
 
-          const discountFraction = discount;
-          const newTotalCartPrice = subtotal * (1 - discountFraction);
-          const discountedPromo = subtotal - newTotalCartPrice;
-          const totalWithDiscount = subtotal - newTotalCartPrice;
+          setVoucherApplied(false);
+          setVoucherDeduction(0);
+          setVoucherType("");
+          setDiscountedVoucher(0);
+
+          setDiscountPercent(discount);
+          setDiscountedPromo(promoDiscount.toFixed(2));
           setTotalCartPrice(newTotalCartPrice);
-          setDiscountedPromo(discountedPromo);
-          setTotalWithDiscount(totalWithDiscount);
-
           setPromoApplied(true);
+
+          setShowSuccess(true);
+          setTimeout(() => {
+            setShowSuccess(false);
+          }, 3000);
 
           await updateDoc(promoDocRef, {
             timesUsed: (promoData?.timesUsed || 0) + 1,
           });
 
-          showErrorPopup("Promo code successfully redeemed!");
+          openDiscountPromoForm(false);
+
+          setPromoCodeInput("");
         } else {
-          setPromoApplied(false);
-          showErrorPopup("Promo code is no longer available!");
+          setShowError(true);
+          setErrorMessage("Promo code is no longer available!");
+          setPromoCodeInput("");
+          setTimeout(() => {
+            setShowError(false);
+          }, 3000);
         }
       } else {
-        setPromoApplied(false);
-        showErrorPopup("Promo code is invalid!");
+        setShowError(true);
+        setErrorMessage("Promo code is invalid!");
+        setPromoCodeInput("");
+        setTimeout(() => {
+          setShowError(false);
+        }, 3000);
       }
     } catch (error) {
       console.error("Error validating promo code:", error);
+      showErrorPopup("An error occurred. Please try again.");
+      setPromoCodeInput("");
+    }
+  };
+  //#endregion
+
+  //#region Handling of Processes for Vouchers
+  const handleVoucherSubmit = async () => {
+    if (!userEmail) {
+      showErrorPopup("Please log in to apply a voucher.");
+      console.log("No user email found.");
+      return;
+    }
+
+    if (!selectedVoucher) {
+      showErrorPopup("Please select a voucher.");
+      console.log("No voucher selected.");
+      return;
+    }
+
+    try {
+      console.log("Selected Voucher:", selectedVoucher);
+
+      const deduction =
+        selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
+      const voucherType = selectedVoucher.type;
+
+      const isVoucherValid = vouchers.some((v) => v.id === selectedVoucher.id);
+
+      if (!isVoucherValid) {
+        showErrorPopup("Selected voucher is invalid.");
+        console.log("Invalid voucher selected.");
+        return;
+      }
+
+      console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
+
       setPromoApplied(false);
+      setDiscountPercent(0);
+      setDiscountedPromo(0);
+
+      let newTotalCartPrice = totalCartPrice;
+      let calculatedDiscount = 0;
+
+      if (voucherType === "percent") {
+        calculatedDiscount = totalCartPrice * deduction;
+        newTotalCartPrice -= calculatedDiscount;
+        setDiscountedVoucher(calculatedDiscount.toFixed(2));
+        console.log(`Discount applied (percent): ${calculatedDiscount}`);
+      } else if (voucherType === "minus") {
+        newTotalCartPrice -= deduction;
+        setDiscountedVoucher(deduction.toFixed(2));
+        console.log(`Discount applied (minus): ${deduction}`);
+      }
+
+      setTotalCartPrice(newTotalCartPrice);
+      setVoucherApplied(true);
+
+      showErrorPopup("Voucher successfully applied!");
+      console.log("Voucher successfully applied.");
+
+      setVoucherType(voucherType);
+      setVoucherDeduction(deduction);
+
+      openVoucherForm(false);
+    } catch (error) {
+      console.error("Error applying voucher:", error);
+      setVoucherApplied(false);
       showErrorPopup("An error occurred. Please try again.");
     }
   };
@@ -263,50 +329,42 @@ const CartPage = () => {
   //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
     try {
-      // Show RemoveItemNotif component for 0.5 seconds
       setShowRemoveItemNotif(true);
       clearTimeout(notificationTimeout);
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
-      }, 1000); // Adjust timeout duration to 0.5 seconds (500 milliseconds)
+      }, 1000);
       setNotificationTimeout(newTimeout);
 
       console.log("Removing item with ID:", itemId);
 
-      // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
 
-      // Fetch all documents in the tempOrders collection
       const querySnapshot = await getDocs(tempOrdersRef);
 
       querySnapshot.forEach(async (doc) => {
         const data = doc.data();
 
-        // Check if the document contains the itemId
         if (data[itemId]) {
           const itemData = data[itemId];
           const itemQty = itemData.itemQty || 0;
           const itemTotalPrice = itemData.totalPrice || 0;
 
-          // Calculate new totals
           const newTotalCartPrice = (data.totalCartPrice || 0) - itemTotalPrice;
           const newTotalItems = (data.totalItems || 0) - itemQty;
 
-          // Remove the item from the document
           await updateDoc(doc.ref, {
             [itemId]: deleteField(),
             totalCartPrice: newTotalCartPrice,
             totalItems: newTotalItems,
           });
 
-          // Check if totals are zero and delete document if true
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(doc.ref);
             console.log(`Document ${doc.id} deleted as the cart is empty.`);
           }
 
-          // Refresh cart items and totals after deletion
           await fetchCartItems();
           console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
         }
@@ -326,21 +384,18 @@ const CartPage = () => {
     }
 
     try {
-      // Show RemoveItemNotif component for 1 second
       setShowRemoveItemNotif(true);
       clearTimeout(notificationTimeout);
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
-      }, 1000); // 1 second (1000 milliseconds)
+      }, 1000);
       setNotificationTimeout(newTimeout);
 
       console.log("Removing all items for user email:", userEmail);
 
-      // Reference to the tempOrders collection
       const tempOrdersRef = collection(db, "tempOrders");
 
-      // Query documents where the user field matches the current user's email
       const querySnapshot = await getDocs(
         query(tempOrdersRef, where("user", "==", userEmail))
       );
@@ -350,13 +405,11 @@ const CartPage = () => {
         return;
       }
 
-      // Iterate through each document and delete
       for (const docSnapshot of querySnapshot.docs) {
         await deleteDoc(docSnapshot.ref);
         console.log(`Document with ID ${docSnapshot.id} deleted`);
       }
 
-      // Refresh cart items and totals after deletion
       await fetchCartItems();
       console.log("All items for user email removed");
     } catch (error) {
@@ -369,7 +422,7 @@ const CartPage = () => {
   //#region Handling of Fetching of All Items
   const fetchCartItems = async () => {
     if (!userEmail) {
-      setShowLoginModal(true); // Show login modal if user is not logged in
+      setShowLoginModal(true);
       return;
     }
 
@@ -380,8 +433,8 @@ const CartPage = () => {
       );
 
       let cartItems: any[] = [];
-      let totalCartPrice = 0; // Initialize total price
-      let subtotal = 0; // Initialize subtotal
+      let totalCartPrice = 0;
+      let subtotal = 0;
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -425,14 +478,14 @@ const CartPage = () => {
               price: itemData.totalPrice,
             });
 
-            subtotal += itemData.totalPrice; // Update subtotal
+            subtotal += itemData.totalPrice;
           }
         });
-        totalCartPrice = data.totalCartPrice; // Get the total price
+        totalCartPrice = data.totalCartPrice;
       });
 
-      setTotalCartPrice(totalCartPrice); // Set total price
-      setSubtotal(subtotal); // Set subtotal
+      setTotalCartPrice(totalCartPrice);
+      setSubtotal(subtotal);
 
       if (cartItems.length > 0) {
         setAddedToCart(cartItems);
@@ -444,76 +497,87 @@ const CartPage = () => {
       console.error("Error fetching cart items:", error);
     }
   };
+  //#endregion
 
-  /*
+  //#region Fetching of All Vouchers
   useEffect(() => {
-    const fetchCartItems = async () => {
+    const fetchVouchers = async () => {
       try {
-        if (!userEmail) return; // Ensure userEmail is present
+        if (!userEmail) {
+          console.error("User email is missing.");
+          return;
+        }
 
-        const tempOrdersRef = collection(db, "tempOrders");
-        const querySnapshot = await getDocs(
-          query(tempOrdersRef, where("user", "==", userEmail))
-        );
+        const userDocRef = doc(db, "users", userEmail);
+        const userDoc = await getDoc(userDocRef);
 
-        // Array to hold all found product IDs
-        const productIdsArray: string[] = [];
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userVouchers = userData.vouchers;
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          console.log(`Document ID: ${doc.id}`);
-          console.log("Full Document Data:", JSON.stringify(data, null, 2));
+          const formattedVouchers: Vouch[] = Object.entries(userVouchers)
+            .filter(([key, value]: any) => value.used === false) // Filter out the used vouchers
+            .map(([key, value]: any) => ({
+              id: value.voucherID,
+              title: value.voucherID,
+              desc: value.voucherDescription,
+              deduction: value.voucherDeduction,
+              type: value.voucherType,
+            }));
 
-          // Check each product in the document data
-          for (const key in data) {
-            if (
-              data.hasOwnProperty(key) &&
-              key !== "totalCartPrice" &&
-              key !== "totalItems" &&
-              key !== "user"
-            ) {
-              const cartItem = data[key];
-              const itemProductIdInCart = cartItem.productId;
-
-              // Add to productIdsArray if not already included
-              if (
-                itemProductIdInCart &&
-                !productIdsArray.includes(itemProductIdInCart)
-              ) {
-                productIdsArray.push(itemProductIdInCart);
-              }
-            }
-          }
-        });
-
-        console.log("Product IDs found:", productIdsArray);
-
-        // Set the product IDs in state
-        setProductIds(productIdsArray);
+          setVouchers(formattedVouchers);
+        }
       } catch (error) {
-        console.error("Error fetching cart items:", error);
+        console.error("Error fetching vouchers:", error);
       }
     };
 
-    fetchCartItems();
-  }, [userEmail]); // Run the effect when userEmail changes
+    if (voucherForm) {
+      fetchVouchers();
+    }
+  }, [voucherForm, userEmail]);
   //#endregion
-  */
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
+    let finalTotal = subtotal;
+
+    console.log("Initial subtotal:", subtotal);
+    console.log("Promo applied:", promoApplied);
+    console.log("Discount percent:", discountPercent);
+    console.log("Voucher applied:", voucherApplied);
+    console.log("Voucher type:", voucherType);
+    console.log("Voucher deduction:", voucherDeduction);
+
+    if (promoApplied) {
+      const promoDiscount = subtotal * discountPercent;
+      finalTotal -= promoDiscount;
+      console.log("Applied promo discount:", promoDiscount);
+    }
+
+    if (voucherApplied) {
+      if (voucherType === "percent") {
+        const voucherDiscount = finalTotal * voucherDeduction;
+        finalTotal -= voucherDiscount;
+        console.log("Applied voucher discount (percent):", voucherDiscount);
+      } else if (voucherType === "minus") {
+        finalTotal -= voucherDeduction;
+        console.log("Applied voucher discount (minus):", voucherDeduction);
+      }
+    }
+
+    finalTotal = Math.max(finalTotal, 0);
+
     const orderData = {
       modeOfPayment: modeOfPayment,
       selectedOption: selectedOption,
       selectedServeTime: selectedServeTime,
-      finalSubtotal: promoApplied
-        ? subtotal - subtotal * discountPercent // Subtotal after discount
-        : subtotal, // Original subtotal without discount
+      finalSubtotal: finalTotal,
     };
 
+    console.log("Final subtotal before completing order:", finalTotal);
     console.log("Order submitted:", orderData);
 
-    // Pass the correct subtotal to handleCompleteOrder
     handleCompleteOrder(
       orderData.modeOfPayment,
       orderData.selectedOption,
@@ -536,14 +600,6 @@ const CartPage = () => {
     }
 
     try {
-      setShowRemoveItemNotif(true);
-      clearTimeout(notificationTimeout);
-      const newTimeout = setTimeout(() => {
-        clearTimeout(newTimeout);
-        setShowRemoveItemNotif(false);
-      }, 1000);
-      setNotificationTimeout(newTimeout);
-
       console.log("Completing order for user email:", userEmail);
 
       const tempOrdersRef = collection(db, "tempOrders");
@@ -631,7 +687,7 @@ const CartPage = () => {
         user: userEmail,
         items: completedOrderItems,
         totalItems: totalItems,
-        subtotal: finalSubtotal || 0, // Add a fallback value like 0
+        subtotal: finalSubtotal || 0,
         totalCartPrice: totalCartPrice,
         modeOfPayment: modeOfPayment,
         selectedOption: selectedOption,
@@ -640,7 +696,10 @@ const CartPage = () => {
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
-        promoDiscouted: discountedPromo,
+        promoDiscounted: Math.round(discountedPromo * 100) / 100,
+        voucherDiscounted: discountedVoucher
+          ? Math.round(discountedVoucher * 100) / 100
+          : 0,
       });
 
       console.log(
@@ -650,6 +709,58 @@ const CartPage = () => {
 
       await handleRemoveAllItems();
       await fetchCartItems();
+
+      // Check if a voucher was applied, and mark it as "used" if true
+      if (voucherApplied && selectedVoucher) {
+        console.log("Voucher applied:", selectedVoucher.title);
+        const userDocRef = doc(db, "users", userEmail);
+
+        // Fetch the current vouchers from Firestore
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userVouchers = userData.vouchers;
+
+          // Check if a voucher was applied, and mark it as "used" if true
+          if (voucherApplied && selectedVoucher) {
+            console.log("Voucher applied:", selectedVoucher.title);
+            const userDocRef = doc(db, "users", userEmail);
+
+            // Fetch the current vouchers from Firestore
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const userVouchers = userData.vouchers;
+
+              // Find the index of the voucher to update
+              const voucherIndex = Object.keys(userVouchers).find(
+                (key) => userVouchers[key].voucherID === selectedVoucher.id
+              );
+
+              if (voucherIndex) {
+                // If the voucher is found, update its 'used' status
+                console.log(
+                  `Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`
+                );
+                await updateDoc(userDocRef, {
+                  [`vouchers.${voucherIndex}.used`]: true, // Use the index to update the 'used' field
+                });
+                console.log(
+                  `Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`
+                );
+              } else {
+                console.log("Selected voucher not found in user's vouchers.");
+              }
+            } else {
+              console.error("User document does not exist.");
+            }
+          }
+        } else {
+          console.error("User document does not exist.");
+        }
+      }
     } catch (error) {
       console.error("Error completing order:", error);
       showErrorPopup("Failed to complete order. Please try again.");
@@ -722,12 +833,11 @@ const CartPage = () => {
 
   //#region Checks if the user is logged in or not
   useEffect(() => {
-    // Listen to authentication state
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const loggedIn = !!authUser && authUser.emailVerified;
       setIsLoggedIn(loggedIn);
-      setUserEmail(authUser?.email || null); // Sets user email
+      setUserEmail(authUser?.email || null);
     });
 
     return () => unsubscribe();
@@ -736,10 +846,11 @@ const CartPage = () => {
 
   //#region Fetching of All Items in Cart
   useEffect(() => {
-    fetchCartItems(); // Fetch cart items when userEmail changes
+    fetchCartItems();
   }, [userEmail]);
   //#endregion
 
+  //#region Check All Existing Orders for Display
   useEffect(() => {
     const checkExistingOrders = async () => {
       try {
@@ -752,19 +863,21 @@ const CartPage = () => {
 
         if (querySnapshot.empty) {
           console.log("No existing orders found.");
-          setNeedsOrder(true); // No orders found, flag for further action
+          setNeedsOrder(true);
         } else {
           console.log("Existing orders found.");
-          setNeedsOrder(false); // Orders found, no need to handle new order
+          setNeedsOrder(false);
         }
       } catch (error) {
         console.error("Error checking existing orders:", error);
       }
     };
 
-    checkExistingOrders(); // Call the function to check existing orders
+    checkExistingOrders();
   }, [userEmail]);
+  //#endregion
 
+  //#region Receive All New Orders
   useEffect(() => {
     if (needsOrder && userEmail && productId) {
       const handleNewOrder = async () => {
@@ -791,20 +904,17 @@ const CartPage = () => {
                 let itemProductIdInCart = cartItem.productId;
                 const selectedDrinkSize = cartItem.selectedDrinkSize;
 
-                // Format product ID if needed
-                itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0]; // Truncate before the number
+                itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0];
 
                 console.log("Formatted Product ID:", itemProductIdInCart);
                 console.log("Comparing Product ID:", itemProductIdInCart);
                 console.log("Comparing Size:", selectedDrinkSize);
 
-                // Check if productId matches and selectedDrinkSize is '8oz'
                 if (
                   itemProductIdInCart === productId &&
                   selectedDrinkSize === "8oz"
                 ) {
                   console.log("Found Cart Data:", cartItem);
-                  // Handle found cart item
                 }
               }
             }
@@ -814,9 +924,14 @@ const CartPage = () => {
         }
       };
 
-      handleNewOrder(); // Call the function to handle new order
+      handleNewOrder();
     }
   }, [needsOrder, userEmail, productId]);
+  //#endregion
+
+  //#region Mark Voucher as Used
+
+  //#endregion
 
   if (!isLoggedIn) {
     return (
@@ -1102,7 +1217,18 @@ const CartPage = () => {
                 <div className="flex justify-between items-center px-4">
                   <span>Promo</span>
                   <span className="font-bold text-lg text-gray-600">
-                    -P{discountedPromo.toFixed(2)}
+                    -P{Number(discountedPromo).toFixed(2)}{" "}
+                    {/* Ensure discountedPromo is treated as a number */}
+                  </span>
+                </div>
+              )}
+
+              {/* ONLY SHOW VOUCHER IF APPLIED */}
+              {voucherApplied && (
+                <div className="flex justify-between items-center px-4">
+                  <span>Voucher</span>
+                  <span className="font-bold text-lg text-gray-600">
+                    -P{discountedVoucher}
                   </span>
                 </div>
               )}
@@ -1136,7 +1262,6 @@ const CartPage = () => {
                 className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
                 onClick={() => openDiscountPromoForm(false)} // Close modal when clicking on the background
               >
-                {/* PROMO CONTAINER */}
                 <form
                   className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
                   onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
@@ -1146,35 +1271,36 @@ const CartPage = () => {
                   <p className="mb-4">Please enter a valid promo code:</p>
                   <input
                     type="text"
+                    value={promoCodeInput}
+                    onChange={(e) => setPromoCodeInput(e.target.value)}
                     className="text-center font-bold text-2xl inline-block w-64 border-2 border-gray-100 rounded-sm mb-4"
                     style={{
                       MozAppearance: "textfield",
                       boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
                     }}
                   />
+                  {showSuccess && ( // Change from promoApplied to showSuccess
+                    <p className="text-green-600 mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100">
+                      Promo code successfully redeemed!
+                    </p>
+                  )}
                   {showError && (
-                    <p
-                      className={`${
-                        promoApplied ? "text-green-600" : "text-red-500"
-                      } mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100`}
-                    >
-                      {promoApplied
-                        ? "Promo code successfully redeemed!"
-                        : "Promo code is invalid!"}
+                    <p className="text-red-500 mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100">
+                      {errorMessage}
                     </p>
                   )}
                   <div className="flex justify-center items-center gap-4">
                     <button
                       type="button"
                       className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
                       onClick={handlePromoCodeSubmit}
                     >
                       Enter Code
                     </button>
                     <button
                       className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
+          hover:bg-gray-50 hover:scale-[1.1] duration-300"
                       onClick={() => openDiscountPromoForm(false)}
                     >
                       Close
@@ -1183,7 +1309,6 @@ const CartPage = () => {
                 </form>
               </div>
             )}
-
             {/* VOUCHER FORM */}
             {voucherForm && (
               <div
@@ -1197,59 +1322,80 @@ const CartPage = () => {
                   ref={modalRef}
                 >
                   <div className="flex flex-col mb-6">
-                    {/* VOUCHER INFO DISPLAY HEADER */}
-                    <h1 className="text-lg font-bold text-orange-900 text-center">
-                      Selected Voucher
-                    </h1>
-                    {/* VOUCHER INFO DISPLAY CONTAINER */}
+                    {/* ICON - Keep this always visible */}
                     <div className="flex flex-col items-center">
-                      {/* ICON */}
                       <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
-                      {/* VOUCHER TITLE */}
-                      <h1 className="font-bold text-orange-950 text-xl">
-                        {selectedVoucher.title}
+                    </div>
+
+                    {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
+                    {selectedVoucher && (
+                      <>
+                        {/* VOUCHER INFO DISPLAY HEADER */}
+                        <h1 className="text-lg font-bold text-orange-900 text-center">
+                          Selected Voucher
+                        </h1>
+                        {/* VOUCHER INFO DISPLAY CONTAINER */}
+                        <div className="flex flex-col items-center">
+                          {/* VOUCHER TITLE */}
+                          <h1 className="font-bold text-orange-950 text-xl">
+                            {selectedVoucher?.title}
+                          </h1>
+                          {/* VOUCHER DESCRIPTION */}
+                          <p className="text-sm">{selectedVoucher?.desc}</p>
+                        </div>
+                        <hr className="my-4" />
+                      </>
+                    )}
+
+                    {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
+                    <div className="flex items-center justify-center h-12">
+                      {" "}
+                      {/* Set a fixed height */}
+                      <h1 className="text-lg font-bold text-orange-900 text-center">
+                        {vouchers.length > 0
+                          ? "Select a voucher"
+                          : "No vouchers available"}
                       </h1>
-                      {/* VOUCHER DESCRIPTION */}
-                      <p className="text-sm">{selectedVoucher.desc}</p>
                     </div>
-                    <hr className="my-4" />
-                    {/* SELECT VOUCHER HEADER */}
-                    <h1 className="text-lg font-bold text-orange-900 text-center mb-4">
-                      Select a voucher
-                    </h1>
+
                     {/* VOUCHERS CONTAINER */}
-                    <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
-                      {vouchers.map((vouch) => (
-                        // VOUCHERS
-                        <span
-                          key={vouch.id}
-                          onClick={() => setSelectedVoucher(vouch)}
-                          className={`${
-                            selectedVoucher.id === vouch.id
-                              ? "bg-gray-700 text-white hover:bg-gray-600"
-                              : "bg-white text-gray-700 hover:bg-gray-50"
-                          }  font-bold text-center
-            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
-                        >
-                          {vouch.title}
-                        </span>
-                      ))}
-                    </div>
+                    {vouchers.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
+                        {vouchers.map((vouch) => (
+                          // VOUCHERS
+                          <span
+                            key={vouch.id}
+                            onClick={() => setSelectedVoucher(vouch)}
+                            className={`${
+                              selectedVoucher?.id === vouch.id
+                                ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
+                                : "bg-white text-gray-700 hover:bg-gray-50"
+                            } font-bold text-center text-xs
+                              rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                          >
+                            {vouch.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <hr className="mb-6" />
                   <div className="flex justify-center items-center gap-4">
-                    <button
-                      type="button"
-                      className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                      hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
-                      onClick={handlePromoCodeSubmit}
-                    >
-                      Apply Voucher
-                    </button>
+                    {/* Apply Voucher button should only be shown if there are vouchers available */}
+                    {vouchers.length > 0 && (
+                      <button
+                        type="button"
+                        className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+                        onClick={handleVoucherSubmit}
+                      >
+                        Apply Voucher
+                      </button>
+                    )}
                     <button
                       className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
-                      onClick={() => openVoucherForm(false)}
+                        hover:bg-gray-50 hover:scale-[1.1] duration-300"
+                      onClick={closeVoucherForm}
                     >
                       Close
                     </button>
@@ -1305,9 +1451,38 @@ const CartPage = () => {
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
                   P
-                  {promoApplied
-                    ? (subtotal - subtotal * discountPercent).toFixed(2)
-                    : totalCartPrice.toFixed(2)}
+                  {(() => {
+                    let finalTotal = subtotal; // Start with the subtotal
+
+                    // Apply promo discount if applicable
+                    if (promoApplied) {
+                      const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
+                      finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+                      console.log("Applied promo discount:", promoDiscount);
+                    }
+
+                    // Apply voucher discount if applicable
+                    if (voucherApplied) {
+                      if (voucherType === "percent") {
+                        const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
+                        finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+                        console.log(
+                          "Applied voucher discount (percent):",
+                          voucherDiscount
+                        );
+                      } else if (voucherType === "minus") {
+                        finalTotal -= voucherDeduction; // Deduct the fixed amount
+                        console.log(
+                          "Applied voucher discount (minus):",
+                          voucherDeduction
+                        );
+                      }
+                    }
+
+                    finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
+
+                    return finalTotal.toFixed(2); // Return formatted total with two decimal places
+                  })()}
                 </span>
               </div>
               {/* CHECKOUT BUTTON */}

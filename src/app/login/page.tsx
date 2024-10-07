@@ -26,25 +26,36 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-const urlDecode = (str) => decodeURIComponent(str.replace(/\+/g, " "));
 const urlEncode = (str) => encodeURIComponent(str);
 
 const LoginPage = () => {
   const [message, setMessage] = useState<{ text: string; type: string } | null>(
     null
   );
-  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    setIsMounted(true);
-
     // Check if the user is already logged in by checking cookies
     const userSession = Cookies.get("userSession");
     if (userSession) {
       router.push("/"); // Redirect to homepage if user is already logged in
     }
   }, [router]);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        // Refresh token to ensure it's up-to-date
+        await user.reload();
+        await user.getIdToken(true);
+
+        // Fetch the user details now that authentication is ready
+        fetchUserDetails(user.email);
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup subscription on component unmount
+  }, []);
 
   const fetchUserDetails = async (email) => {
     try {
@@ -62,7 +73,6 @@ const LoginPage = () => {
         return null;
       }
     } catch (error) {
-      console.error("Error fetching user details: ", error);
       setMessage({ text: "Error fetching user details.", type: "error" });
       return null;
     }
@@ -83,30 +93,27 @@ const LoginPage = () => {
       );
       const user = userCredential.user;
 
+      // Ensure the token is refreshed and fully loaded
       await user.reload();
+      await user.getIdToken(true);
+
       if (!user.emailVerified) {
         setMessage({ text: "Please verify your email.", type: "error" });
-        await auth.signOut();
+        await auth.signOut(); // Sign out if email not verified
       } else {
-        setMessage({ text: "Login successful!", type: "success" });
-        await user.getIdToken(true);
-
         const role = await fetchUserDetails(user.email);
         if (role) {
-          const encodedRole = urlEncode(role);
           Cookies.set("userSession", user.refreshToken, { expires: 1 / 24 });
-          Cookies.set("userRole", encodedRole, { expires: 1 / 24 });
-          router.push("/");
+          Cookies.set("userRole", urlEncode(role), { expires: 1 / 24 });
+          router.push("/"); // Redirect to homepage after successful login
         }
       }
     } catch (error) {
       setMessage({ text: "Invalid username or password.", type: "error" });
     }
 
-    // Remove message after 3 seconds
-    setTimeout(() => {
-      setMessage(null);
-    }, 3000);
+    // Clear message after 3 seconds
+    setTimeout(() => setMessage(null), 3000);
   };
 
   return (
@@ -148,6 +155,7 @@ const LoginPage = () => {
               id="inputEmail"
               type="text"
               placeholder="ex. juandelacruz@gmail.com"
+              required // Added required attribute for better UX
             />
           </div>
 
@@ -165,6 +173,7 @@ const LoginPage = () => {
               id="inputPassword"
               type="password"
               placeholder="●●●●●●●●●●"
+              required // Added required attribute for better UX
             />
           </div>
           <p

@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import classNames from "classnames";
+import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
 
 // Import Firebase modules from npm
 import { initializeApp } from "firebase/app";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import {
   getAuth,
   createUserWithEmailAndPassword,
@@ -32,6 +32,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const SignupPage: React.FC = () => {
+  const router = useRouter(); // Initialize useRouter
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     email: "",
@@ -128,18 +129,57 @@ const SignupPage: React.FC = () => {
 
       clearTimeout(verificationTimeout);
 
-      // Save user data to Firestore with email as the document ID after verification
-      await setDoc(doc(db, "users", email), {
-        username: email,
-        firstName,
-        lastName,
-        address,
-        phoneNumber,
-        role: "user", // Add role to user document
-      });
+      // Fetch the first-time voucher from the vouchers collection
+      const firstTimeVoucherRef = doc(db, "vouchers", "firstTimeVoucher");
+      const voucherSnap = await getDoc(firstTimeVoucherRef);
 
-      setMessage("User created successfully!");
-      setMessageColor("green");
+      if (voucherSnap.exists()) {
+        const firstTimeVoucher = voucherSnap.data();
+
+        // Get current date and time
+        const now = new Date();
+        const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+          now.getDate()
+        ).padStart(2, "0")}/${now.getFullYear()}`;
+        const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+          now.getMinutes()
+        ).padStart(2, "0")}`;
+
+        // Save user data to Firestore with email as the document ID after verification
+        await setDoc(doc(db, "users", email), {
+          username: email,
+          firstName,
+          lastName,
+          address,
+          phoneNumber,
+          role: "user", // Add role to user document
+          vouchers: {
+            firstTimeVoucher: {
+              available: firstTimeVoucher.available,
+              voucherDeduction: firstTimeVoucher.voucherDeduction,
+              voucherDescription: firstTimeVoucher.voucherDescription,
+              voucherID: firstTimeVoucher.voucherID,
+              voucherType: firstTimeVoucher.voucherType,
+              used: false,
+              isRead: false,
+              isNotifDeleted: false,
+              dateCreated: date,
+              timeCreated: time,
+            },
+          },
+        });
+
+        setMessage("User created successfully!");
+        setMessageColor("green");
+
+        // Navigate to login page after successful account creation
+        setTimeout(() => {
+          router.push("/login"); // Navigate to the login page
+        }, 3000); // Optional: delay before redirecting
+      } else {
+        setMessage("Voucher not found.");
+        setMessageColor("red");
+      }
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes("auth/weak-password")) {
