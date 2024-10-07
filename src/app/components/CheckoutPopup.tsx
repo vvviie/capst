@@ -1,6 +1,6 @@
 import React from "react";
 
-const CheckoutPopup = () => {
+const CheckoutPopup = ({ message }) => {
   return (
     <div
       className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-start justify-center z-20"
@@ -11,7 +11,7 @@ const CheckoutPopup = () => {
         style={{ background: "rgba(0, 0, 0, 0.8)" }}
       >
         <i className="far fa-check-circle text-[150px] text-gray-100"></i>
-        <h1 className="font-bold text-2xl text-gray-100">Checkout Success!</h1>
+        <h1 className="font-bold text-2xl text-gray-100">{message}</h1>
       </div>
     </div>
   );

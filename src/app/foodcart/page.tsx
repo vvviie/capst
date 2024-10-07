@@ -1331,7 +1331,7 @@ const CartPage = () => {
         </div>
       )}
       {/* CHANGES MADE POP UP */}
-      {isPopupVisible && <CheckoutPopup />}
+      {isPopupVisible && <CheckoutPopup message="Checkout Success!" />}
     </div>
   );
 };
