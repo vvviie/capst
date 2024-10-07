@@ -704,16 +704,52 @@ const handleCompleteOrder = async (
     await fetchCartItems();
 
     // Check if a voucher was applied, and mark it as "used" if true
-    if (voucherApplied && selectedVoucher) {
-      const userDocRef = doc(db, "users", userEmail);
+if (voucherApplied && selectedVoucher) {
+  console.log("Voucher applied:", selectedVoucher.title);
+  const userDocRef = doc(db, "users", userEmail);
+  
+  // Fetch the current vouchers from Firestore
+  const userDoc = await getDoc(userDocRef);
+  
+  if (userDoc.exists()) {
+    const userData = userDoc.data();
+    const userVouchers = userData.vouchers;
 
-  // Use a nested field update to only update the 'used' field of the specific voucher
-    await updateDoc(userDocRef, {
-      [`vouchers.${selectedVoucher.voucherAlias}.used`]: true, // Update the specific voucher's 'used' field
-    });
+    // Check if a voucher was applied, and mark it as "used" if true
+if (voucherApplied && selectedVoucher) {
+  console.log("Voucher applied:", selectedVoucher.title);
+  const userDocRef = doc(db, "users", userEmail);
+  
+  // Fetch the current vouchers from Firestore
+  const userDoc = await getDoc(userDocRef);
+  
+  if (userDoc.exists()) {
+    const userData = userDoc.data();
+    const userVouchers = userData.vouchers;
 
-      console.log(`Voucher ${selectedVoucher.title} marked as used.`);
+    // Find the index of the voucher to update
+    const voucherIndex = Object.keys(userVouchers).find(key => 
+      userVouchers[key].voucherID === selectedVoucher.id
+    );
+
+    if (voucherIndex) {
+      // If the voucher is found, update its 'used' status
+      console.log(`Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`);
+      await updateDoc(userDocRef, {
+        [`vouchers.${voucherIndex}.used`]: true, // Use the index to update the 'used' field
+      });
+      console.log(`Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`);
+    } else {
+      console.log("Selected voucher not found in user's vouchers.");
     }
+  } else {
+    console.error("User document does not exist.");
+  }
+}
+  } else {
+    console.error("User document does not exist.");
+  }
+}
   } catch (error) {
     console.error("Error completing order:", error);
     showErrorPopup("Failed to complete order. Please try again.");
