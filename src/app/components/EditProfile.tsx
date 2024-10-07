@@ -105,11 +105,14 @@ const EditProfile = ({
 
         <button
           type="button"
-          className={`bg-${isEditMode ? "gray-500" : "orange-950"} hover:bg-${
-            isEditMode ? "gray-600" : "orange-900"
-          } text-${
-            isEditMode ? "white" : "white"
-          } font-bold py-2 px-4 rounded transition duration-300 ease-in-out`}
+          className={`bg-${
+            isEditMode
+              ? "white border-gray-50"
+              : "orange-950 border-orange-950 hover:border-orange-900"
+          } hover:bg-${isEditMode ? "gray-50" : "orange-900"} border-2 text-${
+            isEditMode ? "gray-500" : "white"
+          } font-bold py-2 px-4 rounded hover:scale-[1.03]
+          shadow-md duration-300 ease-in-out`}
           onClick={handleEditMode}
         >
           {isEditMode ? "Cancel" : "Edit Info"}
@@ -221,13 +224,16 @@ const EditProfile = ({
             </p>
             <div className="flex flex-col md:flex-row justify-center md:justify-between">
               <button
-                className="bg-orange-950 hover:bg-orange-900 text-white font-bold py-1.5 px-3 rounded text-sm mb-2 md:mb-0 md:mr-2 transition duration-300 ease-in-out"
+                className="bg-orange-950 hover:bg-orange-900 text-white font-bold py-2 px-3 rounded-md
+                 text-sm mb-2 md:mb-0 md:mr-2 hover:scale-[1.03] duration-300 ease-in-out border-2 border-orange-950
+                 hover:border-orange-900 shadow-md"
                 onClick={handleConfirmUpdate}
               >
                 Yes, Update
               </button>
               <button
-                className="bg-gray-600 hover:bg-gray-500 text-white font-bold py-1.5 px-3 rounded text-sm transition duration-300 ease-in-out"
+                className="bg-white hover:bg-gray-50 text-gray-500 font-bold py-2 px-3 rounded-md
+                 text-sm hover:scale-[1.03] duration-300 ease-in-out border-2 border-gray-100 shadow-md "
                 onClick={handleCancelUpdate}
               >
                 Cancel

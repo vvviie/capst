@@ -296,12 +296,12 @@ const SignupPage: React.FC = () => {
               </button>
 
               <Link
-                    href={"/login"}
-                    className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
-                        shadow-md text-orange-950
+                href={"/login"}
+                className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-100 w-full h-10 rounded-md
+                        shadow-md text-gray-500
                         hover:bg-gray-50 duration-300 hover:scale-[1.02]"
-                    >
-                        <span className="font-bold text-md">Back</span>
+              >
+                <span className="font-bold text-md">Back</span>
               </Link>
             </>
           )}
