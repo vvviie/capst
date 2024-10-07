@@ -1,215 +1,279 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   getAuth,
-  fetchSignInMethodsForEmail,
-  sendPasswordResetEmail,
-  signOut,
-  onAuthStateChanged,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  updatePassword,
 } from "firebase/auth";
-import Cookies from "js-cookie";
 
 const ChangePassword = () => {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [logoutWarning, setLogoutWarning] = useState(false);
-  const [timer, setTimer] = useState<number | null>(null);
-  const [countdown, setCountdown] = useState(10);
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [step, setStep] = useState(1); // Step 1: Confirm old password, Step 2: Set new password
+  const [loading, setLoading] = useState(false); // Loading state for button
+  const [alertMessage, setAlertMessage] = useState<string>(""); // Message for the alert container
+  const [alertType, setAlertType] = useState<"success" | "error" | "">(""); // Alert type for styling
+  const [oldPassword, setOldPassword] = useState("");
 
   const auth = getAuth();
+  const user = auth.currentUser;
 
-  /* Displaying the user email
+  // Use refs to control form inputs directly
+  const newPasswordRef = useRef<HTMLInputElement>(null);
+  const confirmNewPasswordRef = useRef<HTMLInputElement>(null);
+
+  // Clear input values when transitioning to Step 2
   useEffect(() => {
-    const fetchUserData = async () => {
-      onAuthStateChanged(auth, async (authUser ) => {
-        if (authUser ) {
-          const userEmail = authUser .email;
-          setEmail(userEmail); // Set the email state with the current user's email
-        }
-      });
-    };
-  
-    fetchUserData();
-  }, []);*/
+    if (step === 2) {
+      if (newPasswordRef.current) newPasswordRef.current.value = "";
+      if (confirmNewPasswordRef.current)
+        confirmNewPasswordRef.current.value = "";
+    }
+  }, [step]);
 
-  // Handle form submission to send password reset email
-  const handleSubmit = async (e) => {
+  // Handles Step 1, Re-authenticate with old password
+  const handleConfirmOldPassword = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage("");
+    setLoading(true); // Show loading indicator on the button
+    setAlertMessage(""); // Clear previous alert messages
 
-    try {
-      // Check if the email entered is the same as the current user's email
-      const user = auth.currentUser;
-      if (user && user.email !== email) {
-        setMessage("Incorrect email, please enter your registered email.");
-        setLoading(false);
-        return;
+    const form = e.target as HTMLFormElement;
+    const oldPassword = form.oldPassword.value;
+
+    if (user) {
+      const credential = EmailAuthProvider.credential(
+        user.email as string,
+        oldPassword
+      );
+      try {
+        await reauthenticateWithCredential(user, credential);
+
+        // Password is correct
+        setAlertMessage("Password is correct!");
+        setAlertType("success");
+
+        // Set a timer to clear the alert message and move to step 2
+        setTimeout(() => {
+          setAlertMessage("");
+          setStep(2); // Proceed to step 2 after showing the message
+        }, 1000); // Display the success message for 1 second
+      } catch (err: any) {
+        // Handle incorrect password
+        setAlertMessage("Incorrect password. Please try again.");
+        setAlertType("error");
+      } finally {
+        setLoading(false); // Stop loading spinner
       }
-
-      setLogoutWarning(true); // Show logout warning
-    } catch (error) {
-      setMessage(`Error: ${error.message}`);
-    } finally {
+    } else {
+      setAlertMessage("No user is currently signed in.");
+      setAlertType("error");
       setLoading(false);
     }
   };
-  // Handle logout warning confirmation
-  const handleLogoutConfirmation = async () => {
-    try {
-      // Trigger Firebase password reset email
-      await sendPasswordResetEmail(auth, email);
-      setMessage("Password reset email sent! Please check your inbox.");
-      setLogoutWarning(false);
-      const timeoutId = setTimeout(async () => {
-        await signOut(auth); // Update server-side session
-        Cookies.remove("userSession"); // Remove client-side cookie
-        window.location.href = "/login"; // Redirect to login page
-        //window.location.reload();
-      }, 10000); // 10 seconds
-      setTimer(timeoutId);
-      startCountdown();
-    } catch (error) {
-      setMessage(`Error: ${error.message}`);
+
+  // Handles Step 2, Update password
+  const handleUpdatePassword = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const form = e.target as HTMLFormElement;
+    const newPassword = form.newPassword.value;
+    const confirmNewPassword = form.confirmNewPassword.value;
+
+    if (newPassword !== confirmNewPassword) {
+      setAlertMessage("New password and confirmation do not match.");
+      setAlertType("error");
+      return;
+    }
+
+    if (user) {
+      try {
+        await updatePassword(user, newPassword);
+
+        // Show success message
+        setIsPopupVisible(true);
+        setAlertMessage("Password successfully updated!");
+        setAlertType("success");
+
+        // Hide the alert and go back to step 1 after 1 second
+        setTimeout(() => {
+          setAlertMessage("");
+          setStep(1);
+
+          // Reset the oldPassword state to clear the field
+          setOldPassword("");
+        }, 1000);
+      } catch (err: any) {
+        const errorMessage = err.message.replace(/^Firebase: /, "");
+        setAlertMessage(errorMessage);
+        setAlertType("error");
+      }
+    } else {
+      setAlertMessage("No user is currently signed in.");
+      setAlertType("error");
     }
   };
 
-  // Handle logout warning cancellation
-  const handleLogoutCancellation = () => {
-    setLogoutWarning(false);
-    if (timer !== null) {
-      clearTimeout(timer);
-      setTimer(null);
-    }
-  };
+  // Handle Cancel Button Click
+  const handleCancel = () => {
+    setStep(1);
+    setAlertMessage("");
 
-  // Start countdown
-  const startCountdown = () => {
-    const intervalId = setInterval(() => {
-      setCountdown((prevCountdown) => prevCountdown - 1);
-    }, 1000);
-    setTimeout(() => {
-      clearInterval(intervalId);
-    }, 10000);
+    // Reset the oldPassword state to clear the field
+    setOldPassword("");
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="transition duration-300 ease-in-out"
-    >
-      <h1 className="text-2xl font-bold mb-4 text-orange-900">
-        Reset Password
-      </h1>
+    <div>
+      {step === 1 ? (
+        <form onSubmit={handleConfirmOldPassword} className="">
+          {/* HEADER */}
+          <h1 className="text-2xl font-bold mb-2 text-orange-900">
+            Confirm old password
+          </h1>
 
-      {/* Email Input */}
-      <div className="flex flex-col gap-0.5 mb-4">
-        <span className="text-sm text-gray-500">Email</span>
-        <input
-          className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50 focus:ring-2 focus:ring-orange-900 focus:outline-none"
-          type="email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-      </div>
-
-      {/* Update Button */}
-      <button
-        type="submit"
-        className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
-          hover:bg-orange-900 duration-100 active:bg-orange-800 active:scale-95 transition ease-in-out"
-        disabled={loading} // Disable button while loading
-      >
-        {loading ? (
-          <div className="loader">
-            <div className="line-loader"></div>
+          {/* OLD PASSWORD INPUT */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm text-gray-500">
+              Enter your current password
+            </span>
+            <input
+              className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+              name="oldPassword"
+              id="inputOldPassword"
+              type="password"
+              placeholder="●●●●●●●●●●"
+              required
+              autoComplete="off" // Prevent browser autofill
+              value={oldPassword} // Bind to state
+              onChange={(e) => setOldPassword(e.target.value)} // Update state on change
+            />
           </div>
-        ) : (
-          <span className="font-bold text-md">Send Reset Email</span>
-        )}
-      </button>
 
-      {/* Success or Error Message */}
-      {message && (
-        <div
-          className={`mt-4 ${
-            message.startsWith("Error")
-              ? "text-red-500"
-              : message.includes("Incorrect")
-              ? "text-red-500"
-              : "text-green-500"
-          }`}
-        >
-          {message}
-        </div>
-      )}
+          {/* SUBMIT BUTTON WITH LOADING */}
+          <button
+            type="submit"
+            className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white hover:scale-[1.02] ${
+              loading ? "bg-gray-400" : "bg-orange-950 hover:bg-orange-900 "
+            } duration-300 mt-6`}
+            disabled={loading}
+          >
+            {loading ? (
+              <div className="flex items-center space-x-2">
+                <svg
+                  className="animate-spin h-5 w-5 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v8H4z"
+                  ></path>
+                </svg>
+                <span>Checking...</span>
+              </div>
+            ) : (
+              <span className="font-bold text-md">Confirm Old Password</span>
+            )}
+          </button>
 
-      {logoutWarning && (
-        <div className="fixed top-0 left-0 w-full h-screen bg-black bg-opacity-50 flex justify-center items-center z-50 overflow-y-auto">
-          <div className="bg-white p-4 rounded-md md:w-1/2 w-4/5">
-            <h2 className="text-lg font-bold mb-2">
-              Warning: You will be logged out on this process
-            </h2>
-            <p className="text-sm mb-4">
-              To ensure your password is updated securely, you will be logged
-              out during the process. For the reset to be successful, please
-              remain logged out until you complete the reset via the email link.
-            </p>
-            <div className="flex justify-center md:justify-end">
-              <button
-                className="bg-orange-950 hover:bg-orange-900 text-white font-bold py-2 px-4 rounded-md active:bg-orange-800 active:scale-95 transition ease-in-out"
-                onClick={handleLogoutConfirmation}
-              >
-                Send Reset Email
-              </button>
-              <button
-                className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-md ml-2 md:ml-2 active:bg-gray-600 active:scale-95 transition ease-in-out"
-                onClick={handleLogoutCancellation}
-              >
-                Cancel
-              </button>
+          {/* ALERT MESSAGE BELOW THE BUTTON */}
+          {alertMessage && (
+            <div
+              className={`mt-4 p-3 rounded-md ${
+                alertType === "success"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {alertMessage}
             </div>
+          )}
+        </form>
+      ) : (
+        <form onSubmit={handleUpdatePassword} className="">
+          {/* HEADER */}
+          <h1 className="text-2xl font-bold mb-2 text-orange-900">
+            Set New Password
+          </h1>
+
+          {/* NEW PASSWORD INPUT */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm text-gray-500">New Password</span>
+            <input
+              ref={newPasswordRef}
+              className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+              name="newPassword"
+              id="inputNewPassword"
+              type="password"
+              placeholder="●●●●●●●●●●"
+              required
+              autoComplete="new-password" // Prevent autofill for new password
+            />
           </div>
-        </div>
-      )}
 
-      {/* Countdown */}
-      {timer !== null && (
-        <div className="mt-4">
-          You will be logged out in {countdown} seconds.
-        </div>
-      )}
+          {/* CONFIRM NEW PASSWORD INPUT */}
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm text-gray-500">Confirm New Password</span>
+            <input
+              ref={confirmNewPasswordRef}
+              className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
+              name="confirmNewPassword"
+              id="inputConfirmNewPassword"
+              type="password"
+              placeholder="●●●●●●●●●●"
+              required
+              autoComplete="new-password" // Prevent autofill for confirm password
+            />
+          </div>
 
-      <style>
-        {`
-          .loader {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-          
-          .line-loader {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #fff;
-            border-top: 2px solid #ff9900;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-          }
-          
-          @keyframes spin {
-            0% {
-              transform: rotate(0deg);
-            }
-            100% {
-              transform: rotate(360deg);
-            }
-          }
-        `}
-      </style>
-    </form>
+          {/* BUTTON CONTAINER */}
+          <div className="flex justify-between mt-6">
+            {/* CANCEL BUTTON */}
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="flex items-center justify-center space-x-2 w-1/2 h-10 rounded-md shadow-md text-gray-500 bg-white
+              hover:bg-gray-50 duration-300 hover:scale-[1.02] border-2 border-gray-100"
+            >
+              <span className="font-bold text-md">Cancel</span>
+            </button>
+
+            {/* UPDATE PASSWORD BUTTON */}
+            <button
+              type="submit"
+              className="flex items-center justify-center space-x-2 w-1/2 h-10 rounded-md shadow-md text-white bg-orange-950
+              hover:bg-orange-900 duration-300 ml-2 hover:scale-[1.02]"
+            >
+              <span className="font-bold text-md">Update Password</span>
+            </button>
+          </div>
+
+          {/* ALERT MESSAGE BELOW THE BUTTON */}
+          {alertMessage && (
+            <div
+              className={`mt-4 p-3 rounded-md ${
+                alertType === "success"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {alertMessage}
+            </div>
+          )}
+        </form>
+      )}
+    </div>
   );
 };
 

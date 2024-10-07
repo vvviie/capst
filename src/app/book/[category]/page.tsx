@@ -97,7 +97,7 @@ const ReservationPage = () => {
                 />
 
                 <p className="text-xs text-orange-900 pl-2">
-                  Reservation must be made at least 5 days before today.
+                  Reservation must be made at least 5 days after today.
                 </p>
               </div>
               {/* TIME */}
@@ -169,7 +169,7 @@ const ReservationPage = () => {
                   required
                 />
                 <p className="text-xs text-orange-900 pl-2">
-                  Reservation must be made at least 14 days before today.
+                  Reservation must be made at least 14 days after today.
                 </p>
               </div>
 
@@ -191,7 +191,7 @@ const ReservationPage = () => {
                     max={12}
                     required
                   />
-                  <span>:</span>
+                  <span className="text-gray-500">TO</span>
                   <input
                     className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
             inline-block"
@@ -207,7 +207,10 @@ const ReservationPage = () => {
                 </div>
                 <p className="text-xs text-orange-900 pl-2">
                   Inclusive of 3-4 hours exclusive usage and services. Excess
-                  rate: P2,000/hour
+                  rate: P2,000/hour.{" "}
+                  <span className="text-orange-600 font-semibold">
+                    Café opens at 12pm.
+                  </span>
                 </p>
               </div>
 
