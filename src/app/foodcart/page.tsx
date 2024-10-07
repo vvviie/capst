@@ -12,16 +12,16 @@ import {
   deleteDoc,
   deleteField,
   setDoc,
-  getDoc
-} from "firebase/firestore"; 
+  getDoc,
+} from "firebase/firestore";
 import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
-import { getAuth, onAuthStateChanged } from "firebase/auth"; 
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie"; 
+import Cookies from "js-cookie";
 import CheckoutPopup from "../components/CheckoutPopup";
 //#endregion
 
@@ -59,13 +59,13 @@ const CartPage = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [promoCodeInput, setPromoCodeInput] = useState(''); 
-  const [promoApplied, setPromoApplied] = useState(false); 
+  const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
   const [voucherApplied, setVoucherApplied] = useState(false);
   const [voucherDeduction, setVoucherDeduction] = useState(0);
-  const [voucherType, setVoucherType] = useState(""); 
+  const [voucherType, setVoucherType] = useState("");
   const [discountedVoucher, setDiscountedVoucher] = useState<number>(0);
-  const [totalCartPrice, setTotalCartPrice] = useState(0); 
+  const [totalCartPrice, setTotalCartPrice] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
@@ -76,9 +76,9 @@ const CartPage = () => {
     if (!voucherApplied) {
       setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
     }
-    openVoucherForm(false);   // Close the voucher form
+    openVoucherForm(false); // Close the voucher form
   };
-  
+
   const now = new Date();
 
   // Format date as MM/DD/YYYY
@@ -95,7 +95,7 @@ const CartPage = () => {
   //#region Handling of All Methods
 
   //#region Handle Processes
-  
+
   // Handle form submission
   const handleSubmit = () => {
     setIsPopupVisible(true);
@@ -118,7 +118,7 @@ const CartPage = () => {
           setUser(authUser);
           setIsLoggedIn(true);
         }
-        setLoading(false); 
+        setLoading(false);
       });
 
       return () => unsubscribeAuth();
@@ -152,174 +152,179 @@ const CartPage = () => {
   //#endregion
 
   //#region Handling of Processes for Promo Codes
-const handlePromoCodeSubmit = async () => {
-  console.log("Current promoApplied state:", promoApplied); 
+  const handlePromoCodeSubmit = async () => {
+    console.log("Current promoApplied state:", promoApplied);
 
-  if (!userEmail) {
-    showErrorPopup("Please log in to apply a promo code.");
-    return;
-  }
-
-  // Check if promo code has already been applied
-  if (promoApplied) {
-    setShowError(true);
-    setErrorMessage("A promo code has already been applied. You cannot apply another one.");
-    setPromoCodeInput(''); 
-    setTimeout(() => {
-      setShowError(false); 
-    }, 3000);
-    return;
-  }
-
-  const promoCode = promoCodeInput.trim();
-
-  setShowError(false);
-  setErrorMessage("");
-
-  if (!promoCode) {
-    setShowError(true);
-    setErrorMessage("Please enter a promo code.");
-    setPromoCodeInput(''); 
-    setTimeout(() => {
-      setShowError(false); 
-    }, 3000);
-    return;
-  }
-
-  console.log("Entered promo code:", promoCode);
-
-  try {
-    const promoCodesRef = collection(db, "promoCodes");
-    const promoQuery = query(promoCodesRef, where("promoCode", "==", promoCode));
-    const promoSnapshot = await getDocs(promoQuery);
-
-    console.log("Promo snapshot:", promoSnapshot); 
-
-    if (!promoSnapshot.empty) {
-      const promoDoc = promoSnapshot.docs[0];
-      const promoDocRef = doc(db, "promoCodes", promoDoc.id);
-      const promoData = promoDoc.data();
-      const discount = promoData?.discountPercent || 0;
-      const available = promoData?.available || false;
-
-      console.log("Promo data:", promoData);
-
-      if (available) {
-        const promoDiscount = subtotal * discount; 
-        const newTotalCartPrice = subtotal - promoDiscount; 
-
-        setVoucherApplied(false); 
-        setVoucherDeduction(0); 
-        setVoucherType('');
-        setDiscountedVoucher(0);
-
-        setDiscountPercent(discount);
-        setDiscountedPromo(promoDiscount.toFixed(2)); 
-        setTotalCartPrice(newTotalCartPrice); 
-        setPromoApplied(true); 
-
-        setShowSuccess(true);
-        setTimeout(() => {
-            setShowSuccess(false);
-        }, 3000);
-
-        await updateDoc(promoDocRef, {
-            timesUsed: (promoData?.timesUsed || 0) + 1,
-        });
-
-        openDiscountPromoForm(false);
-
-        setPromoCodeInput(''); 
-      } else {
-        setShowError(true);
-        setErrorMessage("Promo code is no longer available!");
-        setPromoCodeInput(''); 
-        setTimeout(() => {
-          setShowError(false); 
-        }, 3000);
-      }
-    } else {
-      setShowError(true);
-      setErrorMessage("Promo code is invalid!");
-      setPromoCodeInput(''); 
-      setTimeout(() => {
-        setShowError(false); 
-      }, 3000);
-    }
-  } catch (error) {
-    console.error("Error validating promo code:", error);
-    showErrorPopup("An error occurred. Please try again.");
-    setPromoCodeInput(''); 
-  }
-};
-//#endregion
-
-  //#region Handling of Processes for Vouchers
-const handleVoucherSubmit = async () => {
-  if (!userEmail) {
-    showErrorPopup("Please log in to apply a voucher.");
-    console.log("No user email found.");
-    return;
-  }
-
-  if (!selectedVoucher) {
-    showErrorPopup("Please select a voucher.");
-    console.log("No voucher selected.");
-    return;
-  }
-
-  try {
-    console.log("Selected Voucher:", selectedVoucher);
-
-    const deduction = selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
-    const voucherType = selectedVoucher.type; 
-
-    const isVoucherValid = vouchers.some(v => v.id === selectedVoucher.id);
-    
-    if (!isVoucherValid) {
-      showErrorPopup("Selected voucher is invalid.");
-      console.log("Invalid voucher selected.");
+    if (!userEmail) {
+      showErrorPopup("Please log in to apply a promo code.");
       return;
     }
 
-    console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
-
-    setPromoApplied(false);
-    setDiscountPercent(0);
-    setDiscountedPromo(0);
-
-    let newTotalCartPrice = totalCartPrice;
-    let calculatedDiscount = 0;
-
-    if (voucherType === "percent") {
-      calculatedDiscount = totalCartPrice * (deduction); 
-      newTotalCartPrice -= calculatedDiscount; 
-      setDiscountedVoucher(calculatedDiscount.toFixed(2)); 
-      console.log(`Discount applied (percent): ${calculatedDiscount}`);
-    } else if (voucherType === "minus") {
-      newTotalCartPrice -= deduction; 
-      setDiscountedVoucher(deduction.toFixed(2)); 
-      console.log(`Discount applied (minus): ${deduction}`);
+    // Check if promo code has already been applied
+    if (promoApplied) {
+      setShowError(true);
+      setErrorMessage(
+        "A promo code has already been applied. You cannot apply another one."
+      );
+      setPromoCodeInput("");
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+      return;
     }
 
-    setTotalCartPrice(newTotalCartPrice);
-    setVoucherApplied(true);
+    const promoCode = promoCodeInput.trim();
 
-    showErrorPopup("Voucher successfully applied!");
-    console.log("Voucher successfully applied.");
+    setShowError(false);
+    setErrorMessage("");
 
-    setVoucherType(voucherType);
-    setVoucherDeduction(deduction);
+    if (!promoCode) {
+      setShowError(true);
+      setErrorMessage("Please enter a promo code.");
+      setPromoCodeInput("");
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+      return;
+    }
 
-    openVoucherForm(false);
+    console.log("Entered promo code:", promoCode);
 
-  } catch (error) {
-    console.error("Error applying voucher:", error);
-    setVoucherApplied(false);
-    showErrorPopup("An error occurred. Please try again.");
-  }
-};
-//#endregion
+    try {
+      const promoCodesRef = collection(db, "promoCodes");
+      const promoQuery = query(
+        promoCodesRef,
+        where("promoCode", "==", promoCode)
+      );
+      const promoSnapshot = await getDocs(promoQuery);
+
+      console.log("Promo snapshot:", promoSnapshot);
+
+      if (!promoSnapshot.empty) {
+        const promoDoc = promoSnapshot.docs[0];
+        const promoDocRef = doc(db, "promoCodes", promoDoc.id);
+        const promoData = promoDoc.data();
+        const discount = promoData?.discountPercent || 0;
+        const available = promoData?.available || false;
+
+        console.log("Promo data:", promoData);
+
+        if (available) {
+          const promoDiscount = subtotal * discount;
+          const newTotalCartPrice = subtotal - promoDiscount;
+
+          setVoucherApplied(false);
+          setVoucherDeduction(0);
+          setVoucherType("");
+          setDiscountedVoucher(0);
+
+          setDiscountPercent(discount);
+          setDiscountedPromo(promoDiscount.toFixed(2));
+          setTotalCartPrice(newTotalCartPrice);
+          setPromoApplied(true);
+
+          setShowSuccess(true);
+          setTimeout(() => {
+            setShowSuccess(false);
+          }, 3000);
+
+          await updateDoc(promoDocRef, {
+            timesUsed: (promoData?.timesUsed || 0) + 1,
+          });
+
+          openDiscountPromoForm(false);
+
+          setPromoCodeInput("");
+        } else {
+          setShowError(true);
+          setErrorMessage("Promo code is no longer available!");
+          setPromoCodeInput("");
+          setTimeout(() => {
+            setShowError(false);
+          }, 3000);
+        }
+      } else {
+        setShowError(true);
+        setErrorMessage("Promo code is invalid!");
+        setPromoCodeInput("");
+        setTimeout(() => {
+          setShowError(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error validating promo code:", error);
+      showErrorPopup("An error occurred. Please try again.");
+      setPromoCodeInput("");
+    }
+  };
+  //#endregion
+
+  //#region Handling of Processes for Vouchers
+  const handleVoucherSubmit = async () => {
+    if (!userEmail) {
+      showErrorPopup("Please log in to apply a voucher.");
+      console.log("No user email found.");
+      return;
+    }
+
+    if (!selectedVoucher) {
+      showErrorPopup("Please select a voucher.");
+      console.log("No voucher selected.");
+      return;
+    }
+
+    try {
+      console.log("Selected Voucher:", selectedVoucher);
+
+      const deduction =
+        selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
+      const voucherType = selectedVoucher.type;
+
+      const isVoucherValid = vouchers.some((v) => v.id === selectedVoucher.id);
+
+      if (!isVoucherValid) {
+        showErrorPopup("Selected voucher is invalid.");
+        console.log("Invalid voucher selected.");
+        return;
+      }
+
+      console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
+
+      setPromoApplied(false);
+      setDiscountPercent(0);
+      setDiscountedPromo(0);
+
+      let newTotalCartPrice = totalCartPrice;
+      let calculatedDiscount = 0;
+
+      if (voucherType === "percent") {
+        calculatedDiscount = totalCartPrice * deduction;
+        newTotalCartPrice -= calculatedDiscount;
+        setDiscountedVoucher(calculatedDiscount.toFixed(2));
+        console.log(`Discount applied (percent): ${calculatedDiscount}`);
+      } else if (voucherType === "minus") {
+        newTotalCartPrice -= deduction;
+        setDiscountedVoucher(deduction.toFixed(2));
+        console.log(`Discount applied (minus): ${deduction}`);
+      }
+
+      setTotalCartPrice(newTotalCartPrice);
+      setVoucherApplied(true);
+
+      showErrorPopup("Voucher successfully applied!");
+      console.log("Voucher successfully applied.");
+
+      setVoucherType(voucherType);
+      setVoucherDeduction(deduction);
+
+      openVoucherForm(false);
+    } catch (error) {
+      console.error("Error applying voucher:", error);
+      setVoucherApplied(false);
+      showErrorPopup("An error occurred. Please try again.");
+    }
+  };
+  //#endregion
 
   //#region Handling of Removal per Item in Cart
   const handleRemoveItem = async (itemId: string) => {
@@ -329,7 +334,7 @@ const handleVoucherSubmit = async () => {
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
-      }, 1000); 
+      }, 1000);
       setNotificationTimeout(newTimeout);
 
       console.log("Removing item with ID:", itemId);
@@ -417,7 +422,7 @@ const handleVoucherSubmit = async () => {
   //#region Handling of Fetching of All Items
   const fetchCartItems = async () => {
     if (!userEmail) {
-      setShowLoginModal(true); 
+      setShowLoginModal(true);
       return;
     }
 
@@ -428,8 +433,8 @@ const handleVoucherSubmit = async () => {
       );
 
       let cartItems: any[] = [];
-      let totalCartPrice = 0; 
-      let subtotal = 0; 
+      let totalCartPrice = 0;
+      let subtotal = 0;
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -473,14 +478,14 @@ const handleVoucherSubmit = async () => {
               price: itemData.totalPrice,
             });
 
-            subtotal += itemData.totalPrice; 
+            subtotal += itemData.totalPrice;
           }
         });
-        totalCartPrice = data.totalCartPrice; 
+        totalCartPrice = data.totalCartPrice;
       });
 
       setTotalCartPrice(totalCartPrice);
-      setSubtotal(subtotal); 
+      setSubtotal(subtotal);
 
       if (cartItems.length > 0) {
         setAddedToCart(cartItems);
@@ -499,17 +504,17 @@ const handleVoucherSubmit = async () => {
     const fetchVouchers = async () => {
       try {
         if (!userEmail) {
-          console.error('User email is missing.');
+          console.error("User email is missing.");
           return;
         }
-  
-        const userDocRef = doc(db, 'users', userEmail);
+
+        const userDocRef = doc(db, "users", userEmail);
         const userDoc = await getDoc(userDocRef);
-  
+
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const userVouchers = userData.vouchers;
-  
+
           const formattedVouchers: Vouch[] = Object.entries(userVouchers)
             .filter(([key, value]: any) => value.used === false) // Filter out the used vouchers
             .map(([key, value]: any) => ({
@@ -517,16 +522,16 @@ const handleVoucherSubmit = async () => {
               title: value.voucherID,
               desc: value.voucherDescription,
               deduction: value.voucherDeduction,
-              type: value.voucherType
+              type: value.voucherType,
             }));
-  
+
           setVouchers(formattedVouchers);
         }
       } catch (error) {
-        console.error('Error fetching vouchers:', error);
+        console.error("Error fetching vouchers:", error);
       }
     };
-  
+
     if (voucherForm) {
       fetchVouchers();
     }
@@ -535,7 +540,7 @@ const handleVoucherSubmit = async () => {
 
   //#region Handling of Options to be Passed in Orders
   const handleSubmitOrder = () => {
-    let finalTotal = subtotal; 
+    let finalTotal = subtotal;
 
     console.log("Initial subtotal:", subtotal);
     console.log("Promo applied:", promoApplied);
@@ -545,222 +550,228 @@ const handleVoucherSubmit = async () => {
     console.log("Voucher deduction:", voucherDeduction);
 
     if (promoApplied) {
-        const promoDiscount = subtotal * discountPercent; 
-        finalTotal -= promoDiscount; 
-        console.log("Applied promo discount:", promoDiscount);
+      const promoDiscount = subtotal * discountPercent;
+      finalTotal -= promoDiscount;
+      console.log("Applied promo discount:", promoDiscount);
     }
 
     if (voucherApplied) {
-        if (voucherType === "percent") {
-            const voucherDiscount = finalTotal * voucherDeduction; 
-            finalTotal -= voucherDiscount; 
-            console.log("Applied voucher discount (percent):", voucherDiscount);
-        } else if (voucherType === "minus") {
-            finalTotal -= voucherDeduction;
-            console.log("Applied voucher discount (minus):", voucherDeduction);
-        }
+      if (voucherType === "percent") {
+        const voucherDiscount = finalTotal * voucherDeduction;
+        finalTotal -= voucherDiscount;
+        console.log("Applied voucher discount (percent):", voucherDiscount);
+      } else if (voucherType === "minus") {
+        finalTotal -= voucherDeduction;
+        console.log("Applied voucher discount (minus):", voucherDeduction);
+      }
     }
 
     finalTotal = Math.max(finalTotal, 0);
 
     const orderData = {
-        modeOfPayment: modeOfPayment,
-        selectedOption: selectedOption,
-        selectedServeTime: selectedServeTime,
-        finalSubtotal: finalTotal,
+      modeOfPayment: modeOfPayment,
+      selectedOption: selectedOption,
+      selectedServeTime: selectedServeTime,
+      finalSubtotal: finalTotal,
     };
 
     console.log("Final subtotal before completing order:", finalTotal);
     console.log("Order submitted:", orderData);
 
     handleCompleteOrder(
-        orderData.modeOfPayment,
-        orderData.selectedOption,
-        orderData.selectedServeTime,
-        orderData.finalSubtotal
+      orderData.modeOfPayment,
+      orderData.selectedOption,
+      orderData.selectedServeTime,
+      orderData.finalSubtotal
     );
-};
+  };
   //#endregion
 
   //#region Handling of Completion of Orders
-const handleCompleteOrder = async (
-  modeOfPayment: string,
-  selectedOption: string,
-  serveTime: string,
-  finalSubtotal: number
-) => {
-  if (!userEmail) {
-    showErrorPopup("User email is not available.");
-    return;
-  }
-
-  try {
-    console.log("Completing order for user email:", userEmail);
-
-    const tempOrdersRef = collection(db, "tempOrders");
-    const querySnapshot = await getDocs(
-      query(tempOrdersRef, where("user", "==", userEmail))
-    );
-
-    if (querySnapshot.empty) {
-      console.log("No documents found in tempOrders.");
+  const handleCompleteOrder = async (
+    modeOfPayment: string,
+    selectedOption: string,
+    serveTime: string,
+    finalSubtotal: number
+  ) => {
+    if (!userEmail) {
+      showErrorPopup("User email is not available.");
       return;
     }
 
-    let completedOrderItems: any[] = [];
-    let totalCartPrice = 0;
-    let totalItems = 0;
-    let customOrderId: string | null = null;
-    let originalOrderId: string | null = null;
+    try {
+      console.log("Completing order for user email:", userEmail);
 
-    for (const docSnapshot of querySnapshot.docs) {
-      const data = docSnapshot.data();
-      const docId = docSnapshot.id;
-      const cleanedDocId = docId.startsWith("cart-")
-        ? docId.substring(5)
-        : docId;
-      const origDocId = docId;
+      const tempOrdersRef = collection(db, "tempOrders");
+      const querySnapshot = await getDocs(
+        query(tempOrdersRef, where("user", "==", userEmail))
+      );
 
-      let foundItem = false;
+      if (querySnapshot.empty) {
+        console.log("No documents found in tempOrders.");
+        return;
+      }
 
-      Object.keys(data).forEach((key) => {
-        if (
-          key !== "user" &&
-          key !== "totalItems" &&
-          key !== "totalCartPrice"
-        ) {
-          const itemData = data[key];
+      let completedOrderItems: any[] = [];
+      let totalCartPrice = 0;
+      let totalItems = 0;
+      let customOrderId: string | null = null;
+      let originalOrderId: string | null = null;
 
-          completedOrderItems.push({
-            productTitle: itemData.productTitle,
-            productImg: itemData.productImg,
-            slug: itemData.slug,
-            itemQty: itemData.itemQty,
-            totalPrice: itemData.totalPrice,
-            tags: itemData.tags || [],
-            note: itemData.note || null,
-            mainCourseOption: itemData.mainCourseOption || null,
-            selectedDrinkSize: itemData.selectedDrinkSize || null,
-            additionals: itemData.additionals || null,
-            milkOption: itemData.milkOption || null,
-          });
+      for (const docSnapshot of querySnapshot.docs) {
+        const data = docSnapshot.data();
+        const docId = docSnapshot.id;
+        const cleanedDocId = docId.startsWith("cart-")
+          ? docId.substring(5)
+          : docId;
+        const origDocId = docId;
 
-          totalItems += itemData.itemQty;
-          totalCartPrice += itemData.totalPrice;
-          foundItem = true;
-        }
-      });
+        let foundItem = false;
 
-      if (foundItem) {
-        const newTotalCartPrice = (data.totalCartPrice || 0) - totalCartPrice;
-        const newTotalItems = (data.totalItems || 0) - totalItems;
+        Object.keys(data).forEach((key) => {
+          if (
+            key !== "user" &&
+            key !== "totalItems" &&
+            key !== "totalCartPrice"
+          ) {
+            const itemData = data[key];
 
-        await updateDoc(docSnapshot.ref, {
-          totalCartPrice: newTotalCartPrice,
-          totalItems: newTotalItems,
+            completedOrderItems.push({
+              productTitle: itemData.productTitle,
+              productImg: itemData.productImg,
+              slug: itemData.slug,
+              itemQty: itemData.itemQty,
+              totalPrice: itemData.totalPrice,
+              tags: itemData.tags || [],
+              note: itemData.note || null,
+              mainCourseOption: itemData.mainCourseOption || null,
+              selectedDrinkSize: itemData.selectedDrinkSize || null,
+              additionals: itemData.additionals || null,
+              milkOption: itemData.milkOption || null,
+            });
+
+            totalItems += itemData.itemQty;
+            totalCartPrice += itemData.totalPrice;
+            foundItem = true;
+          }
         });
 
-        if (newTotalCartPrice === 0 && newTotalItems === 0) {
-          await deleteDoc(docSnapshot.ref);
-          console.log(`Document ${docId} deleted as the cart is empty.`);
-        }
+        if (foundItem) {
+          const newTotalCartPrice = (data.totalCartPrice || 0) - totalCartPrice;
+          const newTotalItems = (data.totalItems || 0) - totalItems;
 
-        if (!customOrderId) {
-          customOrderId = cleanedDocId;
-          originalOrderId = origDocId;
+          await updateDoc(docSnapshot.ref, {
+            totalCartPrice: newTotalCartPrice,
+            totalItems: newTotalItems,
+          });
+
+          if (newTotalCartPrice === 0 && newTotalItems === 0) {
+            await deleteDoc(docSnapshot.ref);
+            console.log(`Document ${docId} deleted as the cart is empty.`);
+          }
+
+          if (!customOrderId) {
+            customOrderId = cleanedDocId;
+            originalOrderId = origDocId;
+          }
         }
       }
-    }
 
-    if (!customOrderId) {
-      customOrderId = new Date().getTime().toString();
-    }
+      if (!customOrderId) {
+        customOrderId = new Date().getTime().toString();
+      }
 
-    const completedOrdersRef = doc(db, "completedOrders", customOrderId);
+      const completedOrdersRef = doc(db, "completedOrders", customOrderId);
 
-    await setDoc(completedOrdersRef, {
-      user: userEmail,
-      items: completedOrderItems,
-      totalItems: totalItems,
-      subtotal: finalSubtotal || 0,
-      totalCartPrice: totalCartPrice,
-      modeOfPayment: modeOfPayment,
-      selectedOption: selectedOption,
-      selectedServeTime: serveTime,
-      cartId: originalOrderId,
-      dateCreated: date,
-      timeCreated: time,
-      status: "TO PAY",
-      promoDiscounted: Math.round(discountedPromo * 100) / 100,
-      voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0,
-    });
-
-    console.log(
-      "Order successfully added to completedOrders with custom ID:",
-      customOrderId
-    );
-
-    await handleRemoveAllItems();
-    await fetchCartItems();
-
-    // Check if a voucher was applied, and mark it as "used" if true
-if (voucherApplied && selectedVoucher) {
-  console.log("Voucher applied:", selectedVoucher.title);
-  const userDocRef = doc(db, "users", userEmail);
-  
-  // Fetch the current vouchers from Firestore
-  const userDoc = await getDoc(userDocRef);
-  
-  if (userDoc.exists()) {
-    const userData = userDoc.data();
-    const userVouchers = userData.vouchers;
-
-    // Check if a voucher was applied, and mark it as "used" if true
-if (voucherApplied && selectedVoucher) {
-  console.log("Voucher applied:", selectedVoucher.title);
-  const userDocRef = doc(db, "users", userEmail);
-  
-  // Fetch the current vouchers from Firestore
-  const userDoc = await getDoc(userDocRef);
-  
-  if (userDoc.exists()) {
-    const userData = userDoc.data();
-    const userVouchers = userData.vouchers;
-
-    // Find the index of the voucher to update
-    const voucherIndex = Object.keys(userVouchers).find(key => 
-      userVouchers[key].voucherID === selectedVoucher.id
-    );
-
-    if (voucherIndex) {
-      // If the voucher is found, update its 'used' status
-      console.log(`Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`);
-      await updateDoc(userDocRef, {
-        [`vouchers.${voucherIndex}.used`]: true, // Use the index to update the 'used' field
+      await setDoc(completedOrdersRef, {
+        user: userEmail,
+        items: completedOrderItems,
+        totalItems: totalItems,
+        subtotal: finalSubtotal || 0,
+        totalCartPrice: totalCartPrice,
+        modeOfPayment: modeOfPayment,
+        selectedOption: selectedOption,
+        selectedServeTime: serveTime,
+        cartId: originalOrderId,
+        dateCreated: date,
+        timeCreated: time,
+        status: "TO PAY",
+        promoDiscounted: Math.round(discountedPromo * 100) / 100,
+        voucherDiscounted: discountedVoucher
+          ? Math.round(discountedVoucher * 100) / 100
+          : 0,
       });
-      console.log(`Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`);
-    } else {
-      console.log("Selected voucher not found in user's vouchers.");
+
+      console.log(
+        "Order successfully added to completedOrders with custom ID:",
+        customOrderId
+      );
+
+      await handleRemoveAllItems();
+      await fetchCartItems();
+
+      // Check if a voucher was applied, and mark it as "used" if true
+      if (voucherApplied && selectedVoucher) {
+        console.log("Voucher applied:", selectedVoucher.title);
+        const userDocRef = doc(db, "users", userEmail);
+
+        // Fetch the current vouchers from Firestore
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userVouchers = userData.vouchers;
+
+          // Check if a voucher was applied, and mark it as "used" if true
+          if (voucherApplied && selectedVoucher) {
+            console.log("Voucher applied:", selectedVoucher.title);
+            const userDocRef = doc(db, "users", userEmail);
+
+            // Fetch the current vouchers from Firestore
+            const userDoc = await getDoc(userDocRef);
+
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const userVouchers = userData.vouchers;
+
+              // Find the index of the voucher to update
+              const voucherIndex = Object.keys(userVouchers).find(
+                (key) => userVouchers[key].voucherID === selectedVoucher.id
+              );
+
+              if (voucherIndex) {
+                // If the voucher is found, update its 'used' status
+                console.log(
+                  `Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`
+                );
+                await updateDoc(userDocRef, {
+                  [`vouchers.${voucherIndex}.used`]: true, // Use the index to update the 'used' field
+                });
+                console.log(
+                  `Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`
+                );
+              } else {
+                console.log("Selected voucher not found in user's vouchers.");
+              }
+            } else {
+              console.error("User document does not exist.");
+            }
+          }
+        } else {
+          console.error("User document does not exist.");
+        }
+      }
+    } catch (error) {
+      console.error("Error completing order:", error);
+      showErrorPopup("Failed to complete order. Please try again.");
     }
-  } else {
-    console.error("User document does not exist.");
-  }
-}
-  } else {
-    console.error("User document does not exist.");
-  }
-}
-  } catch (error) {
-    console.error("Error completing order:", error);
-    showErrorPopup("Failed to complete order. Please try again.");
-  }
-};
-//#endregion
+  };
+  //#endregion
 
   //#endregion
 
   //#region Use Effects
-  
+
   //#region Apply Promos
   useEffect(() => {
     console.log("Promo applied:", promoApplied);
@@ -826,7 +837,7 @@ if (voucherApplied && selectedVoucher) {
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const loggedIn = !!authUser && authUser.emailVerified;
       setIsLoggedIn(loggedIn);
-      setUserEmail(authUser?.email || null); 
+      setUserEmail(authUser?.email || null);
     });
 
     return () => unsubscribe();
@@ -835,7 +846,7 @@ if (voucherApplied && selectedVoucher) {
 
   //#region Fetching of All Items in Cart
   useEffect(() => {
-    fetchCartItems(); 
+    fetchCartItems();
   }, [userEmail]);
   //#endregion
 
@@ -852,17 +863,17 @@ if (voucherApplied && selectedVoucher) {
 
         if (querySnapshot.empty) {
           console.log("No existing orders found.");
-          setNeedsOrder(true); 
+          setNeedsOrder(true);
         } else {
           console.log("Existing orders found.");
-          setNeedsOrder(false); 
+          setNeedsOrder(false);
         }
       } catch (error) {
         console.error("Error checking existing orders:", error);
       }
     };
 
-    checkExistingOrders(); 
+    checkExistingOrders();
   }, [userEmail]);
   //#endregion
 
@@ -913,7 +924,7 @@ if (voucherApplied && selectedVoucher) {
         }
       };
 
-      handleNewOrder(); 
+      handleNewOrder();
     }
   }, [needsOrder, userEmail, productId]);
   //#endregion
@@ -925,10 +936,11 @@ if (voucherApplied && selectedVoucher) {
   if (!isLoggedIn) {
     return (
       <div
-        className={`flex flex-col ${isEmpty
-          ? "min-h-[calc(100vh-280px)]"
-          : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
-          } mt-14 bg-white items-center justify-center`}
+        className={`flex flex-col ${
+          isEmpty
+            ? "min-h-[calc(100vh-280px)]"
+            : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+        } mt-14 bg-white items-center justify-center`}
       >
         <div
           className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
@@ -965,10 +977,11 @@ if (voucherApplied && selectedVoucher) {
 
   return (
     <div
-      className={`flex flex-col ${isEmpty
-        ? "min-h-[calc(100vh-280px)]"
-        : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
-        } mt-14 bg-white items-center justify-center`}
+      className={`flex flex-col ${
+        isEmpty
+          ? "min-h-[calc(100vh-280px)]"
+          : "min-h-[calc(100vh-280px)] lg:py-2 xl:min-h-[calc(100vh-56px)]"
+      } mt-14 bg-white items-center justify-center`}
     >
       {!isLoggedIn && showLoginModal && (
         <div
@@ -1115,8 +1128,9 @@ if (voucherApplied && selectedVoucher) {
               {/* TABLE OR PICKUP */}
               <div className="flex flex-col">
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
-                    }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                    selectedOption === "Table" ? "bg-orange-50" : "bg-gray-50"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1129,8 +1143,9 @@ if (voucherApplied && selectedVoucher) {
                   <span className="ml-4 font-semibold">Table</span>
                 </div>
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
-                    }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                    selectedOption === "Pickup" ? "bg-orange-50" : "bg-gray-50"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1151,8 +1166,9 @@ if (voucherApplied && selectedVoucher) {
               {/* NOW OR LATER */}
               <div className="flex flex-col">
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
-                    }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                    selectedServeTime === "Now" ? "bg-orange-50" : "bg-gray-50"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1165,10 +1181,11 @@ if (voucherApplied && selectedVoucher) {
                   <span className="ml-4 font-semibold">Now</span>
                 </div>
                 <div
-                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedServeTime === "Later"
-                    ? "bg-orange-50"
-                    : "bg-gray-50"
-                    }`}
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                    selectedServeTime === "Later"
+                      ? "bg-orange-50"
+                      : "bg-gray-50"
+                  }`}
                 >
                   <input
                     type="radio"
@@ -1200,7 +1217,8 @@ if (voucherApplied && selectedVoucher) {
                 <div className="flex justify-between items-center px-4">
                   <span>Promo</span>
                   <span className="font-bold text-lg text-gray-600">
-                    -P{Number(discountedPromo).toFixed(2)} {/* Ensure discountedPromo is treated as a number */}
+                    -P{Number(discountedPromo).toFixed(2)}{" "}
+                    {/* Ensure discountedPromo is treated as a number */}
                   </span>
                 </div>
               )}
@@ -1292,168 +1310,180 @@ if (voucherApplied && selectedVoucher) {
               </div>
             )}
             {/* VOUCHER FORM */}
-              {voucherForm && (
-                <div
-                  className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
-                  onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
+            {voucherForm && (
+              <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
+              >
+                {/* PROMO CONTAINER */}
+                <form
+                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                  ref={modalRef}
                 >
-                  {/* PROMO CONTAINER */}
-                  <form
-                    className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
-                    onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-                    ref={modalRef}
-                  >
-                    <div className="flex flex-col mb-6">
-                      {/* ICON - Keep this always visible */}
-                      <div className="flex flex-col items-center">
-                        <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
-                      </div>
+                  <div className="flex flex-col mb-6">
+                    {/* ICON - Keep this always visible */}
+                    <div className="flex flex-col items-center">
+                      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
+                    </div>
 
-                      {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
-                      {selectedVoucher && (
-                        <>
-                          {/* VOUCHER INFO DISPLAY HEADER */}
-                          <h1 className="text-lg font-bold text-orange-900 text-center">
-                            Selected Voucher
-                          </h1>
-                          {/* VOUCHER INFO DISPLAY CONTAINER */}
-                          <div className="flex flex-col items-center">
-                            {/* VOUCHER TITLE */}
-                            <h1 className="font-bold text-orange-950 text-xl">
-                              {selectedVoucher?.title}
-                            </h1>
-                            {/* VOUCHER DESCRIPTION */}
-                            <p className="text-sm">{selectedVoucher?.desc}</p>
-                          </div>
-                          <hr className="my-4" />
-                        </>
-                      )}
-
-                      {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
-                      <div className="flex items-center justify-center h-12"> {/* Set a fixed height */}
+                    {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
+                    {selectedVoucher && (
+                      <>
+                        {/* VOUCHER INFO DISPLAY HEADER */}
                         <h1 className="text-lg font-bold text-orange-900 text-center">
-                          {vouchers.length > 0 ? "Select a voucher" : "No vouchers available"}
+                          Selected Voucher
                         </h1>
-                      </div>
-
-                      {/* VOUCHERS CONTAINER */}
-                      {vouchers.length > 0 && (
-                        <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
-                          {vouchers.map((vouch) => (
-                            // VOUCHERS
-                            <span
-                              key={vouch.id}
-                              onClick={() => setSelectedVoucher(vouch)}
-                              className={`${
-                                selectedVoucher?.id === vouch.id
-                                  ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
-                                  : "bg-white text-gray-700 hover:bg-gray-50"
-                              } font-bold text-center text-xs
-                              rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
-                            >
-                              {vouch.title}
-                            </span>
-                          ))}
+                        {/* VOUCHER INFO DISPLAY CONTAINER */}
+                        <div className="flex flex-col items-center">
+                          {/* VOUCHER TITLE */}
+                          <h1 className="font-bold text-orange-950 text-xl">
+                            {selectedVoucher?.title}
+                          </h1>
+                          {/* VOUCHER DESCRIPTION */}
+                          <p className="text-sm">{selectedVoucher?.desc}</p>
                         </div>
-                      )}
+                        <hr className="my-4" />
+                      </>
+                    )}
+
+                    {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
+                    <div className="flex items-center justify-center h-12">
+                      {" "}
+                      {/* Set a fixed height */}
+                      <h1 className="text-lg font-bold text-orange-900 text-center">
+                        {vouchers.length > 0
+                          ? "Select a voucher"
+                          : "No vouchers available"}
+                      </h1>
                     </div>
-                    <hr className="mb-6" />
-                    <div className="flex justify-center items-center gap-4">
-                      {/* Apply Voucher button should only be shown if there are vouchers available */}
-                      {vouchers.length > 0 && (
-                        <button
-                          type="button"
-                          className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
-                          onClick={handleVoucherSubmit}
-                        >
-                          Apply Voucher
-                        </button>
-                      )}
+
+                    {/* VOUCHERS CONTAINER */}
+                    {vouchers.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
+                        {vouchers.map((vouch) => (
+                          // VOUCHERS
+                          <span
+                            key={vouch.id}
+                            onClick={() => setSelectedVoucher(vouch)}
+                            className={`${
+                              selectedVoucher?.id === vouch.id
+                                ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
+                                : "bg-white text-gray-700 hover:bg-gray-50"
+                            } font-bold text-center text-xs
+                              rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                          >
+                            {vouch.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <hr className="mb-6" />
+                  <div className="flex justify-center items-center gap-4">
+                    {/* Apply Voucher button should only be shown if there are vouchers available */}
+                    {vouchers.length > 0 && (
                       <button
-                        className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                        hover:bg-gray-50 hover:scale-[1.1] duration-300"
-                        onClick={closeVoucherForm}
+                        type="button"
+                        className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+                        onClick={handleVoucherSubmit}
                       >
-                        Close
+                        Apply Voucher
                       </button>
-                    </div>
-                  </form>
+                    )}
+                    <button
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+                        hover:bg-gray-50 hover:scale-[1.1] duration-300"
+                      onClick={closeVoucherForm}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+
+            {/* PAYMENT OPTIONS CONTAINER */}
+            <div className="flex flex-col gap-2">
+              <h1 className="text-gray-500">Payment Options</h1>
+              {/* CASH OR CARD */}
+              <div className="flex flex-col">
+                <div
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                    selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    id="cash"
+                    className="w-5 h-5 cursor-pointer"
+                    checked={selectedPayment === "Cash"}
+                    onChange={() => handlePaymentChange("Cash")}
+                  />
+                  <span className="ml-4 font-semibold">Cash</span>
                 </div>
-              )}
+                <div
+                  className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
+                    selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    id="card"
+                    className="w-5 h-5 cursor-pointer"
+                    checked={selectedPayment === "Card"}
+                    onChange={() => handlePaymentChange("Card")}
+                  />
+                  <span className="ml-4 font-semibold">Card</span>
+                </div>
+              </div>
+            </div>
 
-                          {/* PAYMENT OPTIONS CONTAINER */}
-                          <div className="flex flex-col gap-2">
-                            <h1 className="text-gray-500">Payment Options</h1>
-                            {/* CASH OR CARD */}
-                            <div className="flex flex-col">
-                              <div
-                                className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Cash" ? "bg-orange-50" : "bg-gray-50"
-                                  }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="payment"
-                                  id="cash"
-                                  className="w-5 h-5 cursor-pointer"
-                                  checked={selectedPayment === "Cash"}
-                                  onChange={() => handlePaymentChange("Cash")}
-                                />
-                                <span className="ml-4 font-semibold">Cash</span>
-                              </div>
-                              <div
-                                className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${selectedPayment === "Card" ? "bg-orange-50" : "bg-gray-50"
-                                  }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name="payment"
-                                  id="card"
-                                  className="w-5 h-5 cursor-pointer"
-                                  checked={selectedPayment === "Card"}
-                                  onChange={() => handlePaymentChange("Card")}
-                                />
-                                <span className="ml-4 font-semibold">Card</span>
-                              </div>
-                            </div>
-                          </div>
+            <hr />
 
-                          <hr />
-
-                          {/* TOTAL AND CHECKOUT BUTTON */}
-                          <div>
-                {/* TOTAL AMOUNT */}
+            {/* TOTAL AND CHECKOUT BUTTON */}
+            <div>
+              {/* TOTAL AMOUNT */}
               <div className="flex justify-between items-center px-4 py-4">
-                  <span className="font-semibold text-lg">Total (VAT Inc.)</span>
-                  <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-                    P
-                    {(() => {
-                      let finalTotal = subtotal; // Start with the subtotal
+                <span className="font-semibold text-lg">Total (VAT Inc.)</span>
+                <span className="font-bold text-lg text-gray-800 lg:text-2xl">
+                  P
+                  {(() => {
+                    let finalTotal = subtotal; // Start with the subtotal
 
-                      // Apply promo discount if applicable
-                      if (promoApplied) {
-                          const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
-                          finalTotal -= promoDiscount; // Deduct promo discount from subtotal
-                          console.log("Applied promo discount:", promoDiscount);
+                    // Apply promo discount if applicable
+                    if (promoApplied) {
+                      const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
+                      finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+                      console.log("Applied promo discount:", promoDiscount);
+                    }
+
+                    // Apply voucher discount if applicable
+                    if (voucherApplied) {
+                      if (voucherType === "percent") {
+                        const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
+                        finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+                        console.log(
+                          "Applied voucher discount (percent):",
+                          voucherDiscount
+                        );
+                      } else if (voucherType === "minus") {
+                        finalTotal -= voucherDeduction; // Deduct the fixed amount
+                        console.log(
+                          "Applied voucher discount (minus):",
+                          voucherDeduction
+                        );
                       }
+                    }
 
-                      // Apply voucher discount if applicable
-                      if (voucherApplied) {
-                          if (voucherType === "percent") {
-                              const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
-                              finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
-                              console.log("Applied voucher discount (percent):", voucherDiscount);
-                          } else if (voucherType === "minus") {
-                              finalTotal -= voucherDeduction; // Deduct the fixed amount
-                              console.log("Applied voucher discount (minus):", voucherDeduction);
-                          }
-                      }
+                    finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
 
-                      finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
-
-                      return finalTotal.toFixed(2); // Return formatted total with two decimal places
-                    })()}
-                  </span>
+                    return finalTotal.toFixed(2); // Return formatted total with two decimal places
+                  })()}
+                </span>
               </div>
               {/* CHECKOUT BUTTON */}
               <button
@@ -1476,7 +1506,7 @@ if (voucherApplied && selectedVoucher) {
         </div>
       )}
       {/* CHANGES MADE POP UP */}
-      {isPopupVisible && <CheckoutPopup />}
+      {isPopupVisible && <CheckoutPopup message="Checkout Success!" />}
     </div>
   );
 };

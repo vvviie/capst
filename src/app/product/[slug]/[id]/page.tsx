@@ -22,7 +22,6 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
 const ProductPage: React.FC = () => {
-  
   //#region Const Variables
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -40,8 +39,7 @@ const ProductPage: React.FC = () => {
 
   // For getting the additionals in the DrinksOptions
   const [selectedAdditionals, setSelectedAdditionals] = useState<string[]>([]);
-  const [selectedMilkOption, setSelectedMilkOption] =
-    useState("Fresh Milk");
+  const [selectedMilkOption, setSelectedMilkOption] = useState("Fresh Milk");
 
   // QUANTITY NUMBER ADJUSTMENT
   const [numberQtty, setNumberQtty] = useState<number>(1);

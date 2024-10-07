@@ -29,7 +29,9 @@ const firestore = getFirestore(app);
 const urlEncode = (str) => encodeURIComponent(str);
 
 const LoginPage = () => {
-  const [message, setMessage] = useState<{ text: string; type: string } | null>(null);
+  const [message, setMessage] = useState<{ text: string; type: string } | null>(
+    null
+  );
   const router = useRouter();
 
   useEffect(() => {
@@ -46,7 +48,7 @@ const LoginPage = () => {
         // Refresh token to ensure it's up-to-date
         await user.reload();
         await user.getIdToken(true);
-        
+
         // Fetch the user details now that authentication is ready
         fetchUserDetails(user.email);
       }
@@ -81,8 +83,14 @@ const LoginPage = () => {
     const email = event.target.email.value;
     const password = event.target.password.value;
 
+    console.log("Original Email:", email);
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       // Ensure the token is refreshed and fully loaded
@@ -114,7 +122,10 @@ const LoginPage = () => {
         <Image src={"/coffee.png"} alt="" fill className="object-contain" />
       </div>
 
-      <form onSubmit={handleLogin} className="w-full flex flex-1 items-center justify-center">
+      <form
+        onSubmit={handleLogin}
+        className="w-full flex flex-1 items-center justify-center"
+      >
         <div className="flex flex-col items-center justify-center gap-4">
           <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
             Hello, there! Welcome back!
@@ -122,14 +133,19 @@ const LoginPage = () => {
 
           {message && (
             <span
-              className={`font-bold mt-[-20px] ${message.type === "success" ? "text-green-500" : "text-red-500"} text-xl`}
+              className={`font-bold mt-[-20px] ${
+                message.type === "success" ? "text-green-500" : "text-red-500"
+              } text-xl`}
             >
               {message.text}
             </span>
           )}
 
           <div className="w-full flex flex-col gap-1 items-center justify-center">
-            <label className="text-orange-950 text-sm w-full text-left space-x-1" htmlFor="inputEmail">
+            <label
+              className="text-orange-950 text-sm w-full text-left space-x-1"
+              htmlFor="inputEmail"
+            >
               <i className="fa-solid fa-user text-gray-700"></i>
               <span>Username</span>
             </label>
@@ -144,7 +160,10 @@ const LoginPage = () => {
           </div>
 
           <div className="w-full flex flex-col gap-1 items-center justify-center">
-            <label className="text-orange-950 text-sm w-full text-left space-x-1" htmlFor="inputPassword">
+            <label
+              className="text-orange-950 text-sm w-full text-left space-x-1"
+              htmlFor="inputPassword"
+            >
               <i className="fa-solid fa-lock text-gray-700"></i>
               <span>Password</span>
             </label>
@@ -157,10 +176,17 @@ const LoginPage = () => {
               required // Added required attribute for better UX
             />
           </div>
-
+          <p
+            className="text-sm font-semibold text-gray-600 underline-offset-2 underline
+          hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"
+          >
+            Forgot your password?
+          </p>
           <button
             type="submit"
-            className="flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950"
+            className="flex items-center justify-center space-x-2 w-full h-10 rounded-md
+          shadow-md text-white bg-orange-950
+          hover:bg-orange-900 duration-300 hover:scale-[1.02]"
           >
             <i className="fa fa-sign-in text-sm"></i>
             <span className="font-bold text-md">Username Login</span>
@@ -168,7 +194,9 @@ const LoginPage = () => {
 
           <Link
             href={"/signup"}
-            className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md shadow-md text-orange-950"
+            className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
+          shadow-md text-orange-950
+          hover:bg-gray-50 duration-300 hover:scale-[1.02]"
           >
             <i className="fa fa-user-plus text-sm"></i>
             <span className="font-bold text-md">Create an account</span>

@@ -190,7 +190,7 @@ const Navbar = () => {
           <Link href="/menu">Menu</Link>
         </div>
         <div className="px-4 hover:text-yellow-100">
-          <Link href="/">Book</Link>
+          <Link href="/book">Book</Link>
         </div>
         <div className="px-4 hover:text-yellow-100">
           <Link href="/orders">Orders</Link>
