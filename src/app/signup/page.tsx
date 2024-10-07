@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import classNames from "classnames";
 import { useRouter } from "next/navigation"; // Import useRouter from next/navigation
+import Link from "next/link";
 
 // Import Firebase modules from npm
 import { initializeApp } from "firebase/app";
@@ -293,6 +294,15 @@ const SignupPage: React.FC = () => {
               >
                 <span className="font-bold text-md">Next</span>
               </button>
+
+              <Link
+                    href={"/login"}
+                    className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
+                        shadow-md text-orange-950
+                        hover:bg-gray-50 duration-300 hover:scale-[1.02]"
+                    >
+                        <span className="font-bold text-md">Back</span>
+              </Link>
             </>
           )}
 

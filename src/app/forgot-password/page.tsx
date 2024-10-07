@@ -5,6 +5,7 @@ import classNames from "classnames";
 import { auth } from "@/app/firebase"; // Add your firebase instance here
 import { sendPasswordResetEmail, verifyPasswordResetCode } from "firebase/auth";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 
 const ForgotPasswordPage: React.FC = () => {
     const router = useRouter();
@@ -153,13 +154,25 @@ const ForgotPasswordPage: React.FC = () => {
                     </div>
 
                     <button
-                        type="submit"
-                        className={`bg-orange-950 text-white text-sm font-bold py-2 px-4 rounded-md w-full ${disableButton ? "bg-gray-500" : "bg-orange-950"
-                            }`}
-                        disabled={disableButton}
+                    type="submit"
+                    className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md
+                        shadow-md text-white ${disableButton ? "bg-gray-500" : "bg-orange-950"}
+                        hover:bg-orange-900 duration-300 hover:scale-[1.02]`}
+                    disabled={disableButton}
                     >
+                    <span className="font-bold text-md">
                         {disableButton ? "Waiting..." : "Send Password Reset Email"}
+                    </span>
                     </button>
+
+                    <Link
+                    href={"/login"}
+                    className="flex items-center justify-center space-x-2 border-solid border-2 border-gray-50 w-full h-10 rounded-md
+                        shadow-md text-orange-950
+                        hover:bg-gray-50 duration-300 hover:scale-[1.02]"
+                    >
+                        <span className="font-bold text-md">Back</span>
+                    </Link>
                 </div>
             </form>
         </div>
