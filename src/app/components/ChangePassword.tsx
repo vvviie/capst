@@ -30,7 +30,7 @@ const ChangePassword = () => {
     }
   }, [step]);
 
-  // Handle Step 1: Re-authenticate with old password
+  // Handles Step 1, Re-authenticate with old password
   const handleConfirmOldPassword = async (
     e: React.FormEvent<HTMLFormElement>
   ) => {
@@ -72,7 +72,7 @@ const ChangePassword = () => {
     }
   };
 
-  // Handle Step 2: Update password
+  // Handles Step 2, Update password
   const handleUpdatePassword = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -114,11 +114,15 @@ const ChangePassword = () => {
     }
   };
 
-  // Handle Cancel Button Click
-  const handleCancel = () => {
-    setStep(1);
-    setAlertMessage("");
-  };
+// Handle Cancel Button Click
+const handleCancel = () => {
+  setStep(1);
+  setAlertMessage("");
+  
+  // Reset the oldPassword state to clear the field
+  setOldPassword("");
+};
+
 
   return (
     <div>
@@ -126,12 +130,12 @@ const ChangePassword = () => {
         <form onSubmit={handleConfirmOldPassword} className="">
           {/* HEADER */}
           <h1 className="text-2xl font-bold mb-2 text-orange-900">
-            Confirm Old Password
+            Confirm old password
           </h1>
 
           {/* OLD PASSWORD INPUT */}
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm text-gray-500">Old Password</span>
+            <span className="text-sm text-gray-500">Enter your current password</span>
             <input
               className="border-2 border-solid border-orange-900 w-full h-10 pl-3 rounded-md bg-orange-50"
               name="oldPassword"
