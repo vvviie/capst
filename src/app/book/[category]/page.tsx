@@ -20,7 +20,7 @@ const ReservationPage = () => {
     // Show the popup when the form is submitted
     setIsPopupVisible(true);
 
-    // Hide the popup after 1.5 seconds
+    // Hide the popup after 1.5 seconds.
     setTimeout(() => {
       setIsPopupVisible(false);
     }, 750);
