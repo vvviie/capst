@@ -185,7 +185,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       setIsPopupVisible(true); // Show success popup
       setTimeout(() => setIsPopupVisible(false), 750);
   } catch (error) {
-      console.error("Error adding reservation: ", error);
+      //console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");
   }
 };

@@ -111,7 +111,7 @@ const ReservationsPage = () => {
         setReservations(fetchedReservations);
         setHasReservation(fetchedReservations.length > 0);
       } catch (error) {
-        console.error("Error fetching reservations:", error);
+        //console.error("Error fetching reservations:", error);
       }
     };
 
@@ -121,7 +121,7 @@ const ReservationsPage = () => {
   const handleDeleteReservation = async (reservationId: string) => {
     try {
       await deleteDoc(doc(db, "tableReservations", reservationId));
-      console.log("Reservation deleted successfully!");
+      //console.log("Reservation deleted successfully!");
   
       // Remove the deleted reservation from the state
       setReservations((prev) =>
@@ -131,7 +131,7 @@ const ReservationsPage = () => {
       setHasReservation(reservations.length > 1); // Check if any reservations remain
       setConfirmPopup(false); // Close the confirmation popup
     } catch (error) {
-      console.error("Error deleting reservation:", error);
+      //console.error("Error deleting reservation:", error);
     }
   };
 
@@ -248,7 +248,7 @@ const ReservationsPage = () => {
                       hover:scale-[1.03] duration-300"
                       onClick={(e) => {
                         e.stopPropagation();
-                        console.log("Cancel button clicked");
+                        //console.log("Cancel button clicked");
                         setSelectedReservationId(res.id);
                         setConfirmPopup(true);
                       }}

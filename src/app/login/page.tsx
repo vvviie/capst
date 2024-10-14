@@ -95,7 +95,7 @@ const LoginPage = () => {
     const email = event.target.email.value;
     const password = event.target.password.value;
 
-    console.log("Original Email:", email);
+    //console.log("Original Email:", email);
 
     try {
       const userCredential = await signInWithEmailAndPassword(
