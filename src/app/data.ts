@@ -199,7 +199,7 @@ export const Buffet:bfts = [
   },
 ]
 
-export const Chosen:bfts = [
+export const Chosen:bfts = [  //currently displayed which is just a placeholder
   {
     title: "Veggies",
     items: ["Chicken Mango Salad"],

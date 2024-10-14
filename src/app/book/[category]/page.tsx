@@ -16,6 +16,7 @@ const ReservationPage = () => {
   const [numberOfPersons, setNumberOfPersons] = useState<string>("1"); // Default to '1'
   const packagePricePerPerson = 550; // Price per person
   const [totalPrice, setTotalPrice] = useState(0);
+  const [chosenItems, setChosenItems] = useState([]);
 
   // Set date to 14 days from today
   useEffect(() => {
@@ -27,8 +28,12 @@ const ReservationPage = () => {
 
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPackage(e.target.value);
+    clearSelectedItems(); // Call the callback function
   };
 
+  const clearSelectedItems = () => {
+    // This function will be passed to PackageOffers component
+  };
   // Calculate total price whenever numberOfPersons changes
   useEffect(() => {
     if (numberOfPersons === "") {
@@ -53,6 +58,10 @@ const ReservationPage = () => {
       setNumberOfPersons(numericValue.toString()); // Update state
     }
   };
+
+  useEffect(() => {
+    setChosenItems([]); // Clear chosen items when package changes
+  }, [selectedPackage]);
 
   const getPastaCount = () => (selectedPackage === "C" ? 2 : 1);
   const getMainsCount = () => (selectedPackage === "A" ? 2 : 3);
@@ -96,6 +105,10 @@ const ReservationPage = () => {
         : basePricePerPerson * parseInt(numberOfPersons, 10);
     setTotalPrice(basePrice + excessCharge);
   }, [totalHours, selectedPackage, numberOfPersons]);
+
+  const handleFinalize = (chosenItemsArray) => {
+    setChosenItems(chosenItemsArray);
+  };
 
   return (
     <div className="max-w-md mx-auto p-4 bg-white rounded-md shadow-md mt-20 mb-10">
@@ -191,7 +204,11 @@ const ReservationPage = () => {
             <option value="B">B - P600 per person</option>
             <option value="C">C - P700 per person</option>
           </select>
-          <PackageOffers selectedPackage={selectedPackage} />
+          <PackageOffers
+            selectedPackage={selectedPackage}
+            onFinalize={handleFinalize}
+            onPackageChange={clearSelectedItems} // Pass the callback function
+          />
         </div>
         <p className="text-xs text-orange-900 pl-2 mt-1">
           Buffet: 1 Rice, 1 Veggie, {getPastaCount()} Pasta, {getMainsCount()}{" "}
@@ -204,7 +221,7 @@ const ReservationPage = () => {
           You've chosen:
         </span>
         <div className="text-sm">
-          {Chosen.map((item) => (
+          {chosenItems.map((item) => (
             <div className="space-x-2">
               {/* TYPE OF FOOD */}
               <span className="font-semibold text-orange-700">

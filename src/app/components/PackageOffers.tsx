@@ -3,11 +3,31 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Buffet } from "../data";
 
-const PackageOffers = ({ selectedPackage }) => {
+const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const [prevSelectedPackage, setPrevSelectedPackage] = useState("");
+  useEffect(() => {
+    if (prevSelectedPackage !== selectedPackage) {
+      setSelectedItems({
+        Veggies: [],
+        Pasta: [],
+        Mains: [],
+        Dessert: [],
+      }); // Clear selected items when the package changes
+      setPrevSelectedPackage(selectedPackage); // Update prevSelectedPackage
+    }
+    onPackageChange(); // Call the callback function to notify the parent component
+  }, [selectedPackage, onPackageChange, prevSelectedPackage]);
 
-  // CLOSE FORM WHEN CLICK OUTSIDE
+  // State to track selected items per category
+  const [selectedItems, setSelectedItems] = useState({
+    Veggies: [],
+    Pasta: [],
+    Mains: [],
+    Dessert: [],
+  });
+
   const handleClickOutside = (event: MouseEvent) => {
     if (formRef.current && !formRef.current.contains(event.target as Node)) {
       setOpen(false);
@@ -26,17 +46,57 @@ const PackageOffers = ({ selectedPackage }) => {
     };
   }, [open]);
 
-  const getPastaCount = () => {
-    return selectedPackage === "C" ? 2 : 1;
+  // Category limits based on package
+  const getLimits = {
+    Veggies: 1,
+    Pasta: selectedPackage === "C" ? 2 : 1,
+    Mains: selectedPackage === "A" ? 2 : 3,
+    Dessert: selectedPackage === "C" ? 2 : 1,
   };
 
-  const getMainsCount = () => {
-    return selectedPackage === "A" ? 2 : 3;
+  const handleItemSelect = (category, item) => {
+    setSelectedItems((prev) => {
+      const currentSelection = prev[category];
+
+      // If already selected, unselect the item
+      if (currentSelection.includes(item)) {
+        return {
+          ...prev,
+          [category]: currentSelection.filter((selected) => selected !== item),
+        };
+      }
+
+      // Only allow selection if the limit has not been reached
+      if (currentSelection.length < getLimits[category]) {
+        return {
+          ...prev,
+          [category]: [...currentSelection, item],
+        };
+      }
+
+      return prev;
+    });
   };
 
-  const getDessertCount = () => {
-    return selectedPackage === "C" ? 2 : 1;
-  };
+// Function to handle finalization and validation
+const handleFinalize = () => {
+  const unmetSelections = Object.keys(getLimits).filter(
+    (category) => selectedItems[category].length < getLimits[category]
+  );
+
+  if (unmetSelections.length > 0) {
+    alert(`Please complete your selection for: ${unmetSelections.join(", ")}`);
+  } else {
+    const chosenItemsArray = Object.keys(selectedItems).map((category) => ({
+      title: category,
+      items: selectedItems[category],
+    }));
+    onFinalize(chosenItemsArray); // Pass selected items back to ReservationPage
+    alert("Buffet finalized successfully!");
+    //setIsFinalized(true);
+    setOpen(false);
+  }
+};
 
   return (
     <div className="w-1/2 cursor-pointer z-10">
@@ -62,22 +122,16 @@ const PackageOffers = ({ selectedPackage }) => {
           >
             {Buffet.map((item) => (
               <div key={item.title}>
-                <h1
-                  className={`text-xl text-left font-semibold text-orange-950 my-1`}
-                >
+                <h1 className="text-xl text-left font-semibold text-orange-950 my-1">
                   {item.title}
                 </h1>
                 <hr />
                 <p className="text-xs text-left text-gray-400 mt-2">
-                  Choose{" "}
-                  {item.title === "Veggies"
-                    ? 1
-                    : item.title === "Pasta"
-                    ? getPastaCount()
-                    : item.title === "Mains"
-                    ? getMainsCount()
-                    : getDessertCount()}{" "}
-                  {item.title}:
+                  Choose {getLimits[item.title]} {item.title}:
+                  <span class Nam="ml-2 text-orange-900 font-semibold">
+                    {selectedItems[item.title].length} out of{" "}
+                    {getLimits[item.title]} selected
+                  </span>
                 </p>
                 <div className="grid grid-cols-2">
                   {item.items.map((food) => (
@@ -87,9 +141,16 @@ const PackageOffers = ({ selectedPackage }) => {
                     >
                       <input
                         type="checkbox"
-                        name="allergens"
+                        name={`checkbox${food}`}
                         id={`checkbox${food}`}
                         className="w-5 h-5"
+                        checked={selectedItems[item.title].includes(food)}
+                        onChange={() => handleItemSelect(item.title, food)}
+                        disabled={
+                          !selectedItems[item.title].includes(food) &&
+                          selectedItems[item.title].length >=
+                            getLimits[item.title]
+                        }
                       />
                       <span className="text-sm w-4/5">{food}</span>
                     </div>
@@ -101,7 +162,7 @@ const PackageOffers = ({ selectedPackage }) => {
               type="button"
               className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4
               hover:bg-orange-900 hover:scale-[1.02] duration-300"
-              onClick={() => setOpen(false)}
+              onClick={handleFinalize}
             >
               Set Buffet
             </button>
