@@ -7,6 +7,9 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
   const [prevSelectedPackage, setPrevSelectedPackage] = useState("");
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   useEffect(() => {
     if (prevSelectedPackage !== selectedPackage) {
       setSelectedItems({
@@ -78,25 +81,24 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
     });
   };
 
-// Function to handle finalization and validation
-const handleFinalize = () => {
-  const unmetSelections = Object.keys(getLimits).filter(
-    (category) => selectedItems[category].length < getLimits[category]
-  );
+  // Function to handle finalization and validation
+  const handleFinalize = () => {
+    const unmetSelections = Object.keys(getLimits).filter(
+      (category) => selectedItems[category].length < getLimits[category]
+    );
 
-  if (unmetSelections.length > 0) {
-    alert(`Please complete your selection for: ${unmetSelections.join(", ")}`);
-  } else {
-    const chosenItemsArray = Object.keys(selectedItems).map((category) => ({
-      title: category,
-      items: selectedItems[category],
-    }));
-    onFinalize(chosenItemsArray); // Pass selected items back to ReservationPage
-    alert("Buffet finalized successfully!");
-    //setIsFinalized(true);
-    setOpen(false);
-  }
-};
+    if (unmetSelections.length > 0) {
+      setShowErrorModal(true);
+      setErrorMessage(`Please complete your selection for: ${unmetSelections.join(", ")}`);
+    } else {
+      const chosenItemsArray = Object.keys(selectedItems).map((category) => ({
+        title: category,
+        items: selectedItems[category],
+      }));
+      onFinalize(chosenItemsArray); // Pass selected items back to ReservationPage
+      setOpen(false);
+    }
+  };
 
   return (
     <div className="w-1/2 cursor-pointer z-10">
@@ -126,9 +128,9 @@ const handleFinalize = () => {
                   {item.title}
                 </h1>
                 <hr />
-                <p className="text-xs text-left text-gray-400 mt-2">
+                <p className="text-xs text-left text-gray- 400 mt-2">
                   Choose {getLimits[item.title]} {item.title}:
-                  <span class Nam="ml-2 text-orange-900 font-semibold">
+                  <span className="ml-2 text-orange-900 font-semibold">
                     {selectedItems[item.title].length} out of{" "}
                     {getLimits[item.title]} selected
                   </span>
@@ -164,8 +166,23 @@ const handleFinalize = () => {
               hover:bg-orange-900 hover:scale-[1.02] duration-300"
               onClick={handleFinalize}
             >
-              Set Buffet
+              Finalize Buffet
             </button>
+            {showErrorModal && (
+              <div
+                className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-md shadow-md"
+              >
+                <p className="text-sm">{errorMessage}</p>
+                <button
+                  type="button"
+                  className="bg-orange-950 text-white font-bold text-sm px-4 py-2 rounded-md shadow-md mt-2
+                  hover:bg-orange-900 hover:scale-[1.02] duration-300"
+                  onClick={() => setShowErrorModal(false)}
+                >
+                  OK
+                </button>
+              </div>
+            )}
           </form>
         </div>
       )}
