@@ -96,7 +96,6 @@ const OrdersPage = () => {
       // Cookie is found, proceed to check Firebase auth state
       const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
         if (authUser && authUser.emailVerified) {
-          setUser(authUser);
           setIsLoggedIn(true);
         }
       });

@@ -4,27 +4,191 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Chosen, Promo, Reserve } from "@/app/data";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import PackageOffers from "@/app/components/PackageOffers";
 import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Link from "next/link";
+import { auth, db } from "@/app/firebase";
+import Cookies from "js-cookie"; // Import js-cookie
+import { useRouter } from "next/navigation";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { collection, doc, setDoc, addDoc } from "firebase/firestore";
 
 const ReservationPage = () => {
   const pathname = usePathname();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const slug = pathname.split("/").pop();
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const router = useRouter();
+  const [dateError, setDateError] = useState("");
+  const [timeError, setTimeError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [numberOfPersons, setNumberOfPersons] = useState<number>(1);
+  const [hourInput, setHourInput] = useState<number | "">(""); 
+  const [minuteInput, setMinuteInput] = useState<number | "">("");
+  const [minDate, setMinDate] = useState("");
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      const loggedIn = !!authUser && authUser.emailVerified;
+      setIsLoggedIn(loggedIn);
+      setUserEmail(authUser?.email || null);
+    });
+
+    // Clean up the listener when component unmounts
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const authToken = Cookies.get("authToken");
+
+    if (!authToken) {
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setIsLoggedIn(true);
+        }
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
+  }, [router]);
+
+  useEffect(() => {
+    // Calculate the date 5 days from today
+    const today = new Date();
+    today.setDate(today.getDate() + 5); // Add 5 days
+
+    // Format the date to YYYY-MM-DD
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const dd = String(today.getDate()).padStart(2, '0');
+
+    // Set the min date in the correct format
+    setMinDate(`${yyyy}-${mm}-${dd}`);
+}, []);
+
+  const handleNumberOfPersonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if (value > 20) {
+      setNumberOfPersons(20); // Set to 20 if exceeds max
+    } else {
+      setNumberOfPersons(value);
+    }
+  };
+
+  const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    
+    // Check if minute exceeds 59
+    if (value > 59) {
+      setMinuteInput(59); // Revert to 59
+    } else {
+      setMinuteInput(value);
+    }
+  };
 
   // Handle form submission
-  const handleSubmit = () => {
-    // Show the popup when the form is submitted
-    setIsPopupVisible(true);
+  const generateOrderId = () =>
+    Math.floor(1000000000 + Math.random() * 9000000000).toString();
+  
+  const validateDate = (selectedDate: string) => {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set current date to midnight
 
-    // Hide the popup after 1.5 seconds
-    setTimeout(() => {
-      setIsPopupVisible(false);
-    }, 750);
-  };
+    const inputDate = new Date(selectedDate);
+    inputDate.setHours(0, 0, 0, 0); // Normalize input date to midnight
+
+    // Check if the selected date is in the past
+    if (inputDate < currentDate) {
+        setDateError("Selected date cannot be in the past!"); // Error for past date
+        return false;
+    }
+
+    const minDate = new Date(currentDate);
+    minDate.setDate(minDate.getDate() + 5); // Calculate the minimum valid date
+
+    // Check if the selected date is less than 5 days from today
+    if (inputDate < minDate) {
+        setDateError("Selected date must be at least 5 days from today!"); // Error for insufficient future date
+        return false;
+    }
+
+    // If it passes both checks, return true
+    return true;
+};
+  
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  const dateInput = (document.getElementById("inputDate") as HTMLInputElement)?.value;
+  const hourInput = parseInt((document.getElementById("inputTimeHour") as HTMLInputElement)?.value, 10);
+  const minuteInput = parseInt((document.getElementById("inputTimeMinute") as HTMLInputElement)?.value, 10);
+  const num = numberOfPersons;
+
+  // Validate that all required fields are filled
+  if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
+      setError("Please fill in all required fields."); // Show error message
+      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      return;
+  }
+
+  // Check for hour input of 0 specifically
+  if (hourInput === 0) {
+      setError("Please enter a valid hour."); // Show error message for invalid hour
+      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      return;
+  }
+
+  // Validate date
+  if (!validateDate(dateInput)) {
+      // An error message is already set in validateDate, so just return
+      setTimeout(() => setDateError(""), 3000); // Clear the date error after 3 seconds
+      return;
+  }
+
+  const orderId = generateOrderId();
+  const now = new Date();
+
+  const dateReserved = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+      now.getDate()
+  ).padStart(2, "0")}/${now.getFullYear()}`;
+  const timeReserved = `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+  ).padStart(2, "0")}`;
+
+  // Format date and time to be reserved
+  const dateToBeReserved = new Date(dateInput);
+  const formattedDateToBeReserved = `${String(dateToBeReserved.getMonth() + 1).padStart(2, "0")}/${String(
+      dateToBeReserved.getDate()
+  ).padStart(2, "0")}/${dateToBeReserved.getFullYear()}`;
+
+  const timeToBeReserved = `${String(hourInput).padStart(2, "0")}:${String(minuteInput).padStart(2, "0")}`;
+
+  try {
+      await setDoc(doc(db, "tableReservations", orderId), {
+          dateReserved,
+          timeReserved,
+          numberOfPersons: num,
+          reservedBy: userEmail,
+          status: "PENDING",
+          dateToBeReserved: formattedDateToBeReserved,
+          timeToBeReserved,
+      });
+
+      setIsPopupVisible(true); // Show success popup
+      setTimeout(() => setIsPopupVisible(false), 750);
+  } catch (error) {
+      console.error("Error adding reservation: ", error);
+      alert("Failed to make reservation. Please try again.");
+  }
+};
+
   const handlePackageChange = (e) => {
     setSelectedPackage(e.target.value);
   };
@@ -72,13 +236,23 @@ const ReservationPage = () => {
               : "Mobile Café Booking"}
           </h1>
           {/* USE THIS FOR ERROR PROOFING */}
-          <p
-            className={`text-xs text-red-500 font-semibold my-[-20px] text-center ${
-              slug === "mobilecafe" ? "hidden" : ""
-            }`}
-          >
-            * ! Dito ilalagay ang error proofing. ! *
-          </p>
+          {error && (
+            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+              {error}
+            </p>
+          )}
+
+          {timeError && (
+              <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+                  {timeError}
+              </p>
+          )}
+
+          {dateError && (
+                <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+                    {dateError}
+                </p>
+            )}
           {slug === "table" ? (
             //#region Table Reservation
             <>
@@ -93,6 +267,7 @@ const ReservationPage = () => {
                   name="date"
                   id="inputDate"
                   type="date"
+                  min={minDate}
                   required
                 />
 
@@ -128,6 +303,8 @@ const ReservationPage = () => {
                     placeholder="Min (00-59)"
                     min={0}
                     max={59}
+                    value={minuteInput} // Bind to state
+                    onChange={handleMinuteChange} // Use new handler
                     required
                   />
                   <span className="text-gray-500">PM</span>
@@ -147,6 +324,8 @@ const ReservationPage = () => {
                   min={1}
                   max={20}
                   placeholder="Number of Persons"
+                  value={numberOfPersons} // Bind the state variable here
+                  onChange={handleNumberOfPersonsChange} // Use the new change handler
                   required
                 />
               </div>
@@ -308,9 +487,7 @@ const ReservationPage = () => {
             hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
               slug === "mobilecafe" ? "hidden" : ""
             }`}
-            onClick={() => {
-              handleSubmit();
-            }}
+            onClick={(e) => handleSubmit(e)}
           >
             <i className="fa fa-book text-sm" aria-hidden="true"></i>
             <span className="font-bold text-md">
