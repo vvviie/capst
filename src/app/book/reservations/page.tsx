@@ -3,12 +3,23 @@ import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ReservationDetails } from "@/app/data";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/app/firebase";
+import { collection, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
+import Cookies from "js-cookie"; // Import js-cookie
+import { useRouter } from "next/navigation";
 
 // KUNG MAY RESERVATION/S ANG CUSTOMER
 const hasReservation = true;
 
 const ReservationsPage = () => {
   const [expandedRes, setExpandedRes] = useState<Record<string, boolean>>({});
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [reservations, setReservations] = useState([]);
+  const [hasReservation, setHasReservation] = useState(false);
+  const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null);
+  const router = useRouter();
 
   const toggleRes = (id: string) => {
     setExpandedRes((prev) => ({
@@ -42,6 +53,88 @@ const ReservationsPage = () => {
     };
   }, [confirmPopup]);
 
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      const loggedIn = !!authUser && authUser.emailVerified;
+      setIsLoggedIn(loggedIn);
+      setUserEmail(authUser?.email || null);
+    });
+
+    // Clean up the listener when component unmounts
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const authToken = Cookies.get("authToken");
+
+    if (!authToken) {
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setIsLoggedIn(true);
+        }
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
+  }, [router]);
+
+  useEffect(() => {
+    const fetchReservations = async () => {
+      if (!userEmail) return;
+
+      try {
+        const reservationsRef = collection(db, "tableReservations");
+        const querySnapshot = await getDocs(
+          query(reservationsRef, where("reservedBy", "==", userEmail))
+        );
+
+        const fetchedReservations = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            type: data.type,
+            dateReserved: new Date(data.dateReserved).toLocaleDateString(), // "10/14/2024"
+            dateToBeReserved: new Date(data.dateToBeReserved).toLocaleDateString(), // "10/19/2024"
+            timeReserved: data.timeReserved, // "22:27"
+            timeToBeReserved: data.timeToBeReserved, // "12:00"
+            numberOfPersons: data.numberOfPersons || 1,
+            reservedBy: data.reservedBy,
+            status: data.status === "PENDING" ? "Requested" : data.status,
+          };
+        });
+
+        setReservations(fetchedReservations);
+        setHasReservation(fetchedReservations.length > 0);
+      } catch (error) {
+        console.error("Error fetching reservations:", error);
+      }
+    };
+
+    fetchReservations();
+  }, [userEmail]);
+
+  const handleDeleteReservation = async (reservationId: string) => {
+    try {
+      await deleteDoc(doc(db, "tableReservations", reservationId));
+      console.log("Reservation deleted successfully!");
+  
+      // Remove the deleted reservation from the state
+      setReservations((prev) =>
+        prev.filter((res) => res.id !== reservationId)
+      );
+  
+      setHasReservation(reservations.length > 1); // Check if any reservations remain
+      setConfirmPopup(false); // Close the confirmation popup
+    } catch (error) {
+      console.error("Error deleting reservation:", error);
+    }
+  };
+
   return (
     <div
       className="min-h-[calc(100vh-56px)] gap-6 mt-14 px-10 py-8 flex flex-col items-center md:px-24 lg:gap-8
@@ -73,7 +166,7 @@ const ReservationsPage = () => {
         <div className="space-y-2 w-full max-h-[720px] pb-4 overflow-y-auto">
           {/* RESERVATIONS LIST */}
           {hasReservation ? (
-            ReservationDetails.map((res) => (
+            reservations.map((res) => (
               <div
                 className="w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
                 hover:scale-[0.98] duration-300"
@@ -89,9 +182,7 @@ const ReservationsPage = () => {
                       <span className="">{res.type}</span>
                       <span
                         className={`${
-                          res.status === "Requested"
-                            ? "text-blue-500"
-                            : "text-green-500"
+                          res.status === "Requested" ? "text-blue-500" : "text-green-500"
                         }`}
                       >
                         {res.status}
@@ -102,11 +193,11 @@ const ReservationsPage = () => {
                       {/* DATE AND TIME OF RESERVATION */}
                       <span>
                         For
-                        {res.type === "Mobile Cart" ? "" : ` ${res.pax} pax on`}
-                        {" " + res.dateRes} -{" "}
+                        {res.type === "Mobile Cart" ? "" : ` ${res.numberOfPersons} pax on`}
+                        {" " + res.dateToBeReserved} -{" "}
                         {res.type === "Event"
                           ? res.timeRes + ` to ${res.timeResEnd}`
-                          : res.timeRes}
+                          : res.timeToBeReserved}
                       </span>
                       {/* PRICE IF IT IS EVENT OR IN THE FUTURE, MOBILE CART */}
                       <span className={`font-bold text-gray-600`}>
@@ -149,7 +240,7 @@ const ReservationsPage = () => {
                       </>
                     )}
                     <span className="text-xs text-gray-400">
-                      Date Requested: {res.dateReq + " - " + res.timeReq}
+                      Date Requested: {res.dateReserved + " - " + res.timeReserved}
                     </span>
                     {/* CANCEL BUTTON */}
                     <button
@@ -158,6 +249,7 @@ const ReservationsPage = () => {
                       onClick={(e) => {
                         e.stopPropagation();
                         console.log("Cancel button clicked");
+                        setSelectedReservationId(res.id);
                         setConfirmPopup(true);
                       }}
                     >
@@ -198,7 +290,14 @@ const ReservationsPage = () => {
                 Are you sure you want to cancel this reservation?
               </span>
               <div className="flex gap-2 items-center justify-center mt-4">
-                <button className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500">
+              <button
+                className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500"
+                onClick={() => {
+                  if (selectedReservationId) {
+                    handleDeleteReservation(selectedReservationId); // Use the stored ID
+                  }
+                }}
+              >
                   Yes
                 </button>
                 <button

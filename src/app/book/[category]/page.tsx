@@ -179,6 +179,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           status: "PENDING",
           dateToBeReserved: formattedDateToBeReserved,
           timeToBeReserved,
+          type: "Table"
       });
 
       setIsPopupVisible(true); // Show success popup
