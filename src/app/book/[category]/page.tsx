@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import PackageOffers from "@/app/components/PackageOffers";
 import { Chosen } from "@/app/data";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/app/firebase";
 
 const ReservationPage = () => {
   const pathname = usePathname();
@@ -19,13 +21,27 @@ const ReservationPage = () => {
   const [chosenItems, setChosenItems] = useState([]);
   const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
-  // Set date to 14 days from today
+  const [minDate, setMinDate] = useState("");
+  /* Set date to 14 days from today
   useEffect(() => {
     const today = new Date();
     const minDate = new Date(today.setDate(today.getDate() + 14));
     const formattedMinDate = minDate.toISOString().split("T")[0];
     setDate(formattedMinDate);
+  }, []);*/
+
+  useEffect(() => {
+    // Calculate the date 5 days from today
+    const today = new Date();
+    today.setDate(today.getDate() + 14); // Add 5 days
+  
+    // Format the date to YYYY-MM-DD
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const dd = String(today.getDate()).padStart(2, '0');
+  
+    // Set the min date in the correct format
+    setMinDate(`${yyyy}-${mm}-${dd}`);
   }, []);
 
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -112,7 +128,7 @@ const ReservationPage = () => {
     setChosenItems(chosenItemsArray);
   };
 
-  const handleReserve = () => {
+  const handleReserve = async () => {
     if (chosenItems.length === 0) {
       setError(true);
       setErrorMessage('Please complete the "Buffet Contents" selection.');
@@ -121,7 +137,7 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
-
+  
     if (startTime === endTime) {
       setError(true);
       setErrorMessage("Please select an appropriate hours.");
@@ -130,11 +146,9 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
-
-    const date = new Date();
-    const formattedDate = `${
-      date.getMonth() + 1
-    }/${date.getDate()}/${date.getFullYear()}`;
+  
+    const dateInput = document.getElementById("inputDate");
+    const inputtedDate = dateInput.value;
     const formattedTime = `${startTime}PM to ${endTime}PM`;
     const packageOffer =
       selectedPackage === "A"
@@ -146,15 +160,33 @@ const ReservationPage = () => {
       acc[item.title] = item.items.join(", ");
       return acc;
     }, {});
-
-    console.log(`Date: ${date}`);
-    console.log(`Time: ${formattedTime}`);
-    console.log(`Package offer chosen: ${packageOffer}`);
-    console.log(`Buffet chosen: ${JSON.stringify(buffetChosen, null, 2)}`);
-    console.log(`Total Price: P${totalPrice}`);
-    console.log(
-      `Date Requested: ${formattedDate} - ${date.toLocaleTimeString()}`
-    );
+  
+    const orderId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    const now = new Date();
+    const dateReserved = `${
+      now.getMonth() + 1
+    }/${now.getDate()}/${now.getFullYear()}`;
+    const timeReserved = `${now.getHours()}:${now.getMinutes()}`;
+  
+    try {
+      await setDoc(doc(db, "tableReservations", orderId), {
+        dateReserved,
+        timeReserved,
+        dateToBeReserved: inputtedDate,
+        timeToBeReserved: formattedTime,
+        packageOffer,
+        buffetChosen,
+        numberOfPersons: numberOfPersons,
+        totalPrice: totalPrice,
+        status: "PENDING",
+      });
+  
+      // You can add a success message or redirect the user here
+      alert("Reservation successful!");
+    } catch (error) {
+      console.error("Error adding reservation: ", error);
+      alert("Failed to make reservation. Please try again.");
+    }
   };
 
   return (
@@ -181,9 +213,8 @@ const ReservationPage = () => {
           name="date"
           id="inputDate"
           type="date"
-          min={date}
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          min={minDate}
+          //onChange={(e) => setDate(e.target.value)}
           required
         />
         <p className="text-xs text-orange-900 pl-2">
