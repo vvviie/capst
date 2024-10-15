@@ -17,6 +17,8 @@ const ReservationPage = () => {
   const packagePricePerPerson = 550; // Price per person
   const [totalPrice, setTotalPrice] = useState(0);
   const [chosenItems, setChosenItems] = useState([]);
+  const [error, setError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Set date to 14 days from today
   useEffect(() => {
@@ -111,10 +113,24 @@ const ReservationPage = () => {
   };
 
   const handleReserve = () => {
-      if (chosenItems.length === 0) {
-    console.error("Please select at least one buffet item.");
-    return;
-  }
+    if (chosenItems.length === 0) {
+      setError(true);
+      setErrorMessage('Please complete the "Buffet Contents" selection.');
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+    }
+
+    if (startTime === endTime) {
+      setError(true);
+      setErrorMessage("Please select an appropriate hours.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+    }
+
     const date = new Date();
     const formattedDate = `${
       date.getMonth() + 1
@@ -148,10 +164,10 @@ const ReservationPage = () => {
         <h1 className="text-xl font-semibold text-gray-700">
           Book Exclusive Café
         </h1>
-        {chosenItems.length === 0 && (
-          <p className="text-xs text-red-500 font-semibold text-center">
-            * Please select at least one buffet item. *
-          </p>
+        {error && (
+          <div className="bg-red-500 text-white p-2 rounded text-xs">
+            <span className="block">{errorMessage}</span>
+          </div>
         )}
       </div>
       {/* DATE */}
