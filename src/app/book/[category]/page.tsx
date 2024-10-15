@@ -110,6 +110,37 @@ const ReservationPage = () => {
     setChosenItems(chosenItemsArray);
   };
 
+  const handleReserve = () => {
+      if (chosenItems.length === 0) {
+    console.error("Please select at least one buffet item.");
+    return;
+  }
+    const date = new Date();
+    const formattedDate = `${
+      date.getMonth() + 1
+    }/${date.getDate()}/${date.getFullYear()}`;
+    const formattedTime = `${startTime}PM to ${endTime}PM`;
+    const packageOffer =
+      selectedPackage === "A"
+        ? "Package A"
+        : selectedPackage === "B"
+        ? "Package B"
+        : "Package C";
+    const buffetChosen = chosenItems.reduce((acc, item) => {
+      acc[item.title] = item.items.join(", ");
+      return acc;
+    }, {});
+
+    console.log(`Date: ${date}`);
+    console.log(`Time: ${formattedTime}`);
+    console.log(`Package offer chosen: ${packageOffer}`);
+    console.log(`Buffet chosen: ${JSON.stringify(buffetChosen, null, 2)}`);
+    console.log(`Total Price: P${totalPrice}`);
+    console.log(
+      `Date Requested: ${formattedDate} - ${date.toLocaleTimeString()}`
+    );
+  };
+
   return (
     <div className="max-w-md mx-auto p-4 bg-white rounded-md shadow-md mt-20 mb-10">
       {/* HEADER */}
@@ -117,9 +148,11 @@ const ReservationPage = () => {
         <h1 className="text-xl font-semibold text-gray-700">
           Book Exclusive Café
         </h1>
-        <p className="text-xs text-red-500 font-semibold text-center">
-          * Dito ilalagay ang error proofing. *
-        </p>
+        {chosenItems.length === 0 && (
+          <p className="text-xs text-red-500 font-semibold text-center">
+            * Please select at least one buffet item. *
+          </p>
+        )}
       </div>
       {/* DATE */}
       <div className="flex flex-col gap-0.5">
@@ -270,6 +303,7 @@ const ReservationPage = () => {
       <button
         type="submit"
         className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950 hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 mb-4`}
+        onClick={handleReserve}
       >
         <i className="fa fa-book text-sm" aria-hidden="true"></i>
         <span className="font-bold text-md">Reserve Place (P{totalPrice})</span>
