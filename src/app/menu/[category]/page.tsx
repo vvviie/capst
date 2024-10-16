@@ -22,9 +22,13 @@ import useMainCourse from "@/app/hooks/useMainCourse";
 // Snacks
 import useSnacks from "@/app/hooks/useSnacks";
 
+// Pastries
+import usePastries from "@/app/hooks/usePastries";
+
 import Link from "next/link";
 
 import DrinksFilter from "@/app/components/DrinksFilter";
+import AllergyFilter from "@/app/components/AllergyFilter";
 
 // General Data from Data Folder
 import { Drinks } from "@/app/data";
@@ -32,6 +36,8 @@ import { Pasta } from "@/app/data";
 import { Sandwiches } from "@/app/data";
 import { MainCourse } from "@/app/data";
 import { Snacks } from "@/app/data";
+import { Pastries } from "@/app/data";
+
 
 // Initialization of Arrays for each category
 type DrinksCategoryData = {
@@ -57,6 +63,11 @@ type MainCourseCategoryData = {
 type SnacksCategoryData = {
   title: string;
   snacks: Snacks[];
+}[];
+
+type PastriesCategoryData = {
+  title: string;
+  pastries: Pastries[];
 }[];
 
 const MenuCategoryPage: React.FC = () => {
@@ -99,6 +110,12 @@ const MenuCategoryPage: React.FC = () => {
 
   const snacks: SnacksCategoryData = [
     { title: "Snacks", snacks: servingSnacks },
+  ];
+
+  const { servingPastries = [] } = usePastries();
+
+  const pastries: PastriesCategoryData = [
+    { title: "Pastries", pastries: servingPastries },
   ];
 
   // Function to handle search input changes
@@ -240,6 +257,33 @@ const MenuCategoryPage: React.FC = () => {
           }),
       })),
     [selectedFilter, searchText, selectedCalorie, snacks]
+  );
+
+  const filteredPastries = useMemo(
+    () =>
+      pastries.map((category) => ({
+        ...category,
+        pastries: category.pastries
+          .filter((pastry) => {
+            const matchesFilter =
+              selectedFilter === "all" || pastry.type === selectedFilter;
+            const matchesCalorie =
+              selectedCalorie === null || pastry.calorie === selectedCalorie;  
+            const matchesSearch = pastry.title
+              .toLowerCase()
+              .includes(searchText.toLowerCase());
+            return matchesFilter && matchesCalorie && matchesSearch;
+          })
+          .sort((a, b) => {
+            const typeA = a.type || "";
+            const typeB = b.type || "";
+            const typeComparison = typeA.localeCompare(typeB);
+            return typeComparison !== 0
+              ? typeComparison
+              : a.prodID.localeCompare(b.prodID);
+          }),
+      })),
+    [selectedFilter, searchText, selectedCalorie, pastries]
   );
 
   if (!slug) return <p>No category found.</p>;
@@ -529,6 +573,70 @@ const MenuCategoryPage: React.FC = () => {
                 </h1>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.snacks.map((item) => (
+                    <Link
+                      href={`/product/${slug}/${item.id}?p=${item.price}`}
+                      key={item.id}
+                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                    >
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                        <div className="absolute top-0 left-0 flex flex-col gap-2">
+                          <div className="relative w-6 h-6">
+                            <Image
+                              alt="availability picture"
+                              src={
+                                item.availability === "available"
+                                  ? "/availability/available.webp"
+                                  : "/availability/unavailable.webp"
+                              }
+                              fill
+                              className="object-contain"
+                            />
+                          </div>
+                          <div className="relative w-6 h-6">
+                            <Image
+                              alt="calorie count picture"
+                              src={
+                                item.calorie === "low"
+                                  ? "/calorie/lowcal.webp"
+                                  : item.calorie === "med"
+                                  ? "/calorie/medcal.webp"
+                                  : "/calorie/highcal.webp"
+                              }
+                              fill
+                              className="object-contain"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                        {item.title}
+                      </h2>
+                      <p className="font-bold text-lg text-gray-700 text-center">
+                        ₱{item.price}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )
+        )}
+
+        {slug === "pastries" &&
+        filteredPastries.map(
+          (category, index) =>
+            category.pastries.length > 0 && (
+              <div key={index} className="mb-8">
+                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
+                  {category.title}
+                </h1>
+                <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
+                  {category.pastries.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}

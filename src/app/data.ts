@@ -13,10 +13,14 @@ export type Pastries = {
     id: string;
     title: string;
     desc?: string;
+    type: string;
     img: string;
     price: number;
     availability: string;
     calorie: string;
+    contains: {
+      [key: string]: boolean; // Define that contains can have string keys (allergen names) with boolean values
+    };
     //options?: { title: string; additionalPrice: number }[];
   };
 
