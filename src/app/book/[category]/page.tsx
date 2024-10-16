@@ -3,14 +3,20 @@
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import PackageOffers from "@/app/components/PackageOffers";
-import { Chosen } from "@/app/data";
 import { doc, setDoc } from "firebase/firestore";
-import { db } from "@/app/firebase";
+import { auth, db } from "@/app/firebase";
+import Cookies from "js-cookie"; // Import js-cookie
+import { useRouter } from "next/navigation";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const ReservationPage = () => {
   const pathname = usePathname();
   const slug = pathname.split("/").pop();
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const router = useRouter();
+
   const [date, setDate] = useState("");
   const [startTime, setStartTime] = useState(12); // Default start time 12 PM
   const [endTime, setEndTime] = useState(12);
@@ -22,6 +28,36 @@ const ReservationPage = () => {
   const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [minDate, setMinDate] = useState("");
+
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      const loggedIn = !!authUser && authUser.emailVerified;
+      setIsLoggedIn(loggedIn);
+      setUserEmail(authUser?.email || null);
+    });
+
+    // Clean up the listener when component unmounts
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const authToken = Cookies.get("authToken");
+
+    if (!authToken) {
+    } else {
+      // Cookie is found, proceed to check Firebase auth state
+      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+        if (authUser && authUser.emailVerified) {
+          setIsLoggedIn(true);
+        }
+      });
+
+      // Clean up the listener when component unmounts
+      return () => unsubscribeAuth();
+    }
+  }, [router]);
+
   /* Set date to 14 days from today
   useEffect(() => {
     const today = new Date();
@@ -34,12 +70,12 @@ const ReservationPage = () => {
     // Calculate the date 5 days from today
     const today = new Date();
     today.setDate(today.getDate() + 14); // Add 5 days
-  
+
     // Format the date to YYYY-MM-DD
     const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
-    const dd = String(today.getDate()).padStart(2, '0');
-  
+    const mm = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const dd = String(today.getDate()).padStart(2, "0");
+
     // Set the min date in the correct format
     setMinDate(`${yyyy}-${mm}-${dd}`);
   }, []);
@@ -137,7 +173,7 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
-  
+
     if (startTime === endTime) {
       setError(true);
       setErrorMessage("Please select an appropriate hours.");
@@ -146,9 +182,17 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
-  
+
+    
     const dateInput = document.getElementById("inputDate");
     const inputtedDate = dateInput.value;
+    const formatDate = (dateString) => {
+      const [year, month, day] = dateString.split("-");
+      return `${month}/${day}/${year}`;
+    };
+    // Convert the inputted date to the desired format
+  const formattedDateToBeReserved = formatDate(inputtedDate);
+
     const formattedTime = `${startTime}PM to ${endTime}PM`;
     const packageOffer =
       selectedPackage === "A"
@@ -160,27 +204,31 @@ const ReservationPage = () => {
       acc[item.title] = item.items.join(", ");
       return acc;
     }, {});
-  
-    const orderId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+
+    const orderId = `ERR-${Math.floor(
+      10000000 + Math.random() * 90000000
+    ).toString()}`;
     const now = new Date();
     const dateReserved = `${
       now.getMonth() + 1
     }/${now.getDate()}/${now.getFullYear()}`;
     const timeReserved = `${now.getHours()}:${now.getMinutes()}`;
-  
+
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
         timeReserved,
-        dateToBeReserved: inputtedDate,
+        dateToBeReserved: formattedDateToBeReserved,
         timeToBeReserved: formattedTime,
         packageOffer,
         buffetChosen,
         numberOfPersons: numberOfPersons,
         totalPrice: totalPrice,
         status: "PENDING",
+        type: "Event",
+        reservedBy: userEmail,
       });
-  
+
       // You can add a success message or redirect the user here
       alert("Reservation successful!");
     } catch (error) {

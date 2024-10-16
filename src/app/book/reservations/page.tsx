@@ -1,14 +1,36 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { ReservationDetails } from "@/app/data";
+import { db } from "@/app/firebase"; // Import your Firebase configuration
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 // KUNG MAY RESERVATION/S ANG CUSTOMER
-const hasReservation = true;
-
 const ReservationsPage = () => {
+  const [reservations, setReservations] = useState<any[]>([]); // State to hold reservations
   const [expandedRes, setExpandedRes] = useState<Record<string, boolean>>({});
+  const [confirmPopup, setConfirmPopup] = useState(false);
+  const formRef = useRef<HTMLDivElement | null>(null);
+
+  // Function to fetch reservations from Firestore
+  const fetchReservations = async () => {
+    const reservationsCollection = collection(db, "tableReservations");
+    const eventQuery = query(
+      reservationsCollection,
+      where("type", "in", ["Event", "Table"])
+    );
+    const querySnapshot = await getDocs(eventQuery);
+
+    const fetchedReservations = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    setReservations(fetchedReservations);
+  };
+
+  useEffect(() => {
+    fetchReservations(); // Fetch reservations on component mount
+  }, []);
 
   const toggleRes = (id: string) => {
     setExpandedRes((prev) => ({
@@ -16,12 +38,6 @@ const ReservationsPage = () => {
       [id]: !prev[id],
     }));
   };
-
-  // FOR OPENING NG POP UP
-  const [confirmPopup, setConfirmPopup] = useState(false);
-
-  // FOR CLOSING NG POP UP
-  const formRef = useRef<HTMLDivElement | null>(null);
 
   // CLOSE FORM WHEN CLICK OUTSIDE
   const handleClickOutside = (event: MouseEvent) => {
@@ -72,8 +88,8 @@ const ReservationsPage = () => {
         {/* RESERVATIONS CONTAINER */}
         <div className="space-y-2 w-full max-h-[720px] pb-4 overflow-y-auto">
           {/* RESERVATIONS LIST */}
-          {hasReservation ? (
-            ReservationDetails.map((res) => (
+          {reservations.length > 0 ? (
+            reservations.map((res) => (
               <div
                 className="w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
                 hover:scale-[0.98] duration-300"
@@ -102,15 +118,17 @@ const ReservationsPage = () => {
                       {/* DATE AND TIME OF RESERVATION */}
                       <span>
                         For
-                        {res.type === "Mobile Cart" ? "" : ` ${res.pax} pax on`}
-                        {" " + res.dateRes} -{" "}
+                        {res.type === "Mobile Cart"
+                          ? ""
+                          : ` ${res.numberOfPersons} pax on`}
+                        {" " + res.dateReserved} -{" "}
                         {res.type === "Event"
-                          ? res.timeRes + ` to ${res.timeResEnd}`
-                          : res.timeRes}
+                          ? res.timeReserved + ` to ${res.timeToBeReserved}`
+                          : res.timeReserved}
                       </span>
                       {/* PRICE IF IT IS EVENT OR IN THE FUTURE, MOBILE CART */}
                       <span className={`font-bold text-gray-600`}>
-                        {res.type === "Table" ? "" : `P${res.price}`}
+                        {res.type === "Table" ? "" : `P${res.totalPrice}`}
                       </span>
                     </div>
                   </div>
@@ -130,26 +148,33 @@ const ReservationsPage = () => {
                       <>
                         <div className="font-bold text-sm flex justify-between items-center">
                           <span className="font-semibold">Event Package</span>
-                          <span>Package - {" " + res.package}</span>
+                          <span>Package - {" " + res.packageOffer}</span>
                         </div>
-                        {res.buffet.map((items) => (
-                          <div className="flex flex-col gap-1">
-                            <hr />
-                            {/* ITEM TITLE AND PRICE CONTAINER */}
-                            <div className="font-bold text-sm text-left">
-                              <span className="font-semibold">
-                                {items.title}
-                              </span>
+                        {Object.keys(res.buffetChosen).map(
+                          (category, index) => (
+                            <div className="flex flex-col gap-1" key={index}>
+                              <hr />
+                              {/* ITEM TITLE AND PRICE CONTAINER */}
+                              <div className="font-bold text-sm text-left">
+                                <span className="font-semibold">
+                                  {category}
+                                </span>
+                              </div>
+                              {res.buffetChosen[category]
+                                .split(", ")
+                                .map((item, itemIndex) => (
+                                  <p className="text-xs" key={itemIndex}>
+                                    -{item}
+                                  </p>
+                                ))}
                             </div>
-                            {items.foods.map((food) => (
-                              <p className="text-xs">-{food}</p>
-                            ))}
-                          </div>
-                        ))}
+                          )
+                        )}
                       </>
                     )}
                     <span className="text-xs text-gray-400">
-                      Date Requested: {res.dateReq + " - " + res.timeReq}
+                      Date Requested:{" "}
+                      {res.dateReserved + " - " + res.timeReserved}
                     </span>
                     {/* CANCEL BUTTON */}
                     <button

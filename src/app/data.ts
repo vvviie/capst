@@ -190,7 +190,7 @@ export const Buffet:bfts = [
     title: "Mains",
     items: ["Chicken Saltimbocca", "Roasted Lemon Chicken", "Tuscan Chicken", "Fika Fried Chicken", "Orange Chicken",
       "Pork Salpicao", "Pork Hamonado", "Swedish Meatballs", "Beef Stroganoff", "Creamy Mushroom Roast Beef",
-      "Fika House Tapa", "Fish Fillet in Creamy Lemon Butter Sauce", " Baked Bangus", "Cajun Seafood Mix"
+      "Fika House Tapa", "Fish Fillet in Creamy Lemon Butter Sauce", "Baked Bangus", "Cajun Seafood Mix"
     ],
   },
   {
