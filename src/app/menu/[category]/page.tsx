@@ -118,6 +118,12 @@ const MenuCategoryPage: React.FC = () => {
     { title: "Pastries", pastries: servingPastries },
   ];
 
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+
+  const handleAllergyChange = (allergies: string[]) => {
+    setSelectedAllergies(allergies);
+  };
+
   // Function to handle search input changes
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchText(event.target.value);
@@ -137,7 +143,13 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = drink.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(drink.contains) && 
+                !selectedAllergies.some(allergy => drink.contains.includes(allergy))
+              );
+  
+            return matchesFilter && matchesCalorie && matchesSearch && matchesAllergies;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -148,7 +160,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, selectedCalorie, searchText, drinks]
+    [selectedFilter, selectedCalorie, searchText, drinks, selectedAllergies]
   );
 
   const filteredPastas = useMemo(
@@ -263,27 +275,34 @@ const MenuCategoryPage: React.FC = () => {
     () =>
       pastries.map((category) => ({
         ...category,
-        pastries: category.pastries
-          .filter((pastry) => {
-            const matchesFilter =
-              selectedFilter === "all" || pastry.type === selectedFilter;
-            const matchesCalorie =
-              selectedCalorie === null || pastry.calorie === selectedCalorie;  
-            const matchesSearch = pastry.title
-              .toLowerCase()
-              .includes(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
-          })
-          .sort((a, b) => {
-            const typeA = a.type || "";
-            const typeB = b.type || "";
-            const typeComparison = typeA.localeCompare(typeB);
-            return typeComparison !== 0
-              ? typeComparison
-              : a.prodID.localeCompare(b.prodID);
-          }),
+        pastries: category.pastries.filter((pastry: Pastry) => {
+          const matchesFilter =
+            selectedFilter === "all" || pastry.type === selectedFilter;
+          const matchesCalorie =
+            selectedCalorie === null || pastry.calorie === selectedCalorie;
+          const matchesSearch = pastry.title
+            .toLowerCase()
+            .includes(searchText.toLowerCase());
+  
+          // Check if pastry.contains is an array before using includes
+          const matchesAllergies =
+            selectedAllergies.length === 0 ||
+            (Array.isArray(pastry.contains) && 
+              !selectedAllergies.some(allergy => pastry.contains.includes(allergy))
+            );
+  
+          return matchesFilter && matchesCalorie && matchesSearch && matchesAllergies;
+        })
+        .sort((a, b) => {
+          const typeA = a.type || "";
+          const typeB = b.type || "";
+          const typeComparison = typeA.localeCompare(typeB);
+          return typeComparison !== 0
+            ? typeComparison
+            : a.prodID.localeCompare(b.prodID);
+        }),
       })),
-    [selectedFilter, searchText, selectedCalorie, pastries]
+    [selectedFilter, searchText, selectedCalorie, pastries, selectedAllergies]
   );
 
   if (!slug) return <p>No category found.</p>;
@@ -304,7 +323,11 @@ const MenuCategoryPage: React.FC = () => {
             value={searchText}
             onChange={handleSearchChange}
           />
-          <DrinksFilter onFilterChange={setSelectedFilter} onCalorieChange={setSelectedCalorie} />
+          <DrinksFilter
+            onFilterChange={setSelectedFilter}
+            onCalorieChange={setSelectedCalorie}
+            onAllergyChange={handleAllergyChange} // New prop for handling allergy changes
+          />
         </div>
       </div>
       {slug === "drinks" &&

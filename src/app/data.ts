@@ -7,6 +7,7 @@ export type Drinks = {
     price: number;
     availability: string;
     calorie: string;
+    contains: string[];
 };
 
 export type Pastries = {
@@ -18,9 +19,7 @@ export type Pastries = {
     price: number;
     availability: string;
     calorie: string;
-    contains: {
-      [key: string]: boolean; // Define that contains can have string keys (allergen names) with boolean values
-    };
+    contains: string[];
     //options?: { title: string; additionalPrice: number }[];
   };
 
