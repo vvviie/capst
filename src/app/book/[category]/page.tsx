@@ -37,7 +37,7 @@ const ReservationPage = () => {
 
   //#region "event" Variables
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
-  const [startTime, setStartTime] = useState(12); // Default start time 12 PM
+  const [startTime, setStartTime] = useState(12); // Default start time 12 PM/
   const [endTime, setEndTime] = useState(12);
   const [totalHours, setTotalHours] = useState(0);
   const packagePricePerPerson = 550; // Price per person
