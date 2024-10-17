@@ -67,17 +67,16 @@ const ReservationPage = () => {
   }, []);*/
 
   useEffect(() => {
-    // Calculate the date 5 days from today
     const today = new Date();
-    today.setDate(today.getDate() + 14); // Add 5 days
+    const minDate = new Date(today);
+    minDate.setDate(today.getDate() + 14); // Set minimum date to 14 days from today
 
-    // Format the date to YYYY-MM-DD
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-    const dd = String(today.getDate()).padStart(2, "0");
+    // Format the date to YYYY-MM-DD for the input
+    const yyyy = minDate.getFullYear();
+    const mm = String(minDate.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const dd = String(minDate.getDate()).padStart(2, "0");
 
-    // Set the min date in the correct format
-    setMinDate(`${yyyy}-${mm}-${dd}`);
+    setMinDate(`${yyyy}-${mm}-${dd}`); // Set the state for minDate
   }, []);
 
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -165,6 +164,29 @@ const ReservationPage = () => {
   };
 
   const handleReserve = async () => {
+    const selectedDate = new Date(date);
+    const today = new Date();
+
+    // Set the time to midnight for comparison
+    today.setHours(0, 0, 0, 0);
+
+    // Calculate minimum date (14 days in the future)
+    const minDate = new Date(today);
+    minDate.setDate(today.getDate() + 14);
+
+    // Set the time to midnight for minDate as well
+    minDate.setHours(0, 0, 0, 0);
+
+    // Check for valid date
+    if (isNaN(selectedDate.getTime()) || selectedDate < minDate) {
+      setError(true);
+      setErrorMessage("Please select a date at least 14 days in the future.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+    }
+
     if (chosenItems.length === 0) {
       setError(true);
       setErrorMessage('Please complete the "Buffet Contents" selection.');
@@ -176,23 +198,22 @@ const ReservationPage = () => {
 
     if (startTime === endTime) {
       setError(true);
-      setErrorMessage("Please select an appropriate hours.");
+      setErrorMessage("Please select appropriate hours.");
       setTimeout(() => {
         setError(false);
       }, 5000);
       return;
     }
 
-    
-    const dateInput = document.getElementById("inputDate");
-    const inputtedDate = dateInput.value;
-    const formatDate = (dateString) => {
-      const [year, month, day] = dateString.split("-");
+    // Format the selected date
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
+      const day = String(date.getDate()).padStart(2, "0");
       return `${month}/${day}/${year}`;
     };
-    // Convert the inputted date to the desired format
-  const formattedDateToBeReserved = formatDate(inputtedDate);
 
+    const formattedDateToBeReserved = formatDate(selectedDate);
     const formattedTime = `${startTime}PM to ${endTime}PM`;
     const packageOffer =
       selectedPackage === "A"
@@ -205,10 +226,11 @@ const ReservationPage = () => {
       return acc;
     }, {});
 
-    const orderId = `ERR-${Math.floor(
-      10000000 + Math.random() * 90000000
-    ).toString()}`;
+    const orderId = Math.floor(
+      1000000000 + Math.random() * 9000000000
+    ).toString();
     const now = new Date();
+
     const dateReserved = `${
       now.getMonth() + 1
     }/${now.getDate()}/${now.getFullYear()}`;
@@ -224,7 +246,7 @@ const ReservationPage = () => {
         buffetChosen,
         numberOfPersons: numberOfPersons,
         totalPrice: totalPrice,
-        status: "PENDING",
+        status: "Requested",
         type: "Event",
         reservedBy: userEmail,
       });
@@ -261,8 +283,13 @@ const ReservationPage = () => {
           name="date"
           id="inputDate"
           type="date"
+          value={date}
           min={minDate}
           //onChange={(e) => setDate(e.target.value)}
+          onChange={(e) => {
+            setDate(e.target.value);
+            //handleDateChange(e.target.value);
+          }}
           required
         />
         <p className="text-xs text-orange-900 pl-2">
@@ -411,3 +438,4 @@ const ReservationPage = () => {
 };
 
 export default ReservationPage;
+
