@@ -358,7 +358,7 @@ const ReservationPage = () => {
       return;
     }
 
-    // Validate start and end times
+    /* Validate start and end times
     if (startTime >= endTime) {
       setError(true);
       setErrorMessage("End time must be greater than start time.");
@@ -366,7 +366,7 @@ const ReservationPage = () => {
         setError(false);
       }, 5000);
       return;
-    }
+    }*/
 
     if (startTime < 1 || startTime > 12 || endTime < 1 || endTime > 12) {
       setError(true);
