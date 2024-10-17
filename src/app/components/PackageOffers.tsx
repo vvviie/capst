@@ -17,11 +17,10 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
         Pasta: [],
         Mains: [],
         Dessert: [],
-      }); // Clear selected items when the package changes
-      setPrevSelectedPackage(selectedPackage); // Update prevSelectedPackage
+      });
+      setPrevSelectedPackage(selectedPackage);
     }
-    onPackageChange(); // Call the callback function to notify the parent component
-  }, [selectedPackage, onPackageChange, prevSelectedPackage]);
+  }, [selectedPackage, prevSelectedPackage]); // Ensure prevSelectedPackage is included to avoid loops
 
   // State to track selected items per category
   const [selectedItems, setSelectedItems] = useState({
@@ -89,7 +88,9 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
 
     if (unmetSelections.length > 0) {
       setShowErrorModal(true);
-      setErrorMessage(`Please complete your selection for: ${unmetSelections.join(", ")}`);
+      setErrorMessage(
+        `Please complete your selection for: ${unmetSelections.join(", ")}`
+      );
     } else {
       const chosenItemsArray = Object.keys(selectedItems).map((category) => ({
         title: category,
@@ -169,9 +170,7 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
               Finalize Buffet
             </button>
             {showErrorModal && (
-              <div
-                className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-md shadow-md"
-              >
+              <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white p-4 rounded-md shadow-md">
                 <p className="text-sm">{errorMessage}</p>
                 <button
                   type="button"
