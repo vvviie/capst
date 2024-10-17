@@ -3,38 +3,52 @@
 import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { Chosen, Promo, Reserve } from "@/app/data";
 import PackageOffers from "@/app/components/PackageOffers";
 import CheckoutPopup from "@/app/components/CheckoutPopup";
-import { doc, setDoc } from "firebase/firestore";
+import Link from "next/link";
 import { auth, db } from "@/app/firebase";
 import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import Link from "next/link";
-import { Reserve } from "@/app/data";
+import { collection, doc, setDoc, addDoc } from "firebase/firestore";
 
 const ReservationPage = () => {
+  //#region Global Variables
   const pathname = usePathname();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const slug = pathname.split("/").pop();
-  const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
 
-  // States specific to Event reservations
   const [date, setDate] = useState("");
+  const [minDate, setMinDate] = useState(""); // used by "table" & "event"
+
+  const [error, setError] = useState<boolean>(false); // used by "table" & "event"
+  //#endregion
+
+  //#region "table" Variables
+  const [dateError, setDateError] = useState("");
+  const [timeError, setTimeError] = useState<string | null>(null);
+  const [hourInput, setHourInput] = useState<number | "">("");
+  const [minuteInput, setMinuteInput] = useState<number | "">("");
+  const [numberOfPersonsTable, setNumberOfPersonsTable] = useState<number>(1);
+  //#endregion
+
+  //#region "event" Variables
+  const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
   const [startTime, setStartTime] = useState(12); // Default start time 12 PM
   const [endTime, setEndTime] = useState(12);
   const [totalHours, setTotalHours] = useState(0);
-  const [numberOfPersons, setNumberOfPersons] = useState<string>("1"); // Default to '1'
   const packagePricePerPerson = 550; // Price per person
   const [totalPrice, setTotalPrice] = useState(0);
   const [chosenItems, setChosenItems] = useState([]);
-  const [error, setError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [minDate, setMinDate] = useState("");
+  const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(1);
+  //#endregion
 
+  //#region Global EffectHooks
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
@@ -63,7 +77,157 @@ const ReservationPage = () => {
       return () => unsubscribeAuth();
     }
   }, [router]);
+  //#endregion
 
+  //#region "table" EffectHooks
+  useEffect(() => {
+    // Calculate the date 5 days from today
+    const today = new Date();
+    today.setDate(today.getDate() + 5); // Add 5 days
+
+    // Format the date to YYYY-MM-DD
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
+    const dd = String(today.getDate()).padStart(2, "0");
+
+    // Set the min date in the correct format
+    setMinDate(`${yyyy}-${mm}-${dd}`);
+  }, []);
+
+  const handleNumberOfPersonsTableChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = parseInt(e.target.value, 10);
+    if (value > 20) {
+      setNumberOfPersonsTable(20); // Set to 20 if exceeds max
+    } else {
+      setNumberOfPersonsTable(value);
+    }
+  };
+
+  const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+
+    // Check if minute exceeds 59
+    if (value > 59) {
+      setMinuteInput(59); // Revert to 59
+    } else {
+      setMinuteInput(value);
+    }
+  };
+
+  // Handle form submission
+  const generateOrderId = () =>
+    Math.floor(1000000000 + Math.random() * 9000000000).toString();
+
+  const validateDate = (selectedDate: string) => {
+    const currentDate = new Date();
+    currentDate.setHours(0, 0, 0, 0); // Set current date to midnight
+
+    const inputDate = new Date(selectedDate);
+    inputDate.setHours(0, 0, 0, 0); // Normalize input date to midnight
+
+    // Check if the selected date is in the past
+    if (inputDate < currentDate) {
+      setDateError("Selected date cannot be in the past!"); // Error for past date
+      return false;
+    }
+
+    const minDate = new Date(currentDate);
+    minDate.setDate(minDate.getDate() + 5); // Calculate the minimum valid date
+
+    // Check if the selected date is less than 5 days from today
+    if (inputDate < minDate) {
+      setDateError("Selected date must be at least 5 days from today!"); // Error for insufficient future date
+      return false;
+    }
+
+    // If it passes both checks, return true
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const dateInput = (document.getElementById("inputDate") as HTMLInputElement)
+      ?.value;
+    const hourInput = parseInt(
+      (document.getElementById("inputTimeHour") as HTMLInputElement)?.value,
+      10
+    );
+    const minuteInput = parseInt(
+      (document.getElementById("inputTimeMinute") as HTMLInputElement)?.value,
+      10
+    );
+    const num = numberOfPersonsTable;
+
+    // Validate that all required fields are filled
+    if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
+      setError("Please fill in all required fields."); // Show error message
+      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      return;
+    }
+
+    // Check for hour input of 0 specifically
+    if (hourInput === 0) {
+      setError("Please enter a valid hour."); // Show error message for invalid hour
+      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      return;
+    }
+
+    // Validate date
+    if (!validateDate(dateInput)) {
+      // An error message is already set in validateDate, so just return
+      setTimeout(() => setDateError(""), 3000); // Clear the date error after 3 seconds
+      return;
+    }
+
+    const orderId = generateOrderId();
+    const now = new Date();
+
+    const dateReserved = `${String(now.getMonth() + 1).padStart(
+      2,
+      "0"
+    )}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+    const timeReserved = `${String(now.getHours()).padStart(2, "0")}:${String(
+      now.getMinutes()
+    ).padStart(2, "0")}`;
+
+    // Format date and time to be reserved
+    const dateToBeReserved = new Date(dateInput);
+    const formattedDateToBeReserved = `${String(
+      dateToBeReserved.getMonth() + 1
+    ).padStart(2, "0")}/${String(dateToBeReserved.getDate()).padStart(
+      2,
+      "0"
+    )}/${dateToBeReserved.getFullYear()}`;
+
+    const timeToBeReserved = `${String(hourInput).padStart(2, "0")}:${String(
+      minuteInput
+    ).padStart(2, "0")}`;
+
+    try {
+      await setDoc(doc(db, "tableReservations", orderId), {
+        dateReserved,
+        timeReserved,
+        numberOfPersonsTable: num,
+        reservedBy: userEmail,
+        status: "PENDING",
+        dateToBeReserved: formattedDateToBeReserved,
+        timeToBeReserved,
+        type: "Table",
+      });
+
+      setIsPopupVisible(true); // Show success popup
+      setTimeout(() => setIsPopupVisible(false), 750);
+    } catch (error) {
+      //console.error("Error adding reservation: ", error);
+      alert("Failed to make reservation. Please try again.");
+    }
+  };
+  //#endregion
+
+  //#region "events" EffectHooks
   useEffect(() => {
     const today = new Date();
     const minDate = new Date(today);
@@ -88,26 +252,28 @@ const ReservationPage = () => {
 
   // Calculate total price whenever numberOfPersons changes
   useEffect(() => {
-    if (numberOfPersons === "") {
+    if (numberOfPersonsEvent < 1) {
       setTotalPrice(0);
     } else {
-      setTotalPrice(parseInt(numberOfPersons, 10) * packagePricePerPerson);
+      setTotalPrice(numberOfPersonsEvent * packagePricePerPerson);
     }
-  }, [numberOfPersons]);
+  }, [numberOfPersonsEvent]);
 
   const handlePersonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^0-9]/g, ""); // Strip out non-numeric characters
 
-    // If the value is empty, set numberOfPersons to an empty string
+    // If the value is empty, set numberOfPersons to 1 (or handle it as you prefer)
     if (value === "") {
-      setNumberOfPersons("");
+      setNumberOfPersonsEvent(1); // Set to default value instead of empty
     } else {
       // Validate the number of persons (between 1 and 30)
       let numericValue = parseInt(value, 10);
-      if (numericValue > 30 || numericValue < 1 || isNaN(numericValue)) {
+      if (numericValue > 30) {
+        numericValue = 30; // Cap at 30 if exceeds max
+      } else if (numericValue < 1 || isNaN(numericValue)) {
         numericValue = 1; // Reset to 1 if invalid
       }
-      setNumberOfPersons(numericValue.toString()); // Update state
+      setNumberOfPersonsEvent(numericValue); // Update state with a number
     }
   };
 
@@ -144,7 +310,6 @@ const ReservationPage = () => {
       endTime >= startTime ? endTime - startTime : endTime + (12 - startTime);
     setTotalHours(hours);
   }, [startTime, endTime]);
-
   // Calculate total price with excess rate if over 4 hours
   useEffect(() => {
     const excessHours = totalHours > 4 ? totalHours - 4 : 0;
@@ -152,11 +317,9 @@ const ReservationPage = () => {
     const basePricePerPerson =
       selectedPackage === "A" ? 550 : selectedPackage === "B" ? 600 : 700;
     const basePrice =
-      numberOfPersons === ""
-        ? basePricePerPerson
-        : basePricePerPerson * parseInt(numberOfPersons, 10);
+      numberOfPersonsEvent < 1 ? 0 : basePricePerPerson * numberOfPersonsEvent; // Adjusted check
     setTotalPrice(basePrice + excessCharge);
-  }, [totalHours, selectedPackage, numberOfPersons]);
+  }, [totalHours, selectedPackage, numberOfPersonsEvent]);
 
   const handleFinalize = (chosenItemsArray) => {
     setChosenItems(chosenItemsArray);
@@ -195,9 +358,19 @@ const ReservationPage = () => {
       return;
     }
 
-    if (startTime === endTime) {
+    // Validate start and end times
+    if (startTime >= endTime) {
       setError(true);
-      setErrorMessage("Please select appropriate hours.");
+      setErrorMessage("End time must be greater than start time.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+    }
+
+    if (startTime < 1 || startTime > 12 || endTime < 1 || endTime > 12) {
+      setError(true);
+      setErrorMessage("Start and end times must be between 1 and 12.");
       setTimeout(() => {
         setError(false);
       }, 5000);
@@ -243,7 +416,7 @@ const ReservationPage = () => {
         timeToBeReserved: formattedTime,
         packageOffer,
         buffetChosen,
-        numberOfPersons: numberOfPersons,
+        numberOfPersons: numberOfPersonsEvent,
         totalPrice: totalPrice,
         status: "Requested",
         type: "Event",
@@ -252,22 +425,14 @@ const ReservationPage = () => {
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false); // Hide after a few seconds if desired
-        router.push('/book/reservations'); // Redirect to /book
+        router.push("/book/reservations"); // Redirect to /book
       }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
     }
   };
 
-  const handleSubmit = () => {
-    // Show the popup when the form is submitted
-    setIsPopupVisible(true);
-
-    // Hide the popup after 1.5 seconds
-    setTimeout(() => {
-      setIsPopupVisible(false);
-    }, 750);
-  };
+  //#endregion
 
   return (
     <div
@@ -303,15 +468,28 @@ const ReservationPage = () => {
               : "Mobile Café Booking"}
           </h1>
           {/* USE THIS FOR ERROR PROOFING */}
-          {error && ( // Only render this block if there's an error
-            <div
-              className={`bg-red-500 text-white p-2 rounded text-xs text-center ${
-                slug === "mobilecafe" ? "hidden" : ""
-              }`}
-            >
-              <span className="block">{errorMessage}</span>
-            </div>
+          {error && slug === "table" && (
+            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+              {error}
+            </p>
           )}
+          {timeError && slug === "table" && (
+            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+              {timeError}
+            </p>
+          )}
+          {dateError && slug === "table" && (
+            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+              {dateError}
+            </p>
+          )}
+
+          {error &&
+            slug === "event" && ( // Only render if there's an error and slug is "event"
+              <div className="bg-red-400 border border-red-600 text-white p-2 rounded text-xs text-center">
+                <span className="block">{errorMessage}</span>
+              </div>
+            )}
           {slug === "table" ? (
             //#region Table Reservation
             <>
@@ -326,6 +504,7 @@ const ReservationPage = () => {
                   name="date"
                   id="inputDate"
                   type="date"
+                  min={minDate}
                   required
                 />
 
@@ -341,26 +520,40 @@ const ReservationPage = () => {
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
                   <input
-                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
-            inline-block"
+                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeHour"
                     id="inputTimeHour"
                     type="number"
                     placeholder="Hour (12-7)"
-                    min={7}
-                    max={12}
+                    min={12} // Minimum hour is 12 PM
+                    max={19} // Maximum hour is 7 PM (in 24-hour format)
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (value < 12) {
+                        e.target.value = "7"; // Set to minimum if below
+                      } else if (value > 19) {
+                        e.target.value = "12"; // Set to maximum if above
+                      }
+                    }}
                     required
                   />
                   <span>:</span>
                   <input
-                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
-            inline-block"
+                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeMinute"
                     id="inputTimeMinute"
                     type="number"
                     placeholder="Min (00-59)"
-                    min={0}
-                    max={59}
+                    min={0} // Minimum minutes is 0
+                    max={59} // Maximum minutes is 59
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value, 10);
+                      if (value < 0) {
+                        e.target.value = "0"; // Set to minimum if below
+                      } else if (value > 59) {
+                        e.target.value = "59"; // Set to maximum if above
+                      }
+                    }}
                     required
                   />
                   <span className="text-gray-500">PM</span>
@@ -380,6 +573,8 @@ const ReservationPage = () => {
                   min={1}
                   max={20}
                   placeholder="Number of Persons"
+                  value={numberOfPersonsTable} // Bind the state variable here
+                  onChange={handleNumberOfPersonsTableChange} // Use the new change handler
                   required
                 />
               </div>
@@ -536,8 +731,8 @@ const ReservationPage = () => {
                   min={1}
                   max={30}
                   placeholder="Number of Persons"
-                  value={numberOfPersons} // Bind the value to the state
-                  onChange={handlePersonsChange} // Handle changes
+                  value={numberOfPersonsEvent} // Bind to state
+                  onChange={handlePersonsChange}
                   required
                 />
                 <p className="text-xs text-orange-900 pl-2">
