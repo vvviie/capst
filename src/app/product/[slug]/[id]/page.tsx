@@ -98,7 +98,7 @@ const ProductPage: React.FC = () => {
   const [totalPrice, setTotalPrice] = useState(0);
 
   useEffect(() => {
-    console.log(selectedMilkOption);
+    //console.log(selectedMilkOption);
   }, [selectedMilkOption]);
 
   useEffect(() => {
@@ -170,14 +170,14 @@ const ProductPage: React.FC = () => {
             console.log("Collection:", collection);
             */
 
-          console.log("SLUG: " + slug);
-          console.log("Product Data:", productData);
-          console.log("Product ID:", productId);
-          console.log("Pathname:", pathname);
-          console.log("Collection:", collection);
+          //console.log("SLUG: " + slug);
+          //console.log("Product Data:", productData);
+          //console.log("Product ID:", productId);
+          //console.log("Pathname:", pathname);
+          //console.log("Collection:", collection);
 
           if (!collection || !productId) {
-            console.error("Invalid collection or product ID");
+            //console.error("Invalid collection or product ID");
             return;
           }
 
@@ -190,10 +190,10 @@ const ProductPage: React.FC = () => {
             //console.log("Updated Product Data:", data);
             setSelectedDrinkSize(data.currSize || "12oz"); // Set default size if it exists
           } else {
-            console.error("No such document!");
+            //console.error("No such document!");
           }
         } catch (error) {
-          console.error("Error fetching document:", error);
+          //console.error("Error fetching document:", error);
         }
       }
     };
@@ -221,13 +221,10 @@ const ProductPage: React.FC = () => {
             // Check if the current key corresponds to the productId
             if (key === productId) {
               specificProduct = data[key]; // Store the product data
-              console.log("Specific Product Data:", specificProduct);
-              console.log(`Document ID: ${doc.id}`);
-              console.log(`Field Name: ${key}`);
-              console.log(
-                `Specific Product Data:`,
-                JSON.stringify(specificProduct, null, 2)
-              );
+              //console.log("Specific Product Data:", specificProduct);
+              //console.log(`Document ID: ${doc.id}`);
+              //console.log(`Field Name: ${key}`);
+              //console.log(`Specific Product Data:`,JSON.stringify(specificProduct, null, 2));
               break; // Exit the loop once the product is found
             }
           }
@@ -253,7 +250,7 @@ const ProductPage: React.FC = () => {
           //console.error("No matching product found");
         }
       } catch (error) {
-        console.error("Error fetching cart items:", error);
+        //console.error("Error fetching cart items:", error);
       }
     };
 
@@ -322,7 +319,7 @@ const ProductPage: React.FC = () => {
           )}`;
 
     // Log productData to verify its structure and content
-console.log('Product Data:', productData);
+//console.log('Product Data:', productData);
 
 let orderData = {
   slug: productData.slug || "", // needed
@@ -422,7 +419,7 @@ let orderData = {
           doc(db, "tempOrders", existingOrderDocId),
           updatedOrderData
         );
-        console.log("Order updated in tempOrders collection!");
+        //console.log("Order updated in tempOrders collection!");
       } else {
         // Create new order if no existing document is found
         const newOrderData = {
@@ -432,10 +429,10 @@ let orderData = {
           totalCartPrice: parseFloat(totalPrice.toFixed(2)),
         };
         await setDoc(doc(db, "tempOrders", orderId), newOrderData);
-        console.log("Order added to tempOrders collection!");
+        //console.log("Order added to tempOrders collection!");
       }
     } catch (error) {
-      console.error("Error processing order:", error);
+      //console.error("Error processing order:", error);
     }
 
     setShowCartUpdateNotif(true);
@@ -572,9 +569,7 @@ let orderData = {
             [existingProductKey]: deleteField(),
             [uniqueProductKey]: orderData,
           });
-          console.log(
-            "Existing product deleted from cart and new product added!"
-          );
+          //console.log("Existing product deleted from cart and new product added!");
 
           // Recalculate totalItems and totalCartPrice
           const updatedOrderData = await getDoc(
@@ -593,7 +588,7 @@ let orderData = {
             totalItems,
             totalCartPrice,
           });
-          console.log("Order updated in tempOrders collection!");
+          //console.log("Order updated in tempOrders collection!");
         } else {
           // Add new product to the cart
           const updatedOrderData = {
@@ -617,7 +612,7 @@ let orderData = {
             doc(db, "tempOrders", existingOrderDocId),
             updatedOrderData
           );
-          console.log("Order updated in tempOrders collection!");
+          //console.log("Order updated in tempOrders collection!");
         }
       } else {
         // Create new order if no existing document is found
@@ -628,10 +623,10 @@ let orderData = {
           totalCartPrice: parseFloat(totalPrice.toFixed(2)),
         };
         await setDoc(doc(db, "tempOrders", existingOrderDocId), newOrderData);
-        console.log("Order added to tempOrders collection!");
+        //console.log("Order added to tempOrders collection!");
       }
     } catch (error) {
-      console.error("Error processing order:", error);
+      //console.error("Error processing order:", error);
     }
 
     setShowCartUpdateNotif(true);

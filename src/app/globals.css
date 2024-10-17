@@ -2,3 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 @import "@fontsource/poppins";
+
+input[type="password"]::-ms-reveal {
+    display: none;
+}

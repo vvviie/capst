@@ -153,7 +153,7 @@ const CartPage = () => {
 
   //#region Handling of Processes for Promo Codes
   const handlePromoCodeSubmit = async () => {
-    console.log("Current promoApplied state:", promoApplied);
+    //console.log("Current promoApplied state:", promoApplied);
 
     if (!userEmail) {
       showErrorPopup("Please log in to apply a promo code.");
@@ -188,7 +188,7 @@ const CartPage = () => {
       return;
     }
 
-    console.log("Entered promo code:", promoCode);
+    //console.log("Entered promo code:", promoCode);
 
     try {
       const promoCodesRef = collection(db, "promoCodes");
@@ -198,7 +198,7 @@ const CartPage = () => {
       );
       const promoSnapshot = await getDocs(promoQuery);
 
-      console.log("Promo snapshot:", promoSnapshot);
+      //console.log("Promo snapshot:", promoSnapshot);
 
       if (!promoSnapshot.empty) {
         const promoDoc = promoSnapshot.docs[0];
@@ -207,7 +207,7 @@ const CartPage = () => {
         const discount = promoData?.discountPercent || 0;
         const available = promoData?.available || false;
 
-        console.log("Promo data:", promoData);
+        //console.log("Promo data:", promoData);
 
         if (available) {
           const promoDiscount = subtotal * discount;
@@ -252,7 +252,7 @@ const CartPage = () => {
         }, 3000);
       }
     } catch (error) {
-      console.error("Error validating promo code:", error);
+      //console.error("Error validating promo code:", error);
       showErrorPopup("An error occurred. Please try again.");
       setPromoCodeInput("");
     }
@@ -263,18 +263,18 @@ const CartPage = () => {
   const handleVoucherSubmit = async () => {
     if (!userEmail) {
       showErrorPopup("Please log in to apply a voucher.");
-      console.log("No user email found.");
+      //console.log("No user email found.");
       return;
     }
 
     if (!selectedVoucher) {
       showErrorPopup("Please select a voucher.");
-      console.log("No voucher selected.");
+      //console.log("No voucher selected.");
       return;
     }
 
     try {
-      console.log("Selected Voucher:", selectedVoucher);
+      //console.log("Selected Voucher:", selectedVoucher);
 
       const deduction =
         selectedVoucher.voucherDeduction ?? selectedVoucher.deduction ?? 0;
@@ -284,11 +284,11 @@ const CartPage = () => {
 
       if (!isVoucherValid) {
         showErrorPopup("Selected voucher is invalid.");
-        console.log("Invalid voucher selected.");
+        //console.log("Invalid voucher selected.");
         return;
       }
 
-      console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
+      //console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
 
       setPromoApplied(false);
       setDiscountPercent(0);
@@ -301,25 +301,25 @@ const CartPage = () => {
         calculatedDiscount = totalCartPrice * deduction;
         newTotalCartPrice -= calculatedDiscount;
         setDiscountedVoucher(calculatedDiscount.toFixed(2));
-        console.log(`Discount applied (percent): ${calculatedDiscount}`);
+        //console.log(`Discount applied (percent): ${calculatedDiscount}`);
       } else if (voucherType === "minus") {
         newTotalCartPrice -= deduction;
         setDiscountedVoucher(deduction.toFixed(2));
-        console.log(`Discount applied (minus): ${deduction}`);
+        //console.log(`Discount applied (minus): ${deduction}`);
       }
 
       setTotalCartPrice(newTotalCartPrice);
       setVoucherApplied(true);
 
       showErrorPopup("Voucher successfully applied!");
-      console.log("Voucher successfully applied.");
+      //console.log("Voucher successfully applied.");
 
       setVoucherType(voucherType);
       setVoucherDeduction(deduction);
 
       openVoucherForm(false);
     } catch (error) {
-      console.error("Error applying voucher:", error);
+      //console.error("Error applying voucher:", error);
       setVoucherApplied(false);
       showErrorPopup("An error occurred. Please try again.");
     }
@@ -337,7 +337,7 @@ const CartPage = () => {
       }, 1000);
       setNotificationTimeout(newTimeout);
 
-      console.log("Removing item with ID:", itemId);
+      //console.log("Removing item with ID:", itemId);
 
       const tempOrdersRef = collection(db, "tempOrders");
 
@@ -362,15 +362,15 @@ const CartPage = () => {
 
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(doc.ref);
-            console.log(`Document ${doc.id} deleted as the cart is empty.`);
+            //console.log(`Document ${doc.id} deleted as the cart is empty.`);
           }
 
           await fetchCartItems();
-          console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
+          //console.log(`Item with ID ${itemId} deleted from document ${doc.id}`);
         }
       });
     } catch (error) {
-      console.error("Error removing item:", error);
+      //console.error("Error removing item:", error);
       showErrorPopup("Failed to remove item. Please try again.");
     }
   };
@@ -392,7 +392,7 @@ const CartPage = () => {
       }, 1000);
       setNotificationTimeout(newTimeout);
 
-      console.log("Removing all items for user email:", userEmail);
+      //console.log("Removing all items for user email:", userEmail);
 
       const tempOrdersRef = collection(db, "tempOrders");
 
@@ -401,19 +401,19 @@ const CartPage = () => {
       );
 
       if (querySnapshot.empty) {
-        console.log("No documents found for user:", userEmail);
+        //console.log("No documents found for user:", userEmail);
         return;
       }
 
       for (const docSnapshot of querySnapshot.docs) {
         await deleteDoc(docSnapshot.ref);
-        console.log(`Document with ID ${docSnapshot.id} deleted`);
+        //console.log(`Document with ID ${docSnapshot.id} deleted`);
       }
 
       await fetchCartItems();
-      console.log("All items for user email removed");
+      //console.log("All items for user email removed");
     } catch (error) {
-      console.error("Error removing all items:", error);
+      //console.error("Error removing all items:", error);
       showErrorPopup("Failed to remove all items. Please try again.");
     }
   };
@@ -494,7 +494,7 @@ const CartPage = () => {
         setIsEmpty(true);
       }
     } catch (error) {
-      console.error("Error fetching cart items:", error);
+      //console.error("Error fetching cart items:", error);
     }
   };
   //#endregion
@@ -504,7 +504,7 @@ const CartPage = () => {
     const fetchVouchers = async () => {
       try {
         if (!userEmail) {
-          console.error("User email is missing.");
+          //console.error("User email is missing.");
           return;
         }
 
@@ -528,7 +528,7 @@ const CartPage = () => {
           setVouchers(formattedVouchers);
         }
       } catch (error) {
-        console.error("Error fetching vouchers:", error);
+        //console.error("Error fetching vouchers:", error);
       }
     };
 
@@ -542,27 +542,27 @@ const CartPage = () => {
   const handleSubmitOrder = () => {
     let finalTotal = subtotal;
 
-    console.log("Initial subtotal:", subtotal);
-    console.log("Promo applied:", promoApplied);
-    console.log("Discount percent:", discountPercent);
-    console.log("Voucher applied:", voucherApplied);
-    console.log("Voucher type:", voucherType);
-    console.log("Voucher deduction:", voucherDeduction);
+    //console.log("Initial subtotal:", subtotal);
+    //console.log("Promo applied:", promoApplied);
+    //console.log("Discount percent:", discountPercent);
+    //console.log("Voucher applied:", voucherApplied);
+    //console.log("Voucher type:", voucherType);
+    //console.log("Voucher deduction:", voucherDeduction);
 
     if (promoApplied) {
       const promoDiscount = subtotal * discountPercent;
       finalTotal -= promoDiscount;
-      console.log("Applied promo discount:", promoDiscount);
+      //console.log("Applied promo discount:", promoDiscount);
     }
 
     if (voucherApplied) {
       if (voucherType === "percent") {
         const voucherDiscount = finalTotal * voucherDeduction;
         finalTotal -= voucherDiscount;
-        console.log("Applied voucher discount (percent):", voucherDiscount);
+        //console.log("Applied voucher discount (percent):", voucherDiscount);
       } else if (voucherType === "minus") {
         finalTotal -= voucherDeduction;
-        console.log("Applied voucher discount (minus):", voucherDeduction);
+        //console.log("Applied voucher discount (minus):", voucherDeduction);
       }
     }
 
@@ -575,8 +575,8 @@ const CartPage = () => {
       finalSubtotal: finalTotal,
     };
 
-    console.log("Final subtotal before completing order:", finalTotal);
-    console.log("Order submitted:", orderData);
+    //console.log("Final subtotal before completing order:", finalTotal);
+    //console.log("Order submitted:", orderData);
 
     handleCompleteOrder(
       orderData.modeOfPayment,
@@ -600,7 +600,7 @@ const CartPage = () => {
     }
 
     try {
-      console.log("Completing order for user email:", userEmail);
+      //console.log("Completing order for user email:", userEmail);
 
       const tempOrdersRef = collection(db, "tempOrders");
       const querySnapshot = await getDocs(
@@ -608,7 +608,7 @@ const CartPage = () => {
       );
 
       if (querySnapshot.empty) {
-        console.log("No documents found in tempOrders.");
+        //console.log("No documents found in tempOrders.");
         return;
       }
 
@@ -667,7 +667,7 @@ const CartPage = () => {
 
           if (newTotalCartPrice === 0 && newTotalItems === 0) {
             await deleteDoc(docSnapshot.ref);
-            console.log(`Document ${docId} deleted as the cart is empty.`);
+            //console.log(`Document ${docId} deleted as the cart is empty.`);
           }
 
           if (!customOrderId) {
@@ -702,17 +702,14 @@ const CartPage = () => {
           : 0,
       });
 
-      console.log(
-        "Order successfully added to completedOrders with custom ID:",
-        customOrderId
-      );
+      //console.log("Order successfully added to completedOrders with custom ID:", customOrderId);
 
       await handleRemoveAllItems();
       await fetchCartItems();
 
       // Check if a voucher was applied, and mark it as "used" if true
       if (voucherApplied && selectedVoucher) {
-        console.log("Voucher applied:", selectedVoucher.title);
+        //console.log("Voucher applied:", selectedVoucher.title);
         const userDocRef = doc(db, "users", userEmail);
 
         // Fetch the current vouchers from Firestore
@@ -724,7 +721,7 @@ const CartPage = () => {
 
           // Check if a voucher was applied, and mark it as "used" if true
           if (voucherApplied && selectedVoucher) {
-            console.log("Voucher applied:", selectedVoucher.title);
+            //console.log("Voucher applied:", selectedVoucher.title);
             const userDocRef = doc(db, "users", userEmail);
 
             // Fetch the current vouchers from Firestore
@@ -741,28 +738,24 @@ const CartPage = () => {
 
               if (voucherIndex) {
                 // If the voucher is found, update its 'used' status
-                console.log(
-                  `Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`
-                );
+                //console.log(`Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`);
                 await updateDoc(userDocRef, {
                   [`vouchers.${voucherIndex}.used`]: true, // Use the index to update the 'used' field
                 });
-                console.log(
-                  `Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`
-                );
+                //console.log(`Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`);
               } else {
-                console.log("Selected voucher not found in user's vouchers.");
+                //console.log("Selected voucher not found in user's vouchers.");
               }
             } else {
-              console.error("User document does not exist.");
+              //console.error("User document does not exist.");
             }
           }
         } else {
-          console.error("User document does not exist.");
+          //console.error("User document does not exist.");
         }
       }
     } catch (error) {
-      console.error("Error completing order:", error);
+      //console.error("Error completing order:", error);
       showErrorPopup("Failed to complete order. Please try again.");
     }
   };
@@ -774,7 +767,7 @@ const CartPage = () => {
 
   //#region Apply Promos
   useEffect(() => {
-    console.log("Promo applied:", promoApplied);
+    //console.log("Promo applied:", promoApplied);
   }, [promoApplied]);
   //#endregion
 
@@ -862,14 +855,14 @@ const CartPage = () => {
         );
 
         if (querySnapshot.empty) {
-          console.log("No existing orders found.");
+          //console.log("No existing orders found.");
           setNeedsOrder(true);
         } else {
-          console.log("Existing orders found.");
+          //console.log("Existing orders found.");
           setNeedsOrder(false);
         }
       } catch (error) {
-        console.error("Error checking existing orders:", error);
+        //console.error("Error checking existing orders:", error);
       }
     };
 
@@ -889,8 +882,8 @@ const CartPage = () => {
 
           querySnapshot.forEach((doc) => {
             const data = doc.data();
-            console.log(`Document ID: ${doc.id}`);
-            console.log("Full Document Data:", JSON.stringify(data, null, 2));
+            //console.log(`Document ID: ${doc.id}`);
+            //console.log("Full Document Data:", JSON.stringify(data, null, 2));
 
             // Check each product in the document data
             for (const key in data) {
@@ -906,21 +899,21 @@ const CartPage = () => {
 
                 itemProductIdInCart = itemProductIdInCart.split(/-(?!.*-)/)[0];
 
-                console.log("Formatted Product ID:", itemProductIdInCart);
-                console.log("Comparing Product ID:", itemProductIdInCart);
-                console.log("Comparing Size:", selectedDrinkSize);
+                //console.log("Formatted Product ID:", itemProductIdInCart);
+                //console.log("Comparing Product ID:", itemProductIdInCart);
+                //console.log("Comparing Size:", selectedDrinkSize);
 
                 if (
                   itemProductIdInCart === productId &&
                   selectedDrinkSize === "8oz"
                 ) {
-                  console.log("Found Cart Data:", cartItem);
+                  //console.log("Found Cart Data:", cartItem);
                 }
               }
             }
           });
         } catch (error) {
-          console.error("Error handling new order:", error);
+          //console.error("Error handling new order:", error);
         }
       };
 
@@ -1458,7 +1451,7 @@ const CartPage = () => {
                     if (promoApplied) {
                       const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
                       finalTotal -= promoDiscount; // Deduct promo discount from subtotal
-                      console.log("Applied promo discount:", promoDiscount);
+                      //console.log("Applied promo discount:", promoDiscount);
                     }
 
                     // Apply voucher discount if applicable
@@ -1466,16 +1459,10 @@ const CartPage = () => {
                       if (voucherType === "percent") {
                         const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
                         finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
-                        console.log(
-                          "Applied voucher discount (percent):",
-                          voucherDiscount
-                        );
+                        //console.log("Applied voucher discount (percent):", voucherDiscount);
                       } else if (voucherType === "minus") {
                         finalTotal -= voucherDeduction; // Deduct the fixed amount
-                        console.log(
-                          "Applied voucher discount (minus):",
-                          voucherDeduction
-                        );
+                        //console.log("Applied voucher discount (minus):",voucherDeduction);
                       }
                     }
 
