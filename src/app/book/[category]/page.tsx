@@ -24,7 +24,6 @@ const ReservationPage = () => {
 
   const [date, setDate] = useState("");
   const [minDate, setMinDate] = useState(""); // used by "table" & "event"
-
   const [error, setError] = useState<boolean>(false); // used by "table" & "event"
   //#endregion
 
@@ -160,7 +159,6 @@ const ReservationPage = () => {
       10
     );
     const num = numberOfPersonsTable;
-
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
       setError("Please fill in all required fields."); // Show error message
@@ -480,8 +478,8 @@ const ReservationPage = () => {
           )}
           {dateError && slug === "table" && (
             <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
-              {dateError}
-            </p>
+            {dateError}
+        </p>
           )}
 
           {error &&
@@ -520,40 +518,28 @@ const ReservationPage = () => {
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
                   <input
-                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
+                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
+            inline-block"
                     name="timeHour"
                     id="inputTimeHour"
                     type="number"
                     placeholder="Hour (12-7)"
-                    min={12} // Minimum hour is 12 PM
-                    max={19} // Maximum hour is 7 PM (in 24-hour format)
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      if (value < 12) {
-                        e.target.value = "7"; // Set to minimum if below
-                      } else if (value > 19) {
-                        e.target.value = "12"; // Set to maximum if above
-                      }
-                    }}
+                    min={7}
+                    max={12}
                     required
                   />
                   <span>:</span>
                   <input
-                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
+                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
+            inline-block"
                     name="timeMinute"
                     id="inputTimeMinute"
                     type="number"
                     placeholder="Min (00-59)"
-                    min={0} // Minimum minutes is 0
-                    max={59} // Maximum minutes is 59
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      if (value < 0) {
-                        e.target.value = "0"; // Set to minimum if below
-                      } else if (value > 59) {
-                        e.target.value = "59"; // Set to maximum if above
-                      }
-                    }}
+                    min={0}
+                    max={59}
+                    value={minuteInput} // Bind to state
+                    onChange={handleMinuteChange} // Use new handler
                     required
                   />
                   <span className="text-gray-500">PM</span>
