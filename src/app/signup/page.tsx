@@ -169,7 +169,8 @@ const SignupPage: React.FC = () => {
           lastName,
           address,
           phoneNumber,
-          role: "user", // Add role to user document
+          role: "user", // Add role to user document\
+          totalPaid: 0,
           vouchers: {
             firstTimeVoucher: {
               available: firstTimeVoucher.available,
@@ -191,7 +192,8 @@ const SignupPage: React.FC = () => {
 
         // Navigate to login page after successful account creation
         setTimeout(() => {
-          router.push("/login"); // Navigate to the login page
+          router.push("/login"); // Navigate to the login page\
+          window.location.reload();
         }, 3000); // Optional: delay before redirecting
       } else {
         setMessage("Voucher not found.");
