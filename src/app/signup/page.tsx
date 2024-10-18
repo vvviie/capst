@@ -35,6 +35,18 @@ const db = getFirestore(app);
 const SignupPage: React.FC = () => {
   const router = useRouter(); // Initialize useRouter
   const [step, setStep] = useState(1);
+  const [isEyeOpen, setIsEyeOpen] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -46,6 +58,10 @@ const SignupPage: React.FC = () => {
   });
   const [message, setMessage] = useState("");
   const [messageColor, setMessageColor] = useState("");
+
+  const toggleIcon = () => {
+    setIsEyeOpen(!isEyeOpen); // Toggle between true and false
+  };
 
   useEffect(() => {
     if (message) {
@@ -256,17 +272,30 @@ const SignupPage: React.FC = () => {
                   <i className="fa-solid fa-lock text-gray-700"></i>
                   <span>Password</span>
                 </label>
-                <input
-                  className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
-                  name="password"
-                  id="inputPassword"
-                  type="password"
-                  placeholder="●●●●●●●●●●"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                />
+                <div
+                  className="border-2 border-solid border-orange-900 w-full h-10 rounded-md bg-orange-50
+                 overflow-clip relative flex items-center"
+                >
+                  <input
+                    className="w-full h-10 rounded-md bg-orange-50 pl-4 pr-2"
+                    name="password"
+                    id="inputPassword"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="●●●●●●●●●●"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <i
+                    className={`absolute right-3 top-2.5 fa-solid ${
+                      showPassword ? "fa-eye-slash" : "fa-eye"
+                    }
+                     text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
+                    onClick={togglePasswordVisibility}
+                  ></i>
+                </div>
               </div>
+
               <div className="w-full flex flex-col gap-1 items-center justify-center">
                 <label
                   className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -275,16 +304,28 @@ const SignupPage: React.FC = () => {
                   <i className="fa-solid fa-lock text-gray-700"></i>
                   <span>Confirm Password</span>
                 </label>
-                <input
-                  className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
-                  name="confirmPassword"
-                  id="inputConfirmPassword"
-                  type="password"
-                  placeholder="●●●●●●●●●●"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                />
+                <div
+                  className="border-2 border-solid border-orange-900 w-full h-10 rounded-md bg-orange-50
+                 overflow-clip relative flex items-center"
+                >
+                  <input
+                    className="w-full h-10 rounded-md bg-orange-50 pl-4 pr-2"
+                    name="confirmPassword"
+                    id="inputConfirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="●●●●●●●●●●"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    required
+                  />
+                  <i
+                    className={`absolute right-3 top-2.5 fa-solid ${
+                      showConfirmPassword ? "fa-eye-slash" : "fa-eye"
+                    }
+                     text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
+                    onClick={toggleConfirmPasswordVisibility}
+                  ></i>
+                </div>
               </div>
               <button
                 type="button"

@@ -439,10 +439,19 @@ const OrdersPage = () => {
 
       {/* HEADER AND ORDERS CONTAINER */}
       <div className="w-full  lg:max-w-[800px]">
-        <h1 className="font-bold text-2xl mb-2 text-orange-950 flex gap-2 items-center">
+        <h1 className="font-bold text-2xl text-orange-950 flex gap-2 items-center">
           <i className="fa-solid fa-newspaper text-xl"></i>
           <span>My Orders</span>
         </h1>
+        <div className="w-auto flex items-center gap-2">
+          <div className="h-4 w-4 rounded-full text-center inline-block bg-gray-500 text-xs text-white">
+            <span>i</span>
+          </div>
+          <span className="text-sm text-gray-500">
+            Your order cannot be cancelled if it is already being prepared in
+            the kitchen.
+          </span>
+        </div>
         {/* ORDERS CONTAINER */}
         <div className="space-y-2 w-full max-h-[680px] pb-4 overflow-y-auto">
           {/* ORDERS LIST */}
