@@ -29,10 +29,14 @@ const firestore = getFirestore(app);
 const urlEncode = (str) => encodeURIComponent(str);
 
 const LoginPage = () => {
+  const [isEyeOpen, setIsEyeOpen] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<{ text: string; type: string } | null>(
     null
   );
   const router = useRouter();
+
+
 
   useEffect(() => {
     // Check if the user is already logged in by checking cookies
@@ -57,6 +61,14 @@ const LoginPage = () => {
     return () => unsubscribe(); // Cleanup subscription on component unmount
   }, []);
 
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleIcon = () => {
+    setIsEyeOpen(!isEyeOpen); // Toggle between true and false
+  };
+  
   const fetchUserDetails = async (email) => {
     try {
       const userRef = doc(firestore, "users", email);
@@ -83,7 +95,7 @@ const LoginPage = () => {
     const email = event.target.email.value;
     const password = event.target.password.value;
 
-    console.log("Original Email:", email);
+    //console.log("Original Email:", email);
 
     try {
       const userCredential = await signInWithEmailAndPassword(
@@ -160,22 +172,34 @@ const LoginPage = () => {
           </div>
 
           <div className="w-full flex flex-col gap-1 items-center justify-center">
-            <label
-              className="text-orange-950 text-sm w-full text-left space-x-1"
-              htmlFor="inputPassword"
-            >
-              <i className="fa-solid fa-lock text-gray-700"></i>
-              <span>Password</span>
-            </label>
-            <input
-              className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
+          <label
+            className="text-orange-950 text-sm w-full text-left space-x-1"
+            htmlFor="inputPassword"
+          >
+            <i className="fa-solid fa-lock text-gray-700"></i>
+            <span>Password</span>
+          </label>
+          
+          {/* Parent div for input and icon */}
+          <div className="relative w-full"> {/* Make this relative for positioning */}
+          <input
+              className="border-2 border-solid border-orange-900 w-full h-10 pl-4 pr-12 rounded-md bg-orange-50"
               name="password"
               id="inputPassword"
-              type="password"
+              type={showPassword ? "text" : "password"} // Correctly handle password visibility
               placeholder="●●●●●●●●●●"
-              required // Added required attribute for better UX
+              required
+              autoComplete="off"
             />
+            {/* Custom Eye Icon */}
+            <i
+              className={`absolute right-3 top-2.5 fa-solid ${
+                showPassword ? "fa-eye-slash" : "fa-eye"
+              } text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
+              onClick={togglePasswordVisibility}
+            ></i>
           </div>
+        </div>
           <p
             className="text-sm font-semibold text-gray-600 underline-offset-2 underline
           hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"

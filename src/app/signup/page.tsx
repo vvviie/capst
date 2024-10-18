@@ -277,7 +277,7 @@ const SignupPage: React.FC = () => {
                  overflow-clip relative flex items-center"
                 >
                   <input
-                    className="w-full h-10 rounded-md bg-orange-50 pl-4 pr-2"
+                    className="w-full h-10 rounded-md bg-orange-50 pl-4"
                     name="password"
                     id="inputPassword"
                     type={showPassword ? "text" : "password"}
@@ -309,7 +309,7 @@ const SignupPage: React.FC = () => {
                  overflow-clip relative flex items-center"
                 >
                   <input
-                    className="w-full h-10 rounded-md bg-orange-50 pl-4 pr-2"
+                    className="w-full h-10 rounded-md bg-orange-50 pl-4"
                     name="confirmPassword"
                     id="inputConfirmPassword"
                     type={showConfirmPassword ? "text" : "password"}

@@ -7,16 +7,19 @@ export type Drinks = {
     price: number;
     availability: string;
     calorie: string;
+    contains: string[];
 };
 
 export type Pastries = {
     id: string;
     title: string;
     desc?: string;
+    type: string;
     img: string;
     price: number;
     availability: string;
     calorie: string;
+    contains: string[];
     //options?: { title: string; additionalPrice: number }[];
   };
 

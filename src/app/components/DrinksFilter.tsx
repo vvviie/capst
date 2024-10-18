@@ -2,44 +2,76 @@ import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import AllergyFilter from "./AllergyFilter";
 import { usePathname } from "next/navigation";
-
-interface DrinksFilterProps {
-  onFilterChange: (filter: string) => void;
-  onCalorieChange: (calorie: string) => void;
-}
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../firebase";
 
 // Define a unified filter array with categories
 const Filters = {
   drinks: [
-    { name: "drinktype", id: "radioAllDrinks", onChange: "all", checked: "all", title: "All" },
-    { name: "drinktype", id: "radioCoffee", onChange: "Coffee", checked: "Coffee", title: "Coffee" },
-    { name: "drinktype", id: "radioNonCoffee", onChange: "Non-Coffee", checked: "Non-Coffee", title: "Non-Coffee" },
+    { name: "drinktype", id: "radioAllDrinks", onChange: "all", title: "All" },
+    { name: "drinktype", id: "radioCoffee", onChange: "Coffee", title: "Coffee" },
+    { name: "drinktype", id: "radioNonCoffee", onChange: "Non-Coffee", title: "Non-Coffee" },
   ],
   pasta: [
-    { name: "pastatype", id: "radioAllPasta", onChange: "all", checked: "all", title: "All Pasta" },
-    { name: "pastatype", id: "radioPesto", onChange: "Pesto", checked: "Pesto", title: "Pesto" },
-    { name: "pastatype", id: "radioNonPesto", onChange: "Non-Pesto", checked: "Non-Pesto", title: "Non-Pesto" },
+    { name: "pastatype", id: "radioAllPasta", onChange: "all", title: "All Pasta" },
+    { name: "pastatype", id: "radioPesto", onChange: "Pesto", title: "Pesto" },
+    { name: "pastatype", id: "radioNonPesto", onChange: "Non-Pesto", title: "Non-Pesto" },
   ],
   maincourse: [
-    { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", checked: "all", title: "All" },
-    { name: "maincoursetype", id: "radioMeat", onChange: "Meat", checked: "Meat", title: "Meat" },
-    { name: "maincoursetype", id: "radioSeaFood", onChange: "Sea Food", checked: "Sea Food", title: "Sea Food" },
+    { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", title: "All" },
+    { name: "maincoursetype", id: "radioMeat", onChange: "Meat", title: "Meat" },
+    { name: "maincoursetype", id: "radioSeaFood", onChange: "Sea Food", title: "Sea Food" },
   ],
 };
 
 const FilterCalories = [
-  { name: "caloriecount", id: "radioLow", onChange: "low", checked: "low", title: "Low" },
-  { name: "caloriecount", id: "radioMedium", onChange: "med", checked: "med", title: "Medium" },
-  { name: "caloriecount", id: "radioHigh", onChange: "high", checked: "high", title: "High" },
+  { name: "caloriecount", id: "radioLow", onChange: "low", title: "Low" },
+  { name: "caloriecount", id: "radioMedium", onChange: "med", title: "Medium" },
+  { name: "caloriecount", id: "radioHigh", onChange: "high", title: "High" },
 ];
 
-const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange, onCalorieChange }) => {
+const DrinksFilter: React.FC<{
+  onFilterChange: (filter: string) => void;
+  onCalorieChange: (calorie: string) => void;
+  onAllergyChange: (selectedAllergies: string[]) => void; // New prop for allergy changes
+}> = ({ onFilterChange, onCalorieChange, onAllergyChange }) => {
   const [open, setOpen] = useState(false);
-  const [selectedDrinkType, setSelectedDrinkType] = useState("all");
+  const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>(null);
   const [selectedCalorie, setSelectedCalorie] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const pathname = usePathname();
   const slug = pathname.split("/").pop()?.toLowerCase() || "";
+
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
+  const [products, setProducts] = useState<any[]>([]); // Change type to any[]
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]); // Change type to any[]
+
+  const handleAllergySelection = (allergy: string) => {
+    setSelectedAllergies((prev) => {
+      const newAllergies = prev.includes(allergy)
+        ? prev.filter((a) => a !== allergy)
+        : [...prev, allergy];
+
+      // Notify parent component of the selected allergies
+      onAllergyChange(newAllergies);
+      return newAllergies;
+    });
+  };
+
+  // Effect to filter products based on selected allergies
+  useEffect(() => {
+    if (selectedAllergies.length > 0) {
+      // Filter out products that contain any selected allergy
+      const updatedProducts = products.filter(product => {
+        const containsAllergy = selectedAllergies.some(allergy => product.allergens.includes(allergy));
+        return !containsAllergy; // Keep products that do not contain selected allergies
+      });
+      setFilteredProducts(updatedProducts);
+    } else {
+      setFilteredProducts(products); // Reset to all products if no allergies are selected
+    }
+  }, [selectedAllergies, products]);
 
   // DRINK FILTER CHANGE HANDLER
   const handleDrinkFilterChange = (filter: string) => {
@@ -72,7 +104,47 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange, onCalorieCh
     };
   }, [open]);
 
-  // Determine which filters to show based on slug
+  // Fetch allergy options from Firestore based on the slug
+  useEffect(() => {
+    const fetchAllergies = async () => {
+      if (!slug) return; // Ensure slug is valid
+
+      try {
+        // Query the collection to find allergies
+        const allergyQuery = query(
+          collection(db, slug),
+          where("contains", "array-contains-any", ["Soy", "Wheat", "Milk", "Eggs", "Tree Nuts", "Peanuts"])
+        );
+        const querySnapshot = await getDocs(allergyQuery);
+  
+        const fetchedAllergies: string[] = [];
+        const fetchedProducts: any[] = []; // Array to store fetched products
+  
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+  
+          if (data.contains) {
+            fetchedAllergies.push(...data.contains);
+          }
+  
+          // Ensure data.products exists and is an array before spreading
+          if (Array.isArray(data.products)) {
+            fetchedProducts.push(...data.products);
+          }
+        });
+  
+        setAllergies(fetchedAllergies);
+        setProducts(fetchedProducts); // Set the products state
+        setFilteredProducts(fetchedProducts); // Initialize filtered products with all products
+  
+      } catch (error) {
+        console.error("Error fetching allergies from Firestore:", error);
+      }
+    };
+  
+    fetchAllergies();
+  }, [slug]);
+
   const currentFilters = Filters[slug] || [];
 
   return (
@@ -94,36 +166,35 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange, onCalorieCh
             id="drinksFilter"
             className="bg-white rounded-md shadow-xl p-6 flex flex-col gap-2 min-w-96 mx-10"
           >
-            <h1 className="text-2xl text-center font-semibold text-orange-950">
-              {slug === "drinks"
-                ? "Drink Type"
-                : slug === "pasta"
-                ? "Pasta Type"
-                : slug === "maincourse"
-                ? "Main Course Type"
-                : ""}
-            </h1>
-            <hr
-              className={`mb-4 ${slug === "pastries" || slug === "sandwiches" || slug === "snacks" ? "hidden" : "visible"}`}
-            />
-            <div className="flex gap-2 justify-around">
+            {["drinks", "pasta", "maincourse"].includes(slug) && (
+              <>
+                <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">
+                  {slug === "drinks"
+                    ? "Drink Type"
+                    : slug === "pasta"
+                    ? "Pasta Type"
+                    : "Main Course Type"}
+                </h1>
+                <hr className="mb-4" />
+              </>
+            )}
+  
+            <div className="flex gap-2 justify-around flex-wrap">
               {currentFilters.map((filter) => (
                 <div className="flex items-center justify-start space-x-2" key={filter.id}>
                   <input
                     type="radio"
-                    name={filter.name}
+                    name="drinktype"
                     id={filter.id}
                     className="w-4 h-4"
-                    checked={selectedDrinkType === filter.checked}
+                    checked={selectedDrinkType === filter.onChange}
                     onChange={() => handleDrinkFilterChange(filter.onChange)}
                   />
                   <span className="text-lg">{filter.title}</span>
                 </div>
               ))}
             </div>
-            <hr
-              className={`mt-4 ${slug === "pastries" || slug === "sandwiches" || slug === "snacks" ? "hidden" : "visible"}`}
-            />
+            <hr className="mt-4" />
             <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">Calories</h1>
             <hr />
             <div className="flex justify-around items-center">
@@ -134,21 +205,27 @@ const DrinksFilter: React.FC<DrinksFilterProps> = ({ onFilterChange, onCalorieCh
                     name={filter.name}
                     id={filter.id}
                     className="w-4 h-4"
-                    checked={selectedCalorie === filter.checked}
+                    checked={selectedCalorie === filter.onChange}
                     onChange={() => handleCalorieFilterChange(filter.onChange)}
                   />
                   <span className="text-lg">{filter.title}</span>
                 </div>
               ))}
             </div>
-            <AllergyFilter />
-            <button
-              type="button"
-              className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4"
-              onClick={() => setOpen(false)}
-            >
-              Filter Menu
-            </button>
+            <AllergyFilter
+              slug={slug}
+              selectedAllergies={selectedAllergies}
+              onAllergySelection={handleAllergySelection}
+            />
+            <div className="flex justify-center mt-4">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="bg-orange-950 text-white rounded-md py-2 px-4 hover:bg-orange-700"
+              >
+                Close
+              </button>
+            </div>
           </form>
         </div>
       )}

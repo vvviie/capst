@@ -82,11 +82,11 @@ const ProfilePage = () => {
               setLastName(userData.lastName || "");
             }
           } catch (error) {
-            console.error("Error fetching user data:", error);
+            //console.error("Error fetching user data:", error);
           }
         } else {
           // Handle the case where authUser .email is null
-          console.error("authUser .email is null");
+          //console.error("authUser .email is null");
         }
       } else {
         // Default to Guest if no authenticated user
