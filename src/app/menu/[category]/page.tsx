@@ -38,7 +38,6 @@ import { MainCourse } from "@/app/data";
 import { Snacks } from "@/app/data";
 import { Pastries } from "@/app/data";
 
-
 // Initialization of Arrays for each category
 type DrinksCategoryData = {
   title: string;
@@ -143,13 +142,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = drink.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-              const matchesAllergies =
+            const matchesAllergies =
               selectedAllergies.length === 0 ||
-              (Array.isArray(drink.contains) && 
-                !selectedAllergies.some(allergy => drink.contains.includes(allergy))
-              );
-  
-            return matchesFilter && matchesCalorie && matchesSearch && matchesAllergies;
+              (Array.isArray(drink.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  drink.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -199,7 +204,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || sandwich.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null || sandwich.calorie === selectedCalorie;  
+              selectedCalorie === null || sandwich.calorie === selectedCalorie;
             const matchesSearch = sandwich.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
@@ -225,8 +230,9 @@ const MenuCategoryPage: React.FC = () => {
           .filter((mainCourse) => {
             const matchesFilter =
               selectedFilter === "all" || mainCourse.type === selectedFilter;
-              const matchesCalorie =
-              selectedCalorie === null || mainCourse.calorie === selectedCalorie;  
+            const matchesCalorie =
+              selectedCalorie === null ||
+              mainCourse.calorie === selectedCalorie;
             const matchesSearch = mainCourse.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
@@ -257,7 +263,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = snack.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie &&matchesSearch;
+            return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -275,32 +281,39 @@ const MenuCategoryPage: React.FC = () => {
     () =>
       pastries.map((category) => ({
         ...category,
-        pastries: category.pastries.filter((pastry: Pastry) => {
-          const matchesFilter =
-            selectedFilter === "all" || pastry.type === selectedFilter;
-          const matchesCalorie =
-            selectedCalorie === null || pastry.calorie === selectedCalorie;
-          const matchesSearch = pastry.title
-            .toLowerCase()
-            .includes(searchText.toLowerCase());
-  
-          // Check if pastry.contains is an array before using includes
-          const matchesAllergies =
-            selectedAllergies.length === 0 ||
-            (Array.isArray(pastry.contains) && 
-              !selectedAllergies.some(allergy => pastry.contains.includes(allergy))
+        pastries: category.pastries
+          .filter((pastry: Pastry) => {
+            const matchesFilter =
+              selectedFilter === "all" || pastry.type === selectedFilter;
+            const matchesCalorie =
+              selectedCalorie === null || pastry.calorie === selectedCalorie;
+            const matchesSearch = pastry.title
+              .toLowerCase()
+              .includes(searchText.toLowerCase());
+
+            // Check if pastry.contains is an array before using includes
+            const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(pastry.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  pastry.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
             );
-  
-          return matchesFilter && matchesCalorie && matchesSearch && matchesAllergies;
-        })
-        .sort((a, b) => {
-          const typeA = a.type || "";
-          const typeB = b.type || "";
-          const typeComparison = typeA.localeCompare(typeB);
-          return typeComparison !== 0
-            ? typeComparison
-            : a.prodID.localeCompare(b.prodID);
-        }),
+          })
+          .sort((a, b) => {
+            const typeA = a.type || "";
+            const typeB = b.type || "";
+            const typeComparison = typeA.localeCompare(typeB);
+            return typeComparison !== 0
+              ? typeComparison
+              : a.prodID.localeCompare(b.prodID);
+          }),
       })),
     [selectedFilter, searchText, selectedCalorie, pastries, selectedAllergies]
   );
@@ -310,9 +323,14 @@ const MenuCategoryPage: React.FC = () => {
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col gap-2 py-4 mt-14">
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pr-10 py-4 px-10 md:flex-row md:gap-0 md:px-24 xl:px-56">
-        <span className="text-2xl font-bold text-orange-950 w-full text-left sm:w-auto">
-          Menu
-        </span>
+        <Link
+          href={"/menu"}
+          className="flex items-center space-x-2 font-bold text-orange-950 text-2xl text-left w-full
+      max-w-[1000px] lg:min-w-[800px] hover:text-orange-800 cursor-pointer mb-2"
+        >
+          <i className="fa fa-angle-left mr-[-4px]" aria-hidden="true"></i>
+          <span>Menu</span>
+        </Link>
         <div className="flex w-full md:w-2/3 justify-between items-center gap-4 z-10 sm:justify-end">
           <input
             type="text"
@@ -650,7 +668,7 @@ const MenuCategoryPage: React.FC = () => {
             )
         )}
 
-        {slug === "pastries" &&
+      {slug === "pastries" &&
         filteredPastries.map(
           (category, index) =>
             category.pastries.length > 0 && (

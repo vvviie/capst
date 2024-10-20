@@ -23,148 +23,148 @@ const Navbar = () => {
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
 
-  const unsubscribeAuthRef = useRef(null);
-  const unsubscribeCartRef = useRef(null);
-  const unsubscribeDocRef = useRef(null);
+  // const unsubscribeAuthRef = useRef(null);
+  // const unsubscribeCartRef = useRef(null);
+  // const unsubscribeDocRef = useRef(null);
 
-  const checkCookiesAndLogout = async () => {
-    // Check if there are any cookies present
-    const allCookies = Cookies.get();
+  // const checkCookiesAndLogout = async () => {
+  //   // Check if there are any cookies present
+  //   const allCookies = Cookies.get();
 
-    // If no cookies are found, logout the user
-    if (Object.keys(allCookies).length === 0) {
-      //console.log("No cookies detected, logging out...");
-      await handleLogout();
-    }
-  };
+  //   // If no cookies are found, logout the user
+  //   if (Object.keys(allCookies).length === 0) {
+  //     //console.log("No cookies detected, logging out...");
+  //     await handleLogout();
+  //   }
+  // };
 
-  useEffect(() => {
-    unsubscribeAuthRef.current = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser && authUser.emailVerified) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", authUser.email));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setFirstName(userData.firstName);
-            setUser(authUser);
+  // useEffect(() => {
+  //   unsubscribeAuthRef.current = onAuthStateChanged(auth, async (authUser) => {
+  //     if (authUser && authUser.emailVerified) {
+  //       try {
+  //         const userDoc = await getDoc(doc(db, "users", authUser.email));
+  //         if (userDoc.exists()) {
+  //           const userData = userDoc.data();
+  //           setFirstName(userData.firstName);
+  //           setUser(authUser);
 
-            // Real-time listener for tempOrder updates
-            const tempOrdersRef = collection(db, "tempOrders");
-            const q = query(tempOrdersRef, where("user", "==", authUser.email));
+  //           // Real-time listener for tempOrder updates
+  //           const tempOrdersRef = collection(db, "tempOrders");
+  //           const q = query(tempOrdersRef, where("user", "==", authUser.email));
 
-            unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
-              let tempOrderDocId = null;
+  //           unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
+  //             let tempOrderDocId = null;
 
-              querySnapshot.forEach((doc) => {
-                tempOrderDocId = doc.id;
-              });
+  //             querySnapshot.forEach((doc) => {
+  //               tempOrderDocId = doc.id;
+  //             });
 
-              if (tempOrderDocId) {
-                const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(
-                  tempOrderDocRef,
-                  (doc) => {
-                    if (doc.exists()) {
-                      const tempOrderData = doc.data();
-                      setTotalItems(tempOrderData.totalItems || 0);
-                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                    } else {
-                      setTotalItems(0);
-                      setTotalCartPrice(0);
-                    }
-                  }
-                );
-              } else {
-                setTotalItems(0);
-                setTotalCartPrice(0);
+  //             if (tempOrderDocId) {
+  //               const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
+  //               unsubscribeDocRef.current = onSnapshot(
+  //                 tempOrderDocRef,
+  //                 (doc) => {
+  //                   if (doc.exists()) {
+  //                     const tempOrderData = doc.data();
+  //                     setTotalItems(tempOrderData.totalItems || 0);
+  //                     setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+  //                   } else {
+  //                     setTotalItems(0);
+  //                     setTotalCartPrice(0);
+  //                   }
+  //                 }
+  //               );
+  //             } else {
+  //               setTotalItems(0);
+  //               setTotalCartPrice(0);
 
-                // Unsubscribe from tempOrderDocRef listener if it exists
-                if (unsubscribeDocRef.current) {
-                  unsubscribeDocRef.current();
-                  unsubscribeDocRef.current = null;
-                }
-              }
-            });
-          } else {
-            setUser(null);
-            setFirstName("");
+  //               // Unsubscribe from tempOrderDocRef listener if it exists
+  //               if (unsubscribeDocRef.current) {
+  //                 unsubscribeDocRef.current();
+  //                 unsubscribeDocRef.current = null;
+  //               }
+  //             }
+  //           });
+  //         } else {
+  //           setUser(null);
+  //           setFirstName("");
 
-            // Unsubscribe from listeners if user document doesn't exist
-            if (unsubscribeCartRef.current) {
-              unsubscribeCartRef.current();
-              unsubscribeCartRef.current = null;
-            }
-            if (unsubscribeDocRef.current) {
-              unsubscribeDocRef.current();
-              unsubscribeDocRef.current = null;
-            }
-          }
-        } catch (error) {
-          //console.error("Error fetching user or tempOrder data:", error);
-        }
-      } else {
-        setUser(null);
-        setFirstName("");
+  //           // Unsubscribe from listeners if user document doesn't exist
+  //           if (unsubscribeCartRef.current) {
+  //             unsubscribeCartRef.current();
+  //             unsubscribeCartRef.current = null;
+  //           }
+  //           if (unsubscribeDocRef.current) {
+  //             unsubscribeDocRef.current();
+  //             unsubscribeDocRef.current = null;
+  //           }
+  //         }
+  //       } catch (error) {
+  //         //console.error("Error fetching user or tempOrder data:", error);
+  //       }
+  //     } else {
+  //       setUser(null);
+  //       setFirstName("");
 
-        // Unsubscribe from listeners when user logs out
-        if (unsubscribeCartRef.current) {
-          unsubscribeCartRef.current();
-          unsubscribeCartRef.current = null;
-        }
-        if (unsubscribeDocRef.current) {
-          unsubscribeDocRef.current();
-          unsubscribeDocRef.current = null;
-        }
-      }
-    });
+  //       // Unsubscribe from listeners when user logs out
+  //       if (unsubscribeCartRef.current) {
+  //         unsubscribeCartRef.current();
+  //         unsubscribeCartRef.current = null;
+  //       }
+  //       if (unsubscribeDocRef.current) {
+  //         unsubscribeDocRef.current();
+  //         unsubscribeDocRef.current = null;
+  //       }
+  //     }
+  //   });
 
-    // Check for cookies when the component mounts
-    checkCookiesAndLogout();
+  //   // Check for cookies when the component mounts
+  //   checkCookiesAndLogout();
 
-    // Clean up all listeners when the component unmounts
-    return () => {
-      if (unsubscribeAuthRef.current) {
-        unsubscribeAuthRef.current();
-        unsubscribeAuthRef.current = null;
-      }
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
-    };
-  }, []);
+  //   // Clean up all listeners when the component unmounts
+  //   return () => {
+  //     if (unsubscribeAuthRef.current) {
+  //       unsubscribeAuthRef.current();
+  //       unsubscribeAuthRef.current = null;
+  //     }
+  //     if (unsubscribeCartRef.current) {
+  //       unsubscribeCartRef.current();
+  //       unsubscribeCartRef.current = null;
+  //     }
+  //     if (unsubscribeDocRef.current) {
+  //       unsubscribeDocRef.current();
+  //       unsubscribeDocRef.current = null;
+  //     }
+  //   };
+  // }, []);
 
-  const handleLogout = async (event?: React.SyntheticEvent) => {
-    if (event) event.preventDefault(); // Prevent default only if event exists
+  // const handleLogout = async (event?: React.SyntheticEvent) => {
+  //   if (event) event.preventDefault(); // Prevent default only if event exists
 
-    try {
-      // Get all cookies
-      const allCookies = Cookies.get();
-      Object.keys(allCookies).forEach((cookieName) => {
-        Cookies.remove(cookieName);
-      });
+  //   try {
+  //     // Get all cookies
+  //     const allCookies = Cookies.get();
+  //     Object.keys(allCookies).forEach((cookieName) => {
+  //       Cookies.remove(cookieName);
+  //     });
 
-      // Unsubscribe from Firestore listeners
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
+  //     // Unsubscribe from Firestore listeners
+  //     if (unsubscribeCartRef.current) {
+  //       unsubscribeCartRef.current();
+  //       unsubscribeCartRef.current = null;
+  //     }
+  //     if (unsubscribeDocRef.current) {
+  //       unsubscribeDocRef.current();
+  //       unsubscribeDocRef.current = null;
+  //     }
 
-      // Sign out from Firebase
-      await signOut(auth);
-      router.push("/"); // Redirect to homepage
-    } catch (error) {
-      //console.error("Error signing out:", error);
-    }
-  };
+  //     // Sign out from Firebase
+  //     await signOut(auth);
+  //     router.push("/"); // Redirect to homepage
+  //   } catch (error) {
+  //     //console.error("Error signing out:", error);
+  //   }
+  // };
 
   return (
     <div

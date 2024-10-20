@@ -273,4 +273,352 @@ export const ReservationDetails:ReserDets = [
     price: 69420,
     status: "Approved"
   },
-]
+];
+
+export type MenuItem = {
+  availability: string;
+  calorie: string;
+  desc: string;
+  img: string;
+  price: number;
+  prodCategory: string;
+  prodID: string;
+  title: string;
+  type?: string;
+  contains?: string[];
+  addEspresso?: number;
+  addSyrup?: number;
+  addVanilla?: number;
+  currSize?: string;
+  milkAlmond?: number;
+  milkOat?: number;
+  upsizable?: boolean;
+  upsizeSize?: string;
+  upsizePrice?: number;
+  serveMashedPotato?: boolean;
+  serveRice?: boolean;
+};
+
+type MenuItems = MenuItem[];
+
+export const pastaMenu: MenuItems = [
+  {
+    availability: "available",
+    calorie: "high",
+    desc: "A pasta that is oozing with its own pastaness like nothing has been a pasta like this before.",
+    img: "/menugroups/pasta.webp",
+    price: 255,
+    prodCategory: "pastaMenu",
+    prodID: "pasta5",
+    title: "Aglio Olio Pasta",
+    type: "Non-Pesto",
+    contains: [""],
+  },
+  {
+    availability: "unavailable",
+    calorie: "med",
+    desc: "A pasta that is oozing with its own pastaness like nothing has been a pasta like this before.",
+    img: "/menugroups/pasta.webp",
+    price: 255,
+    prodCategory: "pastaMenu",
+    prodID: "pasta6",
+    title: "Aglio Olio Pasta",
+    type: "Non-Pesto",
+    contains: [""],
+  },
+  {
+    availability: "unavailable",
+    calorie: "low",
+    desc: "A pasta that is oozing with its own pastaness like nothing has been a pasta like this before.",
+    img: "/menugroups/pasta.webp",
+    price: 255,
+    prodCategory: "pastaMenu",
+    prodID: "pasta7",
+    title: "Aglio Olio Pasta",
+    type: "Non-Pesto",
+    contains: [""],
+  },
+];
+
+type menuCat = {
+  id: number;
+  prodCat: string;
+  title: string;
+};
+
+type menuCats = menuCat[];
+
+export const menuCategory: menuCats = [
+  {
+    id: 1,
+    prodCat: "icedDrinks",
+    title: "Iced Drinks",
+  },
+  {
+    id: 2,
+    prodCat: "blendedDrinks",
+    title: "Blended Drinks",
+  },
+  {
+    id: 3,
+    prodCat: "hotDrinks",
+    title: "Hot Drinks",
+  },
+  {
+    id: 4,
+    prodCat: "affogatoDrinks",
+    title: "Affogato Drinks",
+  },
+  {
+    id: 5,
+    prodCat: "mainCourseMenu",
+    title: "Main Course",
+  },
+  {
+    id: 6,
+    prodCat: "snacksMenu",
+    title: "Snacks",
+  },
+  {
+    id: 7,
+    prodCat: "pastriesMenu",
+    title: "Pastries",
+  },
+  {
+    id: 8,
+    prodCat: "sandwichMenu",
+    title: "Sandwiches",
+  },
+  {
+    id: 9,
+    prodCat: "pastaMenu",
+    title: "Pasta",
+  },
+];
+
+export const Availability = [
+  {
+    id: 1,
+    value: "Available",
+  },
+  {
+    id: 2,
+    value: "Unavailable",
+  },
+];
+
+export const pastriesMenu:MenuItems = [
+  {
+    
+    availability: "available",
+    calorie: "high",
+    desc: "Rich and creamy cheesecake with a caramelized burnt top, boasting a velvety interior that melts in your mouth with every bite.",
+    img: "/menugroups/pastry.webp",
+    price: 255,
+    prodCategory: "pastriesMenu",
+    prodID: "pastries2",
+    title: "Basque Burnt Cheesecake",
+    type: "Cake",
+    contains: ["Milk, Eggs"],
+  }  
+];
+
+export const snacksMenu:MenuItems = [
+  {
+    availability: "available",
+    calorie: "high",
+    desc: "Crinkle-cut fries layered with crumbled crispy bacon, mayonnaise, and smoky BBQ sauce.",
+    img: "/menugroups/side.webp",
+    price: 225,
+    prodCategory: "snacksMenu",
+    prodID: "sn3",
+    title: "BBQ Fries",
+    type: "Fries",
+    contains: [""],
+  }
+];
+
+export const sandwichMenu:MenuItems = [
+  {
+    availability: "available",
+    calorie: "high",
+    desc: "Special chicken spread served on a triple-stacked whole wheat bread with crisp lettuce, tomato, cucumber, and cheese.",
+    img: "/menugroups/sandwich.webp",
+    price: 205,
+    prodCategory: "sandwichMenu",
+    prodID: "sandwich4",
+    title: "Chicken Sandwich",
+    type: "Sandwiches",
+    contains: [""],
+  },
+];
+
+export const mainCourseMenu:MenuItems = [
+  {
+    availability: "available",
+    calorie: "high",
+    desc: "Our signature deep-fried chicken served with our special gravy sauce and a portion of our regular fries on the side.",
+    img: "/menugroups/meal.webp",
+    price: 260,
+    prodCategory: "mainCourseMenu",
+    prodID: "mainCourse10",
+    serveMashedPotato: false,
+    serveRice: false,
+    title: "Fika House Fried Chicken",
+    type: "Meat",
+    contains: [""],
+  },
+];
+
+export const drinksMenu: MenuItems = [
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    addVanilla: 25,
+    availability: "unavailable",
+    calorie: "low",
+    contains: [""],
+    currSize: "16oz",
+    desc: "A refreshing blend of rich espresso poured over chilled water and ice.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 105,
+    prodCategory: "icedDrinks",
+    prodID: "id1",
+    title: "Americano",
+    type: "Coffee",
+    upsizable: false,
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    addVanilla: 25,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk", "Soy"],
+    currSize: "16oz",
+    desc: "A chilled treat combining smooth chocolate syrup and cold milk, served over ice for a refreshing and indulgent drink that's perfect for warm days.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 155,
+    prodCategory: "icedDrinks",
+    prodID: "id12",
+    title: "Choco Milk",
+    type: "Non-Coffee",
+    upsizable: false,
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk"],
+    currSize: "8oz",
+    desc: "A combination of espresso and milk.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 105,
+    prodCategory: "hotDrinks",
+    prodID: "hd5",
+    title: "Cafe Latte",
+    type: "Coffee",
+    upsizable: true,
+    upsizePrice: 10,
+    upsizeSize: "12oz",
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk", "Soy"],
+    currSize: "8oz",
+    desc: "A comforting beverage made with rich, velvety chocolate melted into warm milk, creating a sweet and soothing drink perfect for cozy moments.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 115,
+    prodCategory: "hotDrinks",
+    prodID: "hd10",
+    title: "Choco Milk",
+    type: "Non-Coffee",
+    upsizable: true,
+    upsizePrice: 20,
+    upsizeSize: "12oz",
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk"],
+    currSize: "16oz",
+    desc: "A frosty mix of espresso, creamy milk, and velvety foam, blended to perfection for a delightful, refreshing treat.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 175,
+    prodCategory: "blendedDrinks",
+    prodID: "bd4",
+    title: "Cappuccino Blend",
+    type: "Coffee",
+    upsizable: false,
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk"],
+    currSize: "16oz",
+    desc: "A creamy blend of ripe strawberries and smooth milk, mixed with ice for a deliciously sweet and satisfying treat.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 175,
+    prodCategory: "blendedDrinks",
+    prodID: "bd10",
+    title: "Strawberry Cream",
+    type: "Non-Coffee",
+    upsizable: false,
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk"],
+    currSize: "8oz",
+    desc: "A decadent dessert featuring a scoop of creamy vanilla gelato topped with rich espresso and drizzled with sweet salted caramel, creating a delightful balance of flavors and textures in every sip.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 95,
+    prodCategory: "affogatoDrinks",
+    prodID: "ad3",
+    title: "Salted Caramel Spro",
+    type: "Non-Coffee",
+    upsizable: false,
+  },
+  {
+    addEspresso: 30,
+    addSyrup: 30,
+    availability: "available",
+    calorie: "low",
+    contains: ["Milk", "Eggs", "Tree Nuts", "Soy"],
+    currSize: "8oz",
+    desc: "A delightful dessert combining a scoop of creamy vanilla gelato drowned in rich, hot espresso, creating a perfect balance of temperature and flavor.",
+    img: "/menugroups/drink.webp",
+    milkAlmond: 30,
+    milkOat: 40,
+    price: 85,
+    prodCategory: "affogatoDrinks",
+    prodID: "ad1",
+    title: "Espresso",
+    type: "Coffee",
+    upsizable: false,
+  },
+];
