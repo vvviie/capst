@@ -25,7 +25,7 @@ const CRUDProductPage = () => {
   };
 
   // SELECTED MENU BASED SA SELECT ELEMENT NA KATABI NG SEARCH BAR
-  let selectedMenu = "drinks";
+  let selectedMenu = "pasta";
 
   return (
     <div
@@ -154,6 +154,13 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+                  <button
+                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center
+                font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm
+                min-h-10"
+                  >
+                    Feature
+                  </button>
                   <select
                     name=""
                     id=""

@@ -59,7 +59,7 @@ const allergensByCategory: { [key: string]: string[] } = {
 // DAPAT NAKA-SMALL LETTERS TAPOS PLURAL
 let selectedCat = "drinks";
 // KAPAG SINELECT NI USER ANG YES SA UPSIZE
-let upsize = true;
+let upsize = false;
 // EXAMPLE LANG SA CHOSEN ALLERGENS
 let mayroongNapilingAllergen = true;
 
