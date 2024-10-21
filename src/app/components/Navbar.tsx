@@ -19,6 +19,7 @@ import NotificationBell from "./NotificationBell";
 const Navbar = () => {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState("");
+  const [role, setRole] = useState(""); // New state for role
   const [totalItems, setTotalItems] = useState(0);
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
@@ -35,6 +36,7 @@ const Navbar = () => {
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setFirstName(userData.firstName);
+            setRole(userData.role); // Set the role from Firestore
             setUser(authUser);
 
             // Real-time listener for tempOrder updates
@@ -72,6 +74,7 @@ const Navbar = () => {
           } else {
             setUser(null);
             setFirstName("");
+            setRole(""); // Clear the role if user does not exist
             // Clean up listeners
             if (unsubscribeCartRef.current) {
               unsubscribeCartRef.current();
@@ -88,6 +91,7 @@ const Navbar = () => {
       } else {
         setUser(null);
         setFirstName("");
+        setRole(""); // Clear the role when logged out
         // Clean up listeners
         if (unsubscribeCartRef.current) {
           unsubscribeCartRef.current();
@@ -151,7 +155,8 @@ const Navbar = () => {
   return (
     <div className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50" style={{ backgroundColor: "#30261F" }}>
       <div className="font-bold text-xl hover:text-yellow-100">
-        <Link href="/">fikaställe</Link>
+        {/* Conditionally render based on role */}
+        <Link href="/">{role === "admin" ? "fikaställe admin testing" : "fikaställe"}</Link>
       </div>
       <div className="flex items-center justify-center gap-6">
         <div className="md:hidden">

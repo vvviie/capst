@@ -26,7 +26,7 @@ const ViewVouchers = () => {
   // Fetch vouchers from Firestore based on userEmail
   useEffect(() => {
     let unsubscribe: () => void; // Declare unsubscribe function
-
+  
     if (userEmail) {
       const userDocRef = doc(db, "users", userEmail);
       // Use onSnapshot for real-time updates
@@ -34,24 +34,28 @@ const ViewVouchers = () => {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const userVouchers = userData.vouchers;
-
-          const formattedVouchers: Vouch[] = Object.entries(userVouchers)
-            .filter(([key, value]: any) => value.used === false) // Filter out used vouchers
-            .map(([key, value]: any) => ({
-              id: value.voucherID,
-              title: value.voucherID,
-              desc: value.voucherDescription,
-              deduction: value.voucherDeduction,
-              type: value.voucherType,
-            }));
-
-          setVouchers(formattedVouchers);
+  
+          if (userVouchers && typeof userVouchers === "object") {
+            const formattedVouchers: Vouch[] = Object.entries(userVouchers)
+              .filter(([key, value]: any) => value.used === false) // Filter out used vouchers
+              .map(([key, value]: any) => ({
+                id: value.voucherID,
+                title: value.voucherID,
+                desc: value.voucherDescription,
+                deduction: value.voucherDeduction,
+                type: value.voucherType,
+              }));
+  
+            setVouchers(formattedVouchers);
+          } else {
+            setVouchers([]); // Clear vouchers if there are none
+          }
         } else {
           setVouchers([]); // Clear vouchers if document does not exist
         }
       });
     }
-
+  
     // Cleanup subscription on unmount
     return () => {
       if (unsubscribe) {
