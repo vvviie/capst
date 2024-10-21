@@ -77,31 +77,37 @@ const LoginPage = () => {
     event.preventDefault();
     const email = event.target.email.value;
     const password = event.target.password.value;
-  
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-  
-      // Check email verification
-      if (!user.emailVerified) {
-        setMessage({ text: "Please verify your email.", type: "error" });
-        await signOut(auth); // Sign out if email not verified
-      } else {
-        // Cookies or state management here
-        Cookies.set("userSession", user.refreshToken, { expires: 1 / 24 });
-  
-        // You may also want to call a function here to refresh the user state
-        // e.g. updateUserState();
-        
-        router.push("/"); // Redirect to the homepage
-      }
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Check email verification
+        if (!user.emailVerified) {
+            setMessage({ text: "Please verify your email.", type: "error" });
+            await signOut(auth); // Sign out if email not verified
+        } else {
+            // Fetch user role from Firestore
+            const role = await fetchUserDetails(email);
+            
+            if (role) {
+                // Set cookie based on user role
+                if (role === "admin") {
+                    Cookies.set("admin", user.refreshToken, { expires: 1 / 24 }); // Set the cookie value to "admin"
+                } else {
+                    Cookies.set("user", user.refreshToken, { expires: 1 / 24 }); // Set refresh token for regular users
+                }
+                
+                router.push("/"); // Redirect to the homepage
+            }
+        }
     } catch (error) {
-      setMessage({ text: "Invalid username or password.", type: "error" });
+        setMessage({ text: "Invalid username or password.", type: "error" });
     }
-  
+
     // Clear message after 3 seconds
     setTimeout(() => setMessage(null), 3000);
-  };
+};
 
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
