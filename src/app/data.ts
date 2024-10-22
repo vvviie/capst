@@ -622,3 +622,51 @@ export const drinksMenu: MenuItems = [
     upsizable: false,
   },
 ];
+
+type voucherType = {
+  voucherName: string;
+  available: boolean;
+  voucherType: string;
+  voucherID: string;
+  voucherDeduction: number;
+  voucherDescription: string;
+  forever: boolean;
+  validity?: string;
+  unlimited: boolean;
+  numberOfTimes?: number;
+}
+
+type voucherTypes = voucherType[];
+
+export const vouchers:voucherTypes = [
+  {
+    voucherName: "1000HitVoucher",
+    available: true,
+    voucherType: "percent",
+    voucherID: "FIKASTALLE1KORDR",
+    voucherDeduction: 0.1,
+    voucherDescription: "Get 10% off your total order for purchasing P1000 worth of products",
+    forever: true,
+    unlimited: true,
+  },
+  {
+    voucherName: "firstTimeVoucher",
+    available: true,
+    voucherType: "minus",
+    voucherID: "FIKASTALLEWLCM",
+    voucherDeduction: 10,
+    voucherDescription: "Get P10 off when ordering",
+    forever: true,
+    unlimited: true,
+  },
+  {
+    voucherName: "valentinesVoucher",
+    available: true,
+    voucherType: "minus",
+    voucherID: "FIKASTALLEVLNTN",
+    voucherDeduction: 10,
+    voucherDescription: "Get P20 off when ordering",
+    forever: true,
+    unlimited: true,
+  },
+]
