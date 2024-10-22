@@ -53,28 +53,28 @@ const AddAllergens = ({ selectedCat }) => {
                         <h1 className="text-xl font-bold text-orange-950">Allergens</h1>
                         <hr className="mb-2" />
                         <div className="w-full grid grid-cols-2 gap-2">
-                            {(selectedCat === "drinks"
-                                ? allergensByCategory.drinks
-                                : selectedCat === "pastries"
-                                    ? allergensByCategory.pastries
-                                    : allergensByCategory.default
-                            ).map((items) => (
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        name={items}
-                                        className="h-5 w-5"
-                                        id={items}
-                                        value={items}
-                                    />
-                                    <span className="text-lg text-gray-600">{items}</span>
-                                </div>
-                            ))}
+                        {(selectedCat === "drinks"
+                            ? allergensByCategory.drinks
+                            : selectedCat === "pastries"
+                                ? allergensByCategory.pastries
+                                : allergensByCategory.default
+                        ).map((items, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    name={items}
+                                    className="h-5 w-5"
+                                    id={items}
+                                    value={items}
+                                />
+                                <span className="text-lg text-gray-600">{items}</span>
+                            </div>
+                        ))}
                         </div>
                         <button
                             type="button"
                             className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4
-              hover:bg-orange-900 hover:scale-[1.02] duration-300"
+                            hover:bg-orange-900 hover:scale-[1.02] duration-300"
                             onClick={() => setOpen(false)}
                         >
                             Add Allergens
