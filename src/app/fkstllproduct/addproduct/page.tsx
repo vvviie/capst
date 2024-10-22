@@ -84,7 +84,7 @@ const AddProductPage = () => {
     const fileInputRef = useRef(null);
 
     // For Product IDs
-    const [selectedDrinkType, setSelectedDrinkType] = useState("hotDrinks");
+    const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>("hotDrinks");
 
     const drinkTypePrefixes: {
         hotDrinks: string;
@@ -130,17 +130,30 @@ const AddProductPage = () => {
         setExtractedCategory(category);
     }, [selectedCat]);
 
-    // Effect to fetch existing IDs whenever extractedCategory changes
+    // Effect to set the selectedDrinkType based on the selectedCat
+    // Effect to reset drink type when the category changes
     useEffect(() => {
         if (selectedCat === "drinks") {
+            // Reset drink type to hotDrinks when category is drinks
             setSelectedDrinkType("hotDrinks");
-            // If the selected category is drinks, pass the drink type
+            setPassableSelectedDrinkType("hotDrinks");
+        } else {
+            // Clear drink type when category is not drinks
+            setSelectedDrinkType(null);
+            setPassableSelectedDrinkType(null);
+        }
+    }, [selectedCat]);
+
+    // Effect to fetch existing IDs whenever selectedDrinkType or extractedCategory changes
+    useEffect(() => {
+        if (selectedCat === "drinks" && selectedDrinkType) {
+            // Fetch IDs based on drink type
             fetchExistingIDs(extractedCategory, selectedDrinkType);
         } else {
-            // For other categories, just pass the category
+            // Fetch IDs for other categories
             fetchExistingIDs(extractedCategory, null);
         }
-    }, [extractedCategory, selectedDrinkType]);
+    }, [extractedCategory, selectedDrinkType, selectedCat]);
 
     // Function to fetch existing IDs based on the selected category
     const fetchExistingIDs = async (category, drinkType) => {
@@ -527,12 +540,12 @@ const AddProductPage = () => {
                                     className="rounded-md shadow-sm border-2 border-gray-100
                                     text-lg text-gray-600 font-semibold bg-white cursor-pointer
                                     py-[5px] w-full text-center"
-                                    value={passableSelectedDrinkType || ""}// Use passableSelectedDrinkType
-                                    onChange={(e) => {
-                                        const selectedValue = e.target.value;
-                                        setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
-                                        setSelectedDrinkType(selectedValue); // Set selectedDrinkType
-                                    }}
+                                    value={passableSelectedDrinkType || "hotDrinks"} // Use passableSelectedDrinkType as default
+                                        onChange={(e) => {
+                                            const selectedValue = e.target.value;
+                                            setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
+                                            setSelectedDrinkType(selectedValue); // Set selectedDrinkType
+                                        }}
                                 >
                                     <option value="hotDrinks">Hot Drink</option>
                                     <option value="icedDrinks">Iced Drink</option>

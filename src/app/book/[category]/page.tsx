@@ -12,7 +12,7 @@ import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { collection, doc, setDoc, addDoc } from "firebase/firestore";
-
+z
 const ReservationPage = () => {
   //#region Global Variables
   const pathname = usePathname();
