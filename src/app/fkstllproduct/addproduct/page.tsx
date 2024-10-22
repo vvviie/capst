@@ -100,6 +100,9 @@ const AddProductPage = () => {
 
     const [newProdID, setNewProdID] = useState("");
     
+    // For Item's Calorie
+    const [calorie, setCalorie] = useState("low");
+
     // For Item's Name
     const [itemName, setItemName] = useState("");
 
@@ -184,6 +187,12 @@ const AddProductPage = () => {
         const selectedValue = event.target.value;
         console.log("Selected Availability:", selectedValue); // Log the selected value
         setSelectedAvailability(selectedValue); // Update the state
+    };
+
+    const handleCalorieChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedValue = event.target.value; // Get the selected value
+        console.log("Selected Calorie Level:", selectedValue); // Log the selected value
+        setCalorie(selectedValue); // Update the state
     };
 
     const handleItemNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -451,8 +460,10 @@ const AddProductPage = () => {
                                     name="calorieLevel"
                                     id="calorieLevel"
                                     className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-10 w-full text-center"
+                                    text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                    h-10 w-full text-center"
+                                    value={calorie} // Bind the selected value to state
+                                    onChange={handleCalorieChange} // Attach the change handler
                                 >
                                     <option value="low">Low</option>
                                     <option value="med">Medium</option>
