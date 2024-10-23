@@ -319,35 +319,35 @@ const ProductPage: React.FC = () => {
           )}`;
 
     // Log productData to verify its structure and content
-//console.log('Product Data:', productData);
+    //console.log('Product Data:', productData);
 
-let orderData = {
-  slug: productData.slug || "", // needed
-  productImg: productData.productImg || productData.img || "", // needed
-  productTitle: productData.productTitle || title, // needed
-  description: productData.description || desc, // needed
-  note: document.querySelector("textarea")?.value || "none", // needed
-  itemQty: qtyPerItem, // needed
-  pricePerItem: productData.pricePerItem || price, // needed
-  totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
-  calorie: productData.calorie || 0, // needed
-  availability: productData.availability || "", // needed
-  ...(slug === "drinks" && {
-    currSize: productData.currSize || "",
-    upsizable: productData.upsizable,
-    upsizeSize: productData.upsizeSize || "12oz",
-    upsizePrice: productData.upsizePrice || 20,
-    selectedDrinkSize: selectedDrinkSize,
-    additionalCost: additionalCost,
-  }),
-  options: {
-    addEspresso: 30,
-    addSyrup: 30,
-    milkAlmond: 30,
-    milkOat: 40,
-    ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
-  },
-};
+    let orderData = {
+      slug: productData.slug || "", // needed
+      productImg: productData.productImg || productData.img || "", // needed
+      productTitle: productData.productTitle || title, // needed
+      description: productData.description || desc, // needed
+      note: document.querySelector("textarea")?.value || "none", // needed
+      itemQty: qtyPerItem, // needed
+      pricePerItem: productData.pricePerItem || price, // needed
+      totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
+      calorie: productData.calorie || 0, // needed
+      availability: productData.availability || "", // needed
+      ...(slug === "drinks" && {
+        currSize: productData.currSize || "",
+        upsizable: productData.upsizable,
+        upsizeSize: productData.upsizeSize || "12oz",
+        upsizePrice: productData.upsizePrice || 20,
+        selectedDrinkSize: selectedDrinkSize,
+        additionalCost: additionalCost,
+      }),
+      options: {
+        addEspresso: 30,
+        addSyrup: 30,
+        milkAlmond: 30,
+        milkOat: 40,
+        ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
+      },
+    };
 
     if (slug === "drinks") {
       orderData = {
@@ -377,6 +377,11 @@ let orderData = {
       orderData = {
         ...orderData,
         slug: "sandwiches",
+      };
+    } else if (slug === "pastries") {
+      orderData = {
+        ...orderData,
+        slug: "pastries",
       };
     }
 
@@ -534,6 +539,11 @@ let orderData = {
       orderData = {
         ...orderData,
         slug: "sandwiches",
+      };
+    } else if (slug === "pastries") {
+      orderData = {
+        ...orderData,
+        slug: "pastries",
       };
     }
 
