@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from 'next/navigation'; 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -21,8 +21,10 @@ import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
+
 const ProductPage: React.FC = () => {
   //#region Const Variables
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isComingFromCartPage = searchParams.get("edit") === "true";
@@ -446,6 +448,7 @@ const ProductPage: React.FC = () => {
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
+      router.push('/menu'); 
     }, 1000); // 2 seconds
   };
 
@@ -645,6 +648,7 @@ const ProductPage: React.FC = () => {
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
+      router.push('/foodcart'); 
     }, 1000); // 2 seconds
   };
 
