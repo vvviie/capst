@@ -156,6 +156,7 @@ const OrdersPage = () => {
                   ].filter(Boolean);
                   break;
                 case "pasta":
+                case "pastries":
                 case "snacks":
                 case "sandwiches":
                   tags = [item.note && `"${item.note}"`].filter(Boolean);

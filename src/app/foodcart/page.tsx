@@ -466,6 +466,8 @@ const CartPage = () => {
               tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
             } else if (slug === "sandwiches") {
               tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
+            } else if (slug === "pastries") {
+              tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
             }
 
             cartItems.push({
