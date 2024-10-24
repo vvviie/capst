@@ -22,12 +22,12 @@ const ReservationPage = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
 
-  const [date, setDate] = useState("");
   const [minDate, setMinDate] = useState(""); // used by "table" & "event"
   const [error, setError] = useState<boolean>(false); // used by "table" & "event"
   //#endregion
 
   //#region "table" Variables
+  const [tableMinDate, setTableMinDate] = useState(""); // New state variable for the 'table' slug
   const [dateError, setDateError] = useState("");
   const [timeError, setTimeError] = useState<string | null>(null);
   const [hourInput, setHourInput] = useState<number | "">("");
@@ -36,15 +36,16 @@ const ReservationPage = () => {
   //#endregion
 
   //#region "event" Variables
+  const [date, setDate] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
   const [startTime, setStartTime] = useState(12); // Default start time 12 PM
-  const [endTime, setEndTime] = useState(12);
+  const [endTime, setEndTime] = useState(1);
   const [totalHours, setTotalHours] = useState(0);
   const packagePricePerPerson = 550; // Price per person
   const [totalPrice, setTotalPrice] = useState(0);
   const [chosenItems, setChosenItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
-  const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(1);
+  const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
   //#endregion
 
   //#region Global EffectHooks
@@ -76,23 +77,39 @@ const ReservationPage = () => {
       return () => unsubscribeAuth();
     }
   }, [router]);
+
+  useEffect(() => {
+    if (slug === "table") {
+      // Calculate the date 5 days from today for the table reservation
+      const today = new Date();
+      today.setDate(today.getDate() + 5); // Add 5 days
+
+      // Format the date to YYYY-MM-DD
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+
+      // Set the min date for 'table' slug
+      setMinDate(`${yyyy}-${mm}-${dd}`);
+      setTableMinDate(`${yyyy}-${mm}-${dd}`); // Optional: keep this if you need a separate variable
+    } else if (slug === "event") {
+      // Calculate the date 14 days from today for the event reservation
+      const today = new Date();
+      today.setDate(today.getDate() + 14); // Add 14 days
+
+      // Format the date to YYYY-MM-DD
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+
+      // Set the min date for 'event' slug
+      setMinDate(`${yyyy}-${mm}-${dd}`);
+      setDate(""); // Reset date for event if necessary
+    }
+  }, [slug]);
   //#endregion
 
   //#region "table" EffectHooks
-  useEffect(() => {
-    // Calculate the date 5 days from today
-    const today = new Date();
-    today.setDate(today.getDate() + 5); // Add 5 days
-
-    // Format the date to YYYY-MM-DD
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-    const dd = String(today.getDate()).padStart(2, "0");
-
-    // Set the min date in the correct format
-    setMinDate(`${yyyy}-${mm}-${dd}`);
-  }, []);
-
   const handleNumberOfPersonsTableChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -159,6 +176,7 @@ const ReservationPage = () => {
       10
     );
     const num = numberOfPersonsTable;
+
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
       setError("Please fill in all required fields."); // Show error message
@@ -175,8 +193,17 @@ const ReservationPage = () => {
 
     // Validate date
     if (!validateDate(dateInput)) {
-      // An error message is already set in validateDate, so just return
       setTimeout(() => setDateError(""), 3000); // Clear the date error after 3 seconds
+      return;
+    }
+
+    // Check if the number of persons is less than 30 or greater than 50
+    if (numberOfPersonsEvent < 30 || numberOfPersonsEvent > 50) {
+      setError(true); // Trigger error state
+      setErrorMessage("Number of persons must be between 30 and 50.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000); // Clear the error after 5 seconds
       return;
     }
 
@@ -204,6 +231,20 @@ const ReservationPage = () => {
       minuteInput
     ).padStart(2, "0")}`;
 
+    // Log the reservation details
+    console.log("Submitting reservation with the following details:");
+    console.log({
+      orderId,
+      dateReserved,
+      timeReserved,
+      numberOfPersonsTable: num,
+      reservedBy: userEmail,
+      status: "PENDING",
+      dateToBeReserved: formattedDateToBeReserved,
+      timeToBeReserved,
+      type: "Table",
+    });
+
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
@@ -216,28 +257,17 @@ const ReservationPage = () => {
         type: "Table",
       });
 
+      console.log("Reservation successfully saved.");
       setIsPopupVisible(true); // Show success popup
       setTimeout(() => setIsPopupVisible(false), 750);
     } catch (error) {
-      //console.error("Error adding reservation: ", error);
+      console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");
     }
   };
   //#endregion
 
   //#region "events" EffectHooks
-  useEffect(() => {
-    const today = new Date();
-    const minDate = new Date(today);
-    minDate.setDate(today.getDate() + 14); // Set minimum date to 14 days from today
-
-    // Format the date to YYYY-MM-DD for the input
-    const yyyy = minDate.getFullYear();
-    const mm = String(minDate.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-    const dd = String(minDate.getDate()).padStart(2, "0");
-
-    setMinDate(`${yyyy}-${mm}-${dd}`); // Set the state for minDate
-  }, []);
 
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPackage(e.target.value);
@@ -260,19 +290,8 @@ const ReservationPage = () => {
   const handlePersonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^0-9]/g, ""); // Strip out non-numeric characters
 
-    // If the value is empty, set numberOfPersons to 1 (or handle it as you prefer)
-    if (value === "") {
-      setNumberOfPersonsEvent(1); // Set to default value instead of empty
-    } else {
-      // Validate the number of persons (between 1 and 30)
-      let numericValue = parseInt(value, 10);
-      if (numericValue > 30) {
-        numericValue = 30; // Cap at 30 if exceeds max
-      } else if (numericValue < 1 || isNaN(numericValue)) {
-        numericValue = 1; // Reset to 1 if invalid
-      }
-      setNumberOfPersonsEvent(numericValue); // Update state with a number
-    }
+    // Update the state with the current input value
+    setNumberOfPersonsEvent(value === "" ? 0 : parseInt(value, 10)); // Set to 0 if empty
   };
 
   useEffect(() => {
@@ -326,16 +345,26 @@ const ReservationPage = () => {
   const handleReserve = async () => {
     const selectedDate = new Date(date);
     const today = new Date();
-
     // Set the time to midnight for comparison
     today.setHours(0, 0, 0, 0);
-
     // Calculate minimum date (14 days in the future)
     const minDate = new Date(today);
     minDate.setDate(today.getDate() + 14);
-
     // Set the time to midnight for minDate as well
     minDate.setHours(0, 0, 0, 0);
+
+    //#region Validations
+    // Check for 0 hours, meaning the user can't book with the same start and end times
+    if (totalHours <= 0) {
+      setError(true);
+      setErrorMessage(
+        "Current Total hours cannot be 0. Please choose a valid time range."
+      );
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+    }
 
     // Check for valid date
     if (isNaN(selectedDate.getTime()) || selectedDate < minDate) {
@@ -346,6 +375,64 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
+    //#region Time StartEnd
+    // Helper function to convert 12-hour format to 24-hour format for proper comparison
+    function convertTo24Hour(time) {
+      if (time === 12) return 12; // 12 PM is 12 in 24-hour format
+      if (
+        time === 1 ||
+        time === 2 ||
+        time === 3 ||
+        time === 4 ||
+        time === 5 ||
+        time === 6 ||
+        time === 7 ||
+        time === 8 ||
+        time === 9 ||
+        time === 10 ||
+        time === 11
+      ) {
+        return time + 12; // PM times are 13-23 in 24-hour format
+      }
+      return time; // AM times stay the same
+    }
+
+    // Convert startTime and endTime to 24-hour format for comparison
+    const startTime24 = convertTo24Hour(startTime);
+    const endTime24 = convertTo24Hour(endTime);
+
+    if (startTime24 >= 21) {
+      // 21 in 24-hour format is 9 PM
+      setError(true);
+      setErrorMessage("Reservations cannot be made starting at or after 9 PM.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000); // Clear the error after 5 seconds
+      return; // Exit the function early
+    }
+
+    // Check if endTime is 12 PM (closed time)
+    if (endTime === 12) {
+      // 12 PM means store is closed
+      setError(true);
+      setErrorMessage(
+        "End time cannot be 12 as the store is closed at that time."
+      );
+      setTimeout(() => {
+        setError(false);
+      }, 5000); // Clear the error after 5 seconds
+      return; // Exit the function early
+    }
+    // Check if startTime is greater than endTime
+    if (startTime24 > endTime24) {
+      setError(true);
+      setErrorMessage("Start time cannot be greater than end time.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000); // Clear the error after 5 seconds
+      return; // Exit the function early
+    }
+    //#endregion
 
     if (chosenItems.length === 0) {
       setError(true);
@@ -356,24 +443,16 @@ const ReservationPage = () => {
       return;
     }
 
-    /* Validate start and end times
-    if (startTime >= endTime) {
+    if (numberOfPersonsEvent < 30 || numberOfPersonsEvent > 50) {
       setError(true);
-      setErrorMessage("End time must be greater than start time.");
+      setErrorMessage("The number of persons must be between 30 and 50.");
       setTimeout(() => {
         setError(false);
-      }, 5000);
-      return;
-    }*/
-
-    if (startTime < 1 || startTime > 12 || endTime < 1 || endTime > 12) {
-      setError(true);
-      setErrorMessage("Start and end times must be between 1 and 12.");
-      setTimeout(() => {
-        setError(false);
-      }, 5000);
-      return;
+      }, 5000); // Clear the error after 5 seconds
+      return; // Exit the function early
     }
+
+    //#endregion
 
     // Format the selected date
     const formatDate = (date) => {
@@ -423,7 +502,7 @@ const ReservationPage = () => {
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false); // Hide after a few seconds if desired
-        router.push("/book/reservations"); // Redirect to /book
+        //router.push("/book/reservations"); // Redirect to /book
       }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
@@ -478,8 +557,8 @@ const ReservationPage = () => {
           )}
           {dateError && slug === "table" && (
             <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
-            {dateError}
-        </p>
+              {dateError}
+            </p>
           )}
 
           {error &&
@@ -518,15 +597,26 @@ const ReservationPage = () => {
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
                   <input
-                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
-            inline-block"
+                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeHour"
                     id="inputTimeHour"
                     type="number"
-                    placeholder="Hour (12-7)"
-                    min={7}
-                    max={12}
+                    placeholder="Hour (12-19)"
+                    min={12}
+                    max={19}
                     required
+                    onInput={(e) => {
+                      // Limit to 2 digits and prevent values greater than 19
+                      if (
+                        e.target.value.length > 2 ||
+                        parseInt(e.target.value) > 19
+                      ) {
+                        e.target.value = e.target.value.slice(0, 2); // Limit to 2 digits
+                        if (parseInt(e.target.value) > 19) {
+                          e.target.value = "19"; // Set to max value if exceeded
+                        }
+                      }
+                    }}
                   />
                   <span>:</span>
                   <input
@@ -714,15 +804,16 @@ const ReservationPage = () => {
                   type="tel"
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  min={1}
-                  max={30}
+                  min={30}
+                  max={50}
+                  maxLength={2} // Add this to limit the input to 2 digits
                   placeholder="Number of Persons"
                   value={numberOfPersonsEvent} // Bind to state
                   onChange={handlePersonsChange}
                   required
                 />
                 <p className="text-xs text-orange-900 pl-2">
-                  Maximum of 30 persons can be accommodated.
+                  minimum of 30 and maximum of 50 persons can be accommodated.
                 </p>
               </div>
             </>
@@ -756,7 +847,7 @@ const ReservationPage = () => {
           </button>
           <p
             className={`${
-              slug === "Event" ? "" : "hidden"
+              slug === "event" ? "" : "hidden"
             } text-xs text-orange-900 text-center mt-[-10px]`}
           >
             There must be a 50% downpayment upon reservation.
