@@ -22,12 +22,12 @@ const ReservationPage = () => {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
 
-  const [date, setDate] = useState("");
   const [minDate, setMinDate] = useState(""); // used by "table" & "event"
   const [error, setError] = useState<boolean>(false); // used by "table" & "event"
   //#endregion
 
   //#region "table" Variables
+  const [tableMinDate, setTableMinDate] = useState(""); // New state variable for the 'table' slug
   const [dateError, setDateError] = useState("");
   const [timeError, setTimeError] = useState<string | null>(null);
   const [hourInput, setHourInput] = useState<number | "">("");
@@ -36,6 +36,7 @@ const ReservationPage = () => {
   //#endregion
 
   //#region "event" Variables
+  const [date, setDate] = useState("");
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
   const [startTime, setStartTime] = useState(12); // Default start time 12 PM
   const [endTime, setEndTime] = useState(1);
@@ -76,23 +77,39 @@ const ReservationPage = () => {
       return () => unsubscribeAuth();
     }
   }, [router]);
+
+  useEffect(() => {
+    if (slug === "table") {
+      // Calculate the date 5 days from today for the table reservation
+      const today = new Date();
+      today.setDate(today.getDate() + 5); // Add 5 days
+
+      // Format the date to YYYY-MM-DD
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+
+      // Set the min date for 'table' slug
+      setMinDate(`${yyyy}-${mm}-${dd}`);
+      setTableMinDate(`${yyyy}-${mm}-${dd}`); // Optional: keep this if you need a separate variable
+    } else if (slug === "event") {
+      // Calculate the date 14 days from today for the event reservation
+      const today = new Date();
+      today.setDate(today.getDate() + 14); // Add 14 days
+
+      // Format the date to YYYY-MM-DD
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const dd = String(today.getDate()).padStart(2, "0");
+
+      // Set the min date for 'event' slug
+      setMinDate(`${yyyy}-${mm}-${dd}`);
+      setDate(""); // Reset date for event if necessary
+    }
+  }, [slug]);
   //#endregion
 
   //#region "table" EffectHooks
-  useEffect(() => {
-    // Calculate the date 5 days from today
-    const today = new Date();
-    today.setDate(today.getDate() + 5); // Add 5 days
-
-    // Format the date to YYYY-MM-DD
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-    const dd = String(today.getDate()).padStart(2, "0");
-
-    // Set the min date in the correct format
-    setMinDate(`${yyyy}-${mm}-${dd}`);
-  }, []);
-
   const handleNumberOfPersonsTableChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -251,18 +268,6 @@ const ReservationPage = () => {
   //#endregion
 
   //#region "events" EffectHooks
-  useEffect(() => {
-    const today = new Date();
-    const minDate = new Date(today);
-    minDate.setDate(today.getDate() + 14); // Set minimum date to 14 days from today
-
-    // Format the date to YYYY-MM-DD for the input
-    const yyyy = minDate.getFullYear();
-    const mm = String(minDate.getMonth() + 1).padStart(2, "0"); // Months are 0-indexed
-    const dd = String(minDate.getDate()).padStart(2, "0");
-
-    setMinDate(`${yyyy}-${mm}-${dd}`); // Set the state for minDate
-  }, []);
 
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPackage(e.target.value);
@@ -438,7 +443,7 @@ const ReservationPage = () => {
       return;
     }
     //#endregion
-    
+
     // Format the selected date
     const formatDate = (date) => {
       const year = date.getFullYear();
