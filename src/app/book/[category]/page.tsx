@@ -340,17 +340,15 @@ const ReservationPage = () => {
   const handleReserve = async () => {
     const selectedDate = new Date(date);
     const today = new Date();
-
     // Set the time to midnight for comparison
     today.setHours(0, 0, 0, 0);
-
     // Calculate minimum date (14 days in the future)
     const minDate = new Date(today);
     minDate.setDate(today.getDate() + 14);
-
     // Set the time to midnight for minDate as well
     minDate.setHours(0, 0, 0, 0);
 
+    //#region Validations
     // Check for 0 hours, meaning the user can't book with the same start and end times
     if (totalHours <= 0) {
       setError(true);
@@ -362,8 +360,17 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
-    //
-    //
+
+    // Check for valid date
+    if (isNaN(selectedDate.getTime()) || selectedDate < minDate) {
+      setError(true);
+      setErrorMessage("Please select a date at least 14 days in the future.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+    }
+    //#region Time StartEnd
     // Helper function to convert 12-hour format to 24-hour format for proper comparison
     function convertTo24Hour(time) {
       if (time === 12) return 12; // 12 PM is 12 in 24-hour format
@@ -420,16 +427,7 @@ const ReservationPage = () => {
       }, 5000); // Clear the error after 5 seconds
       return; // Exit the function early
     }
-    //
-    // Check for valid date
-    if (isNaN(selectedDate.getTime()) || selectedDate < minDate) {
-      setError(true);
-      setErrorMessage("Please select a date at least 14 days in the future.");
-      setTimeout(() => {
-        setError(false);
-      }, 5000);
-      return;
-    }
+    //#endregion
 
     if (chosenItems.length === 0) {
       setError(true);
@@ -439,7 +437,8 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
-
+    //#endregion
+    
     // Format the selected date
     const formatDate = (date) => {
       const year = date.getFullYear();
