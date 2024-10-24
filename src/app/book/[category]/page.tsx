@@ -291,7 +291,7 @@ const ReservationPage = () => {
     let value = e.target.value.replace(/[^0-9]/g, ""); // Strip out non-numeric characters
 
     // Update the state with the current input value
-    setNumberOfPersonsEvent(value === "" ? "" : parseInt(value, 10));
+    setNumberOfPersonsEvent(value === "" ? 0 : parseInt(value, 10)); // Set to 0 if empty
   };
 
   useEffect(() => {
@@ -442,6 +442,16 @@ const ReservationPage = () => {
       }, 5000);
       return;
     }
+
+    if (numberOfPersonsEvent < 30 || numberOfPersonsEvent > 50) {
+      setError(true);
+      setErrorMessage("The number of persons must be between 30 and 50.");
+      setTimeout(() => {
+        setError(false);
+      }, 5000); // Clear the error after 5 seconds
+      return; // Exit the function early
+    }
+
     //#endregion
 
     // Format the selected date
@@ -587,15 +597,26 @@ const ReservationPage = () => {
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
                   <input
-                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50
-            inline-block"
+                    className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeHour"
                     id="inputTimeHour"
                     type="number"
-                    placeholder="Hour (12-7)"
-                    min={7}
-                    max={12}
+                    placeholder="Hour (12-19)"
+                    min={12}
+                    max={19}
                     required
+                    onInput={(e) => {
+                      // Limit to 2 digits and prevent values greater than 19
+                      if (
+                        e.target.value.length > 2 ||
+                        parseInt(e.target.value) > 19
+                      ) {
+                        e.target.value = e.target.value.slice(0, 2); // Limit to 2 digits
+                        if (parseInt(e.target.value) > 19) {
+                          e.target.value = "19"; // Set to max value if exceeded
+                        }
+                      }
+                    }}
                   />
                   <span>:</span>
                   <input
