@@ -1,5 +1,5 @@
 "use client";
-
+import { useRouter } from 'next/navigation'; 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -21,8 +21,10 @@ import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
+
 const ProductPage: React.FC = () => {
   //#region Const Variables
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isComingFromCartPage = searchParams.get("edit") === "true";
@@ -319,35 +321,35 @@ const ProductPage: React.FC = () => {
           )}`;
 
     // Log productData to verify its structure and content
-//console.log('Product Data:', productData);
+    //console.log('Product Data:', productData);
 
-let orderData = {
-  slug: productData.slug || "", // needed
-  productImg: productData.productImg || productData.img || "", // needed
-  productTitle: productData.productTitle || title, // needed
-  description: productData.description || desc, // needed
-  note: document.querySelector("textarea")?.value || "none", // needed
-  itemQty: qtyPerItem, // needed
-  pricePerItem: productData.pricePerItem || price, // needed
-  totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
-  calorie: productData.calorie || 0, // needed
-  availability: productData.availability || "", // needed
-  ...(slug === "drinks" && {
-    currSize: productData.currSize || "",
-    upsizable: productData.upsizable,
-    upsizeSize: productData.upsizeSize || "12oz",
-    upsizePrice: productData.upsizePrice || 20,
-    selectedDrinkSize: selectedDrinkSize,
-    additionalCost: additionalCost,
-  }),
-  options: {
-    addEspresso: 30,
-    addSyrup: 30,
-    milkAlmond: 30,
-    milkOat: 40,
-    ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
-  },
-};
+    let orderData = {
+      slug: productData.slug || "", // needed
+      productImg: productData.productImg || productData.img || "", // needed
+      productTitle: productData.productTitle || title, // needed
+      description: productData.description || desc, // needed
+      note: document.querySelector("textarea")?.value || "none", // needed
+      itemQty: qtyPerItem, // needed
+      pricePerItem: productData.pricePerItem || price, // needed
+      totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
+      calorie: productData.calorie || 0, // needed
+      availability: productData.availability || "", // needed
+      ...(slug === "drinks" && {
+        currSize: productData.currSize || "",
+        upsizable: productData.upsizable,
+        upsizeSize: productData.upsizeSize || "12oz",
+        upsizePrice: productData.upsizePrice || 20,
+        selectedDrinkSize: selectedDrinkSize,
+        additionalCost: additionalCost,
+      }),
+      options: {
+        addEspresso: 30,
+        addSyrup: 30,
+        milkAlmond: 30,
+        milkOat: 40,
+        ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
+      },
+    };
 
     if (slug === "drinks") {
       orderData = {
@@ -377,6 +379,11 @@ let orderData = {
       orderData = {
         ...orderData,
         slug: "sandwiches",
+      };
+    } else if (slug === "pastries") {
+      orderData = {
+        ...orderData,
+        slug: "pastries",
       };
     }
 
@@ -441,6 +448,7 @@ let orderData = {
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
+      router.push('/menu'); 
     }, 1000); // 2 seconds
   };
 
@@ -534,6 +542,11 @@ let orderData = {
       orderData = {
         ...orderData,
         slug: "sandwiches",
+      };
+    } else if (slug === "pastries") {
+      orderData = {
+        ...orderData,
+        slug: "pastries",
       };
     }
 
@@ -635,6 +648,7 @@ let orderData = {
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
+      router.push('/foodcart'); 
     }, 1000); // 2 seconds
   };
 

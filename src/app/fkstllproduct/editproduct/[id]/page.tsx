@@ -383,8 +383,8 @@ const EditProductPage = ({ MenuItem }) => {
                   name="menuItemType"
                   id="menuItemType"
                   className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-10 w-full"
+                                    text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                    h-10 w-full"
                 >
                   {(selectedCat === "drinks"
                     ? drinkTypes
@@ -429,7 +429,7 @@ const EditProductPage = ({ MenuItem }) => {
                     {allergensByCategory.drinks.map((allergens) => (
                       <span
                         className="rounded-full bg-orange-400 py-1.5 text-center
-                      font-semibold text-orange-50"
+                                                font-semibold text-orange-50"
                       >
                         {allergens}
                       </span>
@@ -461,7 +461,7 @@ const EditProductPage = ({ MenuItem }) => {
           </div>
           <button
             className="w-full bg-orange-950 font-bold text-xl text-white p-2 rounded-md mt-2
-          shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
+                        shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
             onClick={() => {
               handleSubmit();
             }}

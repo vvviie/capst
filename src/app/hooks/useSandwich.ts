@@ -10,7 +10,7 @@ const useSandwich = () => {
     const fetchSandwich = async () => {
       try {
         const sandwichRef = collection(db, "sandwiches");
-        const q = query(sandwichRef, where("prodCategory", "==", "sandwichMenu"));
+        const q = query(sandwichRef, where("prodCategory", "==", "sandwichesMenu"));
         const querySnapshot = await getDocs(q);
 
         if (querySnapshot.empty) {

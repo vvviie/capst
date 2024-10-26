@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from "react";
 
 const allergensByCategory: { [key: string]: string[] } = {
@@ -8,9 +6,38 @@ const allergensByCategory: { [key: string]: string[] } = {
   drinks: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
 };
 
-const AddAllergens = ({ selectedCat }) => {
+interface AddAllergensProps {
+  selectedCat: string;
+  selectedAllergens: string[]; // <-- New prop to pass in already selected allergens
+  onAdd: (allergens: string[]) => void;
+}
+
+const AddAllergens: React.FC<AddAllergensProps> = ({
+  selectedCat,
+  selectedAllergens,
+  onAdd,
+}) => {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const [tempSelectedAllergens, setTempSelectedAllergens] = useState<string[]>(
+    []
+  );
+
+  // Sync with selectedAllergens prop when modal opens
+  useEffect(() => {
+    if (open) {
+      setTempSelectedAllergens(selectedAllergens);
+    }
+  }, [open, selectedAllergens]);
+
+  const handleCheckboxChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const allergen = event.target.value;
+    setTempSelectedAllergens((prev) =>
+      event.target.checked
+        ? [...prev, allergen]
+        : prev.filter((a) => a !== allergen)
+    );
+  };
 
   const handleClickOutside = (event: MouseEvent) => {
     if (formRef.current && !formRef.current.contains(event.target as Node)) {
@@ -24,11 +51,9 @@ const AddAllergens = ({ selectedCat }) => {
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [open]);
+
   return (
     <div className="w-full cursor-pointer z-10">
       <button
@@ -58,24 +83,29 @@ const AddAllergens = ({ selectedCat }) => {
                 : selectedCat === "pastries"
                 ? allergensByCategory.pastries
                 : allergensByCategory.default
-              ).map((items) => (
-                <div className="flex items-center gap-2">
+              ).map((allergen, index) => (
+                <div key={index} className="flex items-center gap-2">
                   <input
                     type="checkbox"
-                    name={items}
+                    name={allergen}
                     className="h-5 w-5"
-                    id={items}
-                    value={items}
+                    id={allergen}
+                    value={allergen}
+                    checked={tempSelectedAllergens.includes(allergen)} // <-- Check if already selected
+                    onChange={handleCheckboxChange}
                   />
-                  <span className="text-lg text-gray-600">{items}</span>
+                  <span className="text-lg text-gray-600">{allergen}</span>
                 </div>
               ))}
             </div>
             <button
               type="button"
               className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4
-              hover:bg-orange-900 hover:scale-[1.02] duration-300"
-              onClick={() => setOpen(false)}
+                            hover:bg-orange-900 hover:scale-[1.02] duration-300"
+              onClick={() => {
+                onAdd(tempSelectedAllergens); // Send selected allergens to main component
+                setOpen(false); // Close modal
+              }}
             >
               Add Allergens
             </button>

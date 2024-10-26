@@ -4,8 +4,17 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { mainCourseMenu } from "@/app/data";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
-import { useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { db } from "@/app/firebase";
+import { doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, query, where } from "firebase/firestore";
+import {
+  getStorage,
+  ref,
+  listAll,
+  getDownloadURL,
+  uploadBytes,
+} from "firebase/storage";
 
 // MENU CATEGORY
 export const menuCategory = [
@@ -31,7 +40,7 @@ export const menuCategory = [
   },
   {
     id: 5,
-    prodCat: "sandwichMenu",
+    prodCat: "sandwichesMenu",
     title: "Sandwiches",
   },
   {
@@ -42,24 +51,19 @@ export const menuCategory = [
 ];
 
 // TYPES PER CATEGORY
-let drinkTypes = ["Coffee", "None-Coffee"];
-let pastaTypes = ["Pesto", "Non-Pesto"];
-let snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
-let sandwichTypes = ["Sandwich"];
-let mainCourseTypes = ["Meat", "Seafood", "Veggie"];
-let pastryTypes = ["Cake", "Cookie", "Tart"];
+//let drinkTypes = ["Coffee", "Non-Coffee"];
+//let pastaTypes = ["Pesto", "Non-Pesto"];
+//let snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
+//let sandwichTypes = ["Sandwich"];
+//let mainCourseTypes = ["Meat", "Seafood", "Veggie"];
+//let pastryTypes = ["Cake", "Cookie", "Tart"];
 
 // ALLERGENS GALING SA ALLERGIESFILTER
-const allergensByCategory: { [key: string]: string[] } = {
-  default: ["Peanut", "Fish", "Chicken", "Almond", "Shrimp"],
-  pastries: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
-  drinks: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
-};
 
 // DAPAT NAKA-SMALL LETTERS TAPOS PLURAL
-let selectedCat = "drinks";
+//let selectedCat = "drinks";
 // KAPAG SINELECT NI USER ANG YES SA UPSIZE
-let upsize = false;
+//let upsize = true;
 // EXAMPLE LANG SA CHOSEN ALLERGENS
 let mayroongNapilingAllergen = true;
 
@@ -67,13 +71,616 @@ const AddProductPage = () => {
   //   PARA LANG SA POP-UP KAPAG NAG-ADD PRODUCT BUTTON
   const [isPopupVisible, setIsPopupVisible] = useState(false);
 
-  //   PARA LANG SA POP-UP KAPAG NAG-ADD PRODUCT BUTTON
-  const handleSubmit = () => {
-    setIsPopupVisible(true);
+  // Menu Category
+  const [selectedCat, setSelectedCat] = useState("drinks");
+  const [extractedCategory, setExtractedCategory] = useState("drinks");
 
+  // Availability
+  const [selectedAvailability, setSelectedAvailability] = useState("available");
+
+  // For Image
+  const [imageUrl, setImageUrl] = useState("");
+
+  // For Image's File Name
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef(null);
+
+  // For Product IDs
+  const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>(
+    "hotDrinks"
+  );
+
+  const drinkTypePrefixes: {
+    hotDrinks: string;
+    icedDrinks: string;
+    blendedDrinks: string;
+    affogatoDrinks: string;
+  } = {
+    hotDrinks: "hd",
+    icedDrinks: "id",
+    blendedDrinks: "bd",
+    affogatoDrinks: "ad",
+  };
+
+  const [newProdID, setNewProdID] = useState("");
+
+  // For Item's Calorie
+  const [calorie, setCalorie] = useState("low");
+
+  // For Item's Name
+  const [itemName, setItemName] = useState("");
+
+  // For Item's Price
+  const [itemPrice, setItemPrice] = useState<number | "">("");
+
+  // For DRINKS ONLY - Drink's Category
+  const [passableSelectedDrinkType, setPassableSelectedDrinkType] = useState<
+    string | null
+  >(null);
+
+  // For DRINKS ONLY - Drink's Size
+  const [drinkSize, setDrinkSize] = useState<string | null>(null);
+
+  // For DRINKS ONLY - Drink's Upsize CHOICE
+  const [upsize, setUpsize] = useState<boolean>(true);
+
+  // For DRINKS ONLY - Drink's Upsize SIZE
+  const [upsizeSize, setUpsizeSize] = useState<string | null>(null);
+
+  // For DRINKS ONLY - Drink's Upsize PRICE
+  const [upsizePrice, setUpsizePrice] = useState<number | null>(null);
+
+  // CATEGORY OF TYPES
+  const drinkTypes = ["Coffee", "Non-Coffee"];
+  const pastaTypes = ["Pesto", "Non-Pesto"];
+  const snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
+  const sandwichTypes = ["Sandwich"];
+  const mainCourseTypes = ["Meat", "Seafood", "Veggie"];
+  const pastryTypes = ["Cake", "Cookie", "Tart"];
+
+  // ALLERGIES
+  const allergensByCategory: { [key: string]: string[] } = {
+    default: ["Peanut", "Fish", "Chicken", "Almond", "Shrimp"],
+    pastries: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
+    drinks: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
+  };
+
+  const allergenOptions =
+    selectedCat === "drinks"
+      ? allergensByCategory.drinks
+      : selectedCat === "pastriesMenu"
+      ? allergensByCategory.pastries
+      : allergensByCategory.default;
+
+  // SET ALLERGIES
+  const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
+
+  const selectRef = useRef<HTMLSelectElement>(null);
+  const getSelectedValue = () => {
+    if (selectRef.current) {
+      const selectedValue = selectRef.current.value;
+      console.log("Selected value from dropdown:", selectedValue);
+      return selectedValue;
+    }
+  };
+
+  // Item's Description
+  const [desc, setDesc] = useState("");
+
+  const [existingIDs, setExistingIDs] = useState<string[]>([]); // Initialize existing IDs
+  const existingIDsRef = useRef<string[]>([]); // Create a ref to store existing IDs
+  const itemNameRef = useRef(null);
+  const itemPriceRef = useRef(null);
+  const drinkSizeRef = useRef(null);
+  const drinkUpsizeRef = useRef(null);
+  const drinkUpsizePriceRef = useRef(null);
+  const descriptionRef = useRef(null);
+  // Effect to update extractedCategory when selectedCat changes
+  useEffect(() => {
+    const category = selectedCat.replace("Menu", "");
+    setExtractedCategory(category);
+  }, [selectedCat]);
+
+  // Effect to reset drink type and product ID when category changes
+  useEffect(() => {
+    if (selectedCat === "drinks") {
+      // Initialize to default drink type
+      console.log("Switching to drinks category.");
+      setSelectedDrinkType("hotDrinks");
+      setPassableSelectedDrinkType("hotDrinks");
+      setUpsize(true);
+    } else {
+      // Set default values for non-drink categories
+      setUpsize(false);
+      switch (selectedCat) {
+        case "pastaMenu":
+          setSelectedDrinkType("Pesto");
+          setPassableSelectedDrinkType("Pesto");
+          break;
+        case "snacksMenu":
+          setSelectedDrinkType("Fries");
+          setPassableSelectedDrinkType("Fries");
+          break;
+        case "sandwichesMenu":
+          setSelectedDrinkType("Sandwich");
+          setPassableSelectedDrinkType("Sandwich");
+          break;
+        case "pastriesMenu":
+          setSelectedDrinkType("Cake");
+          setPassableSelectedDrinkType("Cake");
+          break;
+        case "mainCourseMenu":
+          setSelectedDrinkType("Meat");
+          setPassableSelectedDrinkType("Meat");
+          break;
+        default:
+          setSelectedDrinkType(null);
+          setPassableSelectedDrinkType(null);
+          break;
+      }
+    }
+  }, [selectedCat]);
+
+  useEffect(() => {
+    if (selectedCat !== "drinks") {
+      setUpsize(false); // Set upsize to false if the category is not drinks
+    }
+  }, [selectedCat]);
+
+  // Effect to fetch IDs and set product ID when drink type changes
+  useEffect(() => {
+    const drinkType =
+      selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
+    if (drinkType) {
+      fetchExistingIDs(extractedCategory, drinkType);
+    }
+  }, [
+    extractedCategory,
+    selectedDrinkType,
+    selectedCat,
+    passableSelectedDrinkType,
+  ]);
+
+  // Effect to generate a new ID based on existing IDs
+  useEffect(() => {
+    const drinkType =
+      selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
+    generateNewID(existingIDsRef.current, drinkType); // Call with the current value of existing IDs
+  }, [existingIDs]);
+
+  useEffect(() => {
+    // Handle drinkSize bounds
+    if (drinkSize !== null && drinkSize !== "") {
+      const sizeAsNumber = parseInt(drinkSize);
+
+      if (!isNaN(sizeAsNumber)) {
+        if (sizeAsNumber < 1) {
+          setDrinkSize("1");
+        } else if (sizeAsNumber > 30) {
+          setDrinkSize("30");
+        }
+      }
+    }
+
+    // Handle upsizeSize bounds
+    if (upsizeSize !== null && upsizeSize !== "") {
+      const sizeAsNumber = parseInt(upsizeSize);
+
+      if (!isNaN(sizeAsNumber)) {
+        if (sizeAsNumber < 1) {
+          setUpsizeSize("1");
+        } else if (sizeAsNumber > 30) {
+          setUpsizeSize("30");
+        }
+      }
+    }
+  }, [drinkSize, upsizeSize]);
+
+  // Effect to set default drink type to "Coffee" if "drinks" is selected
+  useEffect(() => {
+    if (selectedCat === "drinks" && !selectedDrinkType) {
+      setSelectedDrinkType("Coffee");
+    }
+  }, [selectedCat, selectedDrinkType]);
+
+  const handleDrinkTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = e.target.value;
+    setSelectedDrinkType(selectedValue); // Update the state with the new selection
+    console.log("Selected type:", selectedValue); // Log the selected type for debugging
+  };
+
+  // Function to fetch existing IDs based on the selected category
+  const fetchExistingIDs = async (
+    category: string,
+    drinkType: string | null
+  ) => {
+    try {
+      console.log("Fetching IDs from collection:", category);
+      const q = query(collection(db, category)); // Use category for the collection name
+      const querySnapshot = await getDocs(q);
+
+      // Extract the prodID from each document
+      const ids = querySnapshot.docs.map((doc) => doc.data().prodID);
+
+      // Update the existingIDs state and ref
+      setExistingIDs(ids);
+      existingIDsRef.current = ids; // Store in ref for ID generation
+    } catch (error) {
+      console.error("Error fetching existing IDs: ", error);
+    }
+  };
+
+  // Function to generate a new product ID
+  const generateNewID = (
+    ids: string[],
+    drinkType: keyof typeof drinkTypePrefixes | null
+  ) => {
+    const prefix =
+      selectedCat === "drinks" && drinkType
+        ? drinkTypePrefixes[drinkType]
+        : `${extractedCategory}`;
+
+    if (!prefix) {
+      console.error("Cannot generate ID: invalid prefix", {
+        selectedCat,
+        drinkType,
+      });
+      return; // Early return if no prefix is available
+    }
+
+    // Generate the new ID
+    const newID =
+      ids.length === 0
+        ? `${prefix}1`
+        : `${prefix}${
+            Math.max(
+              ...ids.map(
+                (id) =>
+                  parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) ||
+                  0
+              )
+            ) + 1
+          }`;
+
+    setNewProdID(newID);
+    console.log("Generated new product ID:", newID);
+  };
+
+  const handleAvailabilityChange = (
+    event: React.ChangeEvent<HTMLSelectElement>
+  ) => {
+    const selectedValue = event.target.value;
+    console.log("Selected Availability:", selectedValue); // Log the selected value
+    setSelectedAvailability(selectedValue); // Update the state
+  };
+
+  const handleCalorieChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = event.target.value; // Get the selected value
+    console.log("Selected Calorie Level:", selectedValue); // Log the selected value
+    setCalorie(selectedValue); // Update the state
+  };
+
+  const handleItemNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value;
+    setItemName(newValue); // Update the state
+  };
+
+  useEffect(() => {
+    console.log("Selected Drink Type:", passableSelectedDrinkType);
+  }, [passableSelectedDrinkType]); // Runs when passableSelectedDrinkType changes
+
+  const handleUploadClick = () => {
+    // Trigger the file input click
+    fileInputRef.current.click();
+  };
+
+  // Handler for input change
+  const handleItemPriceChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const newValue = event.target.value;
+    setItemPrice(newValue === "" ? "" : parseFloat(newValue)); // Convert to number or set to empty string
+  };
+
+  // Method to handle size input change
+  const handleSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const sizeValue = event.target.value;
+    const formattedSize = sizeValue ? `${sizeValue} oz` : null; // Combine number with "oz", or set to null
+    console.log("Selected Drink Size:", formattedSize); // Log the formatted size
+    setDrinkSize(formattedSize); // Update the state
+  };
+
+  const handleUpsizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = event.target.value; // Get the selected value from the dropdown
+    setUpsize(selectedValue === "true"); // Update upsize state based on selected value
+    console.log("Upsize selected:", selectedValue === "true"); // Log the updated value
+  };
+
+  const handleUpsizeSizeChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const sizeValue = event.target.value; // Get the input value
+    const formattedSize = sizeValue ? `${sizeValue} oz` : null; // Format the size with "oz", or set to null
+    console.log("Selected Upsize Size:", formattedSize); // Log the formatted size
+    setUpsizeSize(formattedSize); // Update the state
+  };
+
+  const handleUpsizePriceChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const priceValue = event.target.value; // Get the input value
+    const formattedPrice = priceValue ? parseFloat(priceValue) : null; // Parse the value as a float
+
+    // Check if the price exceeds the maximum allowed value (100)
+    const cappedPrice =
+      formattedPrice !== null && formattedPrice > 100 ? 100 : formattedPrice;
+
+    console.log("Selected Upsize Price:", cappedPrice); // Log the capped price
+    setUpsizePrice(cappedPrice); // Update the state
+  };
+
+  // Handle category change
+  const handleCategoryChange = (value: string) => {
+    setSelectedCat(value); // Update the selected category
+    setSelectedAllergens([]); // Reset allergens
+    console.log(value); // Log the selected value
+  };
+
+  const handleAllergenAdd = (allergens: string[]) => {
+    setSelectedAllergens(allergens); // Update selected allergens
+    console.log("Selected allergens:", allergens); // Log or handle the selected allergens as needed
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0]; // Get the uploaded file
+    if (file) {
+      const validTypes = ["image/jpeg", "image/png"];
+      if (!validTypes.includes(file.type)) {
+        console.error("Invalid file type. Please upload a PNG or JPEG.");
+        return;
+      }
+      setFileName(file.name); // Update the file name in state
+      const previewUrl = URL.createObjectURL(file); // Create a local URL for preview
+      setImageUrl(previewUrl); // Update the image preview state
+
+      try {
+        // Convert and upload the image immediately
+        const webpUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+        console.log("Uploaded image URL:", webpUrl);
+      } catch (error) {
+        console.error("Error during image processing:", error);
+      }
+    }
+  };
+
+  // Function to convert image to WebP using canvas
+  const convertImageToWebP = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const imgElement = new window.Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        imgElement.src = e.target.result as string;
+      };
+
+      imgElement.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+
+          // Convert to WebP format
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Conversion to WebP failed."));
+            }
+          }, "image/webp");
+        } else {
+          reject(new Error("Canvas context is null."));
+        }
+      };
+
+      imgElement.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.readAsDataURL(file); // Read the file as Data URL
+    });
+  };
+
+  // Function to upload image to Firebase Storage
+  const uploadImageToStorage = async (file) => {
+    const storage = getStorage();
+    const storageRef = ref(
+      storage,
+      `images/${file.name.split(".").slice(0, -1).join(".")}.webp`
+    ); // Update path to WebP
+
+    try {
+      // Convert the image to WebP format
+      const webpBlob = await convertImageToWebP(file);
+      console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
+      console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
+
+      // Create URL for the WebP Blob to preview
+      const webpUrl = URL.createObjectURL(webpBlob);
+      console.log("Converted to WebP:", webpUrl); // Log the WebP URL
+      setImageUrl(webpUrl); // Set this URL for preview, if needed
+
+      // Upload the WebP file
+      await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
+      const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+      return downloadUrl; // Return the URL
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null; // Return null if there's an error
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl(""); // Remove the image preview
+    setFileName(""); // Clear the file name
+    fileInputRef.current.value = ""; // Clear the file input
+  };
+
+  const fetchPlaceholderImageUrl = async () => {
+    const storage = getStorage();
+    const storageRef = ref(storage); // Root directory or specify folder if needed
+    const files = await listAll(storageRef);
+    const placeholderFile = files.items.find(
+      (item) => item.name === "placeholder-photo.webp"
+    );
+
+    if (placeholderFile) {
+      return await getDownloadURL(placeholderFile); // Get the download URL
+    } else {
+      console.warn("Placeholder image not found in storage.");
+      return null;
+    }
+  };
+
+  //   PARA LANG SA POP-UP KAPAG NAG-ADD PRODUCT BUTTON
+  const handleSubmit = async () => {
+    // Validate required fields
+    if (!itemName) {
+      itemNameRef.current.focus(); // Set focus back to item name
+      return; // Exit the function if validation fails
+    }
+
+    if (!itemPrice) {
+      itemPriceRef.current.focus(); // Set focus back to item price
+      return; // Exit if item price is not provided
+    }
+
+    if (selectedCat === "drinks") {
+      if (!drinkSize) {
+        drinkSizeRef.current.focus();
+        return; // Exit if drink size is not provided
+      }
+      if (upsize && !upsizeSize) {
+        drinkUpsizeRef.current.focus();
+        return; // Exit if upsize size is not provided
+      }
+      if (upsize && !upsizePrice) {
+        drinkUpsizePriceRef.current.focus();
+        return; // Exit if upsize price is not provided
+      }
+    }
+
+    if (!desc) {
+      descriptionRef.current.focus();
+      return; // Exit if description is not provided
+    }
+
+    // Optional ingredients with default values of null
+    let addEspresso = null;
+    let addSyrup = null;
+    let milkOat = null;
+    let milkAlmond = null;
+    let addVanilla = null;
+    let serveMashedPotato = null;
+    let serveRice = null;
+
+    // Assign values conditionally based on selected category
+    if (selectedCat === "drinks") {
+      addEspresso = 30;
+      addSyrup = 30;
+      milkOat = 40;
+      milkAlmond = 30;
+
+      if (selectedDrinkType === "icedDrinks") {
+        addVanilla = 25;
+      }
+    } else if (selectedCat === "mainCourseMenu") {
+      serveMashedPotato = false;
+      serveRice = false;
+    }
+
+    // Document name from item title
+    const documentName = itemName.toLowerCase().replace(/\s+/g, "-");
+
+    // Upload the image if it exists
+    let finalImageUrl;
+    if (fileInputRef.current.files[0]) {
+      const file = fileInputRef.current.files[0]; // Get the uploaded file
+      try {
+        finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+        if (!finalImageUrl) {
+          console.error("Image upload failed, using placeholder.");
+          finalImageUrl = await fetchPlaceholderImageUrl(); // Use placeholder if upload fails
+        }
+      } catch (error) {
+        console.error("Error during image processing:", error);
+        finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if there's an error
+      }
+    } else {
+      finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
+    }
+
+    // Prepare data object with individual fields
+    const documentData = {
+      availability: selectedAvailability,
+      calorie: calorie,
+      desc: desc,
+      img: finalImageUrl,
+      price: itemPrice,
+      prodCategory:
+        selectedCat === "drinks" ? passableSelectedDrinkType : selectedCat, // Logic for prodCategory
+      prodID: newProdID,
+      title: itemName,
+      type: passableSelectedDrinkType || "",
+      contains: selectedAllergens.length > 0 ? selectedAllergens : [""], // Allergens only
+
+      // Optional drink fields
+      ...(selectedCat === "drinks" && {
+        addEspresso,
+        addSyrup,
+        milkOat,
+        milkAlmond,
+        addVanilla,
+        currSize: drinkSize || "",
+        upsizable: upsize,
+      }),
+
+      // Optional main course fields
+      ...(selectedCat === "mainCourseMenu" && {
+        serveMashedPotato,
+        serveRice,
+      }),
+
+      // Optional upsize fields, only if upsizable
+      ...(upsize && {
+        upsizePrice: upsizePrice || 10,
+        upsizeSize: upsizeSize || "12oz",
+      }),
+    };
+
+    // Show popup only after validation passes
+    setIsPopupVisible(true);
     setTimeout(() => {
       setIsPopupVisible(false);
     }, 750);
+
+    // Add to Firestore
+    try {
+      await setDoc(doc(db, extractedCategory, documentName), documentData);
+      console.log("Document successfully written!");
+
+      // Reload the page after a delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000); // Adjust the delay as needed
+    } catch (error) {
+      console.error("Error writing document:", error);
+    }
   };
 
   return (
@@ -107,12 +714,29 @@ const AddProductPage = () => {
             <div className="w-full flex justify-between gap-2 items-center">
               {/* IMAGE CONTAINER */}
               <div className="w-52 aspect-square rounded-md relative border-2 border-gray-100 text-xs">
-                <Image
-                  src={""}
-                  alt="product img"
-                  fill
-                  className="object-contain"
-                />
+                {/* Display the image preview */}
+                {imageUrl && (
+                  <div className="relative group w-52 aspect-square rounded-md border-2 border-gray-100 text-xs mt-2">
+                    {/* Image */}
+                    <Image
+                      src={imageUrl} // Use the preview URL
+                      alt="Product Image"
+                      fill
+                      className="object-contain rounded-md"
+                    />
+
+                    {/* Overlay for dimming effect */}
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+
+                    {/* White "X" button centered */}
+                    <button
+                      onClick={handleRemoveImage} // Remove the image on click
+                      className="absolute inset-0 flex items-center justify-center text-white text-3xl font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                    >
+                      &#x2715; {/* Unicode for the "X" */}
+                    </button>
+                  </div>
+                )}
               </div>
               {/* MENU CATEGORY AND AVAILABILITY */}
               <div className="w-full flex flex-col justify-between items-center">
@@ -128,8 +752,12 @@ const AddProductPage = () => {
                     name="menuCategory"
                     id="menuCat"
                     className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-9 w-full"
+                                        text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                        h-9 w-full"
+                    onChange={(e) => {
+                      handleCategoryChange(e.target.value);
+                      console.log(e.target.value); // Log the selected value
+                    }}
                   >
                     {menuCategory.map((cats) => (
                       <option
@@ -155,8 +783,10 @@ const AddProductPage = () => {
                     name="menuAvailability"
                     id="menuCatAvailability"
                     className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-9 w-full text-center"
+                                        text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                        h-9 w-full text-center"
+                    value={selectedAvailability} // Bind value to state
+                    onChange={handleAvailabilityChange} // Handle change event
                   >
                     <option value="available">Available</option>
                     <option value="unavailable">Unavailable</option>
@@ -179,14 +809,25 @@ const AddProductPage = () => {
                   id="inputProdImg"
                   type="text"
                   placeholder="File Name"
+                  value={fileName} // Set the value to the file name
+                  readOnly // Make the input read-only
                 />
                 {/* UPLOAD BUTTON */}
                 <button
                   className="h-10 w-1/2 font-bold text-gray-600 bg-white border-2 border-gray-100 shadow-md rounded-md
-                hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                                    hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                  onClick={handleUploadClick}
                 >
                   Upload
                 </button>
+
+                <input
+                  type="file"
+                  accept="image/*" // Accept image files only
+                  ref={fileInputRef} // Attach the ref
+                  style={{ display: "none" }} // Hide the input
+                  onChange={handleFileChange}
+                />
               </div>
             </div>
             {/* ID AND CALORIE */}
@@ -205,6 +846,8 @@ const AddProductPage = () => {
                   id="inputProdID"
                   type="text"
                   placeholder="Item ID"
+                  value={newProdID}
+                  readOnly
                   required
                 />
               </div>
@@ -220,8 +863,10 @@ const AddProductPage = () => {
                   name="calorieLevel"
                   id="calorieLevel"
                   className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-10 w-full text-center"
+                                    text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                    h-10 w-full text-center"
+                  value={calorie} // Bind the selected value to state
+                  onChange={handleCalorieChange} // Attach the change handler
                 >
                   <option value="low">Low</option>
                   <option value="med">Medium</option>
@@ -244,6 +889,9 @@ const AddProductPage = () => {
                 type="text"
                 placeholder="Item Name"
                 required
+                value={itemName} // Bind input value to state
+                onChange={handleItemNameChange} // Handle input changes
+                ref={itemNameRef} // Attach the ref here
               />
             </div>
             {/* PRICE AND CATEGORY */}
@@ -263,11 +911,14 @@ const AddProductPage = () => {
                   type="number"
                   placeholder="Price"
                   required
+                  value={itemPrice} // Bind input value to state
+                  onChange={handleItemPriceChange} // Handle input changes
+                  ref={itemPriceRef}
                 />
               </div>
               {/* PRODUCT CATEGORY - KAPAG HINDI DRINK, AUTOMATIC NA KUNG ANO ANG MENU CATEGORY NILA*/}
               {selectedCat === "drinks" && (
-                //PRODUCT CATEGORY FOR DRINKS
+                // PRODUCT CATEGORY FOR DRINKS
                 <div className="flex-1 flex flex-col gap-1 items-center justify-center">
                   <label
                     className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -279,8 +930,14 @@ const AddProductPage = () => {
                     name="catDrinks"
                     id="catDrinks"
                     className="rounded-md shadow-sm border-2 border-gray-100
-                text-lg text-gray-600 font-semibold bg-white cursor-pointer
-                py-[5px] w-full text-center"
+                                    text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                    py-[5px] w-full text-center"
+                    value={passableSelectedDrinkType || "hotDrinks"} // Use passableSelectedDrinkType as default
+                    onChange={(e) => {
+                      const selectedValue = e.target.value;
+                      setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
+                      setSelectedDrinkType(selectedValue); // Set selectedDrinkType
+                    }}
                   >
                     <option value="hotDrinks">Hot Drink</option>
                     <option value="icedDrinks">Iced Drink</option>
@@ -307,7 +964,12 @@ const AddProductPage = () => {
                     id="inputCurrSize"
                     type="number"
                     placeholder="Oz"
+                    min="1" // Set minimum value
+                    max="30" // Set maximum value
                     required
+                    value={drinkSize ? drinkSize.replace(" oz", "") : ""}
+                    onChange={handleSizeChange}
+                    ref={drinkSizeRef}
                   />
                 </div>
                 {/* UPSIZE? */}
@@ -322,8 +984,9 @@ const AddProductPage = () => {
                     name="menuItemType"
                     id="menuItemType"
                     className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-10 w-full text-center"
+                                        text-lg text-gray-600 font-semibold bg-white cursor-pointer
+                                        h-10 w-full text-center"
+                    onChange={handleUpsizeChange}
                   >
                     <option value={"true"}>Yes</option>
                     <option value={"false"}>No</option>
@@ -348,6 +1011,11 @@ const AddProductPage = () => {
                     type="number"
                     placeholder="Oz"
                     required
+                    min="1" // Set minimum value
+                    max="30" // Set maximum value
+                    value={upsizeSize ? upsizeSize.replace(" oz", "") : ""} // Display only the number in the input
+                    onChange={handleUpsizeSizeChange} // Attach the change handler
+                    ref={drinkUpsizeRef}
                   />
                 </div>
                 {/* UPSIZE PRICE */}
@@ -365,6 +1033,11 @@ const AddProductPage = () => {
                     type="number"
                     placeholder="Additional"
                     required
+                    min="0"
+                    max="100"
+                    value={upsizePrice !== null ? upsizePrice : ""} // Display the number or an empty string
+                    onChange={handleUpsizePriceChange} // Attach the change handler
+                    ref={drinkUpsizePriceRef}
                   />
                 </div>
               </div>
@@ -380,21 +1053,22 @@ const AddProductPage = () => {
                   <span>Type</span>
                 </label>
                 <select
+                  ref={selectRef}
                   name="menuItemType"
                   id="menuItemType"
-                  className="rounded-md shadow-sm border-2 border-gray-100
-            text-lg text-gray-600 font-semibold bg-white cursor-pointer
-            h-10 w-full"
+                  value={selectedDrinkType ? selectedDrinkType : ""}
+                  onChange={handleDrinkTypeChange}
+                  className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer h-10 w-full"
                 >
                   {(selectedCat === "drinks"
                     ? drinkTypes
-                    : selectedCat === "snacks"
+                    : selectedCat === "snacksMenu"
                     ? snackTypes
-                    : selectedCat === "sandwiches"
+                    : selectedCat === "sandwichesMenu"
                     ? sandwichTypes
-                    : selectedCat === "pasta"
+                    : selectedCat === "pastaMenu"
                     ? pastaTypes
-                    : selectedCat === "pastries"
+                    : selectedCat === "pastriesMenu"
                     ? pastryTypes
                     : mainCourseTypes
                   ).map((types) => (
@@ -412,12 +1086,16 @@ const AddProductPage = () => {
                 >
                   <span>Allergen</span>
                 </label>
-                <AddAllergens selectedCat={selectedCat} />
+                <AddAllergens
+                  selectedCat={selectedCat}
+                  selectedAllergens={selectedAllergens} // Pass the current selected allergens
+                  onAdd={handleAllergenAdd} // Handle adding allergens
+                />
               </div>
             </div>
 
             {/* DISPLAY CHOSEN ALLERGENS */}
-            {mayroongNapilingAllergen && (
+            {mayroongNapilingAllergen && selectedAllergens.length > 0 && (
               <div className="w-full flex flex-col gap-1 items-center justify-center">
                 <label
                   className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -425,13 +1103,12 @@ const AddProductPage = () => {
                 >
                   <span>Contains these allergens:</span>
                   <div className="grid grid-cols-3 gap-1.5 mt-2">
-                    {/* EXAMPLE LANG */}
-                    {allergensByCategory.drinks.map((allergens) => (
+                    {selectedAllergens.map((allergen, index) => (
                       <span
-                        className="rounded-full bg-orange-400 py-1.5 text-center
-                      font-semibold text-orange-50"
+                        key={index}
+                        className="rounded-full bg-orange-400 py-1.5 text-center font-semibold text-orange-50"
                       >
-                        {allergens}
+                        {allergen}
                       </span>
                     ))}
                   </div>
@@ -456,12 +1133,15 @@ const AddProductPage = () => {
                 rows={3}
                 style={{ resize: "none" }}
                 required
+                value={desc} // Bind the textarea value to desc state
+                onChange={(e) => setDesc(e.target.value)} // Update desc on change
+                ref={descriptionRef}
               />
             </div>
           </div>
           <button
             className="w-full bg-orange-950 font-bold text-xl text-white p-2 rounded-md mt-2
-          shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
+                        shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
             onClick={() => {
               handleSubmit();
             }}

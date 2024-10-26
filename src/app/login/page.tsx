@@ -36,8 +36,6 @@ const LoginPage = () => {
   );
   const router = useRouter();
 
-
-
   useEffect(() => {
     // Check if the user is already logged in by checking cookies
     const userSession = Cookies.get("userSession");
@@ -46,21 +44,6 @@ const LoginPage = () => {
     }
   }, [router]);
 
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        // Refresh token to ensure it's up-to-date
-        await user.reload();
-        await user.getIdToken(true);
-
-        // Fetch the user details now that authentication is ready
-        fetchUserDetails(user.email);
-      }
-    });
-
-    return () => unsubscribe(); // Cleanup subscription on component unmount
-  }, []);
-
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -68,7 +51,7 @@ const LoginPage = () => {
   const toggleIcon = () => {
     setIsEyeOpen(!isEyeOpen); // Toggle between true and false
   };
-  
+
   const fetchUserDetails = async (email) => {
     try {
       const userRef = doc(firestore, "users", email);
@@ -95,38 +78,36 @@ const LoginPage = () => {
     const email = event.target.email.value;
     const password = event.target.password.value;
 
-    //console.log("Original Email:", email);
-
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
-      const user = userCredential.user;
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-      // Ensure the token is refreshed and fully loaded
-      await user.reload();
-      await user.getIdToken(true);
-
-      if (!user.emailVerified) {
-        setMessage({ text: "Please verify your email.", type: "error" });
-        await auth.signOut(); // Sign out if email not verified
-      } else {
-        const role = await fetchUserDetails(user.email);
-        if (role) {
-          Cookies.set("userSession", user.refreshToken, { expires: 1 / 24 });
-          Cookies.set("userRole", urlEncode(role), { expires: 1 / 24 });
-          router.push("/"); // Redirect to homepage after successful login
+        // Check email verification
+        if (!user.emailVerified) {
+            setMessage({ text: "Please verify your email.", type: "error" });
+            await signOut(auth); // Sign out if email not verified
+        } else {
+            // Fetch user role from Firestore
+            const role = await fetchUserDetails(email);
+            
+            if (role) {
+                // Set cookie based on user role
+                if (role === "admin") {
+                    Cookies.set("admin", user.refreshToken, { expires: 1 / 24 }); // Set the cookie value to "admin"
+                } else {
+                    Cookies.set("user", user.refreshToken, { expires: 1 / 24 }); // Set refresh token for regular users
+                }
+                
+                router.push("/"); // Redirect to the homepage
+            }
         }
-      }
     } catch (error) {
-      setMessage({ text: "Invalid username or password.", type: "error" });
+        setMessage({ text: "Invalid username or password.", type: "error" });
     }
 
     // Clear message after 3 seconds
     setTimeout(() => setMessage(null), 3000);
-  };
+};
 
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
@@ -222,7 +203,7 @@ const LoginPage = () => {
           shadow-md text-gray-500
           hover:bg-gray-50 duration-300 hover:scale-[1.02]"
           >
-            <i className="fa fa-user-plus text-sm"></i>
+            <i className="fa  fa-user-plus text-sm"></i>
             <span className="font-bold text-md">Create an account</span>
           </Link>
         </div>
