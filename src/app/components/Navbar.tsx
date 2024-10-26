@@ -19,6 +19,7 @@ import NotificationBell from "./NotificationBell";
 const Navbar = () => {
   const [user, setUser] = useState(null);
   const [firstName, setFirstName] = useState("");
+  const [role, setRole] = useState(""); // New state for role
   const [totalItems, setTotalItems] = useState(0);
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
@@ -27,25 +28,15 @@ const Navbar = () => {
   const unsubscribeCartRef = useRef(null);
   const unsubscribeDocRef = useRef(null);
 
-  const checkCookiesAndLogout = async () => {
-    // Check if there are any cookies present
-    const allCookies = Cookies.get();
-
-    // If no cookies are found, logout the user
-    if (Object.keys(allCookies).length === 0) {
-      //console.log("No cookies detected, logging out...");
-      await handleLogout();
-    }
-  };
-
   useEffect(() => {
-    unsubscribeAuthRef.current = onAuthStateChanged(auth, async (authUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser && authUser.emailVerified) {
         try {
           const userDoc = await getDoc(doc(db, "users", authUser.email));
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setFirstName(userData.firstName);
+            setRole(userData.role); // Set the role from Firestore
             setUser(authUser);
 
             // Real-time listener for tempOrder updates
@@ -61,24 +52,19 @@ const Navbar = () => {
 
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(
-                  tempOrderDocRef,
-                  (doc) => {
-                    if (doc.exists()) {
-                      const tempOrderData = doc.data();
-                      setTotalItems(tempOrderData.totalItems || 0);
-                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                    } else {
-                      setTotalItems(0);
-                      setTotalCartPrice(0);
-                    }
+                unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
+                  if (doc.exists()) {
+                    const tempOrderData = doc.data();
+                    setTotalItems(tempOrderData.totalItems || 0);
+                    setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+                  } else {
+                    setTotalItems(0);
+                    setTotalCartPrice(0);
                   }
-                );
+                });
               } else {
                 setTotalItems(0);
                 setTotalCartPrice(0);
-
-                // Unsubscribe from tempOrderDocRef listener if it exists
                 if (unsubscribeDocRef.current) {
                   unsubscribeDocRef.current();
                   unsubscribeDocRef.current = null;
@@ -88,8 +74,8 @@ const Navbar = () => {
           } else {
             setUser(null);
             setFirstName("");
-
-            // Unsubscribe from listeners if user document doesn't exist
+            setRole(""); // Clear the role if user does not exist
+            // Clean up listeners
             if (unsubscribeCartRef.current) {
               unsubscribeCartRef.current();
               unsubscribeCartRef.current = null;
@@ -100,13 +86,13 @@ const Navbar = () => {
             }
           }
         } catch (error) {
-          //console.error("Error fetching user or tempOrder data:", error);
+          // Handle any errors that occur while fetching user data
         }
       } else {
         setUser(null);
         setFirstName("");
-
-        // Unsubscribe from listeners when user logs out
+        setRole(""); // Clear the role when logged out
+        // Clean up listeners
         if (unsubscribeCartRef.current) {
           unsubscribeCartRef.current();
           unsubscribeCartRef.current = null;
@@ -121,12 +107,9 @@ const Navbar = () => {
     // Check for cookies when the component mounts
     checkCookiesAndLogout();
 
-    // Clean up all listeners when the component unmounts
+    // Cleanup
     return () => {
-      if (unsubscribeAuthRef.current) {
-        unsubscribeAuthRef.current();
-        unsubscribeAuthRef.current = null;
-      }
+      unsubscribe();
       if (unsubscribeCartRef.current) {
         unsubscribeCartRef.current();
         unsubscribeCartRef.current = null;
@@ -138,17 +121,21 @@ const Navbar = () => {
     };
   }, []);
 
-  const handleLogout = async (event?: React.SyntheticEvent) => {
-    if (event) event.preventDefault(); // Prevent default only if event exists
+  const checkCookiesAndLogout = async () => {
+    const allCookies = Cookies.get();
+    if (Object.keys(allCookies).length === 0) {
+      await handleLogout();
+    }
+  };
 
+  const handleLogout = async (event) => {
+    if (event) event.preventDefault();
     try {
-      // Get all cookies
       const allCookies = Cookies.get();
       Object.keys(allCookies).forEach((cookieName) => {
         Cookies.remove(cookieName);
       });
 
-      // Unsubscribe from Firestore listeners
       if (unsubscribeCartRef.current) {
         unsubscribeCartRef.current();
         unsubscribeCartRef.current = null;
@@ -158,21 +145,18 @@ const Navbar = () => {
         unsubscribeDocRef.current = null;
       }
 
-      // Sign out from Firebase
       await signOut(auth);
-      router.push("/"); // Redirect to homepage
+      router.push("/");
     } catch (error) {
-      //console.error("Error signing out:", error);
+      // Handle any errors during sign-out
     }
   };
 
   return (
-    <div
-      className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50"
-      style={{ backgroundColor: "#30261F" }}
-    >
+    <div className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50" style={{ backgroundColor: "#30261F" }}>
       <div className="font-bold text-xl hover:text-yellow-100">
-        <Link href="/">fikaställe</Link>
+        {/* Conditionally render based on role */}
+        <Link href="/">{role === "admin" ? "fikaställe admin testing" : "fikaställe"}</Link>
       </div>
       <div className="flex items-center justify-center gap-6">
         <div className="md:hidden">
@@ -196,52 +180,27 @@ const Navbar = () => {
           <Link href="/orders">Orders</Link>
         </div>
       </div>
-
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
-          <div className="">
-            <Link
-              href="/foodcart"
-              className="relative flex gap-2 group hover:text-yellow-100 items-center"
-            >
-              <span
-                key="cart-item-count"
-                className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]"
-              >
-                {totalItems}
-              </span>
-              <i
-                key="cart-icon"
-                className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"
-              ></i>
-              <span key="cart-total-price" className="">
-                (P{totalCartPrice.toFixed(2)})
-              </span>
+          <div>
+            <Link href="/foodcart" className="relative flex gap-2 group hover:text-yellow-100 items-center">
+              <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">{totalItems}</span>
+              <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
+              <span>(P{totalCartPrice.toFixed(2)})</span>
             </Link>
           </div>
-          <div key="notif-bell">
-            <NotificationBell />
-          </div>
-          <div key="user-firstname">
+          <div><NotificationBell /></div>
+          <div>
             <Link href="/profile">
               <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
             </Link>
           </div>
-          <div key="logout">
-            <Link
-              href="/"
-              onClick={handleLogout}
-              className="hover:text-yellow-100"
-            >
-              Logout
-            </Link>
+          <div>
+            <Link href="/" onClick={handleLogout} className="hover:text-yellow-100">Logout</Link>
           </div>
         </div>
       ) : (
-        <div
-          className="hidden md:block font-semibold hover:text-yellow-100"
-          key="login"
-        >
+        <div className="hidden md:block font-semibold hover:text-yellow-100">
           <Link href="/login">Login</Link>
         </div>
       )}
