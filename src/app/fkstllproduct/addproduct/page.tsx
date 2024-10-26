@@ -4,10 +4,11 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { mainCourseMenu } from "@/app/data";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useRef ,useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { db } from "@/app/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where } from 'firebase/firestore';
-
+import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
 
 // MENU CATEGORY
 export const menuCategory = [
@@ -44,19 +45,15 @@ export const menuCategory = [
 ];
 
 // TYPES PER CATEGORY
-let drinkTypes = ["Coffee", "Non-Coffee"];
-let pastaTypes = ["Pesto", "Non-Pesto"];
-let snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
-let sandwichTypes = ["Sandwich"];
-let mainCourseTypes = ["Meat", "Seafood", "Veggie"];
-let pastryTypes = ["Cake", "Cookie", "Tart"];
+//let drinkTypes = ["Coffee", "Non-Coffee"];
+//let pastaTypes = ["Pesto", "Non-Pesto"];
+//let snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
+//let sandwichTypes = ["Sandwich"];
+//let mainCourseTypes = ["Meat", "Seafood", "Veggie"];
+//let pastryTypes = ["Cake", "Cookie", "Tart"];
 
 // ALLERGENS GALING SA ALLERGIESFILTER
-const allergensByCategory: { [key: string]: string[] } = {
-    default: ["Peanut", "Fish", "Chicken", "Almond", "Shrimp"],
-    pastries: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
-    drinks: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
-};
+
 
 // DAPAT NAKA-SMALL LETTERS TAPOS PLURAL
 //let selectedCat = "drinks";
@@ -72,7 +69,7 @@ const AddProductPage = () => {
     // Menu Category
     const [selectedCat, setSelectedCat] = useState("drinks");
     const [extractedCategory, setExtractedCategory] = useState("drinks");
-    
+
     // Availability
     const [selectedAvailability, setSelectedAvailability] = useState("available");
 
@@ -99,7 +96,7 @@ const AddProductPage = () => {
     };
 
     const [newProdID, setNewProdID] = useState("");
-    
+
     // For Item's Calorie
     const [calorie, setCalorie] = useState("low");
 
@@ -124,76 +121,192 @@ const AddProductPage = () => {
     // For DRINKS ONLY - Drink's Upsize PRICE
     const [upsizePrice, setUpsizePrice] = useState<number | null>(null);
 
-     // Effect to update extractedCategory when selectedCat changes
+    // CATEGORY OF TYPES
+    const drinkTypes = ["Coffee", "Non-Coffee"];
+    const pastaTypes = ["Pesto", "Non-Pesto"];
+    const snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
+    const sandwichTypes = ["Sandwich"];
+    const mainCourseTypes = ["Meat", "Seafood", "Veggie"];
+    const pastryTypes = ["Cake", "Cookie", "Tart"];
+
+    // ALLERGIES
+    const allergensByCategory: { [key: string]: string[] } = {
+        default: ["Peanut", "Fish", "Chicken", "Almond", "Shrimp"],
+        pastries: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
+        drinks: ["Milk", "Eggs", "Peanuts", "Tree Nuts", "Wheat", "Soy"],
+    };
+
+    const allergenOptions =
+        selectedCat === "drinks"
+            ? allergensByCategory.drinks
+            : selectedCat === "pastriesMenu"
+            ? allergensByCategory.pastries
+            : allergensByCategory.default;
+
+    // SET ALLERGIES
+    const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
+
+    const selectRef = useRef<HTMLSelectElement>(null);
+    const getSelectedValue = () => {
+        if (selectRef.current) {
+            const selectedValue = selectRef.current.value;
+            console.log("Selected value from dropdown:", selectedValue);
+            return selectedValue;
+        }
+    };
+
+    // Item's Description
+    const [desc, setDesc] = useState(""); 
+
+    const [existingIDs, setExistingIDs] = useState<string[]>([]); // Initialize existing IDs
+    const existingIDsRef = useRef<string[]>([]); // Create a ref to store existing IDs
+    const itemNameRef = useRef(null);
+    const itemPriceRef = useRef(null);
+    const drinkSizeRef = useRef(null);
+    const drinkUpsizeRef = useRef(null);
+    const drinkUpsizePriceRef = useRef(null);
+    const descriptionRef = useRef(null);
+    // Effect to update extractedCategory when selectedCat changes
     useEffect(() => {
         const category = selectedCat.replace("Menu", "");
         setExtractedCategory(category);
     }, [selectedCat]);
 
-    // Effect to set the selectedDrinkType based on the selectedCat
-    // Effect to reset drink type when the category changes
+    // Effect to reset drink type and product ID when category changes
     useEffect(() => {
-        if (selectedCat === "drinks") {
-            // Reset drink type to hotDrinks when category is drinks
-            setSelectedDrinkType("hotDrinks");
-            setPassableSelectedDrinkType("hotDrinks");
-        } else {
-            // Clear drink type when category is not drinks
-            setSelectedDrinkType(null);
-            setPassableSelectedDrinkType(null);
+    if (selectedCat === "drinks") {
+        // Initialize to default drink type
+        console.log("Switching to drinks category.");
+        setSelectedDrinkType("hotDrinks");
+        setPassableSelectedDrinkType("hotDrinks");
+        setUpsize(true);
+    } else {
+        // Set default values for non-drink categories
+        setUpsize(false);
+        switch (selectedCat) {
+            case "pastaMenu":
+                setSelectedDrinkType("Pesto");
+                setPassableSelectedDrinkType("Pesto");
+                break;
+            case "snacksMenu":
+                setSelectedDrinkType("Fries");
+                setPassableSelectedDrinkType("Fries");
+                break;
+            case "sandwichesMenu":
+                setSelectedDrinkType("Sandwich");
+                setPassableSelectedDrinkType("Sandwich");
+                break;
+            case "pastriesMenu":
+                setSelectedDrinkType("Cake");
+                setPassableSelectedDrinkType("Cake");
+                break;
+            case "mainCourseMenu":
+                setSelectedDrinkType("Meat");
+                setPassableSelectedDrinkType("Meat");
+                break;
+            default:
+                setSelectedDrinkType(null);
+                setPassableSelectedDrinkType(null);
+                break;
+        }
+    }
+    }, [selectedCat]);
+
+    useEffect(() => {
+        if (selectedCat !== "drinks") {
+            setUpsize(false); // Set upsize to false if the category is not drinks
         }
     }, [selectedCat]);
 
-    // Effect to fetch existing IDs whenever selectedDrinkType or extractedCategory changes
+    // Effect to fetch IDs and set product ID when drink type changes
     useEffect(() => {
-        if (selectedCat === "drinks" && selectedDrinkType) {
-            // Fetch IDs based on drink type
-            fetchExistingIDs(extractedCategory, selectedDrinkType);
-        } else {
-            // Fetch IDs for other categories
-            fetchExistingIDs(extractedCategory, null);
+        const drinkType = selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
+        if (drinkType) {
+            fetchExistingIDs(extractedCategory, drinkType);
         }
-    }, [extractedCategory, selectedDrinkType, selectedCat]);
+    }, [extractedCategory, selectedDrinkType, selectedCat, passableSelectedDrinkType]);
+
+    // Effect to generate a new ID based on existing IDs
+    useEffect(() => {
+        const drinkType = selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
+        generateNewID(existingIDsRef.current, drinkType); // Call with the current value of existing IDs
+    }, [existingIDs]);
+
+    useEffect(() => {
+        // Handle drinkSize bounds
+        if (drinkSize !== null && drinkSize !== "") {
+            const sizeAsNumber = parseInt(drinkSize);
+
+            if (!isNaN(sizeAsNumber)) {
+                if (sizeAsNumber < 1) {
+                    setDrinkSize("1");
+                } else if (sizeAsNumber > 30) {
+                    setDrinkSize("30");
+                }
+            }
+        }
+
+        // Handle upsizeSize bounds
+        if (upsizeSize !== null && upsizeSize !== "") {
+            const sizeAsNumber = parseInt(upsizeSize);
+
+            if (!isNaN(sizeAsNumber)) {
+                if (sizeAsNumber < 1) {
+                    setUpsizeSize("1");
+                } else if (sizeAsNumber > 30) {
+                    setUpsizeSize("30");
+                }
+            }
+        }
+    }, [drinkSize, upsizeSize]);
+
+    // Effect to set default drink type to "Coffee" if "drinks" is selected
+    useEffect(() => {
+        if (selectedCat === "drinks" && !selectedDrinkType) {
+            setSelectedDrinkType("Coffee");
+        }
+    }, [selectedCat, selectedDrinkType]);
+
+    const handleDrinkTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedValue = e.target.value;
+        setSelectedDrinkType(selectedValue); // Update the state with the new selection
+        console.log("Selected type:", selectedValue); // Log the selected type for debugging
+    };
 
     // Function to fetch existing IDs based on the selected category
-    const fetchExistingIDs = async (category, drinkType) => {
-    try {
-        console.log("Fetching IDs from collection:", category);
-        const q = query(collection(db, category)); // Use category for the collection name
-        const querySnapshot = await getDocs(q);
-        
-        // Extract the prodID from each document
-        const ids = querySnapshot.docs.map(doc => doc.data().prodID);
-    
-        // Log the gathered prodIDs
-        //console.log("Gathered prodIDs:", ids);
-    
-        generateNewID(ids, drinkType); // Generate a new ID based on the existing ones and drink type
-    } catch (error) {
-        console.error("Error fetching existing IDs: ", error);
-    }
-};
+    const fetchExistingIDs = async (category: string, drinkType: string | null) => {
+        try {
+            console.log("Fetching IDs from collection:", category);
+            const q = query(collection(db, category)); // Use category for the collection name
+            const querySnapshot = await getDocs(q);
+
+            // Extract the prodID from each document
+            const ids = querySnapshot.docs.map(doc => doc.data().prodID);
+
+            // Update the existingIDs state and ref
+            setExistingIDs(ids);
+            existingIDsRef.current = ids; // Store in ref for ID generation
+        } catch (error) {
+            console.error("Error fetching existing IDs: ", error);
+        }
+    };
 
     // Function to generate a new product ID
     const generateNewID = (ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
-        // Get prefix for drinks, or use the extracted category for non-drinks
-        const prefix = drinkType ? drinkTypePrefixes[drinkType] : `${extractedCategory}`;
+        const prefix = selectedCat === "drinks" && drinkType ? drinkTypePrefixes[drinkType] : `${extractedCategory}`;
 
-        if (ids.length === 0) {
-            const newID = `${prefix}1`; // Start with prefix + 1 if no IDs exist
-            setNewProdID(newID);
-            return;
+        if (!prefix) {
+            console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
+            return; // Early return if no prefix is available
         }
 
-        const regex = new RegExp(`^${prefix}`, "i");
-        const numericIDs = ids.map(id => {
-            const numPart = id.replace(regex, ""); // Remove the prefix
-            return parseInt(numPart, 10); // Convert to integer
-        }).filter(num => !isNaN(num)); // Filter out NaN values
+        // Generate the new ID
+        const newID = ids.length === 0 
+            ? `${prefix}1` 
+            : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
 
-        const maxID = numericIDs.length > 0 ? Math.max(...numericIDs) : 0; // Find the maximum ID
-        const newID = `${prefix}${maxID + 1}`; // Generate new ID
         setNewProdID(newID);
+        console.log("Generated new product ID:", newID);
     };
 
     const handleAvailabilityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -248,24 +361,51 @@ const AddProductPage = () => {
         console.log("Selected Upsize Size:", formattedSize); // Log the formatted size
         setUpsizeSize(formattedSize); // Update the state
     };
-    
+
     const handleUpsizePriceChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const priceValue = event.target.value; // Get the input value
         const formattedPrice = priceValue ? parseFloat(priceValue) : null; // Parse the value as a float
-    
+
         // Check if the price exceeds the maximum allowed value (100)
         const cappedPrice = formattedPrice !== null && formattedPrice > 100 ? 100 : formattedPrice;
-    
+
         console.log("Selected Upsize Price:", cappedPrice); // Log the capped price
         setUpsizePrice(cappedPrice); // Update the state
+    };
+
+    // Handle category change
+    const handleCategoryChange = (value: string) => {
+        setSelectedCat(value); // Update the selected category
+        setSelectedAllergens([]); // Reset allergens
+        console.log(value); // Log the selected value
+    };
+
+    const handleAllergenAdd = (allergens: string[]) => {
+        setSelectedAllergens(allergens); // Update selected allergens
+        console.log("Selected allergens:", allergens); // Log or handle the selected allergens as needed
     };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0]; // Get the uploaded file
         if (file) {
             setFileName(file.name); // Update the file name in state
-            const imageUrl = URL.createObjectURL(file); // Create a local URL for preview
-            setImageUrl(imageUrl); // Update the image preview state
+            const previewUrl = URL.createObjectURL(file); // Create a local URL for preview
+            setImageUrl(previewUrl); // Update the image preview state
+        }
+    };
+    
+    // Function to upload image to Firebase Storage
+    const uploadImageToStorage = async (file) => {
+        const storage = getStorage();
+        const storageRef = ref(storage, `images/${file.name}`); // Path in storage
+
+        try {
+            await uploadBytes(storageRef, file); // Upload the file
+            const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+            return downloadUrl; // Return the URL
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            return null; // Return null if there's an error
         }
     };
 
@@ -275,24 +415,151 @@ const AddProductPage = () => {
         fileInputRef.current.value = ""; // Clear the file input
     };
 
-    // Handle the file input change and set the image URL
-    const handleImageUpload = (e) => {
-    const file = e.target.files[0]; // Get the uploaded file
-    if (file) {
-      const imageUrl = URL.createObjectURL(file); // Create a URL for the file
-      setImageUrl(imageUrl); // Update the state with the image URL
-    }
+    const fetchPlaceholderImageUrl = async () => {
+        const storage = getStorage();
+        const storageRef = ref(storage); // Root directory or specify folder if needed
+        const files = await listAll(storageRef);
+        const placeholderFile = files.items.find(item => item.name === "placeholder-photo.webp");
+    
+        if (placeholderFile) {
+            return await getDownloadURL(placeholderFile); // Get the download URL
+        } else {
+            console.warn("Placeholder image not found in storage.");
+            return null;
+        }
     };
 
     //   PARA LANG SA POP-UP KAPAG NAG-ADD PRODUCT BUTTON
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
+        // Validate required fields
+        if (!itemName) {
+            itemNameRef.current.focus(); // Set focus back to item name
+            return; // Exit the function if validation fails
+        }
+    
+        if (!itemPrice) {
+            itemPriceRef.current.focus(); // Set focus back to item price
+            return; // Exit if item price is not provided
+        }
+    
+        if (selectedCat === "drinks") {
+            if (!drinkSize) {
+                drinkSizeRef.current.focus();
+                return; // Exit if drink size is not provided
+            }
+            if (upsize && !upsizeSize) {
+                drinkUpsizeRef.current.focus();
+                return; // Exit if upsize size is not provided
+            }
+            if (upsize && !upsizePrice) {
+                drinkUpsizePriceRef.current.focus();
+                return; // Exit if upsize price is not provided
+            }
+        }
+        
+        if (!desc) {
+            descriptionRef.current.focus();
+            return; // Exit if description is not provided
+        }
+    
+        // Optional ingredients with default values of null
+        let addEspresso = null;
+        let addSyrup = null;
+        let milkOat = null;
+        let milkAlmond = null;
+        let addVanilla = null;
+        let serveMashedPotato = null;
+        let serveRice = null;
+    
+        // Assign values conditionally based on selected category
+        if (selectedCat === "drinks") {
+            addEspresso = 30;
+            addSyrup = 30;
+            milkOat = 40;
+            milkAlmond = 30;
+    
+            if (selectedDrinkType === "icedDrinks") {
+                addVanilla = 25;
+            }
+        } else if (selectedCat === "mainCourseMenu") {
+            serveMashedPotato = false;
+            serveRice = false;
+        }
+    
+        // Document name from item title
+        const documentName = itemName.toLowerCase().replace(/\s+/g, "-");
+    
+        // Upload the image if it exists
+        let finalImageUrl;
+        if (fileInputRef.current.files[0]) {
+            const file = fileInputRef.current.files[0]; // Get the uploaded file
+            finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+            if (!finalImageUrl) {
+                console.error("Image upload failed, using placeholder.");
+                finalImageUrl = await fetchPlaceholderImageUrl(); // Use placeholder if upload fails
+            }
+        } else {
+            finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
+        }
+    
+        // Prepare data object with individual fields
+        const documentData = {
+            availability: selectedAvailability,
+            calorie: calorie,
+            desc: desc,
+            img: finalImageUrl,
+            price: itemPrice,
+            prodCategory: selectedCat === "drinks" ? passableSelectedDrinkType : selectedCat, // Logic for prodCategory
+            prodID: newProdID,
+            title: itemName,
+            type: passableSelectedDrinkType || "",
+            contains: selectedAllergens.length > 0 ? selectedAllergens : [""], // Allergens only
+    
+            // Optional drink fields
+            ...(selectedCat === "drinks" && {
+                addEspresso,
+                addSyrup,
+                milkOat,
+                milkAlmond,
+                addVanilla,
+                currSize: drinkSize || "",
+                upsizable: upsize,
+            }),
+    
+            // Optional main course fields
+            ...(selectedCat === "mainCourseMenu" && {
+                serveMashedPotato,
+                serveRice,
+            }),
+    
+            // Optional upsize fields, only if upsizable
+            ...(upsize && {
+                upsizePrice: upsizePrice || 10,
+                upsizeSize: upsizeSize || "12oz",
+            }),
+        };
+    
+        // Show popup only after validation passes
         setIsPopupVisible(true);
-
         setTimeout(() => {
             setIsPopupVisible(false);
         }, 750);
+    
+        // Add to Firestore
+        try {
+            await setDoc(doc(db, extractedCategory, documentName), documentData);
+            console.log("Document successfully written!");
+    
+            // Reload the page after a delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000); // Adjust the delay as needed
+        } catch (error) {
+            console.error("Error writing document:", error);
+        }
     };
-
+    
+    
     return (
         <div
             className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex items-center justify-center
@@ -324,29 +591,29 @@ const AddProductPage = () => {
                         <div className="w-full flex justify-between gap-2 items-center">
                             {/* IMAGE CONTAINER */}
                             <div className="w-52 aspect-square rounded-md relative border-2 border-gray-100 text-xs">
-                            {/* Display the image preview */}
-                            {imageUrl && (
-                                <div className="relative group w-52 aspect-square rounded-md border-2 border-gray-100 text-xs mt-2">
-                                    {/* Image */}
-                                    <Image
-                                        src={imageUrl} // Use the preview URL
-                                        alt="Product Image"
-                                        fill
-                                        className="object-contain rounded-md"
-                                    />
-                                    
-                                    {/* Overlay for dimming effect */}
-                                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+                                {/* Display the image preview */}
+                                {imageUrl && (
+                                    <div className="relative group w-52 aspect-square rounded-md border-2 border-gray-100 text-xs mt-2">
+                                        {/* Image */}
+                                        <Image
+                                            src={imageUrl} // Use the preview URL
+                                            alt="Product Image"
+                                            fill
+                                            className="object-contain rounded-md"
+                                        />
 
-                                    {/* White "X" button centered */}
-                                    <button
-                                        onClick={handleRemoveImage} // Remove the image on click
-                                        className="absolute inset-0 flex items-center justify-center text-white text-3xl font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                                    >
-                                        &#x2715; {/* Unicode for the "X" */}
-                                    </button>
-                                </div>
-                            )}
+                                        {/* Overlay for dimming effect */}
+                                        <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+
+                                        {/* White "X" button centered */}
+                                        <button
+                                            onClick={handleRemoveImage} // Remove the image on click
+                                            className="absolute inset-0 flex items-center justify-center text-white text-3xl font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                        >
+                                            &#x2715; {/* Unicode for the "X" */}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             {/* MENU CATEGORY AND AVAILABILITY */}
                             <div className="w-full flex flex-col justify-between items-center">
@@ -365,7 +632,7 @@ const AddProductPage = () => {
                                         text-lg text-gray-600 font-semibold bg-white cursor-pointer
                                         h-9 w-full"
                                         onChange={(e) => {
-                                            setSelectedCat(e.target.value);
+                                            handleCategoryChange(e.target.value);
                                             console.log(e.target.value); // Log the selected value
                                         }}
                                     >
@@ -432,11 +699,11 @@ const AddProductPage = () => {
                                 </button>
 
                                 <input
-                                type="file"
-                                accept="image/*" // Accept image files only
-                                ref={fileInputRef} // Attach the ref
-                                style={{ display: 'none' }} // Hide the input
-                                onChange={handleFileChange}
+                                    type="file"
+                                    accept="image/*" // Accept image files only
+                                    ref={fileInputRef} // Attach the ref
+                                    style={{ display: 'none' }} // Hide the input
+                                    onChange={handleFileChange}
                                 />
                             </div>
                         </div>
@@ -501,6 +768,7 @@ const AddProductPage = () => {
                                 required
                                 value={itemName} // Bind input value to state
                                 onChange={handleItemNameChange} // Handle input changes
+                                ref={itemNameRef} // Attach the ref here
                             />
                         </div>
                         {/* PRICE AND CATEGORY */}
@@ -522,38 +790,39 @@ const AddProductPage = () => {
                                     required
                                     value={itemPrice} // Bind input value to state
                                     onChange={handleItemPriceChange} // Handle input changes
+                                    ref={itemPriceRef}
                                 />
                             </div>
                             {/* PRODUCT CATEGORY - KAPAG HINDI DRINK, AUTOMATIC NA KUNG ANO ANG MENU CATEGORY NILA*/}
                             {selectedCat === "drinks" && (
-                            // PRODUCT CATEGORY FOR DRINKS
-                            <div className="flex-1 flex flex-col gap-1 items-center justify-center">
-                                <label
-                                    className="text-orange-950 text-sm w-full text-left space-x-1"
-                                    htmlFor="catDrinks"
-                                >
-                                    <span>Item Category</span>
-                                </label>
-                                <select
-                                    name="catDrinks"
-                                    id="catDrinks"
-                                    className="rounded-md shadow-sm border-2 border-gray-100
+                                // PRODUCT CATEGORY FOR DRINKS
+                                <div className="flex-1 flex flex-col gap-1 items-center justify-center">
+                                    <label
+                                        className="text-orange-950 text-sm w-full text-left space-x-1"
+                                        htmlFor="catDrinks"
+                                    >
+                                        <span>Item Category</span>
+                                    </label>
+                                    <select
+                                        name="catDrinks"
+                                        id="catDrinks"
+                                        className="rounded-md shadow-sm border-2 border-gray-100
                                     text-lg text-gray-600 font-semibold bg-white cursor-pointer
                                     py-[5px] w-full text-center"
-                                    value={passableSelectedDrinkType || "hotDrinks"} // Use passableSelectedDrinkType as default
+                                        value={passableSelectedDrinkType || "hotDrinks"} // Use passableSelectedDrinkType as default
                                         onChange={(e) => {
                                             const selectedValue = e.target.value;
                                             setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
                                             setSelectedDrinkType(selectedValue); // Set selectedDrinkType
                                         }}
-                                >
-                                    <option value="hotDrinks">Hot Drink</option>
-                                    <option value="icedDrinks">Iced Drink</option>
-                                    <option value="blendedDrinks">Blended Drink</option>
-                                    <option value="affogatoDrinks">Affogato Drink</option>
-                                </select>
-                            </div>
-                        )}
+                                    >
+                                        <option value="hotDrinks">Hot Drink</option>
+                                        <option value="icedDrinks">Iced Drink</option>
+                                        <option value="blendedDrinks">Blended Drink</option>
+                                        <option value="affogatoDrinks">Affogato Drink</option>
+                                    </select>
+                                </div>
+                            )}
                         </div>
 
                         {selectedCat === "drinks" && (
@@ -577,6 +846,7 @@ const AddProductPage = () => {
                                         required
                                         value={drinkSize ? drinkSize.replace(" oz", "") : ""}
                                         onChange={handleSizeChange}
+                                        ref={drinkSizeRef}
                                     />
                                 </div>
                                 {/* UPSIZE? */}
@@ -618,10 +888,11 @@ const AddProductPage = () => {
                                         type="number"
                                         placeholder="Oz"
                                         required
-                                        min="1" // Optional: Set minimum value
-                                        max="30" // Optional: Set maximum value
+                                        min="1" // Set minimum value
+                                        max="30" // Set maximum value
                                         value={upsizeSize ? upsizeSize.replace(" oz", "") : ""} // Display only the number in the input
                                         onChange={handleUpsizeSizeChange} // Attach the change handler
+                                        ref={drinkUpsizeRef}
                                     />
                                 </div>
                                 {/* UPSIZE PRICE */}
@@ -643,6 +914,7 @@ const AddProductPage = () => {
                                         max="100"
                                         value={upsizePrice !== null ? upsizePrice : ""} // Display the number or an empty string
                                         onChange={handleUpsizePriceChange} // Attach the change handler
+                                        ref={drinkUpsizePriceRef}
                                     />
                                 </div>
                             </div>
@@ -658,26 +930,29 @@ const AddProductPage = () => {
                                     <span>Type</span>
                                 </label>
                                 <select
-                                name="menuItemType"
-                                id="menuItemType"
-                                className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer h-10 w-full"
+                                    ref={selectRef}
+                                    name="menuItemType"
+                                    id="menuItemType"
+                                    value={selectedDrinkType ? selectedDrinkType : ""}
+                                    onChange={handleDrinkTypeChange}
+                                    className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer h-10 w-full"
                                 >
-                                {(selectedCat === "drinks"
-                                    ? drinkTypes
-                                    : selectedCat === "snacksMenu"
-                                    ? snackTypes
-                                    : selectedCat === "sandwichesMenu"
-                                        ? sandwichTypes
-                                        : selectedCat === "pastaMenu"
-                                        ? pastaTypes
-                                        : selectedCat === "pastriesMenu"
-                                            ? pastryTypes
-                                            : mainCourseTypes
-                                ).map((types) => (
-                                    <option value={types} className="text-center" key={types}>
-                                    {types}
-                                    </option>
-                                ))}
+                                    {(selectedCat === "drinks"
+                                        ? drinkTypes
+                                        : selectedCat === "snacksMenu"
+                                            ? snackTypes
+                                            : selectedCat === "sandwichesMenu"
+                                                ? sandwichTypes
+                                                : selectedCat === "pastaMenu"
+                                                    ? pastaTypes
+                                                    : selectedCat === "pastriesMenu"
+                                                        ? pastryTypes
+                                                        : mainCourseTypes
+                                    ).map((types) => (
+                                        <option value={types} className="text-center" key={types}>
+                                            {types}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             {/* ADD ALLERGEN BUTTON */}
@@ -688,29 +963,29 @@ const AddProductPage = () => {
                                 >
                                     <span>Allergen</span>
                                 </label>
-                                <AddAllergens selectedCat={selectedCat} />
+                                <AddAllergens 
+                                    selectedCat={selectedCat} 
+                                    selectedAllergens={selectedAllergens} // Pass the current selected allergens
+                                    onAdd={handleAllergenAdd} // Handle adding allergens
+                                />
                             </div>
                         </div>
 
                         {/* DISPLAY CHOSEN ALLERGENS */}
-                        {mayroongNapilingAllergen && (
-                            <div className="w-full flex flex-col gap-1 items-center justify-center">
-                                <label
-                                    className="text-orange-950 text-sm w-full text-left space-x-1"
-                                    htmlFor="menuItemDescription"
-                                >
-                                    <span>Contains these allergens:</span>
-                                    <div className="grid grid-cols-3 gap-1.5 mt-2">
-                                        {/* EXAMPLE LANG */}
-                                        {allergensByCategory.drinks.map((allergen, index) => (
-                                            <span key={index} className="rounded-full bg-orange-400 py-1.5 text-center font-semibold text-orange-50">
-                                                {allergen}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </label>
-                            </div>
-                        )}
+                        {mayroongNapilingAllergen && selectedAllergens.length > 0 && (
+                        <div className="w-full flex flex-col gap-1 items-center justify-center">
+                            <label className="text-orange-950 text-sm w-full text-left space-x-1" htmlFor="menuItemDescription">
+                                <span>Contains these allergens:</span>
+                                <div className="grid grid-cols-3 gap-1.5 mt-2">
+                                    {selectedAllergens.map((allergen, index) => (
+                                        <span key={index} className="rounded-full bg-orange-400 py-1.5 text-center font-semibold text-orange-50">
+                                            {allergen}
+                                        </span>
+                                    ))}
+                                </div>
+                            </label>
+                        </div>
+                    )}
 
                         {/* MENU ITEM DESCRIPTION */}
                         <div className="w-full flex flex-col gap-1 items-center justify-center">
@@ -729,12 +1004,15 @@ const AddProductPage = () => {
                                 rows={3}
                                 style={{ resize: "none" }}
                                 required
+                                value={desc} // Bind the textarea value to desc state
+                                onChange={(e) => setDesc(e.target.value)} // Update desc on change
+                                ref={descriptionRef}
                             />
                         </div>
                     </div>
                     <button
                         className="w-full bg-orange-950 font-bold text-xl text-white p-2 rounded-md mt-2
-          shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
+                        shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
                         onClick={() => {
                             handleSubmit();
                         }}
