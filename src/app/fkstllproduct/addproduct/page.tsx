@@ -393,21 +393,66 @@ const AddProductPage = () => {
             setImageUrl(previewUrl); // Update the image preview state
         }
     };
+
+    // Function to convert image to WebP using canvas
+    const convertImageToWebP = (file: File): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const imgElement = new window.Image(); // Use window.Image to avoid conflicts
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                imgElement.src = e.target.result as string; // Cast to string for TypeScript
+            };
+
+            imgElement.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = imgElement.width;
+                canvas.height = imgElement.height;
+                const ctx = canvas.getContext("2d");
+                if (ctx) {
+                    ctx.drawImage(imgElement, 0, 0);
+
+                    // Convert to WebP format
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve(blob); // Resolve with the blob
+                        } else {
+                            reject(new Error("Conversion to WebP failed."));
+                        }
+                    }, "image/webp");
+                } else {
+                    reject(new Error("Canvas context is null."));
+                }
+            };
+
+            imgElement.onerror = (err) => {
+                reject(err);
+            };
+
+            reader.onerror = (err) => {
+                reject(err);
+            };
+
+            reader.readAsDataURL(file); // Read the file as Data URL
+        });
+    };
     
     // Function to upload image to Firebase Storage
-    const uploadImageToStorage = async (file) => {
-        const storage = getStorage();
-        const storageRef = ref(storage, `images/${file.name}`); // Path in storage
+const uploadImageToStorage = async (file) => {
+    const storage = getStorage();
+    const storageRef = ref(storage, `images/${file.name}`); // Path in storage
 
-        try {
-            await uploadBytes(storageRef, file); // Upload the file
-            const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
-            return downloadUrl; // Return the URL
-        } catch (error) {
-            console.error("Error uploading image:", error);
-            return null; // Return null if there's an error
-        }
-    };
+    try {
+        // Convert the image to WebP format
+        const webpBlob = await convertImageToWebP(file);
+        await uploadBytes(storageRef, webpBlob, { contentType: 'image/webp' }); // Upload the WebP file
+        const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+        return downloadUrl; // Return the URL
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        return null; // Return null if there's an error
+    }
+};
 
     const handleRemoveImage = () => {
         setImageUrl(""); // Remove the image preview
