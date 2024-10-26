@@ -14,7 +14,7 @@ import {
 } from "../data";
 
 import { db } from "../firebase";
-import { collection, getDocs, query, where, deleteDoc, doc} from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc, doc, updateDoc} from 'firebase/firestore';
 
 const CRUDProductPage = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>("icedDrinks");
@@ -273,6 +273,58 @@ const CRUDProductPage = () => {
         }
     };
 
+    const handleAvailabilityChange = async (e: React.ChangeEvent<HTMLSelectElement>, id: string, collectionName: string) => {
+        const newAvailability = e.target.value;
+        
+        try {
+            const itemRef = doc(db, collectionName, id); // Use collectionName dynamically
+            await updateDoc(itemRef, { availability: newAvailability });
+            console.log(`Availability for item ${id} in ${collectionName} updated to ${newAvailability}`);
+    
+            // Optionally, update local state directly to avoid re-fetching data
+            updateLocalStateAvailability(collectionName, id, newAvailability);
+        } catch (error) {
+            console.error(`Error updating availability in ${collectionName}:`, error);
+        }
+    };
+
+    const updateLocalStateAvailability = (collectionName: string, id: string, newAvailability: string) => {
+        switch (collectionName) {
+            case "drinks":
+                setDrinks((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "mainCourse":
+                setMainCourses((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "pasta":
+                setPasta((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "pastries":
+                setPastries((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "snacks":
+                setSnacks((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "sandwiches":
+                setSandwiches((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            default:
+                console.warn("Unknown collection name:", collectionName);
+        }
+    };
+
     return (
         <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
             {/* MAIN CONTAINER */}
@@ -338,24 +390,25 @@ const CRUDProductPage = () => {
                                     className="object-contain"
                                 />
                             </div>
+                            
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
                                 {item.title}
                             </h1>
-                            {/* AVAILABILITY */}
+                            
+                            {/* AVAILABILITY INDICATOR */}
                             <span
                                 className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
+                            
                             {/* CALORIE CONTENT */}
                             <span
                                 className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                                    item.calorie === "high"
-                                        ? "bg-red-500"
-                                        : item.calorie === "med"
-                                            ? "bg-orange-400"
-                                            : "bg-green-400"
+                                    item.calorie === "high" ? "bg-red-500" :
+                                    item.calorie === "med" ? "bg-orange-400" : "bg-green-400"
                                 }`}
                             ></span>
+                            
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
                                 <div
@@ -366,10 +419,11 @@ const CRUDProductPage = () => {
                                     <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
                                         Feature
                                     </button>
+                                    
                                     <select
-                                        name=""
-                                        id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "drinks")} // Dynamically pass the collection name
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -378,10 +432,11 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
+                                    
                                     <Link
                                         href={`/fkstllproduct/editproduct/${item.id}`}
                                         className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -389,11 +444,12 @@ const CRUDProductPage = () => {
                                     >
                                         Edit
                                     </Link>
+                                    
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDelete(item.id, "drinks");
+                                            handleDelete(item.id, collectionName); // Pass the dynamic collection name
                                         }}
                                     >
                                         Delete
@@ -450,7 +506,9 @@ const CRUDProductPage = () => {
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "mainCourse")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -459,7 +517,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -474,7 +532,7 @@ const CRUDProductPage = () => {
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDelete(item.id, "mainCourses");
+                                            handleDelete(item.id, "mainCourse");
                                         }}
                                     >
                                         Delete
@@ -531,7 +589,9 @@ const CRUDProductPage = () => {
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "pasta")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -540,7 +600,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -612,7 +672,9 @@ const CRUDProductPage = () => {
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "pastries")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -621,7 +683,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -693,7 +755,9 @@ const CRUDProductPage = () => {
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "snacks")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -702,7 +766,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -774,7 +838,9 @@ const CRUDProductPage = () => {
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "sandwiches")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -783,7 +849,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
