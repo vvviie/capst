@@ -14,7 +14,13 @@ import {
 } from "../data";
 
 import { db } from "../firebase";
-import { collection, getDocs, query, where, deleteDoc, doc, updateDoc} from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc, doc, updateDoc, getDoc, setDoc, onSnapshot} from 'firebase/firestore';
+
+interface FeaturedItem {
+    id: string;
+    // Add other fields if necessary
+    fromDB?: string;
+}
 
 const CRUDProductPage = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>("icedDrinks");
@@ -25,6 +31,8 @@ const CRUDProductPage = () => {
     const [pastries, setPastries] = useState<Pastries[]>([]);
     const [snacks, setSnacks] = useState<Snacks[]>([]);
     const [sandwiches, setSandwiches] = useState<Sandwiches[]>([]);
+    
+    const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
 
     const handleItemClick = (id: string) => {
         setActiveItem(activeItem === id ? null : id);
@@ -325,6 +333,70 @@ const CRUDProductPage = () => {
         }
     };
 
+    const handleToggleFeatureItem = async (itemId: string, collectionName: string) => {
+        try {
+            const itemDocRef = doc(db, collectionName, itemId); // Original collection reference
+            const featuredDocRef = doc(db, "featuredItems", itemId); // Featured collection reference
+    
+            const featuredSnapshot = await getDoc(featuredDocRef);
+    
+            if (featuredSnapshot.exists()) {
+                // If the item is already in featuredItems, unfeature it by deleting it
+                await deleteDoc(featuredDocRef);
+                console.log(`Item ${itemId} has been unfeatured.`);
+            } else {
+                // If the item is not in featuredItems, feature it by copying the document data
+                const itemSnapshot = await getDoc(itemDocRef);
+    
+                if (itemSnapshot.exists()) {
+                    const itemData = itemSnapshot.data();
+                    
+                    await setDoc(featuredDocRef, {
+                        ...itemData,
+                        fromDB: collectionName, // Indicate the original collection
+                    });
+                    console.log(`Item ${itemId} from ${collectionName} featured successfully.`);
+                } else {
+                    console.warn(`Item ${itemId} does not exist in ${collectionName}.`);
+                }
+            }
+        } catch (error) {
+            console.error(`Error toggling feature for item ${itemId} from ${collectionName}:`, error);
+        }
+    };
+
+    useEffect(() => {
+        const fetchFeaturedItems = async () => {
+            try {
+                const featuredCollection = collection(db, "featuredItems");
+                const featuredSnapshot = await getDocs(featuredCollection);
+                const featuredData: FeaturedItem[] = featuredSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setFeaturedItems(featuredData);
+            } catch (error) {
+                console.error("Error fetching featured items:", error);
+            }
+        };
+    
+        fetchFeaturedItems();
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, "featuredItems"), (snapshot) => {
+            const featuredData: FeaturedItem[] = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as FeaturedItem[];
+            setFeaturedItems(featuredData);
+        });
+    
+        return () => unsubscribe(); // Clean up the listener on component unmount
+    }, []);
+
+    const isItemFeatured = (id: string) => featuredItems.some((featuredItem) => featuredItem.id === id);
+
     return (
         <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
             {/* MAIN CONTAINER */}
@@ -416,8 +488,14 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "drinks"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     
                                     <select
@@ -500,8 +578,14 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "mainCourse"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
@@ -583,8 +667,14 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "pasta"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
@@ -666,8 +756,14 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "pastries"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
@@ -749,8 +845,14 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "snacks"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
@@ -832,8 +934,14 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "sandwiches"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
