@@ -397,14 +397,16 @@ export const menuCategory: menuCats = [
 ];
 
 export const Availability = [
-{
-  id: 1,
-  value: "Available",
-},
-{
-  id: 2,
-  value: "Unavailable",
-},
+  {
+    id: 1,
+    name: "Available",  // Capitalized display name
+    value: "available"   // Lowercase logical value
+  },
+  {
+    id: 2,
+    name: "Unavailable",
+    value: "unavailable"
+  }
 ];
 
 export const pastriesMenu:MenuItems = [

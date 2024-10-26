@@ -14,7 +14,13 @@ import {
 } from "../data";
 
 import { db } from "../firebase";
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc, doc, updateDoc, getDoc, setDoc, onSnapshot} from 'firebase/firestore';
+
+interface FeaturedItem {
+    id: string;
+    // Add other fields if necessary
+    fromDB?: string;
+}
 
 const CRUDProductPage = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>("icedDrinks");
@@ -25,6 +31,8 @@ const CRUDProductPage = () => {
     const [pastries, setPastries] = useState<Pastries[]>([]);
     const [snacks, setSnacks] = useState<Snacks[]>([]);
     const [sandwiches, setSandwiches] = useState<Sandwiches[]>([]);
+    
+    const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
 
     const handleItemClick = (id: string) => {
         setActiveItem(activeItem === id ? null : id);
@@ -223,6 +231,172 @@ const CRUDProductPage = () => {
         return sandwiches; 
     }, [sandwiches]);
 
+    // Delete function for items
+    const handleDelete = async (id: string, category: string) => {
+        try {
+            // Define the correct collection based on the category
+            const collectionMap = {
+                drinks: "drinks",
+                mainCourses: "mainCourse",
+                pastas: "pasta",
+                pastries: "pastries",
+                snacks: "snacks",
+                sandwiches: "sandwiches",
+            };
+            
+            const collectionName = collectionMap[category];
+            if (!collectionName) {
+                console.error("Invalid category");
+                return;
+            }
+
+            // Delete from Firestore
+            await deleteDoc(doc(db, collectionName, id));
+
+            // Update local state after deletion
+            switch (category) {
+                case "drinks":
+                    setDrinks((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "mainCourses":
+                    setMainCourses((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "pastas":
+                    setPasta((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "pastries":
+                    setPastries((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "snacks":
+                    setSnacks((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "sandwiches":
+                    setSandwiches((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                default:
+                    break;
+            }
+        } catch (error) {
+            console.error("Error deleting item:", error);
+        }
+    };
+
+    const handleAvailabilityChange = async (e: React.ChangeEvent<HTMLSelectElement>, id: string, collectionName: string) => {
+        const newAvailability = e.target.value;
+        
+        try {
+            const itemRef = doc(db, collectionName, id); // Use collectionName dynamically
+            await updateDoc(itemRef, { availability: newAvailability });
+            console.log(`Availability for item ${id} in ${collectionName} updated to ${newAvailability}`);
+    
+            // Optionally, update local state directly to avoid re-fetching data
+            updateLocalStateAvailability(collectionName, id, newAvailability);
+        } catch (error) {
+            console.error(`Error updating availability in ${collectionName}:`, error);
+        }
+    };
+
+    const updateLocalStateAvailability = (collectionName: string, id: string, newAvailability: string) => {
+        switch (collectionName) {
+            case "drinks":
+                setDrinks((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "mainCourse":
+                setMainCourses((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "pasta":
+                setPasta((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "pastries":
+                setPastries((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "snacks":
+                setSnacks((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            case "sandwiches":
+                setSandwiches((prev) =>
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
+                );
+                break;
+            default:
+                console.warn("Unknown collection name:", collectionName);
+        }
+    };
+
+    const handleToggleFeatureItem = async (itemId: string, collectionName: string) => {
+        try {
+            const itemDocRef = doc(db, collectionName, itemId); // Original collection reference
+            const featuredDocRef = doc(db, "featuredItems", itemId); // Featured collection reference
+    
+            const featuredSnapshot = await getDoc(featuredDocRef);
+    
+            if (featuredSnapshot.exists()) {
+                // If the item is already in featuredItems, unfeature it by deleting it
+                await deleteDoc(featuredDocRef);
+                console.log(`Item ${itemId} has been unfeatured.`);
+            } else {
+                // If the item is not in featuredItems, feature it by copying the document data
+                const itemSnapshot = await getDoc(itemDocRef);
+    
+                if (itemSnapshot.exists()) {
+                    const itemData = itemSnapshot.data();
+                    
+                    await setDoc(featuredDocRef, {
+                        ...itemData,
+                        fromDB: collectionName, // Indicate the original collection
+                    });
+                    console.log(`Item ${itemId} from ${collectionName} featured successfully.`);
+                } else {
+                    console.warn(`Item ${itemId} does not exist in ${collectionName}.`);
+                }
+            }
+        } catch (error) {
+            console.error(`Error toggling feature for item ${itemId} from ${collectionName}:`, error);
+        }
+    };
+
+    useEffect(() => {
+        const fetchFeaturedItems = async () => {
+            try {
+                const featuredCollection = collection(db, "featuredItems");
+                const featuredSnapshot = await getDocs(featuredCollection);
+                const featuredData: FeaturedItem[] = featuredSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+                setFeaturedItems(featuredData);
+            } catch (error) {
+                console.error("Error fetching featured items:", error);
+            }
+        };
+    
+        fetchFeaturedItems();
+    }, []);
+
+    useEffect(() => {
+        const unsubscribe = onSnapshot(collection(db, "featuredItems"), (snapshot) => {
+            const featuredData: FeaturedItem[] = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as FeaturedItem[];
+            setFeaturedItems(featuredData);
+        });
+    
+        return () => unsubscribe(); // Clean up the listener on component unmount
+    }, []);
+
+    const isItemFeatured = (id: string) => featuredItems.some((featuredItem) => featuredItem.id === id);
+
     return (
         <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
             {/* MAIN CONTAINER */}
@@ -288,24 +462,25 @@ const CRUDProductPage = () => {
                                     className="object-contain"
                                 />
                             </div>
+                            
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
                                 {item.title}
                             </h1>
-                            {/* AVAILABILITY */}
+                            
+                            {/* AVAILABILITY INDICATOR */}
                             <span
                                 className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
+                            
                             {/* CALORIE CONTENT */}
                             <span
                                 className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                                    item.calorie === "high"
-                                        ? "bg-red-500"
-                                        : item.calorie === "med"
-                                            ? "bg-orange-400"
-                                            : "bg-green-400"
+                                    item.calorie === "high" ? "bg-red-500" :
+                                    item.calorie === "med" ? "bg-orange-400" : "bg-green-400"
                                 }`}
                             ></span>
+                            
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
                                 <div
@@ -313,13 +488,20 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "drinks"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
+                                    
                                     <select
-                                        name=""
-                                        id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "drinks")} // Dynamically pass the collection name
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -328,10 +510,11 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
+                                    
                                     <Link
                                         href={`/fkstllproduct/editproduct/${item.id}`}
                                         className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -339,9 +522,13 @@ const CRUDProductPage = () => {
                                     >
                                         Edit
                                     </Link>
+                                    
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, collectionName); // Pass the dynamic collection name
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -391,13 +578,21 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "mainCourse"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "mainCourse")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -406,7 +601,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -419,7 +614,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "mainCourse");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -469,13 +667,21 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "pasta"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "pasta")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -484,7 +690,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -497,7 +703,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "pastas");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -547,13 +756,21 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "pastries"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "pastries")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -562,7 +779,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -575,7 +792,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "pastries");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -625,13 +845,21 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "snacks"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "snacks")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -640,7 +868,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -653,7 +881,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "snacks");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -703,13 +934,21 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10">
-                                        Feature
+                                    <button 
+                                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                                        onClick={(e) => {
+                                            e.stopPropagation(); // Prevents triggering parent onClick
+                                            handleToggleFeatureItem(item.id, "sandwiches"); // Call toggle feature function with item ID and collection name
+                                        }}
+                                    >
+                                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
                                     <select
                                         name=""
                                         id=""
+                                        value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "sandwiches")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
@@ -718,7 +957,7 @@ const CRUDProductPage = () => {
                                                 value={availability.value}
                                                 className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
-                                                {availability.value}
+                                                {availability.name}
                                             </option>
                                         ))}
                                     </select>
@@ -731,7 +970,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "sandwiches");
+                                        }}
                                     >
                                         Delete
                                     </button>
