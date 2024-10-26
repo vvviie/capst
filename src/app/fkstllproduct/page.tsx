@@ -14,7 +14,7 @@ import {
 } from "../data";
 
 import { db } from "../firebase";
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, deleteDoc, doc} from 'firebase/firestore';
 
 const CRUDProductPage = () => {
     const [selectedCategory, setSelectedCategory] = useState<string>("icedDrinks");
@@ -223,6 +223,56 @@ const CRUDProductPage = () => {
         return sandwiches; 
     }, [sandwiches]);
 
+    // Delete function for items
+    const handleDelete = async (id: string, category: string) => {
+        try {
+            // Define the correct collection based on the category
+            const collectionMap = {
+                drinks: "drinks",
+                mainCourses: "mainCourse",
+                pastas: "pasta",
+                pastries: "pastries",
+                snacks: "snacks",
+                sandwiches: "sandwiches",
+            };
+            
+            const collectionName = collectionMap[category];
+            if (!collectionName) {
+                console.error("Invalid category");
+                return;
+            }
+
+            // Delete from Firestore
+            await deleteDoc(doc(db, collectionName, id));
+
+            // Update local state after deletion
+            switch (category) {
+                case "drinks":
+                    setDrinks((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "mainCourses":
+                    setMainCourses((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "pastas":
+                    setPasta((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "pastries":
+                    setPastries((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "snacks":
+                    setSnacks((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                case "sandwiches":
+                    setSandwiches((prev) => prev.filter((item) => item.id !== id));
+                    break;
+                default:
+                    break;
+            }
+        } catch (error) {
+            console.error("Error deleting item:", error);
+        }
+    };
+
     return (
         <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
             {/* MAIN CONTAINER */}
@@ -341,7 +391,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "drinks");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -419,7 +472,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "mainCourses");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -497,7 +553,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "pastas");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -575,7 +634,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "pastries");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -653,7 +715,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "snacks");
+                                        }}
                                     >
                                         Delete
                                     </button>
@@ -731,7 +796,10 @@ const CRUDProductPage = () => {
                                     </Link>
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                                        onClick={(e) => e.stopPropagation()}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDelete(item.id, "sandwiches");
+                                        }}
                                     >
                                         Delete
                                     </button>
