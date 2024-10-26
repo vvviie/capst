@@ -386,7 +386,7 @@ export const menuCategory: menuCats = [
 },
 {
   id: 8,
-  prodCat: "sandwichMenu",
+  prodCat: "sandwichesMenu",
   title: "Sandwiches",
 },
 {
