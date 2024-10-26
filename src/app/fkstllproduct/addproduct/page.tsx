@@ -385,23 +385,36 @@ const AddProductPage = () => {
         console.log("Selected allergens:", allergens); // Log or handle the selected allergens as needed
     };
 
-    const handleFileChange = (e) => {
+    const handleFileChange = async (e) => {
         const file = e.target.files[0]; // Get the uploaded file
         if (file) {
+            const validTypes = ['image/jpeg', 'image/png'];
+            if (!validTypes.includes(file.type)) {
+                console.error("Invalid file type. Please upload a PNG or JPEG.");
+                return;
+            }
             setFileName(file.name); // Update the file name in state
             const previewUrl = URL.createObjectURL(file); // Create a local URL for preview
             setImageUrl(previewUrl); // Update the image preview state
+    
+            try {
+                // Convert and upload the image immediately
+                const webpUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+                console.log("Uploaded image URL:", webpUrl);
+            } catch (error) {
+                console.error("Error during image processing:", error);
+            }
         }
     };
 
     // Function to convert image to WebP using canvas
     const convertImageToWebP = (file: File): Promise<Blob> => {
         return new Promise((resolve, reject) => {
-            const imgElement = new window.Image(); // Use window.Image to avoid conflicts
+            const imgElement = new window.Image();
             const reader = new FileReader();
 
             reader.onload = (e) => {
-                imgElement.src = e.target.result as string; // Cast to string for TypeScript
+                imgElement.src = e.target.result as string;
             };
 
             imgElement.onload = () => {
@@ -415,7 +428,7 @@ const AddProductPage = () => {
                     // Convert to WebP format
                     canvas.toBlob((blob) => {
                         if (blob) {
-                            resolve(blob); // Resolve with the blob
+                            resolve(blob);
                         } else {
                             reject(new Error("Conversion to WebP failed."));
                         }
@@ -438,21 +451,30 @@ const AddProductPage = () => {
     };
     
     // Function to upload image to Firebase Storage
-const uploadImageToStorage = async (file) => {
-    const storage = getStorage();
-    const storageRef = ref(storage, `images/${file.name}`); // Path in storage
+    const uploadImageToStorage = async (file) => {
+        const storage = getStorage();
+        const storageRef = ref(storage, `images/${file.name.split('.').slice(0, -1).join('.')}.webp`); // Update path to WebP
 
-    try {
-        // Convert the image to WebP format
-        const webpBlob = await convertImageToWebP(file);
-        await uploadBytes(storageRef, webpBlob, { contentType: 'image/webp' }); // Upload the WebP file
-        const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
-        return downloadUrl; // Return the URL
-    } catch (error) {
-        console.error("Error uploading image:", error);
-        return null; // Return null if there's an error
-    }
-};
+        try {
+            // Convert the image to WebP format
+            const webpBlob = await convertImageToWebP(file);
+            console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
+            console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
+
+            // Create URL for the WebP Blob to preview
+            const webpUrl = URL.createObjectURL(webpBlob);
+            console.log("Converted to WebP:", webpUrl); // Log the WebP URL
+            setImageUrl(webpUrl); // Set this URL for preview, if needed
+
+            // Upload the WebP file
+            await uploadBytes(storageRef, webpBlob, { contentType: 'image/webp' });
+            const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+            return downloadUrl; // Return the URL
+        } catch (error) {
+            console.error("Error uploading image:", error);
+            return null; // Return null if there's an error
+        }
+    };
 
     const handleRemoveImage = () => {
         setImageUrl(""); // Remove the image preview
@@ -538,10 +560,15 @@ const uploadImageToStorage = async (file) => {
         let finalImageUrl;
         if (fileInputRef.current.files[0]) {
             const file = fileInputRef.current.files[0]; // Get the uploaded file
-            finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
-            if (!finalImageUrl) {
-                console.error("Image upload failed, using placeholder.");
-                finalImageUrl = await fetchPlaceholderImageUrl(); // Use placeholder if upload fails
+            try {
+                finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+                if (!finalImageUrl) {
+                    console.error("Image upload failed, using placeholder.");
+                    finalImageUrl = await fetchPlaceholderImageUrl(); // Use placeholder if upload fails
+                }
+            } catch (error) {
+                console.error("Error during image processing:", error);
+                finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if there's an error
             }
         } else {
             finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
