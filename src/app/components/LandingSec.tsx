@@ -13,7 +13,8 @@ const data = [
   },
   {
     id: 2,
-    title: "Experience culinary delights and warm ambiance at our charming eatery.",
+    title:
+      "Experience culinary delights and warm ambiance at our charming eatery.",
     desc: "Experience culinary delights and warm ambiance at our charming eatery.",
     img: "/cwfood.jpg",
   },
@@ -36,7 +37,7 @@ export const LandingSec = () => {
   }, []);
 
   return (
-    <div className="w-full h-[calc(100vh-56px)] mt-14 flex flex-col lg:flex-row xl:px-56">
+    <div className="w-full min-h-[calc(100vh-56px)] mt-14 flex flex-col lg:flex-row md:px-24 xl:px-56 py-6 gap-4 lg:gap-0 items-center">
       {/* TEXT CONTAINER */}
       <div className="px-8 flex flex-col items-center justify-center xl:px-0 lg:items-start gap-4 lg:h-full flex-1">
         <h1
@@ -53,7 +54,9 @@ export const LandingSec = () => {
         >
           {data[currentSlide].desc}
         </p>
-        <Link href="/menu"> {/* Wrap button with Link component */}
+        <Link href="/menu">
+          {" "}
+          {/* Wrap button with Link component */}
           <button
             className="bg-amber-950 text-white py-2 px-4 text-xl lg:px-6 lg:py-3 rounded-lg hover:bg-amber-900
             lg:hover:scale-105 duration-[0.3s] font-bold"
@@ -63,9 +66,9 @@ export const LandingSec = () => {
         </Link>
       </div>
       {/* IMAGE CONTAINER */}
-      <div className="w-full relative flex-1 flex justify-center items-center">
+      <div className="w-full relative flex-1 flex justify-center items-center aspect-square py-2">
         <Image
-          src={data[0].img}
+          src={data[currentSlide].img}
           alt=""
           fill
           priority
