@@ -527,7 +527,7 @@ const CRUDProductPage = () => {
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDelete(item.id, collectionName); // Pass the dynamic collection name
+                                            handleDelete(item.id, "drinks"); // Pass the dynamic collection name
                                         }}
                                     >
                                         Delete
