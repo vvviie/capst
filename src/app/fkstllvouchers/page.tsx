@@ -145,7 +145,7 @@ const VoucherListPage = () => {
                             : "text-gray-500"
                         } font-bold`}
                       >
-                        {availability.value}
+                        {availability.name}
                       </option>
                     ))}
                   </select>
