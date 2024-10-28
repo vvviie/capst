@@ -3,6 +3,7 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { vouchers, Availability } from "../data";
 
+// Voucher Array
 type voucherType = {
   id: number;
   title: string;
