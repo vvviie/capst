@@ -325,7 +325,7 @@ const MenuCategoryPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pr-10 py-4 px-10 md:flex-row md:gap-0 md:px-24 xl:px-56">
         <Link
           href={"/menu"}
-          className="flex items-center space-x-2 font-bold text-orange-950 text-2xl text-left w-full
+          className="w-full sm:w-auto flex items-center space-x-2 font-bold text-orange-950 text-2xl text-left
        hover:text-orange-800 cursor-pointer mb-2"
         >
           <i className="fa fa-angle-left mr-[-4px]" aria-hidden="true"></i>

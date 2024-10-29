@@ -37,9 +37,9 @@ export const LandingSec = () => {
   }, []);
 
   return (
-    <div className="w-full min-h-[calc(100vh-56px)] mt-14 flex flex-col lg:flex-row md:px-24 xl:px-56 py-6 gap-4 lg:gap-0 items-center">
+    <div className="w-full min-h-[calc(100vh-56px)] px-10 mt-14 flex flex-col lg:flex-row md:px-24 xl:px-56 py-6 gap-4 items-center">
       {/* TEXT CONTAINER */}
-      <div className="px-8 flex flex-col items-center justify-center xl:px-0 lg:items-start gap-4 lg:h-full flex-1">
+      <div className="flex flex-col items-center justify-center lg:items-start gap-4 lg:h-full flex-1">
         <h1
           className={`text-3xl md:text-4xl text-center lg:text-left lg:text-5xl transition-opacity duration-1000 text-orange-950 font-bold ${
             fade ? "opacity-100" : "opacity-0"
@@ -66,13 +66,13 @@ export const LandingSec = () => {
         </Link>
       </div>
       {/* IMAGE CONTAINER */}
-      <div className="w-full relative flex-1 flex justify-center items-center aspect-square py-2">
+      <div className="w-full relative flex-1 flex justify-center items-center aspect-square py-2 rounded-lg overflow-clip">
         <Image
           src={data[currentSlide].img}
           alt=""
           fill
           priority
-          className={`object-contain
+          className={`object-contain lg:object-cover
             }`}
         />
       </div>

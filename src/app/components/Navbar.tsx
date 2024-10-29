@@ -39,29 +39,32 @@ const Navbar = () => {
             setRole(userData.role); // Set the role from Firestore
             setUser(authUser);
 
-  //           // Real-time listener for tempOrder updates
-  //           const tempOrdersRef = collection(db, "tempOrders");
-  //           const q = query(tempOrdersRef, where("user", "==", authUser.email));
+            // Real-time listener for tempOrder updates
+            const tempOrdersRef = collection(db, "tempOrders");
+            const q = query(tempOrdersRef, where("user", "==", authUser.email));
 
-  //           unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
-  //             let tempOrderDocId = null;
+            unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
+              let tempOrderDocId = null;
 
-  //             querySnapshot.forEach((doc) => {
-  //               tempOrderDocId = doc.id;
-  //             });
+              querySnapshot.forEach((doc) => {
+                tempOrderDocId = doc.id;
+              });
 
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
-                  if (doc.exists()) {
-                    const tempOrderData = doc.data();
-                    setTotalItems(tempOrderData.totalItems || 0);
-                    setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                  } else {
-                    setTotalItems(0);
-                    setTotalCartPrice(0);
+                unsubscribeDocRef.current = onSnapshot(
+                  tempOrderDocRef,
+                  (doc) => {
+                    if (doc.exists()) {
+                      const tempOrderData = doc.data();
+                      setTotalItems(tempOrderData.totalItems || 0);
+                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+                    } else {
+                      setTotalItems(0);
+                      setTotalCartPrice(0);
+                    }
                   }
-                });
+                );
               } else {
                 setTotalItems(0);
                 setTotalCartPrice(0);
@@ -104,8 +107,8 @@ const Navbar = () => {
       }
     });
 
-  //   // Check for cookies when the component mounts
-  //   checkCookiesAndLogout();
+    // Check for cookies when the component mounts
+    checkCookiesAndLogout();
 
     // Cleanup
     return () => {
@@ -153,10 +156,15 @@ const Navbar = () => {
   };
 
   return (
-    <div className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50" style={{ backgroundColor: "#30261F" }}>
+    <div
+      className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50"
+      style={{ backgroundColor: "#30261F" }}
+    >
       <div className="font-bold text-xl hover:text-yellow-100">
         {/* Conditionally render based on role */}
-        <Link href="/">{role === "admin" ? "fikaställe admin testing" : "fikaställe"}</Link>
+        <Link href="/">
+          {role === "admin" ? "fikaställe admin testing" : "fikaställe"}
+        </Link>
       </div>
       <div className="flex items-center justify-center gap-6">
         <div className="md:hidden">
@@ -183,20 +191,33 @@ const Navbar = () => {
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
           <div>
-            <Link href="/foodcart" className="relative flex gap-2 group hover:text-yellow-100 items-center">
-              <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">{totalItems}</span>
+            <Link
+              href="/foodcart"
+              className="relative flex gap-2 group hover:text-yellow-100 items-center"
+            >
+              <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
+                {totalItems}
+              </span>
               <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
               <span>(P{totalCartPrice.toFixed(2)})</span>
             </Link>
           </div>
-          <div><NotificationBell /></div>
+          <div>
+            <NotificationBell />
+          </div>
           <div>
             <Link href="/profile">
               <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
             </Link>
           </div>
           <div>
-            <Link href="/" onClick={handleLogout} className="hover:text-yellow-100">Logout</Link>
+            <Link
+              href="/"
+              onClick={handleLogout}
+              className="hover:text-yellow-100"
+            >
+              Logout
+            </Link>
           </div>
         </div>
       ) : (

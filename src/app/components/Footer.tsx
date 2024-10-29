@@ -54,19 +54,19 @@ const Footer = () => {
         <div className="flex gap-4 items-center justify-center">
           {/* FACEBOOK */}
           <div className="relative w-8 h-8 hover:scale-[1.08] duration-200">
-            <Link href={data.socials.facebook.url}>
+            <Link href={data.socials.facebook.url} target="_blank">
               <Image src={data.socials.facebook.img} alt="" fill />
             </Link>
           </div>
           {/* MESSENGER */}
           <div className="relative w-8 h-8 hover:scale-[1.08] duration-200">
-            <Link href={data.socials.messenger.url}>
+            <Link href={data.socials.messenger.url} target="_blank">
               <Image src={data.socials.messenger.img} alt="" fill />
             </Link>
           </div>
           {/* INSTAGRAM */}
           <div className="relative w-8 h-8 hover:scale-[1.08] duration-200">
-            <Link href={data.socials.instagram.url}>
+            <Link href={data.socials.instagram.url} target="_blank">
               <Image src={data.socials.instagram.img} alt="" fill />
             </Link>
           </div>
