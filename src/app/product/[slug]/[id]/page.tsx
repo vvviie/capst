@@ -808,7 +808,7 @@ const ProductPage: React.FC = () => {
               {/* PRICE DIV */}
               <div className="flex flex-col gap-1 w-2/6">
                 <span className="text-2xl font-bold text-right text-orange-900">
-                  P{productData.pricePerItem || price}
+                  PHP {productData.pricePerItem || price}
                 </span>
                 <span className="text-sm font-medium text-right w-full">
                   Base price
@@ -1001,9 +1001,9 @@ const ProductPage: React.FC = () => {
           >
             <i className="fa-solid fa-cart-shopping"></i>
             {isComingFromCartPage ? (
-              <span>Update Item (+P{totalPrice.toFixed(2)})</span>
+              <span>Update Item (+PHP {totalPrice.toFixed(2)})</span>
             ) : (
-              <span>Add to my Order (+P{totalPrice.toFixed(2)})</span>
+              <span>Add to my Order (+PHP {totalPrice.toFixed(2)})</span>
             )}
           </button>
         </div>
