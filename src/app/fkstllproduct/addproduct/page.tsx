@@ -385,7 +385,7 @@ const AddProductPage = () => {
   // Method to handle size input change
   const handleSizeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const sizeValue = event.target.value;
-    const formattedSize = sizeValue ? `${sizeValue} oz` : null; // Combine number with "oz", or set to null
+    const formattedSize = sizeValue ? `${sizeValue}oz` : null; // Combine number with "oz", or set to null
     console.log("Selected Drink Size:", formattedSize); // Log the formatted size
     setDrinkSize(formattedSize); // Update the state
   };
@@ -400,7 +400,7 @@ const AddProductPage = () => {
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const sizeValue = event.target.value; // Get the input value
-    const formattedSize = sizeValue ? `${sizeValue} oz` : null; // Format the size with "oz", or set to null
+    const formattedSize = sizeValue ? `${sizeValue}oz` : null; // Format the size with "oz", or set to null
     console.log("Selected Upsize Size:", formattedSize); // Log the formatted size
     setUpsizeSize(formattedSize); // Update the state
   };
@@ -967,7 +967,7 @@ const AddProductPage = () => {
                     min="1" // Set minimum value
                     max="30" // Set maximum value
                     required
-                    value={drinkSize ? drinkSize.replace(" oz", "") : ""}
+                    value={drinkSize ? drinkSize.replace("oz", "") : ""}
                     onChange={handleSizeChange}
                     ref={drinkSizeRef}
                   />
@@ -1013,7 +1013,7 @@ const AddProductPage = () => {
                     required
                     min="1" // Set minimum value
                     max="30" // Set maximum value
-                    value={upsizeSize ? upsizeSize.replace(" oz", "") : ""} // Display only the number in the input
+                    value={upsizeSize ? upsizeSize.replace("oz", "") : ""} // Display only the number in the input
                     onChange={handleUpsizeSizeChange} // Attach the change handler
                     ref={drinkUpsizeRef}
                   />

@@ -273,8 +273,8 @@ const AdminLandingPageMaintenance = () => {
                   <div className="w-full flex items-center gap-2 mt-4">
                     <button
                       className="w-2/3 border-2 border-orange-950 bg-orange-950 font-bold
-                  text-white hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.02]
-                  duration-200 rounded-md shadow-md h-10"
+                                            text-white hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.02]
+                                            duration-200 rounded-md shadow-md h-10"
                       onClick={() => {
                         handleSubmit();
                         setTimeout(() => {
@@ -286,8 +286,8 @@ const AdminLandingPageMaintenance = () => {
                     </button>
                     <button
                       className="w-1/3 border-2 border-gray-100 bg-white font-bold
-                  text-gray-500 hover:bg-gray-50 hover:scale-[1.02]
-                  duration-200 rounded-md shadow-md h-10"
+                                            text-gray-500 hover:bg-gray-50 hover:scale-[1.02]
+                                            duration-200 rounded-md shadow-md h-10"
                       onClick={() => setEditTabOpen(false)}
                     >
                       Cancel
