@@ -72,6 +72,9 @@ const CartPage = () => {
   const [notificationTimeout, setNotificationTimeout] = useState(null);
   const [productId] = useState<string | undefined>(undefined);
   const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
+  const [appliedPromoCode, setAppliedPromoCode] = useState("");
+  const [promoType, setPromoType] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState<number>(0);
   const closeVoucherForm = () => {
     if (!voucherApplied) {
       setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
@@ -199,38 +202,64 @@ const CartPage = () => {
       const promoSnapshot = await getDocs(promoQuery);
 
       //console.log("Promo snapshot:", promoSnapshot);
-
+      //zzz
       if (!promoSnapshot.empty) {
         const promoDoc = promoSnapshot.docs[0];
         const promoDocRef = doc(db, "promoCodes", promoDoc.id);
         const promoData = promoDoc.data();
-        const discount = promoData?.discountPercent || 0;
+        const discount = promoData?.promoDeduction || 0;
         const available = promoData?.available || false;
+        const promoType = promoData?.deductionType; // Set the promo type
 
-        //console.log("Promo data:", promoData);
+      // Add more console logs to help debug
+      console.log("Promo Data:", promoData); // Log the whole promo data
+      console.log("Promo Type from promoData:", promoType); // Log promo type
+      setPromoType(promoType); // Set the promo type
 
         if (available) {
-          const promoDiscount = subtotal * discount;
-          const newTotalCartPrice = subtotal - promoDiscount;
-
+          let promoDiscount = 0; // Initialize promoDiscount
+        
+          // Log the subtotal and discount values
+          console.log("Initial subtotal:", subtotal);
+          console.log("Discount value (should be decimal):", discount);
+        
+          if (promoType === "percent") {
+            promoDiscount = subtotal * discount; // Calculate promoDiscount as a percentage of subtotal
+            console.log("Calculated promo discount (percent):", promoDiscount);
+          } else if (promoType === "minus") {
+            promoDiscount = discount; // Fixed discount
+            console.log("Applied fixed promo discount:", promoDiscount);
+          }
+        
+          const newTotalCartPrice = subtotal - promoDiscount; // Calculate new total price after discount
+          console.log("New total cart price after discount:", newTotalCartPrice);
+        
+          // Resetting voucher states
           setVoucherApplied(false);
           setVoucherDeduction(0);
           setVoucherType("");
           setDiscountedVoucher(0);
-
-          setDiscountPercent(discount);
-          setDiscountedPromo(promoDiscount.toFixed(2));
+        
+          // Setting discount percent in state
+          setDiscountPercent(discount); // Set the discount value in decimal
+        
+          // Set discounted promo value
+          setDiscountedPromo(promoDiscount.toFixed(2)); // Should reflect the correct promo discount
+        
+          // Updating total cart price
           setTotalCartPrice(newTotalCartPrice);
           setPromoApplied(true);
-
+          setAppliedPromoCode(promoCode);
+          
+          // Display success message
           setShowSuccess(true);
           setTimeout(() => {
             setShowSuccess(false);
           }, 3000);
-
-          await updateDoc(promoDocRef, {
-            timesUsed: (promoData?.timesUsed || 0) + 1,
-          });
+    
+          //await updateDoc(promoDocRef, {
+            //timesUsed: (promoData?.timesUsed || 0) + 1,
+          //});
 
           openDiscountPromoForm(false);
 
@@ -541,53 +570,57 @@ const CartPage = () => {
   //#endregion
 
   //#region Handling of Options to be Passed in Orders
-  const handleSubmitOrder = () => {
-    let finalTotal = subtotal;
+const handleSubmitOrder = () => {
+  let finalTotal = subtotal; // Start with the initial subtotal
 
-    //console.log("Initial subtotal:", subtotal);
-    //console.log("Promo applied:", promoApplied);
-    //console.log("Discount percent:", discountPercent);
-    //console.log("Voucher applied:", voucherApplied);
-    //console.log("Voucher type:", voucherType);
-    //console.log("Voucher deduction:", voucherDeduction);
+  // Check if a promo has been applied
+  if (promoApplied) {
+    let promoDiscount = 0; // Initialize promoDiscount
 
-    if (promoApplied) {
-      const promoDiscount = subtotal * discountPercent;
-      finalTotal -= promoDiscount;
-      //console.log("Applied promo discount:", promoDiscount);
+    // Calculate promo discount based on type
+    if (promoType === "percent") {
+      promoDiscount = subtotal * discountPercent; // Calculate percentage discount
+    } else {
+      promoDiscount = discountPercent; // Use fixed discount
     }
 
-    if (voucherApplied) {
-      if (voucherType === "percent") {
-        const voucherDiscount = finalTotal * voucherDeduction;
-        finalTotal -= voucherDiscount;
-        //console.log("Applied voucher discount (percent):", voucherDiscount);
-      } else if (voucherType === "minus") {
-        finalTotal -= voucherDeduction;
-        //console.log("Applied voucher discount (minus):", voucherDeduction);
-      }
+    setPromoDiscount(promoDiscount); // Set the calculated promo discount
+    finalTotal -= promoDiscount; // Reduce finalTotal by promoDiscount
+  }
+
+  // Check if a voucher has been applied
+  if (voucherApplied) {
+    let voucherDiscount = 0; // Initialize voucherDiscount
+
+    // Calculate voucher discount based on type
+    if (voucherType === "percent") {
+      voucherDiscount = finalTotal * voucherDeduction; // Calculate percentage discount
+      finalTotal -= voucherDiscount; // Reduce finalTotal by voucherDiscount
+    } else if (voucherType === "minus") {
+      finalTotal -= voucherDeduction; // Use fixed discount
     }
+  }
 
-    finalTotal = Math.max(finalTotal, 0);
+  // Ensure finalTotal does not go below zero
+  finalTotal = Math.max(finalTotal, 0);
 
-    const orderData = {
-      modeOfPayment: modeOfPayment,
-      selectedOption: selectedOption,
-      selectedServeTime: selectedServeTime,
-      finalSubtotal: finalTotal,
-    };
-
-    //console.log("Final subtotal before completing order:", finalTotal);
-    //console.log("Order submitted:", orderData);
-
-    handleCompleteOrder(
-      orderData.modeOfPayment,
-      orderData.selectedOption,
-      orderData.selectedServeTime,
-      orderData.finalSubtotal
-    );
+  // Prepare order data to be sent
+  const orderData = {
+    modeOfPayment: modeOfPayment,
+    selectedOption: selectedOption,
+    selectedServeTime: selectedServeTime,
+    finalSubtotal: finalTotal,
   };
-  //#endregion
+
+  // Proceed with completing the order
+  handleCompleteOrder(
+    orderData.modeOfPayment,
+    orderData.selectedOption,
+    orderData.selectedServeTime,
+    orderData.finalSubtotal
+  );
+};
+//#endregion
 
   //#region Handling of Completion of Orders
   const handleCompleteOrder = async (
@@ -685,6 +718,27 @@ const CartPage = () => {
 
       const completedOrdersRef = doc(db, "completedOrders", customOrderId);
 
+      const promoDiscounted = discountedPromo && !isNaN(discountedPromo)
+        ? parseFloat(discountedPromo.toFixed(2))
+        : 0;
+
+        console.log("Final Document Data:", {
+          user: userEmail,
+          items: completedOrderItems,
+          totalItems: totalItems,
+          subtotal: finalSubtotal || 0,
+          totalCartPrice: totalCartPrice,
+          modeOfPayment: modeOfPayment,
+          selectedOption: selectedOption,
+          selectedServeTime: serveTime,
+          cartId: originalOrderId,
+          dateCreated: date,
+          timeCreated: time,
+          status: "TO PAY",
+          promoDiscounted: promoDiscounted,
+          voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0,
+      });
+        
       await setDoc(completedOrdersRef, {
         user: userEmail,
         items: completedOrderItems,
@@ -698,11 +752,29 @@ const CartPage = () => {
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
-        promoDiscounted: Math.round(discountedPromo * 100) / 100,
+        promoDiscounted: promoDiscounted,
         voucherDiscounted: discountedVoucher
           ? Math.round(discountedVoucher * 100) / 100
           : 0,
       });
+
+      // Update the timesUsed in the promoCodes collection
+      const promoCodesRef = collection(db, "promoCodes");
+      const promoQuery = query(
+        promoCodesRef,
+        where("promoCode", "==", appliedPromoCode) // Assuming `appliedPromoCode` is a state variable holding the currently applied promo code
+      );
+      const promoSnapshot = await getDocs(promoQuery);
+
+      if (!promoSnapshot.empty) {
+        const promoDoc = promoSnapshot.docs[0];
+        const promoDocRef = doc(db, "promoCodes", promoDoc.id);
+        const promoData = promoDoc.data();
+
+        await updateDoc(promoDocRef, {
+          timesUsed: (promoData?.timesUsed || 0) + 1,
+        });
+      }
 
       //console.log("Order successfully added to completedOrders with custom ID:", customOrderId);
 
@@ -1449,12 +1521,17 @@ const CartPage = () => {
                   {(() => {
                     let finalTotal = subtotal; // Start with the subtotal
 
-                    // Apply promo discount if applicable
-                    if (promoApplied) {
-                      const promoDiscount = subtotal * discountPercent; // Calculate based on subtotal
-                      finalTotal -= promoDiscount; // Deduct promo discount from subtotal
-                      //console.log("Applied promo discount:", promoDiscount);
+                    /// Apply promo discount if applicable
+                  if (promoApplied) {
+                    let promoDiscount = 0; // Initialize promoDiscount
+                    if (promoType === "percent") {
+                      promoDiscount = subtotal * discountPercent; // Calculate percentage discount
+                    } else {
+                      promoDiscount = discountPercent; // Fixed discount amount
                     }
+                    finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+                    //console.log("Applied promo discount:", promoDiscount);
+                  }
 
                     // Apply voucher discount if applicable
                     if (voucherApplied) {
