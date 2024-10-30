@@ -28,132 +28,132 @@ const Navbar = () => {
   const unsubscribeCartRef = useRef(null);
   const unsubscribeDocRef = useRef(null);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser && authUser.emailVerified) {
-        try {
-          const userDoc = await getDoc(doc(db, "users", authUser.email));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setFirstName(userData.firstName);
-            setRole(userData.role); // Set the role from Firestore
-            setUser(authUser);
+  // useEffect(() => {
+  //   const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+  //     if (authUser && authUser.emailVerified) {
+  //       try {
+  //         const userDoc = await getDoc(doc(db, "users", authUser.email));
+  //         if (userDoc.exists()) {
+  //           const userData = userDoc.data();
+  //           setFirstName(userData.firstName);
+  //           setRole(userData.role); // Set the role from Firestore
+  //           setUser(authUser);
 
-            // Real-time listener for tempOrder updates
-            const tempOrdersRef = collection(db, "tempOrders");
-            const q = query(tempOrdersRef, where("user", "==", authUser.email));
+  //           // Real-time listener for tempOrder updates
+  //           const tempOrdersRef = collection(db, "tempOrders");
+  //           const q = query(tempOrdersRef, where("user", "==", authUser.email));
 
-            unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
-              let tempOrderDocId = null;
+  //           unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
+  //             let tempOrderDocId = null;
 
-              querySnapshot.forEach((doc) => {
-                tempOrderDocId = doc.id;
-              });
+  //             querySnapshot.forEach((doc) => {
+  //               tempOrderDocId = doc.id;
+  //             });
 
-              if (tempOrderDocId) {
-                const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(
-                  tempOrderDocRef,
-                  (doc) => {
-                    if (doc.exists()) {
-                      const tempOrderData = doc.data();
-                      setTotalItems(tempOrderData.totalItems || 0);
-                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                    } else {
-                      setTotalItems(0);
-                      setTotalCartPrice(0);
-                    }
-                  }
-                );
-              } else {
-                setTotalItems(0);
-                setTotalCartPrice(0);
-                if (unsubscribeDocRef.current) {
-                  unsubscribeDocRef.current();
-                  unsubscribeDocRef.current = null;
-                }
-              }
-            });
-          } else {
-            setUser(null);
-            setFirstName("");
-            setRole(""); // Clear the role if user does not exist
-            // Clean up listeners
-            if (unsubscribeCartRef.current) {
-              unsubscribeCartRef.current();
-              unsubscribeCartRef.current = null;
-            }
-            if (unsubscribeDocRef.current) {
-              unsubscribeDocRef.current();
-              unsubscribeDocRef.current = null;
-            }
-          }
-        } catch (error) {
-          // Handle any errors that occur while fetching user data
-        }
-      } else {
-        setUser(null);
-        setFirstName("");
-        setRole(""); // Clear the role when logged out
-        // Clean up listeners
-        if (unsubscribeCartRef.current) {
-          unsubscribeCartRef.current();
-          unsubscribeCartRef.current = null;
-        }
-        if (unsubscribeDocRef.current) {
-          unsubscribeDocRef.current();
-          unsubscribeDocRef.current = null;
-        }
-      }
-    });
+  //             if (tempOrderDocId) {
+  //               const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
+  //               unsubscribeDocRef.current = onSnapshot(
+  //                 tempOrderDocRef,
+  //                 (doc) => {
+  //                   if (doc.exists()) {
+  //                     const tempOrderData = doc.data();
+  //                     setTotalItems(tempOrderData.totalItems || 0);
+  //                     setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+  //                   } else {
+  //                     setTotalItems(0);
+  //                     setTotalCartPrice(0);
+  //                   }
+  //                 }
+  //               );
+  //             } else {
+  //               setTotalItems(0);
+  //               setTotalCartPrice(0);
+  //               if (unsubscribeDocRef.current) {
+  //                 unsubscribeDocRef.current();
+  //                 unsubscribeDocRef.current = null;
+  //               }
+  //             }
+  //           });
+  //         } else {
+  //           setUser(null);
+  //           setFirstName("");
+  //           setRole(""); // Clear the role if user does not exist
+  //           // Clean up listeners
+  //           if (unsubscribeCartRef.current) {
+  //             unsubscribeCartRef.current();
+  //             unsubscribeCartRef.current = null;
+  //           }
+  //           if (unsubscribeDocRef.current) {
+  //             unsubscribeDocRef.current();
+  //             unsubscribeDocRef.current = null;
+  //           }
+  //         }
+  //       } catch (error) {
+  //         // Handle any errors that occur while fetching user data
+  //       }
+  //     } else {
+  //       setUser(null);
+  //       setFirstName("");
+  //       setRole(""); // Clear the role when logged out
+  //       // Clean up listeners
+  //       if (unsubscribeCartRef.current) {
+  //         unsubscribeCartRef.current();
+  //         unsubscribeCartRef.current = null;
+  //       }
+  //       if (unsubscribeDocRef.current) {
+  //         unsubscribeDocRef.current();
+  //         unsubscribeDocRef.current = null;
+  //       }
+  //     }
+  //   });
 
-    // Check for cookies when the component mounts
-    checkCookiesAndLogout();
+  //   // Check for cookies when the component mounts
+  //   checkCookiesAndLogout();
 
-    // Cleanup
-    return () => {
-      unsubscribe();
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
-    };
-  }, []);
+  //   // Cleanup
+  //   return () => {
+  //     unsubscribe();
+  //     if (unsubscribeCartRef.current) {
+  //       unsubscribeCartRef.current();
+  //       unsubscribeCartRef.current = null;
+  //     }
+  //     if (unsubscribeDocRef.current) {
+  //       unsubscribeDocRef.current();
+  //       unsubscribeDocRef.current = null;
+  //     }
+  //   };
+  // }, []);
 
-  const checkCookiesAndLogout = async () => {
-    const allCookies = Cookies.get();
-    if (Object.keys(allCookies).length === 0) {
-      await handleLogout();
-    }
-  };
+  // const checkCookiesAndLogout = async () => {
+  //   const allCookies = Cookies.get();
+  //   if (Object.keys(allCookies).length === 0) {
+  //     await handleLogout();
+  //   }
+  // };
 
-  const handleLogout = async (event) => {
-    if (event) event.preventDefault();
-    try {
-      const allCookies = Cookies.get();
-      Object.keys(allCookies).forEach((cookieName) => {
-        Cookies.remove(cookieName);
-      });
+  // const handleLogout = async (event) => {
+  //   if (event) event.preventDefault();
+  //   try {
+  //     const allCookies = Cookies.get();
+  //     Object.keys(allCookies).forEach((cookieName) => {
+  //       Cookies.remove(cookieName);
+  //     });
 
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
+  //     if (unsubscribeCartRef.current) {
+  //       unsubscribeCartRef.current();
+  //       unsubscribeCartRef.current = null;
+  //     }
+  //     if (unsubscribeDocRef.current) {
+  //       unsubscribeDocRef.current();
+  //       unsubscribeDocRef.current = null;
+  //     }
 
-      await signOut(auth);
-      router.push("/");
-    } catch (error) {
-      // Handle any errors during sign-out
-    }
-  };
+  //     await signOut(auth);
+  //     router.push("/");
+  //   } catch (error) {
+  //     // Handle any errors during sign-out
+  //   }
+  // };
 
   return (
     <div

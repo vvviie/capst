@@ -17,6 +17,13 @@ const category = [
     img: "/cwfood.jpg",
     src: "information",
   },
+  {
+    id: 3,
+    title: "Footer Section",
+    desc: "Update the footer section of your website.",
+    img: "/coffee.png",
+    src: "footer",
+  },
 ];
 
 const AdminHomeMaintenancePage = () => {
@@ -27,21 +34,21 @@ const AdminHomeMaintenancePage = () => {
     lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
     >
       {/* MAIN CONTAINER */}
-      <div className="w-full max-w-[900px] space-y-2">
+      <div className="w-full max-w-[1400px] space-y-2">
         <h1 className="text-xl sm:text-2xl font-bold text-orange-950">
           Home Page Maintenance
         </h1>
         {/* CATEGORY CONTAINER */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {category.map((cat) => (
             <Link
               href={`/fkstllhomemaintenance/${cat.src}`}
               className="border-2 border-gray-100 shadow-md rounded-md bg-white px-4 relative aspect-square
-            overflow-clip mb-4 flex flex-col justify-end"
+            overflow-clip flex flex-col justify-end"
               key={cat.id}
             >
               {/* IMAGE CONTAINER */}
-              <div className="absolute top-0 left-0 w-full h-4/5">
+              <div className="absolute top-0 left-0 w-full h-2/3">
                 <Image
                   src={cat.img}
                   alt={cat.img}
@@ -50,13 +57,11 @@ const AdminHomeMaintenancePage = () => {
                 />
               </div>
               {/* TITLE AND DESC */}
-              <div className="h-1/5 py-4 text-center flex flex-col gap-1 justify-center md:gap-0 lg:gap-1">
-                <h1 className="text-xl md:text-lg lg:text-xl font-bold text-orange-950">
+              <div className="h-1/3 py-4 text-center flex flex-col justify-center md:gap-0 lg:gap-1">
+                <h1 className="text-lg lg:text-xl font-bold text-orange-950">
                   {cat.title}
                 </h1>
-                <p className="text-sm text-gray-500 md:text-xs lg:text-sm">
-                  {cat.desc}
-                </p>
+                <p className="text-xs text-gray-500 lg:text-sm">{cat.desc}</p>
               </div>
             </Link>
           ))}

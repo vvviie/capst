@@ -2,12 +2,16 @@
 import Link from "next/link";
 import React, { useState } from "react";
 import CheckoutPopup from "@/app/components/CheckoutPopup";
+import { usePathname } from "next/navigation";
 
 const AddVoucherPage = () => {
   const [deduction, setDeduction] = useState("minus");
   const [validity, setValidity] = useState(false);
   const [limitUse, setLimitUse] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
+
+  const pathname = usePathname();
+  const slug = pathname.split("/").pop();
 
   const handleSubmit = () => {
     setIsPopupVisible(true);
@@ -49,7 +53,7 @@ const AddVoucherPage = () => {
             href={"/fkstllvouchers"}
             className="flex items-center space-x-2 font-bold text-orange-950 text-xl sm:text-2xl text-left hover:text-orange-800 cursor-pointer"
           >
-            Vouchers List
+            {slug} List
           </Link>
           <div className="text-xl sm:text-2xl font-bold text-orange-950 space-x-2 flex items-center">
             <i className="fa fa-angle-right" aria-hidden="true"></i>
@@ -69,16 +73,16 @@ const AddVoucherPage = () => {
             <div className="flex-1 flex flex-col gap-1 items-center justify-center">
               <label
                 className="text-orange-950 text-sm w-full text-left space-x-1"
-                htmlFor="voucherID"
+                htmlFor={`input${slug}ID`}
               >
                 <span>ID</span>
               </label>
               <input
                 className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
-                name="voucherID"
-                id="inputVoucherID"
+                name={`input${slug}ID`}
+                id={`input${slug}ID`}
                 type="text"
-                placeholder="Voucher ID"
+                placeholder={`${slug} ID`}
                 required
               />
             </div>
@@ -106,16 +110,16 @@ const AddVoucherPage = () => {
           <div className="flex-1 flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
-              htmlFor="voucherName"
+              htmlFor={`input${slug}Name`}
             >
               <span>Name</span>
             </label>
             <input
               className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
-              name="voucherName"
-              id="inputVoucherName"
+              name={`input${slug}Name`}
+              id={`input${slug}Name`}
               type="text"
-              placeholder="Voucher Name"
+              placeholder={`${slug} Name`}
               required
             />
           </div>
@@ -261,16 +265,16 @@ const AddVoucherPage = () => {
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
-              htmlFor="voucherDescription"
+              htmlFor={`input${slug}Description`}
             >
               <span>Description</span>
             </label>
             <textarea
               className="border-2 border-solid border-orange-900 w-full pl-4 rounded-md 
                 bg-orange-50 pt-1.5"
-              name="voucherDescription"
-              id="inputVoucherDescription"
-              placeholder="Voucher Description"
+              name={`input${slug}Description`}
+              id={`input${slug}Description`}
+              placeholder={`${slug} Description`}
               rows={2}
               style={{ resize: "none" }}
               required
@@ -283,10 +287,10 @@ const AddVoucherPage = () => {
               handleSubmit();
             }}
           >
-            Create Voucher
+            Create {slug}
           </button>
           {/* PRODUCT CREATED POP UP */}
-          {isPopupVisible && <CheckoutPopup message="Voucher Created!" />}
+          {isPopupVisible && <CheckoutPopup message={`${slug} Created!`} />}
         </div>
       </div>
     </div>
