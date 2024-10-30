@@ -199,7 +199,7 @@ const Navbar = () => {
                 {totalItems}
               </span>
               <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
-              <span>(P{totalCartPrice.toFixed(2)})</span>
+              <span>(PHP {totalCartPrice.toFixed(2)})</span>
             </Link>
           </div>
           <div>
