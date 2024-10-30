@@ -203,7 +203,7 @@ const ReservationsPage = () => {
 
                       {/* PRICE IF IT IS EVENT OR IN THE FUTURE, MOBILE CART */}
                       <span className={`font-bold text-gray-600`}>
-                        {res.type === "Table" ? "" : `P${res.price}`}
+                        {res.type === "Table" ? "" : `PHP ${res.price.toFixed(2)}`}
                       </span>
                     </div>
                   </div>

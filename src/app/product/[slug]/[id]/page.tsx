@@ -808,7 +808,7 @@ const ProductPage: React.FC = () => {
               {/* PRICE DIV */}
               <div className="flex flex-col gap-1 w-2/6">
                 <span className="text-2xl font-bold text-right text-orange-900">
-                  PHP {productData.pricePerItem || price}
+                  PHP {productData.pricePerItem ? productData.pricePerItem.toFixed(2) : Number(price).toFixed(2)}
                 </span>
                 <span className="text-sm font-medium text-right w-full">
                   Base price
@@ -881,7 +881,7 @@ const ProductPage: React.FC = () => {
                           </span>
                           <span className="ml-2">
                             {" "}
-                            (+{productData.upsizePrice})
+                            (+{productData.upsizePrice.toFixed(2)})
                           </span>
                         </div>
                       )}

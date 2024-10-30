@@ -11,8 +11,9 @@ import {
   doc,
   updateDoc,
   getDoc,
+  onSnapshot
 } from "firebase/firestore";
-import { onSnapshot } from "firebase/firestore";
+
 
 //#region Variable Arrays for Retrieving Purposes
 type deets = {
@@ -143,8 +144,8 @@ const NotificationBell = () => {
               id: `${doc.id}-${index}`,
               type: "Order Item",
               subject: `Order Status: ${data.status || "Unknown"}`,
-              details: `Your order '${doc.id}' with subtotal P${
-                data.subtotal || 0
+              details: `Your order '${doc.id}' with subtotal PHP ${
+                data.subtotal.toFixed(2) || 0
               } is ${
                 data.status || "in progress"
               }. Please proceed to the cashier and settle your orders.`,
@@ -193,30 +194,61 @@ const NotificationBell = () => {
 //#endregion
 
 //#region Fetching of Table Reservations
-const fetchTableReservations = async (fetchedNotifications: notifs) => {
+const fetchTableReservations = () => {
   if (!userEmail) return;
 
   const tempReservationsRef = collection(db, "tableReservations");
   const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
 
-  const reservationQuerySnapshot = await getDocs(q);
-  reservationQuerySnapshot.forEach((doc) => {
-    const data = doc.data();
-    if (!data.isNotifDeleted) { // Check for deletion before adding
-      const notification = {
-        id: doc.id,
-        type: "Table Reservation",
-        subject: `New Booking for: ${data.type || "Unknown"}`,
-        details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} PM is ${data.status || "in progress"}.`,
-        time: data.timeReserved || "N/A",
-        date: data.dateReserved || "N/A",
-        read: data.isRead || false,
-      };
-      fetchedNotifications.push(notification);
-    }
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const newNotifications: notifs = []; // Temporary array for updated notifications
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (!data.isNotifDeleted) { // Check for deletion before adding
+        const notification = {
+          id: doc.id,
+          type: "Table Reservation",
+          subject: `New Booking for: ${data.type || "Unknown"}`,
+          details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${data.status || "in progress"}.`,
+          time: data.timeReserved || "N/A",
+          date: data.dateReserved || "N/A",
+          read: data.isRead || false,
+        };
+        newNotifications.push(notification);
+      }
+    });
+
+    // Update the notifItems state with the latest reservations, avoiding duplicates
+    setNotifItems((prevNotifItems) => {
+      // Create a map to filter unique notifications based on their IDs
+      const existingIds = new Set(prevNotifItems.map((item) => item.id));
+      
+      // Combine new and existing notifications while avoiding duplicates
+      const allNotifications = [
+        ...newNotifications.filter((notification) => !existingIds.has(notification.id)),
+        ...prevNotifItems,
+      ];
+
+      // Sort notifications by date and time in descending order
+      allNotifications.sort((a, b) => {
+        const dateA = new Date(`${a.date} ${a.time}`);
+        const dateB = new Date(`${b.date} ${b.time}`);
+        return dateB.getTime() - dateA.getTime(); // Descending order
+      });
+
+      // Return the updated notifications
+      return allNotifications;
+    });
+
+    // Check for unread notifications
+    setHasUnreadNotifs((prev) => newNotifications.some((notif) => !notif.read) || prev);
   });
+
+  // Return the unsubscribe function to clean up the listener
+  return unsubscribe;
 };
-  //#endregion
+//#endregion
 
   //#region Mark Notification as Read and Unread
   const toggleReadStatus = async (

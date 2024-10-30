@@ -251,9 +251,7 @@ const ReservationPage = () => {
       "0"
     )}/${dateToBeReserved.getFullYear()}`;
 
-    const timeToBeReserved = `${String(hourInput).padStart(2, "0")}:${String(
-      minuteInput
-    ).padStart(2, "0")}`;
+    const timeToBeReserved = `${hourInput > 9 ? hourInput : hourInput % 12}:${String(minuteInput).padStart(2, "0")}PM`;
 
     // Log the reservation details
     console.log("Submitting reservation with the following details:");
@@ -261,7 +259,7 @@ const ReservationPage = () => {
       orderId,
       dateReserved,
       timeReserved,
-      numberOfPersonsTable: num,
+      numberOfPersons: num,
       reservedBy: userEmail,
       status: "PENDING",
       dateToBeReserved: formattedDateToBeReserved,
@@ -273,7 +271,7 @@ const ReservationPage = () => {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
         timeReserved,
-        numberOfPersonsTable: num,
+        numberOfPersons: numberOfPersonsTable,
         reservedBy: userEmail,
         status: "PENDING",
         dateToBeReserved: formattedDateToBeReserved,
@@ -523,7 +521,7 @@ const ReservationPage = () => {
         buffetChosen,
         numberOfPersons: numberOfPersonsEvent,
         totalPrice: totalPrice,
-        status: "Requested",
+        status: "REQUESTED",
         type: "Event",
         reservedBy: userEmail,
       });
@@ -748,7 +746,7 @@ const ReservationPage = () => {
                 </div>
                 <p className="text-xs text-orange-900 pl-2">
                   Inclusive of 3-4 hours exclusive usage and services. Excess
-                  rate: P2,000/hour.{" "}
+                  rate: PHP 2,000.00/hour.{" "}
                   <span className="text-orange-600 font-semibold">
                     Café opens at 12pm.
                   </span>
@@ -769,9 +767,9 @@ const ReservationPage = () => {
                     value={selectedPackage}
                     onChange={handlePackageChange}
                   >
-                    <option value="A">A - P550 per person</option>
-                    <option value="B">B - P600 per person</option>
-                    <option value="C">C - P700 per person</option>
+                    <option value="A">A - PHP 550 per person</option>
+                    <option value="B">B - PHP 600 per person</option>
+                    <option value="C">C - PHP 700 per person</option>
                   </select>
                   <PackageOffers
                     selectedPackage={selectedPackage}
@@ -841,7 +839,7 @@ const ReservationPage = () => {
                   required
                 />
                 <p className="text-xs text-orange-900 pl-2">
-                  minimum of 30 and maximum of 50 persons can be accommodated.
+                  Minimum of 30 and maximum of 50 persons can be accommodated.
                 </p>
               </div>
             </>
@@ -869,7 +867,7 @@ const ReservationPage = () => {
               {slug === "table"
                 ? "Reserve Table"
                 : slug === "event"
-                ? "Reserve Place (P" + totalPrice + ")"
+                ? "Reserve Place (PHP " + totalPrice + ")"
                 : "Book Mobile Café"}{" "}
             </span>
           </button>

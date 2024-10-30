@@ -186,7 +186,7 @@ const Navbar = () => {
             <Link href="/foodcart" className="relative flex gap-2 group hover:text-yellow-100 items-center">
               <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">{totalItems}</span>
               <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
-              <span>(P{totalCartPrice.toFixed(2)})</span>
+              <span>(PHP {totalCartPrice.toFixed(2)})</span>
             </Link>
           </div>
           <div><NotificationBell /></div>

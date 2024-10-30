@@ -470,7 +470,7 @@ const OrdersPage = () => {
                     {/* HEADERS CONTAINER */}
                     <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                       <span className="">ID: {order.id}</span>
-                      <span className="">P{order.price}</span>
+                      <span className="">PHP {order.price}</span>
                     </div>
                     {/* SUBHEADER CONTAINER */}
                     <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -519,13 +519,13 @@ const OrdersPage = () => {
                     {order.promo && (
                       <div className="font-bold text-sm flex justify-between items-center">
                         <span className="font-semibold">Promo discount</span>
-                        <span>{order.promo}</span>
+                        <span>PHP {order.promo}</span>
                       </div>
                     )}
                     {order.voucher && (
                       <div className="font-bold text-sm flex justify-between items-center">
                         <span className="font-semibold">Voucher discount</span>
-                        <span>{order.voucher}</span>
+                        <span>PHP {order.voucher}</span>
                       </div>
                     )}
                     {/* Iterate through order items */}
@@ -537,7 +537,7 @@ const OrdersPage = () => {
                           <span className="font-semibold">
                             {item.productTitle}
                           </span>
-                          <span>{item.price}</span>
+                          <span>PHP {item.price.toFixed(2)}</span>
                         </div>
 
                         {/* Show item tags if available */}
