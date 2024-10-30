@@ -403,7 +403,7 @@ const MenuCategoryPage: React.FC = () => {
                         {item.title}
                       </h2>
                       <p className="font-bold text-lg text-gray-700 text-center">
-                        PHP {item.price}
+                        PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
                   ))}
@@ -467,7 +467,7 @@ const MenuCategoryPage: React.FC = () => {
                         {item.title}
                       </h2>
                       <p className="font-bold text-lg text-gray-700 text-center">
-                        PHP{item.price}
+                        PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
                   ))}
@@ -531,7 +531,7 @@ const MenuCategoryPage: React.FC = () => {
                         {item.title}
                       </h2>
                       <p className="font-bold text-lg text-gray-700 text-center">
-                        PHP{item.price}
+                        PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
                   ))}
@@ -595,7 +595,7 @@ const MenuCategoryPage: React.FC = () => {
                         {item.title}
                       </h2>
                       <p className="font-bold text-lg text-gray-700 text-center">
-                        PHP{item.price}
+                        PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
                   ))}
@@ -659,7 +659,7 @@ const MenuCategoryPage: React.FC = () => {
                         {item.title}
                       </h2>
                       <p className="font-bold text-lg text-gray-700 text-center">
-                        PHP{item.price}
+                        PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
                   ))}
@@ -723,7 +723,7 @@ const MenuCategoryPage: React.FC = () => {
                         {item.title}
                       </h2>
                       <p className="font-bold text-lg text-gray-700 text-center">
-                        PHP{item.price}
+                        PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
                   ))}

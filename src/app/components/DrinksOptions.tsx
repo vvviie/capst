@@ -109,7 +109,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
               checked={selectedAdditionalsState.includes("Espresso")}
             />
             <span className="ml-4 font-semibold">Espresso</span>
-            <span className="ml-2"> (+{addEspresso})</span>
+            <span className="ml-2"> (+{addEspresso.toFixed(2)})</span>
           </div>
           {/* ADDITIONAL SYRUP */}
           <div
@@ -128,7 +128,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
               checked={selectedAdditionalsState.includes("Syrup")}
             />
             <span className="ml-4 font-semibold">Syrup</span>
-            <span className="ml-2"> (+{addSyrup})</span>
+            <span className="ml-2"> (+{addSyrup.toFixed(2)})</span>
           </div>
           {/* ADDITIONAL VANILLA */}
           {addVanilla > 0 && ( // Conditionally render if addVanilla exists and is greater than 0
@@ -148,7 +148,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
                 checked={selectedAdditionalsState.includes("Vanilla")}
               />
               <span className="ml-4 font-semibold">Vanilla</span>
-              <span className="ml-2"> (+{addVanilla})</span>
+              <span className="ml-2"> (+{addVanilla.toFixed(2)})</span>
             </div>
           )}
         </div>
@@ -198,7 +198,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
               onChange={() => handleMilkOptionChange("Almond Milk")}
             />
             <span className="ml-4 font-semibold">Almond Milk</span>
-            <span className="ml-2"> (+{milkAlmond})</span>
+            <span className="ml-2"> (+{milkAlmond.toFixed(2)})</span>
           </div>
           {/* OAT MILK OPTION */}
           <div
@@ -218,7 +218,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
               onChange={() => handleMilkOptionChange("Oat Milk")}
             />
             <span className="ml-4 font-semibold">Oat Milk</span>
-            <span className="ml-2"> (+{milkOat})</span>
+            <span className="ml-2"> (+{milkOat.toFixed(2)})</span>
           </div>
         </div>
       </div>
