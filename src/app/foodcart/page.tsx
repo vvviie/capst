@@ -244,7 +244,7 @@ const CartPage = () => {
           setDiscountPercent(discount); // Set the discount value in decimal
         
           // Set discounted promo value
-          setDiscountedPromo(promoDiscount.toFixed(2)); // Should reflect the correct promo discount
+          setDiscountedPromo(Number(promoDiscount.toFixed(2))); // Should reflect the correct promo discount
         
           // Updating total cart price
           setTotalCartPrice(newTotalCartPrice);
@@ -718,8 +718,8 @@ const handleSubmitOrder = () => {
 
       const completedOrdersRef = doc(db, "completedOrders", customOrderId);
 
-      const promoDiscounted = discountedPromo && !isNaN(discountedPromo)
-        ? parseFloat(discountedPromo.toFixed(2))
+      const promoDiscounted = typeof discountedPromo === 'number' && !isNaN(discountedPromo)
+        ? parseFloat(discountedPromo.toString()) // Ensure it's treated as a number
         : 0;
 
         console.log("Final Document Data:", {
@@ -738,7 +738,7 @@ const handleSubmitOrder = () => {
           promoDiscounted: promoDiscounted,
           voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0,
       });
-        
+
       await setDoc(completedOrdersRef, {
         user: userEmail,
         items: completedOrderItems,
