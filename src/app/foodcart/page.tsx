@@ -1067,7 +1067,7 @@ const CartPage = () => {
                     {/* PRICE AND ACTIONS CONTAINER */}
                     <div className="flex flex-col gap-2 justify-between items-end pr-2">
                       <div className="font-bold text-lg">
-                        P{parseFloat(items.price).toFixed(2)}
+                        PHP {parseFloat(items.price).toFixed(2)}
                       </div>
                       <div className="flex flex-col space-y-1 items-center justify-center">
                         <Link
@@ -1204,7 +1204,7 @@ const CartPage = () => {
               <div className="flex justify-between items-center px-4">
                 <span>Subtotal</span>
                 <span className="font-bold text-lg text-gray-600">
-                  P{subtotal.toFixed(2)}
+                  PHP {subtotal.toFixed(2)}
                 </span>
               </div>
               {/* ONLY SHOW PROMO IF APPLIED */}
@@ -1212,7 +1212,7 @@ const CartPage = () => {
                 <div className="flex justify-between items-center px-4">
                   <span>Promo</span>
                   <span className="font-bold text-lg text-gray-600">
-                    -P{Number(discountedPromo).toFixed(2)}{" "}
+                    -PHP {Number(discountedPromo).toFixed(2)}{" "}
                     {/* Ensure discountedPromo is treated as a number */}
                   </span>
                 </div>
@@ -1445,7 +1445,7 @@ const CartPage = () => {
               <div className="flex justify-between items-center px-4 py-4">
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-                  P
+                {"PHP "}
                   {(() => {
                     let finalTotal = subtotal; // Start with the subtotal
 
