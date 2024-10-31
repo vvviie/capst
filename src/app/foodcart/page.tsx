@@ -74,7 +74,7 @@ const CartPage = () => {
   const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
   const [promoType, setPromoType] = useState("");
-  const [promoDiscount, setPromoDiscount] = useState<number>(0);
+  const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
   const closeVoucherForm = () => {
     if (!voucherApplied) {
       setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
