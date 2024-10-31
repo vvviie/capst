@@ -175,36 +175,72 @@ const Navbar = () => {
         </div>
       </div>
       <div className="hidden md:flex font-semibold">
-        <div className="px-4 hover:text-yellow-100">
-          <Link href="/">Home</Link>
-        </div>
-        <div className="px-4 hover:text-yellow-100">
-          <Link href="/menu">Menu</Link>
-        </div>
-        <div className="px-4 hover:text-yellow-100">
-          <Link href="/book">Book</Link>
-        </div>
-        <div className="px-4 hover:text-yellow-100">
-          <Link href="/orders">Orders</Link>
-        </div>
+        {role === "admin" ? (
+          <>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Home</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllproduct">Menu</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllhomemaintenance">Landing</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllvouchers">Vouchers/Promos</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Bookings</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Orders</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Accounts</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Roles</Link>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Home</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/menu">Menu</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/book">Book</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/orders">Orders</Link>
+            </div>
+          </>
+        )}
       </div>
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
-          <div>
-            <Link
-              href="/foodcart"
-              className="relative flex gap-2 group hover:text-yellow-100 items-center"
-            >
-              <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
-                {totalItems}
-              </span>
-              <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
-              <span>(PHP {totalCartPrice.toFixed(2)})</span>
-            </Link>
-          </div>
-          <div>
-            <NotificationBell />
-          </div>
+          {role !== "admin" && ( // Only show for non-admin users
+            <div>
+              <Link
+                href="/foodcart"
+                className="relative flex gap-2 group hover:text-yellow-100 items-center"
+              >
+                <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
+                  {totalItems}
+                </span>
+                <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
+                <span>(PHP {totalCartPrice.toFixed(2)})</span>
+              </Link>
+            </div>
+          )}
+          {role !== "admin" && (
+            <div>
+              <NotificationBell />
+            </div>
+          )}{" "}
+          {/* Only show notification for non-admin users */}
           <div>
             <Link href="/profile">
               <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
