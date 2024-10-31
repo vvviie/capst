@@ -42,13 +42,13 @@ const EditVoucherPage = () => {
   const today = new Date().toISOString().split("T")[0];
   const pathname = usePathname();
   const voucherId = pathname.split("/").pop();
-
+  const [showMessage, setShowMessage] = useState(false);
   const voucherDeductionValueRef = useRef<HTMLInputElement>(null);
   const voucherValidityDateRef = useRef<HTMLInputElement>(null);
   const voucherNumberOfUsesRef = useRef<HTMLInputElement>(null);
   const voucherDescriptionRef = useRef<HTMLInputElement>(null);
   const voucherThresholdValueRef = useRef<HTMLInputElement>(null);
-
+  
   const formatDate = (dateString: string): string => {
     const parts = dateString.split('/');
     const mm = parts[0];
@@ -266,66 +266,83 @@ const formattedDate = (date: Date): string => {
 };
 
 
-const handleSubmit = async () => {
-  if (voucherData) {
+  const handleSubmit = async () => {
+    if (voucherData) {
 
-    if (voucherDeduction === "" || voucherDeduction === 0) {
-      voucherDeductionValueRef.current?.focus();
-      return;
-    }
+      if (voucherDeduction === "" || voucherDeduction === 0) {
+        voucherDeductionValueRef.current?.focus();
+        return;
+      }
 
-    if (validityType === "expiration" && validityDate === "") {
-      voucherValidityDateRef.current?.focus();
-      return;
-    }
+      if (validityType === "expiration" && validityDate === "") {
+        voucherValidityDateRef.current?.focus();
+        return;
+      }
 
-    if (limitUse && numberOfUses === "" || limitUse && numberOfUses === 0) {
-      voucherNumberOfUsesRef.current?.focus();
-      return;
-    }
+      if (limitUse && numberOfUses === "" || limitUse && numberOfUses === 0) {
+        voucherNumberOfUsesRef.current?.focus();
+        return;
+      }
 
-    if (voucherDescription === "") {
-      voucherDescriptionRef.current?.focus();
-      return;
-    }
+      if (voucherDescription === "") {
+        voucherDescriptionRef.current?.focus();
+        return;
+      }
 
-    if (thresholdUse === true && thresholdCondition === "" || thresholdUse === true && thresholdCondition === 0) {
-      voucherThresholdValueRef.current?.focus();
-      return;
-    }
+      if (thresholdUse === true && thresholdCondition === "" || thresholdUse === true && thresholdCondition === 0) {
+        voucherThresholdValueRef.current?.focus();
+        return;
+      }
 
-    const adjustedVoucherDeduction = deductionType === "percentage" && typeof voucherDeduction === "number"
-      ? voucherDeduction / 100 // Convert to decimal if percentage
-      : voucherDeduction || 0; // Use 0 if voucherDeduction is empty
+      const adjustedVoucherDeduction = deductionType === "percentage" && typeof voucherDeduction === "number"
+        ? voucherDeduction / 100 // Convert to decimal if percentage
+        : voucherDeduction || 0; // Use 0 if voucherDeduction is empty
 
-      const formattedValidityDate = validityType === "expiration" && validityDate 
-      ? formattedDate(new Date(validityDate)) 
-      : null;
-      
-    const updatedVoucher = {
-      voucherID: voucherId,
-      voucherName,
-      voucherDescription: voucherDescription || "",
-      available: availability,
-      deductionType,
-      voucherDeduction: adjustedVoucherDeduction, // Use adjusted deduction
-      validityType,
-      ...(validityType === "expiration" && formattedValidityDate ? { validityDate: formattedValidityDate } : {}),
-      usageLimitType: limitUse ? "limited" : "unlimited",
-      ...(limitUse && numberOfUses ? { numberOfUses } : {}),
-      thresholdUse,
-      ...(thresholdUse && thresholdCondition ? { thresholdCondition } : {})
-    };
+        const formattedValidityDate = validityType === "expiration" && validityDate 
+        ? formattedDate(new Date(validityDate)) 
+        : null;
+        
+      const updatedVoucher = {
+        voucherID: voucherId,
+        voucherName,
+        voucherDescription: voucherDescription || "",
+        available: availability,
+        deductionType,
+        voucherDeduction: adjustedVoucherDeduction, // Use adjusted deduction
+        validityType,
+        ...(validityType === "expiration" && formattedValidityDate ? { validityDate: formattedValidityDate } : {}),
+        usageLimitType: limitUse ? "limited" : "unlimited",
+        ...(limitUse && numberOfUses ? { numberOfUses } : {}),
+        thresholdUse,
+        ...(thresholdUse && thresholdCondition ? { thresholdCondition } : {})
+      };
 
-    // Log the filtered `updatedVoucher` object before updating in Firestore
-    console.log("Updated Voucher Data:", updatedVoucher);
+      // Log the filtered `updatedVoucher` object before updating in Firestore
+      console.log("Updated Voucher Data:", updatedVoucher);
 
-    const voucherRef = doc(db, "vouchers", voucherId!);
-    await updateDoc(voucherRef, updatedVoucher);
-    setIsPopupVisible(true);
+      // Query to find the document with the matching voucherID field
+    const vouchersCollectionRef = collection(db, "vouchers");
+    const q = query(vouchersCollectionRef, where("voucherID", "==", voucherId));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.error(`No document found with voucherID: ${voucherId}`);
+      setShowMessage(true); // Show a message that no document exists
       setTimeout(() => {
-        setIsPopupVisible(false);
-      }, 750);
+        setShowMessage(false);
+      }, 3000);
+      return; // Exit the function since there's no document to update
+    }
+
+    // Assuming that voucherId is unique and there will be one matching document
+    const voucherDocRef = querySnapshot.docs[0].ref;
+
+    // Proceed to update the document if it exists
+    await updateDoc(voucherDocRef, updatedVoucher);
+    setIsPopupVisible(true);
+    setTimeout(() => {
+      setIsPopupVisible(false);
+    }, 750);
   }
 };
 
@@ -357,6 +374,11 @@ const handleSubmit = async () => {
         >
           {/* VOUCHER ICON */}
           <i className="fa-solid fa-ticket text-orange-950 text-7xl text-center"></i>
+          {showMessage && ( // Conditional rendering based on showMessage state
+            <p className="flex items-center justify-center font-bold text-red-600 text-lg mt-0">
+              No changes detected!
+            </p>
+          )}
           {/* ID AND AVAILABILITY */}
           <div className="w-full flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             {/* VOUCHER ID */}
