@@ -121,10 +121,10 @@ const VoucherListPage = () => {
     await deleteDoc(voucherRef);
   };
 
-  // Filter vouchers based on search input
-  const filteredVouchers = vouchers.filter(voucher =>
-    voucher.voucherID && // Check if voucherID exists
-    voucher.voucherID.toLowerCase().includes(searchInput.toLowerCase())
+  // Filter vouchers and promos based on search input
+  const filteredResults = filteredItems.filter(item =>
+    (selectedType === "vouchers" ? item.voucherID : item.promoID) && // Check if ID exists
+    (selectedType === "vouchers" ? item.voucherID : item.promoID).toLowerCase().includes(searchInput.toLowerCase())
   );
 
   // Function to get the appropriate text based on the selected type
@@ -221,7 +221,7 @@ const VoucherListPage = () => {
             </span>
           </Link>
           {/* MENU ITEMS */}
-          {filteredItems.map((items) => (
+          {filteredResults.map((items) => (
             <div
               key={items.id}
               className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer items-center px-8 aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300 justify-center"
