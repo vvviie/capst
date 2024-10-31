@@ -30,6 +30,16 @@ const roles = [
 const EditStaffAccountPage = () => {
   //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
   const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
 
   //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
   const handleSubmit = () => {
@@ -70,11 +80,13 @@ const EditStaffAccountPage = () => {
           <h1 className="w-full text-start text-xl font-bold text-orange-950">
             Update Account
           </h1>
+          {/* EMAIL */}
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
               htmlFor={`inputEmail`}
             >
+              <i className="fa-solid fa-user text-gray-700"></i>
               <span>Email Address</span>
             </label>
             <input
@@ -86,11 +98,13 @@ const EditStaffAccountPage = () => {
               required
             />
           </div>
+          {/* FIRST NAME */}
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
               htmlFor={`inputFirstName`}
             >
+              <i className="fa-solid fa-user text-gray-700"></i>
               <span>First Name</span>
             </label>
             <input
@@ -102,11 +116,13 @@ const EditStaffAccountPage = () => {
               required
             />
           </div>
+          {/* LAST NAME */}
           <div className="w-full flex flex-col gap-1 items-center justify-center">
             <label
               className="text-orange-950 text-sm w-full text-left space-x-1"
               htmlFor={`inputLastName`}
             >
+              <i className="fa-solid fa-user text-gray-700"></i>
               <span>Last Name</span>
             </label>
             <input
@@ -117,6 +133,66 @@ const EditStaffAccountPage = () => {
               placeholder="Last Name"
               required
             />
+          </div>
+          {/* PASSWORD */}
+          <div className="w-full flex flex-col gap-1 items-center justify-center">
+            <label
+              className="text-orange-950 text-sm w-full text-left space-x-1"
+              htmlFor="inputPassword"
+            >
+              <i className="fa-solid fa-lock text-gray-700"></i>
+              <span>Password</span>
+            </label>
+            <div
+              className="border-2 border-solid border-orange-900 w-full h-10 rounded-md bg-orange-50
+                 overflow-clip relative flex items-center"
+            >
+              <input
+                className="w-full h-10 rounded-md bg-orange-50 pl-4"
+                name="password"
+                id="inputPassword"
+                type={showPassword ? "text" : "password"}
+                placeholder="●●●●●●●●●●"
+                required
+              />
+              <i
+                className={`absolute right-3 top-2.5 fa-solid ${
+                  showPassword ? "fa-eye-slash" : "fa-eye"
+                }
+                     text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
+                onClick={togglePasswordVisibility}
+              ></i>
+            </div>
+          </div>
+          {/* CONFIRM PASSWORD */}
+          <div className="w-full flex flex-col gap-1 items-center justify-center">
+            <label
+              className="text-orange-950 text-sm w-full text-left space-x-1"
+              htmlFor="inputConfirmPassword"
+            >
+              <i className="fa-solid fa-lock text-gray-700"></i>
+              <span>Confirm Password</span>
+            </label>
+            <div
+              className="border-2 border-solid border-orange-900 w-full h-10 rounded-md bg-orange-50
+                 overflow-clip relative flex items-center"
+            >
+              <input
+                className="w-full h-10 rounded-md bg-orange-50 pl-4"
+                name="confirmPassword"
+                id="inputConfirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="●●●●●●●●●●"
+                required
+              />
+              <i
+                className={`absolute right-3 top-2.5 fa-solid ${
+                  showConfirmPassword ? "fa-eye-slash" : "fa-eye"
+                }
+                     text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
+                onClick={toggleConfirmPasswordVisibility}
+              ></i>
+            </div>
           </div>
           {/* ACTIVE AND ROLE CONTAINER */}
           <div className="w-full flex flex-col justify-center items-center gap-2 md:flex-row">
