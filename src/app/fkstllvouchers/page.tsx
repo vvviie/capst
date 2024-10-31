@@ -177,7 +177,9 @@ const VoucherListPage = () => {
         {/* HEADER, MENU CAT, AND SEARCH BAR CONTAINER */}
         <div className="flex flex-col gap-4">
           {/* HEADER*/}
-          <h1 className="text-2xl font-bold text-orange-950">Voucher/Promo Listings</h1>
+          <h1 className="text-2xl font-bold text-orange-950">
+            {selectedType === "vouchers" ? "Voucher Listings" : "Promo Listings"}
+          </h1>
           {/* CREATE AND SEARCH CONTAINER */}
           <div className="flex justify-between items-center gap-4">
             {/* SELECT MENU CATEGORY */}
@@ -264,10 +266,10 @@ const VoucherListPage = () => {
                     </option>
                   </select>
                   <Link
-                    href={`/fkstllvouchers/editvoucher/${items.voucherID}`}
+                    href={selectedType === "promoCodes" ? `/fkstllvouchers/editpromo/${items.promoID}` : `/fkstllvouchers/editvoucher/${items.voucherID}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center
-                  font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm
-                  min-h-10 pt-2"
+                    font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm
+                    min-h-10 pt-2"
                     onClick={(e) => e.stopPropagation()}
                   >
                     Edit
