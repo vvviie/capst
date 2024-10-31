@@ -141,7 +141,7 @@ const AddVoucherPage = () => {
   const formatDate = (date: Date): string => {
     const mm = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
     const dd = String(date.getDate()).padStart(2, '0');
-    const yy = String(date.getFullYear()).slice(-2); // Get last two digits of the year
+    const yy = String(date.getFullYear());
     return `${mm}/${dd}/${yy}`;
   };
 
