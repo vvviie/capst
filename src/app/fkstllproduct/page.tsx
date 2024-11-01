@@ -33,6 +33,7 @@ const CRUDProductPage = () => {
     const [sandwiches, setSandwiches] = useState<Sandwiches[]>([]);
     
     const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const handleItemClick = (id: string) => {
         setActiveItem(activeItem === id ? null : id);
@@ -208,28 +209,28 @@ const CRUDProductPage = () => {
     };
 
     const filteredDrinks = useMemo(() => {
-        return drinks; 
-    }, [drinks]);
-
+        return drinks.filter((drink) => drink.title.toLowerCase().includes(searchTerm));
+    }, [drinks, searchTerm]);
+    
     const filteredMainCourses = useMemo(() => {
-        return mainCourses; 
-    }, [mainCourses]);
-
+        return mainCourses.filter((course) => course.title.toLowerCase().includes(searchTerm));
+    }, [mainCourses, searchTerm]);
+    
     const filteredPastas = useMemo(() => {
-        return pastas; 
-    }, [pastas]);
-
+        return pastas.filter((pasta) => pasta.title.toLowerCase().includes(searchTerm));
+    }, [pastas, searchTerm]);
+    
     const filteredPastries = useMemo(() => {
-        return pastries; 
-    }, [pastries]);
-
+        return pastries.filter((pastry) => pastry.title.toLowerCase().includes(searchTerm));
+    }, [pastries, searchTerm]);
+    
     const filteredSnacks = useMemo(() => {
-        return snacks; 
-    }, [snacks]);
-
+        return snacks.filter((snack) => snack.title.toLowerCase().includes(searchTerm));
+    }, [snacks, searchTerm]);
+    
     const filteredSandwiches = useMemo(() => {
-        return sandwiches; 
-    }, [sandwiches]);
+        return sandwiches.filter((sandwich) => sandwich.title.toLowerCase().includes(searchTerm));
+    }, [sandwiches, searchTerm]);
 
     // Delete function for items
     const handleDelete = async (id: string, category: string) => {
@@ -426,6 +427,8 @@ const CRUDProductPage = () => {
                             id="inputSearch"
                             placeholder="Search menu..."
                             className="border-2 border-solid border-gray-200 text-xs sm:text-base md:text-lg h-9 pl-2 rounded-md bg-gray-50 w-full"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
                         />
                     </div>
                 </div>
