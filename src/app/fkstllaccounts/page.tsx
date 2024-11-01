@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminStaffFilter from "../components/AdminStaffFilter";
 import UsersFilter from "../components/UsersFilter";
+import { db } from "../firebase";
+import { collection, getDocs, query, where } from "firebase/firestore";
 
 //#region Staff Sample Acc
 type staff = {
@@ -72,8 +74,6 @@ type user = {
     username: string;
     firstName: string;
     lastName: string;
-    password: string;
-    cPassword: string;
     address: string;
     phone: string;
     totalPaid: number;
@@ -81,65 +81,15 @@ type user = {
 
 type listUser = user[];
 
-let userAccounts: listUser = [
-    {
-        username: "jamp@gmail.com",
-        firstName: "Jorge Angelo",
-        lastName: "Pangilinan",
-        password: "123123",
-        cPassword: "123123",
-        address: "Silang, Cavite",
-        phone: "09123456789",
-        totalPaid: 400,
-    },
-    {
-        username: "jcdf@gmail.com",
-        firstName: "Johann Carl",
-        lastName: "Fellizar",
-        password: "123123",
-        cPassword: "123123",
-        address: "Cavite",
-        phone: "09123456789",
-        totalPaid: 4000,
-    },
-    {
-        username: "jpg@gmail.com",
-        firstName: "Jericko",
-        lastName: "Gomez",
-        password: "123123",
-        cPassword: "123123",
-        address: "Cavite",
-        phone: "09123456789",
-        totalPaid: 6000,
-    },
-    {
-        username: "sundae@gmail.com",
-        firstName: "Sundae Mae",
-        lastName: "Bundae",
-        password: "123123",
-        cPassword: "123123",
-        address: "Cavite",
-        phone: "09123456789",
-        totalPaid: 10000,
-    },
-    {
-        username: "orky@gmail.com",
-        firstName: "Tohru",
-        lastName: "Bork",
-        password: "123123",
-        cPassword: "123123",
-        address: "Cavite",
-        phone: "09123456789",
-        totalPaid: 20000,
-    },
-];
 //#endregion
 
 const AccountsListPage = () => {
     const [accountType, setAccountType] = useState("users");
+    const [userAccounts, setUserAccounts] = useState<listUser>([]);
     const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
         {}
     );
+    const [searchInput, setSearchInput] = useState("");
 
     const toggleOrder = (id: string) => {
         setExpandedOrders((prev) => ({
@@ -153,6 +103,36 @@ const AccountsListPage = () => {
     ) => {
         setAccountType(event.target.value === "users" ? "users" : "staff");
     };
+
+    const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchInput(event.target.value);
+    };
+
+    useEffect(() => {
+        const fetchUsers = async () => {
+            const usersCollection = collection(db, "users");
+            const q = query(usersCollection, where("role", "==", "user"));
+            const userSnapshot = await getDocs(q);
+            const users: listUser = userSnapshot.docs.map(doc => ({
+                username: doc.data().username,
+                firstName: doc.data().firstName,
+                lastName: doc.data().lastName,
+                address: doc.data().address,
+                phone: doc.data().phoneNumber,
+                totalPaid: doc.data().totalPaid,
+            }));
+            setUserAccounts(users);
+        };
+
+        fetchUsers();
+    }, []);
+
+    const filteredUserAccounts = userAccounts.filter(user => 
+        user.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+        user.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+        user.username.toLowerCase().startsWith(searchInput.toLowerCase())
+    );
+
     return (
         <div
             className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -175,6 +155,8 @@ const AccountsListPage = () => {
                             placeholder="Search accounts..."
                             className="border-2 border-solid border-gray-200 text-sm sm:text-base
                                 md:text-lg h-10 pl-2 rounded-md bg-gray-50 w-full font-semibold"
+                            value={searchInput}
+                            onChange={handleSearchInputChange}
                         />
                         {/* FILTER */}
                         {accountType === "users" ? <UsersFilter /> : <AdminStaffFilter />}
@@ -206,42 +188,42 @@ const AccountsListPage = () => {
                 {accountType === "users" ? (
                     <div className="w-full flex flex-col justify-center gap-2 max-h-[720px] overflow-y-auto pb-2">
                         {/* USER ACCOUNTS */}
-                        {userAccounts.map((users) => (
+                        {filteredUserAccounts.map((user) => (
                             <div
                                 className="w-full bg-white border-2 border-gray-100 shadow-md rounded-md p-2
                                     flex flex-col justify-center gap-2"
-                                key={users.username}
-                                onClick={() => toggleOrder(users.username)}
+                                key={user.username}
+                                onClick={() => toggleOrder(user.username)}
                             >
                                 {/* USER HEADER CONTAINER */}
                                 <div className="flex gap-2 justify-between items-center">
                                     <div className="flex flex-col gap-0">
                                         {/* USER FULL NAME */}
                                         <h1 className="sm:text-lg font-bold text-gray-900 mb-[-4px]">
-                                            {users.firstName + " " + users.lastName}
+                                            {user.firstName + " " + user.lastName}
                                         </h1>
                                         {/* USER EMAIL */}
                                         <p className="text-sm font-light text-gray-500">
-                                            {users.username}
+                                            {user.username}
                                         </p>
                                         <p
-                                            className={`text-xs font-bold uppercase text-${users.totalPaid < 1000
+                                            className={`text-xs font-bold uppercase text-${user.totalPaid < 1000
                                                     ? "gray-700"
-                                                    : users.totalPaid < 5000
+                                                    : user.totalPaid < 5000
                                                         ? "orange-900"
-                                                        : users.totalPaid < 10000
+                                                        : user.totalPaid < 10000
                                                             ? "gray-400"
-                                                            : users.totalPaid < 20000
+                                                            : user.totalPaid < 20000
                                                                 ? "yellow-500"
                                                                 : "green-600"
                                                 }`}
-                                        >{`${users.totalPaid < 1000
+                                        >{`${user.totalPaid < 1000
                                                 ? "REGULAR"
-                                                : users.totalPaid < 5000
+                                                : user.totalPaid < 5000
                                                     ? "BRONZE"
-                                                    : users.totalPaid < 10000
+                                                    : user.totalPaid < 10000
                                                         ? "SILVER"
-                                                        : users.totalPaid < 20000
+                                                        : user.totalPaid < 20000
                                                             ? "GOLD"
                                                             : "DIAMOND"
                                             } MEMBER`}</p>
@@ -253,7 +235,7 @@ const AccountsListPage = () => {
                                             mr-4 cursor-pointer"
                                     >
                                         <i
-                                            className={`fa ${expandedOrders[users.username]
+                                            className={`fa ${expandedOrders[user.username]
                                                     ? "fa-caret-down"
                                                     : "fa-caret-right"
                                                 } text-gray-300 text-xs`}
@@ -262,7 +244,7 @@ const AccountsListPage = () => {
                                     </span>
                                 </div>
                                 {/* EXPANDED DETAILS AND ACTIONS CONTAINER */}
-                                {expandedOrders[users.username] && (
+                                {expandedOrders[user.username] && (
                                     <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                                         {/* ADDRESS */}
                                         <div className="flex flex-col">
@@ -270,7 +252,7 @@ const AccountsListPage = () => {
                                                 Address
                                             </h1>
                                             <p className="text-sm text-gray-600 font-semibold">
-                                                {users.address}
+                                                {user.address}
                                             </p>
                                         </div>
                                         {/* PHONE NUMBER */}
@@ -279,7 +261,7 @@ const AccountsListPage = () => {
                                                 Phone Number
                                             </h1>
                                             <p className="text-sm text-gray-600 font-semibold">
-                                                {users.phone}
+                                                {user.phone}
                                             </p>
                                         </div>
                                         {/* ACTIONS */}
