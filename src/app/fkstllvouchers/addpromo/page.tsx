@@ -338,7 +338,7 @@ const AddPromoPage = () => {
                             className="text-orange-950 text-sm w-full text-left space-x-1"
                             htmlFor="promoName"
                         >
-                            <span>Code</span>
+                            <span>Name</span>
                         </label>
                         <input
                             className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
@@ -359,7 +359,7 @@ const AddPromoPage = () => {
                             className="text-orange-950 text-sm w-full text-left space-x-1"
                             htmlFor="promoCode"
                         >
-                            <span>Name</span>
+                            <span>Code</span>
                         </label>
                         <input
                             className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"

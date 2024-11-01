@@ -19,6 +19,7 @@ type Promo = {
     promoDeduction: number;
     promoDescription: string;
     numberOfUses: number;
+    promoCode: string;
 };
 
 const EditPromoPage = () => {
@@ -36,6 +37,7 @@ const EditPromoPage = () => {
     const [deductionType, setDeductionType] = useState("");
     const [formattedValue, setFormattedValue] = useState<string>("");
     const [validityDate, setValidityDate] = useState("");
+    const [promoCode, setPromoCode] = useState<string>("");
     const [formattedValidityDate, setFormattedValidityDate] = useState("");
     const [numberOfUses, setNumberOfUses] = useState<number | "">("");
     const [promoDescription, setPromoDescription] = useState("");
@@ -43,11 +45,13 @@ const EditPromoPage = () => {
     const pathname = usePathname();
     const promoId = pathname.split("/").pop();
     const [showMessage, setShowMessage] = useState(false);
+
     const promoDeductionValueRef = useRef<HTMLInputElement>(null);
     const promoValidityDateRef = useRef<HTMLInputElement>(null);
     const promoNumberOfUsesRef = useRef<HTMLInputElement>(null);
     const promoDescriptionRef = useRef<HTMLInputElement>(null);
     const promoThresholdValueRef = useRef<HTMLInputElement>(null);
+    const promoCodeRef = useRef<HTMLInputElement>(null);
 
     const formatDate = (dateString: string): string => {
         const parts = dateString.split('/');
@@ -70,6 +74,8 @@ const EditPromoPage = () => {
 
                     // Set default values for edit form
                     setDeductionType(promo.deductionType);
+                    setPromoCode(promo.promoCode);
+                    console.log(promoCode);
                     setValidityType(promo.validityType === "expiration" ? "expiration" : "perpetual");
                     setLimitUse(promo.usageLimitType === "limited");
                     setThresholdUse(promo.thresholdUse);
@@ -158,6 +164,12 @@ const EditPromoPage = () => {
             console.log(`Threshold Condition reverted to maximum: 10000`); // Log the reset action
         }
     }, [thresholdCondition]); // Dependency array
+
+    const Promo = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = event.target.value;
+        setPromoCode(newValue);
+        console.log("Promo Code:", newValue); // Log the updated promo code
+    };
 
     const handlePromoDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
         setPromoDescription(event.target.value);
@@ -279,6 +291,11 @@ const EditPromoPage = () => {
                 return;
             }
 
+            if (promoCode === "") {
+                promoCodeRef.current?.focus();
+                return;
+            }
+
             if (limitUse && numberOfUses === "" || limitUse && numberOfUses === 0) {
                 promoNumberOfUsesRef.current?.focus();
                 return;
@@ -305,6 +322,7 @@ const EditPromoPage = () => {
             const updatedPromo = {
                 promoID: promoId,
                 promoName,
+                promoCode,
                 promoDescription: promoDescription || "",
                 available: availability,
                 deductionType,
@@ -441,6 +459,28 @@ const EditPromoPage = () => {
                             readOnly
                         />
                     </div>
+
+                    {/* Promo CODE */}
+                    <div className="flex-1 flex flex-col gap-1 items-center justify-center">
+                        <label
+                            className="text-orange-950 text-sm w-full text-left space-x-1"
+                            htmlFor="promoCode"
+                        >
+                            <span>Code</span>
+                        </label>
+                        <input
+                            className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
+                            name="promoCode"
+                            id="inputPromoCode"
+                            type="text"
+                            placeholder="Promo Code"
+                            required
+                            value={promoCode} // Bind input to promoName state
+                            onChange={Promo} // Update state on change
+                            ref={promoCodeRef}
+                        />
+                    </div>
+
 
                     {/* TYPE AND DEDUCTION */}
                     <div className="w-full flex flex-col-reverse sm:flex-row-reverse sm:justify-between sm:items-center gap-2">
