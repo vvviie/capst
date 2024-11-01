@@ -5,21 +5,40 @@ import Link from "next/link";
 const data = {
   title: "CONTACT US",
   tel: "(046)1234567",
-  socials: {
-    facebook: {
-      img: "/fb.png",
-      url: "https://www.facebook.com/fikastalle/",
-    },
-    messenger: {
-      img: "/ms.png",
-      url: "https://www.facebook.com/fikastalle/",
-    },
-    instagram: {
-      img: "/ig.png",
-      url: "https://www.instagram.com/fikastalle.fikakafe/",
-    },
-  },
 };
+
+const socials = [
+  {
+    name: "facebook",
+    active: true,
+    icon: "fa-brands fa-facebook-f",
+    url: "https://www.facebook.com/fikastalle/",
+  },
+  {
+    name: "messenger",
+    active: true,
+    icon: "fab fa-facebook-messenger",
+    url: "https://www.facebook.com/fikastalle/",
+  },
+  {
+    name: "instagram",
+    active: true,
+    icon: "fa-brands fa-instagram",
+    url: "https://www.instagram.com/fikastalle.fikakafe/",
+  },
+  {
+    name: "tiktok",
+    active: true,
+    icon: "fa-brands fa-tiktok",
+    url: "https://www.tiktok.com/@fikastalle",
+  },
+  {
+    name: "email",
+    active: true,
+    icon: "fa-solid fa-envelope",
+    url: "mailto:emailaddressngfikastalle@gmail.com",
+  },
+];
 
 const Footer = () => {
   return (
@@ -51,25 +70,26 @@ const Footer = () => {
       {/* SOCIAL MEDIA */}
       <div className="flex flex-col justify-center items-center gap-2">
         <span className="text-white">Social Media</span>
-        <div className="flex gap-4 items-center justify-center">
-          {/* FACEBOOK */}
-          <div className="relative w-8 h-8 hover:scale-[1.08] duration-200">
-            <Link href={data.socials.facebook.url}>
-              <Image src={data.socials.facebook.img} alt="" fill />
-            </Link>
-          </div>
-          {/* MESSENGER */}
-          <div className="relative w-8 h-8 hover:scale-[1.08] duration-200">
-            <Link href={data.socials.messenger.url}>
-              <Image src={data.socials.messenger.img} alt="" fill />
-            </Link>
-          </div>
-          {/* INSTAGRAM */}
-          <div className="relative w-8 h-8 hover:scale-[1.08] duration-200">
-            <Link href={data.socials.instagram.url}>
-              <Image src={data.socials.instagram.img} alt="" fill />
-            </Link>
-          </div>
+        <div className="flex gap-1 items-center justify-center">
+          {socials.map((soc) => (
+            <div
+              className={`relative ${
+                soc.active ? "block" : "hidden"
+              } w-8 h-8 hover:scale-[1.08] duration-200`}
+            >
+              <Link href={soc.url} target="_blank">
+                <i
+                  className={`${soc.icon} ${
+                    soc.name === "instagram"
+                      ? "text-[26px]"
+                      : soc.name === "email"
+                      ? "text-[27px]"
+                      : "text-2xl"
+                  } text-white`}
+                ></i>
+              </Link>
+            </div>
+          ))}
         </div>
       </div>
     </div>
