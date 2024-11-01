@@ -188,7 +188,7 @@ const Navbar = () => {
               <Link href="/">Orders</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Accounts</Link>
+              <Link href="/fkstllaccounts">Accounts</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
               <Link href="/">Roles</Link>
