@@ -154,38 +154,37 @@ const AccountsListPage = () => {
     };
 
     const handleDeleteUser = async (username: string) => {
-		try {
-			// Ensure username is provided
-			if (!username) {
-				alert('Please provide a username to delete.');
-				return;
-			}
-
-			// Call the delete API with the username
-			const response = await fetch('/api/deleteUser', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ username }), // Correctly send the username
-			});
-
-			const data = await response.json(); // Get the response data
+        try {
+            // Ensure username is provided
+            if (!username) {
+                alert('Please provide a username to delete.');
+                return;
+            }
+    
+            // Call the delete API with the username
+            const response = await fetch('/api/deleteUser', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username }), // Correctly send the username
+            });
+    
+            const data = await response.json(); // Get the response data
             console.log("Response data:", data); // Log the response data
-
-			if (response.ok) {
-				// If the deletion was successful, update the state accordingly
-				setUserAccounts((prev) => prev.filter((user) => user.username !== username));
-				alert('User deleted successfully!');
-			} else {
-				const errorData = await response.json(); // Capture error message
-				console.error("Error data:", errorData); // Log error message
-				alert(`Failed to delete user: ${errorData.error || 'Please try again.'}`);
-			}
-		} catch (error) {
-			console.error('Error deleting user:', error);
-			alert('Failed to delete user. Please try again.');
-		}
+    
+            if (response.ok) {
+                // If the deletion was successful, update the state accordingly
+                setUserAccounts((prev) => prev.filter((user) => user.username !== username));
+            } else {
+                // Since we've already read the response body, we can use 'data' here
+                console.error("Error data:", data); // Log error message
+                alert(`Failed to delete user: ${data.error || 'Please try again.'}`);
+            }
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('Failed to delete user. Please try again.');
+        }
     };
 
     
