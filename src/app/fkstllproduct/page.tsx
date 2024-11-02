@@ -209,27 +209,27 @@ const CRUDProductPage = () => {
     };
 
     const filteredDrinks = useMemo(() => {
-        return drinks.filter((drink) => drink.title.toLowerCase().includes(searchTerm));
+        return drinks.filter((drink) => drink.title.toLowerCase().startsWith(searchTerm));
     }, [drinks, searchTerm]);
     
     const filteredMainCourses = useMemo(() => {
-        return mainCourses.filter((course) => course.title.toLowerCase().includes(searchTerm));
+        return mainCourses.filter((course) => course.title.toLowerCase().startsWith(searchTerm));
     }, [mainCourses, searchTerm]);
     
     const filteredPastas = useMemo(() => {
-        return pastas.filter((pasta) => pasta.title.toLowerCase().includes(searchTerm));
+        return pastas.filter((pasta) => pasta.title.toLowerCase().startsWith(searchTerm));
     }, [pastas, searchTerm]);
     
     const filteredPastries = useMemo(() => {
-        return pastries.filter((pastry) => pastry.title.toLowerCase().includes(searchTerm));
+        return pastries.filter((pastry) => pastry.title.toLowerCase().startsWith(searchTerm));
     }, [pastries, searchTerm]);
     
     const filteredSnacks = useMemo(() => {
-        return snacks.filter((snack) => snack.title.toLowerCase().includes(searchTerm));
+        return snacks.filter((snack) => snack.title.toLowerCase().startsWith(searchTerm));
     }, [snacks, searchTerm]);
     
     const filteredSandwiches = useMemo(() => {
-        return sandwiches.filter((sandwich) => sandwich.title.toLowerCase().includes(searchTerm));
+        return sandwiches.filter((sandwich) => sandwich.title.toLowerCase().startsWith(searchTerm));
     }, [sandwiches, searchTerm]);
 
     // Delete function for items

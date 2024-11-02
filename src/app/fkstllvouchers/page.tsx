@@ -124,7 +124,7 @@ const VoucherListPage = () => {
   // Filter vouchers and promos based on search input
   const filteredResults = filteredItems.filter(item =>
     (selectedType === "vouchers" ? item.voucherID : item.promoID) && // Check if ID exists
-    (selectedType === "vouchers" ? item.voucherID : item.promoID).toLowerCase().includes(searchInput.toLowerCase())
+    (selectedType === "vouchers" ? item.voucherID : item.promoID).toLowerCase().startsWith(searchInput.toLowerCase())
   );
 
   // Function to get the appropriate text based on the selected type

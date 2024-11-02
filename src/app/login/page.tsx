@@ -38,9 +38,10 @@ const LoginPage = () => {
 
   useEffect(() => {
     // Check if the user is already logged in by checking cookies
-    const userSession = Cookies.get("userSession");
+    const userSession = Cookies.get("user");
     if (userSession) {
       router.push("/"); // Redirect to homepage if user is already logged in
+      window.location.reload();
     }
   }, [router]);
 

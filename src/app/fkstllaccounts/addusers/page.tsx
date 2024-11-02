@@ -3,13 +3,93 @@
 import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Link from "next/link";
 import React from "react";
-import { useState } from "react";
+import { initializeApp } from "firebase/app";
+import { useState, useEffect, useRef } from "react";
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAWhVssqbS2QQ7NkI1CwiOHTq6sN31gsVg",
+    authDomain: "testingcapstonejg.firebaseapp.com",
+    databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "testingcapstonejg",
+    storageBucket: "testingcapstonejg.appspot.com",
+    messagingSenderId: "1006906116033",
+    appId: "1:1006906116033:web:825eeeeeed8c4221a71140",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 const AddUsersAccountPage = () => {
     //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
+    const router = useRouter(); // Initialize useRouter
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [address, setAddress] = useState("");
+
+    const [errorMessage, setErrorMessage] = useState("");
+    const [verificationMessage, setVerificationMessage] = useState("");
+
+    const usernameRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+    const confirmPasswordRef = useRef<HTMLInputElement>(null);
+    const firstNameRef = useRef<HTMLInputElement>(null);
+    const lastNameRef = useRef<HTMLInputElement>(null);
+    const phoneNumberRef = useRef<HTMLInputElement>(null);
+    const addressRef = useRef<HTMLInputElement>(null);
+
+    const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setUsername(value);
+        console.log(`Username: ${value}`);
+    };
+
+    const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setPassword(value);
+        console.log(`Password: ${value}`);
+    };
+
+    const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setConfirmPassword(value);
+        console.log(`Confirm Password: ${value}`);
+    };
+
+    const handleFirstNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setFirstName(value);
+        console.log(`First Name: ${value}`);
+    };
+
+    const handleLastNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setLastName(value);
+        console.log(`Last Name: ${value}`);
+    };
+
+    const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setPhoneNumber(value);
+        console.log(`Phone Number: ${value}`);
+    };
+
+    const handleAddressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setAddress(value);
+        console.log(`Address: ${value}`);
+    };
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
@@ -19,13 +99,128 @@ const AddUsersAccountPage = () => {
         setShowConfirmPassword(!showConfirmPassword);
     };
 
-    //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
-    const handleSubmit = () => {
-        setIsPopupVisible(true);
+    // Validation function
+    const validateInputs = () => {
+        if (!username || !password || !confirmPassword || !firstName || !lastName || !phoneNumber || !address) {
+            setErrorMessage("All fields must be filled out.");
+            clearErrorAfterDelay();
+            return false;
+        }
+        if (!username.endsWith(".com")) {
+            setErrorMessage("Email must be valid.");
+            clearErrorAfterDelay();
+            return false;
+        }
+        if (password !== confirmPassword) {
+            setErrorMessage("Passwords do not match.");
+            clearErrorAfterDelay();
+            return false;
+        }
 
+        if (password.length < 6 || confirmPassword.length < 6) {
+            setErrorMessage("Password must be at least 6 characters.");
+            clearErrorAfterDelay();
+            return false;
+        }
+
+        if (isNaN(Number(phoneNumber))) {
+            setErrorMessage("Phone number must be valid.");
+            clearErrorAfterDelay();
+            return false;
+        }
+        setErrorMessage(""); // Clear error if all validations pass
+        return true;
+    };
+
+    const clearErrorAfterDelay = () => {
         setTimeout(() => {
-            setIsPopupVisible(false);
-        }, 750);
+            setErrorMessage("");
+        }, 3000); // 3 seconds
+    };
+
+    //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
+    const handleSubmit = async () => {
+        if (validateInputs()) {
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, username, password);
+                const user = userCredential.user;
+    
+                // Send email verification
+                await sendEmailVerification(user);
+                
+                // Set the verification message with the username
+                setVerificationMessage(`Verification email was sent to ${username}.`);
+    
+                // Clear the verification message after 3 seconds
+                setTimeout(() => {
+                    setVerificationMessage("");
+                }, 3000); // 3000 milliseconds = 3 seconds
+    
+                const firstTimeVoucherRef = doc(db, "vouchers", "firstTimeVoucher");
+                const voucherSnap = await getDoc(firstTimeVoucherRef);
+    
+                if (voucherSnap.exists()) {
+                    const firstTimeVoucher = voucherSnap.data();
+                    const now = new Date();
+                    const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+                        now.getDate()
+                    ).padStart(2, "0")}/${now.getFullYear()}`;
+                    const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+                        now.getMinutes()
+                    ).padStart(2, "0")}`;
+    
+                    await setDoc(doc(db, "users", username), {
+                        username,
+                        firstName,
+                        lastName,
+                        address,
+                        phoneNumber,
+                        role: "user",
+                        totalPaid: 0,
+                        vouchers: {
+                            firstTimeVoucher: {
+                                available: firstTimeVoucher.available,
+                                voucherDeduction: firstTimeVoucher.voucherDeduction,
+                                voucherDescription: firstTimeVoucher.voucherDescription,
+                                voucherID: firstTimeVoucher.voucherID,
+                                voucherType: firstTimeVoucher.deductionType,
+                                used: false,
+                                isRead: false,
+                                isNotifDeleted: false,
+                                dateCreated: date,
+                                timeCreated: time,
+                            },
+                        },
+                    });
+                }
+                setIsPopupVisible(true);
+                setTimeout(() => {
+                    setIsPopupVisible(false);
+                }, 3000);
+
+                setTimeout(() => {
+                    router.push("/fkstllaccounts");    
+                  }, 3000); // Optional: delay before redirecting
+
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    setErrorMessage(`The email is already in use. Please try with another email.`);
+                    setTimeout(() => {
+                        setErrorMessage("");
+                    }, 5000); // 3000 milliseconds = 3 seconds
+                } else {
+                    setErrorMessage(`An error occurred: ${error.message}`);
+                    setTimeout(() => {
+                        setErrorMessage("");
+                    }, 5000); // 3000 milliseconds = 3 seconds
+                }
+    
+                // Clear the error message after 3 seconds
+                setTimeout(() => {
+                    setVerificationMessage("");
+                }, 3000); // 3000 milliseconds = 3 seconds
+            }
+        }
     };
 
     return (
@@ -58,6 +253,16 @@ const AddUsersAccountPage = () => {
                     <h1 className="w-full text-start text-xl font-bold text-orange-950">
                         New User Account
                     </h1>
+                
+                    {/* Error message conditionally displayed */}
+                    {errorMessage && (
+                        <p className="text-red-500 text-1xl text-center">{errorMessage}</p>
+                    )}
+
+                    {verificationMessage && (
+                                    <p className="text-green-500 text-1xl text-center">{verificationMessage}</p>
+                                )}
+
                     <div className="w-full flex flex-col gap-1 items-center justify-center">
                         <label
                             className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -70,9 +275,12 @@ const AddUsersAccountPage = () => {
                             className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
                             name="email"
                             id="inputEmail"
-                            type="text"
+                            type="email"
                             placeholder="ex. juandelacruz@gmail.com"
                             required
+                            value={username}
+                            onChange={handleUsernameChange}
+                            ref={usernameRef}
                         />
                     </div>
                     <div className="w-full flex flex-col gap-1 items-center justify-center">
@@ -94,6 +302,9 @@ const AddUsersAccountPage = () => {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="●●●●●●●●●●"
                                 required
+                                value={password}
+                                onChange={handlePasswordChange}
+                                ref={passwordRef}
                             />
                             <i
                                 className={`absolute right-3 top-2.5 fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"
@@ -123,6 +334,9 @@ const AddUsersAccountPage = () => {
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="●●●●●●●●●●"
                                 required
+                                value={confirmPassword}
+                                onChange={handleConfirmPasswordChange}
+                                ref={confirmPasswordRef}
                             />
                             <i
                                 className={`absolute right-3 top-2.5 fa-solid ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"
@@ -147,6 +361,9 @@ const AddUsersAccountPage = () => {
                             id="inputFirstName"
                             type="text"
                             placeholder="First Name"
+                            value={firstName}
+                            onChange={handleFirstNameChange}
+                            ref={firstNameRef}
                         />
                     </div>
                     {/* LAST NAME */}
@@ -164,6 +381,9 @@ const AddUsersAccountPage = () => {
                             id="inputLastName"
                             type="text"
                             placeholder="Last Name"
+                            value={lastName}
+                            onChange={handleLastNameChange}
+                            ref={lastNameRef}
                         />
                     </div>
 
@@ -182,6 +402,9 @@ const AddUsersAccountPage = () => {
                             id="inputPhoneNumber"
                             type="text"
                             placeholder="Phone Number"
+                            value={phoneNumber}
+                            onChange={handlePhoneNumberChange}
+                            ref={phoneNumberRef}
                         />
                     </div>
 
@@ -200,6 +423,9 @@ const AddUsersAccountPage = () => {
                             id="inputAddress"
                             type="text"
                             placeholder="Address"
+                            value={address}
+                            onChange={handleAddressChange}
+                            ref={addressRef}
                         />
                     </div>
                     <button
