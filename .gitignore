@@ -70,4 +70,4 @@ purgecss.config.js
 *.iml
 .idea/
 
-/src/app/adminsettings/adminsettings.json
+/src/app/adminsettings/
