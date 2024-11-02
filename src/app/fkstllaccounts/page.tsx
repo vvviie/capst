@@ -4,8 +4,14 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import AdminStaffFilter from "../components/AdminStaffFilter";
 import UsersFilter from "../components/UsersFilter";
-import { db } from "../firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { auth, db } from "../firebase";
+import { collection, getDocs, query, where, doc, deleteDoc, getDoc, DocumentData } from "firebase/firestore";
+import { 
+    onAuthStateChanged, 
+    getAuth, EmailAuthProvider, 
+    reauthenticateWithCredential, 
+    deleteUser 
+} from "firebase/auth"; // Import Firebase Auth methods
 
 //#region Staff Sample Acc
 type staff = {
@@ -77,6 +83,7 @@ type user = {
     address: string;
     phone: string;
     totalPaid: number;
+    role: string;
 };
 
 type listUser = user[];
@@ -90,7 +97,8 @@ const AccountsListPage = () => {
         {}
     );
     const [searchInput, setSearchInput] = useState("");
-
+    const [isAdmin, setIsAdmin] = useState(false);
+    
     const toggleOrder = (id: string) => {
         setExpandedOrders((prev) => ({
             ...prev,
@@ -120,6 +128,7 @@ const AccountsListPage = () => {
                 address: doc.data().address,
                 phone: doc.data().phoneNumber,
                 totalPaid: doc.data().totalPaid,
+                role: doc.data().role,
             }));
             setUserAccounts(users);
         };
@@ -133,6 +142,53 @@ const AccountsListPage = () => {
         user.username.toLowerCase().startsWith(searchInput.toLowerCase())
     );
 
+    const reauthenticateUser = async (email: string, password: string) => {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        
+        if (user) {
+            const credential = EmailAuthProvider.credential(email, password);
+            return reauthenticateWithCredential(user, credential);
+        }
+        throw new Error("No user is currently logged in.");
+    };
+
+    const handleDeleteUser = async (username: string) => {
+		try {
+			// Ensure username is provided
+			if (!username) {
+				alert('Please provide a username to delete.');
+				return;
+			}
+
+			// Call the delete API with the username
+			const response = await fetch('/api/deleteUser', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ username }), // Correctly send the username
+			});
+
+			const data = await response.json(); // Get the response data
+            console.log("Response data:", data); // Log the response data
+
+			if (response.ok) {
+				// If the deletion was successful, update the state accordingly
+				setUserAccounts((prev) => prev.filter((user) => user.username !== username));
+				alert('User deleted successfully!');
+			} else {
+				const errorData = await response.json(); // Capture error message
+				console.error("Error data:", errorData); // Log error message
+				alert(`Failed to delete user: ${errorData.error || 'Please try again.'}`);
+			}
+		} catch (error) {
+			console.error('Error deleting user:', error);
+			alert('Failed to delete user. Please try again.');
+		}
+    };
+
+    
     return (
         <div
             className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -277,7 +333,8 @@ const AccountsListPage = () => {
                                             {/* DELETE BUTTON */}
                                             <button
                                                 className="h-10 w-full bg-red-500 font-bold text-white rounded-md shadow-md
-                        hover:bg-red-400 hover:scale-[1.02] duration-200 mt-2"
+                                                hover:bg-red-400 hover:scale-[1.02] duration-200 mt-2"
+                                                onClick={() => handleDeleteUser(user.username)}
                                             >
                                                 Delete
                                             </button>
