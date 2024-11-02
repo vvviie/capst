@@ -69,3 +69,5 @@ purgecss.config.js
 # JetBrains IDEs
 *.iml
 .idea/
+
+/src/app/adminsettings/adminsettings.json
