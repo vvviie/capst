@@ -128,11 +128,18 @@ const VoucherListPage = () => {
     await deleteDoc(voucherRef);
   };
 
+<<<<<<< HEAD
   // Filter vouchers based on search input
   const filteredVouchers = vouchers.filter(
     (voucher) =>
       voucher.voucherID && // Check if voucherID exists
       voucher.voucherID.toLowerCase().includes(searchInput.toLowerCase())
+=======
+  // Filter vouchers and promos based on search input
+  const filteredResults = filteredItems.filter(item =>
+    (selectedType === "vouchers" ? item.voucherID : item.promoID) && // Check if ID exists
+    (selectedType === "vouchers" ? item.voucherID : item.promoID).toLowerCase().startsWith(searchInput.toLowerCase())
+>>>>>>> 8ff37b8651210cf028a425e13b307c96087ce439
   );
 
   // Function to get the appropriate text based on the selected type
@@ -186,7 +193,11 @@ const VoucherListPage = () => {
         <div className="flex flex-col gap-4">
           {/* HEADER*/}
           <h1 className="text-2xl font-bold text-orange-950">
+<<<<<<< HEAD
             Voucher/Promo Listings
+=======
+            {selectedType === "vouchers" ? "Voucher Listings" : "Promo Listings"}
+>>>>>>> 8ff37b8651210cf028a425e13b307c96087ce439
           </h1>
           {/* CREATE AND SEARCH CONTAINER */}
           <div className="flex justify-between items-center gap-4">
@@ -241,7 +252,7 @@ const VoucherListPage = () => {
             </span>
           </Link>
           {/* MENU ITEMS */}
-          {filteredItems.map((items) => (
+          {filteredResults.map((items) => (
             <div
               key={items.id}
               className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer items-center px-8 aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300 justify-center"
@@ -287,8 +298,15 @@ const VoucherListPage = () => {
                     </option>
                   </select>
                   <Link
+<<<<<<< HEAD
                     href={`/fkstllvouchers/editvoucher/${items.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+=======
+                    href={selectedType === "promoCodes" ? `/fkstllvouchers/editpromo/${items.promoID}` : `/fkstllvouchers/editvoucher/${items.voucherID}`}
+                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center
+                    font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm
+                    min-h-10 pt-2"
+>>>>>>> 8ff37b8651210cf028a425e13b307c96087ce439
                     onClick={(e) => e.stopPropagation()}
                   >
                     Edit

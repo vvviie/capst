@@ -144,9 +144,15 @@ const AddVoucherPage = () => {
   };
 
   const formatDate = (date: Date): string => {
+<<<<<<< HEAD:src/app/fkstllvouchers/add/[category]/page.tsx
     const mm = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
     const dd = String(date.getDate()).padStart(2, "0");
     const yy = String(date.getFullYear()).slice(-2); // Get last two digits of the year
+=======
+    const mm = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+    const dd = String(date.getDate()).padStart(2, '0');
+    const yy = String(date.getFullYear());
+>>>>>>> 8ff37b8651210cf028a425e13b307c96087ce439:src/app/fkstllvouchers/addvoucher/page.tsx
     return `${mm}/${dd}/${yy}`;
   };
 

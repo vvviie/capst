@@ -162,9 +162,13 @@ const Navbar = () => {
     >
       <div className="font-bold text-xl hover:text-yellow-100">
         {/* Conditionally render based on role */}
+<<<<<<< HEAD
         <Link href="/">
           {role === "admin" ? "fikaställe admin testing" : "fikaställe"}
         </Link>
+=======
+        <Link href="/">{role === "admin" ? "fikaställe admin" : "fikaställe"}</Link>
+>>>>>>> 8ff37b8651210cf028a425e13b307c96087ce439
       </div>
       <div className="flex items-center justify-center gap-6">
         <div className="md:hidden">
@@ -196,10 +200,7 @@ const Navbar = () => {
               <Link href="/">Orders</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Accounts</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Roles</Link>
+              <Link href="/fkstllaccounts">Accounts</Link>
             </div>
           </>
         ) : (

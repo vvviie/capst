@@ -177,7 +177,7 @@ const SignupPage: React.FC = () => {
               voucherDeduction: firstTimeVoucher.voucherDeduction,
               voucherDescription: firstTimeVoucher.voucherDescription,
               voucherID: firstTimeVoucher.voucherID,
-              voucherType: firstTimeVoucher.voucherType,
+              voucherType: firstTimeVoucher.deductionType,
               used: false,
               isRead: false,
               isNotifDeleted: false,
