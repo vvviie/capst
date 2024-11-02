@@ -5,12 +5,22 @@ import React, { useState, useEffect } from "react";
 import AdminStaffFilter from "../components/AdminStaffFilter";
 import UsersFilter from "../components/UsersFilter";
 import { auth, db } from "../firebase";
-import { collection, getDocs, query, where, doc, deleteDoc, getDoc, DocumentData } from "firebase/firestore";
-import { 
-    onAuthStateChanged, 
-    getAuth, EmailAuthProvider, 
-    reauthenticateWithCredential, 
-    deleteUser 
+import {
+    collection,
+    getDocs,
+    query,
+    where,
+    doc,
+    deleteDoc,
+    getDoc,
+    DocumentData,
+} from "firebase/firestore";
+import {
+    onAuthStateChanged,
+    getAuth,
+    EmailAuthProvider,
+    reauthenticateWithCredential,
+    deleteUser,
 } from "firebase/auth"; // Import Firebase Auth methods
 
 //#region Staff Sample Acc
@@ -98,7 +108,12 @@ const AccountsListPage = () => {
     );
     const [searchInput, setSearchInput] = useState("");
     const [isAdmin, setIsAdmin] = useState(false);
-    
+    const [filteredStatus, setFilteredStatus] = useState("All");
+
+    const handleFilterChange = (status) => {
+        setFilteredStatus(status);
+    };
+
     const toggleOrder = (id: string) => {
         setExpandedOrders((prev) => ({
             ...prev,
@@ -112,7 +127,9 @@ const AccountsListPage = () => {
         setAccountType(event.target.value === "users" ? "users" : "staff");
     };
 
-    const handleSearchInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSearchInputChange = (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => {
         setSearchInput(event.target.value);
     };
 
@@ -121,7 +138,7 @@ const AccountsListPage = () => {
             const usersCollection = collection(db, "users");
             const q = query(usersCollection, where("role", "==", "user"));
             const userSnapshot = await getDocs(q);
-            const users: listUser = userSnapshot.docs.map(doc => ({
+            const users: listUser = userSnapshot.docs.map((doc) => ({
                 username: doc.data().username,
                 firstName: doc.data().firstName,
                 lastName: doc.data().lastName,
@@ -136,16 +153,35 @@ const AccountsListPage = () => {
         fetchUsers();
     }, []);
 
-    const filteredUserAccounts = userAccounts.filter(user => 
+    const statusInfo = status.find((s) => s.value === filteredStatus); // Move this outside
+
+    const statusOptions = [
+        { id: 1, value: "All", min: 0, max: Infinity },
+        { id: 2, value: "Regular", min: 0, max: 999 },
+        { id: 3, value: "Bronze", min: 1000, max: 4999 },
+        { id: 4, value: "Silver", min: 5000, max: 9999 },
+        { id: 5, value: "Gold", min: 10000, max: 19999 },
+        { id: 6, value: "Diamond", min: 20000, max: Infinity },
+    ];
+    
+    const filteredUserAccounts = userAccounts.filter((user) => {
+        const matchesSearch =
         user.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
         user.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
-        user.username.toLowerCase().startsWith(searchInput.toLowerCase())
-    );
+        user.username.toLowerCase().startsWith(searchInput.toLowerCase());
+    
+        const statusInfo = statusOptions.find((s) => s.value === filteredStatus);
+        const matchesStatus = statusInfo
+            ? user.totalPaid >= statusInfo.min && user.totalPaid <= statusInfo.max
+            : false;
+    
+        return matchesSearch && (filteredStatus === "All" || matchesStatus);
+    });
 
     const reauthenticateUser = async (email: string, password: string) => {
         const auth = getAuth();
         const user = auth.currentUser;
-        
+
         if (user) {
             const credential = EmailAuthProvider.credential(email, password);
             return reauthenticateWithCredential(user, credential);
@@ -157,37 +193,38 @@ const AccountsListPage = () => {
         try {
             // Ensure username is provided
             if (!username) {
-                alert('Please provide a username to delete.');
+                alert("Please provide a username to delete.");
                 return;
             }
-    
+
             // Call the delete API with the username
-            const response = await fetch('/api/deleteUser', {
-                method: 'POST',
+            const response = await fetch("/api/deleteUser", {
+                method: "POST",
                 headers: {
-                    'Content-Type': 'application/json',
+                    "Content-Type": "application/json",
                 },
                 body: JSON.stringify({ username }), // Correctly send the username
             });
-    
+
             const data = await response.json(); // Get the response data
             console.log("Response data:", data); // Log the response data
-    
+
             if (response.ok) {
                 // If the deletion was successful, update the state accordingly
-                setUserAccounts((prev) => prev.filter((user) => user.username !== username));
+                setUserAccounts((prev) =>
+                    prev.filter((user) => user.username !== username)
+                );
             } else {
                 // Since we've already read the response body, we can use 'data' here
                 console.error("Error data:", data); // Log error message
-                alert(`Failed to delete user: ${data.error || 'Please try again.'}`);
+                alert(`Failed to delete user: ${data.error || "Please try again."}`);
             }
         } catch (error) {
-            console.error('Error deleting user:', error);
-            alert('Failed to delete user. Please try again.');
+            console.error("Error deleting user:", error);
+            alert("Failed to delete user. Please try again.");
         }
     };
 
-    
     return (
         <div
             className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -214,7 +251,11 @@ const AccountsListPage = () => {
                             onChange={handleSearchInputChange}
                         />
                         {/* FILTER */}
-                        {accountType === "users" ? <UsersFilter /> : <AdminStaffFilter />}
+                        {accountType === "users" ? (
+                            <UsersFilter onFilterChange={handleFilterChange} />
+                        ) : (
+                            <AdminStaffFilter />
+                        )}
                     </div>
                     <div className="flex gap-2 items-center justify-between w-full md:w-1/2">
                         {/* SELECT ACCOUNT TYPE */}
@@ -222,7 +263,7 @@ const AccountsListPage = () => {
                             name="selectAccounts"
                             id="selectAccounts"
                             className="w-2/3 rounded-md border-2 border-gray-100 shadow-md h-10 bg-whitep px-4 font-bold text-center
-            text-gray-500"
+                            text-gray-500"
                             onChange={handleCategoryChange}
                         >
                             <option value="users">Users</option>
