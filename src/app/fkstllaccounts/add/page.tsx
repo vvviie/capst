@@ -3,27 +3,50 @@
 import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Link from "next/link";
 import React from "react";
-import { useState } from "react";
+import { initializeApp } from "firebase/app";
+import { useState, useEffect, useRef } from "react";
+import { getAuth, createUserWithEmailAndPassword} from "firebase/auth";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAWhVssqbS2QQ7NkI1CwiOHTq6sN31gsVg",
+    authDomain: "testingcapstonejg.firebaseapp.com",
+    databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "testingcapstonejg",
+    storageBucket: "testingcapstonejg.appspot.com",
+    messagingSenderId: "1006906116033",
+    appId: "1:1006906116033:web:825eeeeeed8c4221a71140",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 const status = [
     {
         id: 1,
-        value: "Activated",
+        value: "activated",
+        name: "Activated"
     },
     {
         id: 2,
-        value: "Deactivated",
+        value: "deactivated",
+        name: "Deactivated"
     },
 ];
 
 const roles = [
     {
         id: 1,
-        value: "Bar",
+        value: "bar",
+        name: "Bar"
     },
     {
         id: 2,
-        value: "Kitchen",
+        value: "kitchen",
+        name: "Kitchen"
     },
 ];
 
@@ -32,6 +55,50 @@ const AddStaffAccountPage = () => {
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [username, setUsername] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [staffStatus, setStaffStatus] = useState("activated");
+    const [staffRole, setStaffRole] = useState("bar");
+    const [errorMessage, setErrorMessage] = useState("");
+
+    const usernameRef = useRef<HTMLInputElement>(null);
+    const firstNameRef = useRef<HTMLInputElement>(null);
+    const lastNameRef = useRef<HTMLInputElement>(null);
+    const passwordRef = useRef<HTMLInputElement>(null);
+    const confirmPasswordRef = useRef<HTMLInputElement>(null);
+
+    const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setUsername(value);
+        console.log(`Username: ${value}`);
+    };
+
+    const handleFirstNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setFirstName(value);
+        console.log(`First Name: ${value}`);
+    };
+
+    const handleLastNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setLastName(value);
+        console.log(`Last Name: ${value}`);
+    };
+
+    const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setPassword(value);
+        console.log(`Password: ${value}`);
+    };
+
+    const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setConfirmPassword(value);
+        console.log(`Confirm Password: ${value}`);
+    };
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
@@ -41,13 +108,75 @@ const AddStaffAccountPage = () => {
         setShowConfirmPassword(!showConfirmPassword);
     };
 
-    //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
-    const handleSubmit = () => {
-        setIsPopupVisible(true);
+    const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedStatus = event.target.value;
+        setStaffStatus(selectedStatus);
+        console.log("Selected status:", selectedStatus); // Console log the selected status
+    };
 
+    const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedStatus = event.target.value;
+        setStaffRole(selectedStatus);
+        console.log("Selected status:", selectedStatus); // Console log the selected status
+    };
+
+    const displayError = (message) => {
+        setErrorMessage(message);
         setTimeout(() => {
-            setIsPopupVisible(false);
-        }, 750);
+            setErrorMessage("");
+        }, 3000);
+    };
+
+    //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
+    const handleSubmit = async () => {
+        setErrorMessage("");
+
+        if (!username || !firstName || !lastName || !password || !confirmPassword || !staffStatus || !staffRole) {
+            displayError("All fields must be filled up.");
+            return;
+        }
+
+        if (username.includes("@")) {
+            displayError("Username must not contain '@'.");
+            return;
+        }
+
+        const formattedUsername = `${username}@fikastallestaff.com`;
+
+        if (password.length < 6) {
+            displayError("Password must be at least 6 characters long.");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            displayError("Passwords do not match!");
+            return;
+        }
+
+        try {
+            // Create user in Firebase Authentication
+            const userCredential = await createUserWithEmailAndPassword(auth, formattedUsername, password);
+            const user = userCredential.user;
+
+            // Save additional user info in Firestore under 'staff' collection
+            await setDoc(doc(db, "staff", formattedUsername), {
+                firstName,
+                lastName,
+                staffStatus,
+                staffRole,
+                email: formattedUsername,
+                uid: user.uid, // Store user UID for reference
+            });
+
+            console.log("User created with Document ID:", formattedUsername);
+            setIsPopupVisible(true);
+            setTimeout(() => {
+                setIsPopupVisible(false);
+            }, 750);
+        } catch (error) {
+            console.error("Error creating user:", error.message);
+            displayError("Error creating account. Please try again.");
+        }
     };
 
     return (
@@ -80,6 +209,11 @@ const AddStaffAccountPage = () => {
                     <h1 className="w-full text-start text-xl font-bold text-orange-950">
                         New Account
                     </h1>
+
+                    {errorMessage && (
+                        <p className="text-red-500 text-1xl text-center">{errorMessage}</p>
+                    )}
+
                     {/* EMAIL */}
                     <div className="w-full flex flex-col gap-1 items-center justify-center">
                         <label
@@ -87,15 +221,18 @@ const AddStaffAccountPage = () => {
                             htmlFor={`inputEmail`}
                         >
                             <i className="fa-solid fa-user text-gray-700"></i>
-                            <span>Email Address</span>
+                            <span>Username</span>
                         </label>
                         <input
                             className="border-2 border-solid border-orange-900 w-full h-10 pl-2 rounded-md bg-orange-50"
                             name={`inputEmail`}
                             id={`inputEmail`}
-                            type="email"
-                            placeholder="Email Address"
+                            type="text"
+                            placeholder="Username"
                             required
+                            value={username}
+                            onChange={handleUsernameChange}
+                            ref={usernameRef}
                         />
                     </div>
                     {/* FIRST NAME */}
@@ -114,6 +251,9 @@ const AddStaffAccountPage = () => {
                             type="text"
                             placeholder="First Name"
                             required
+                            value={firstName}
+                            onChange={handleFirstNameChange}
+                            ref={firstNameRef}
                         />
                     </div>
                     {/* LAST NAME */}
@@ -132,6 +272,9 @@ const AddStaffAccountPage = () => {
                             type="text"
                             placeholder="Last Name"
                             required
+                            value={lastName}
+                            onChange={handleLastNameChange}
+                            ref={lastNameRef}
                         />
                     </div>
                     {/* PASSWORD */}
@@ -154,6 +297,9 @@ const AddStaffAccountPage = () => {
                                 type={showPassword ? "text" : "password"}
                                 placeholder="●●●●●●●●●●"
                                 required
+                                value={password}
+                                onChange={handlePasswordChange}
+                                ref={passwordRef}
                             />
                             <i
                                 className={`absolute right-3 top-2.5 fa-solid ${showPassword ? "fa-eye-slash" : "fa-eye"
@@ -183,6 +329,9 @@ const AddStaffAccountPage = () => {
                                 type={showConfirmPassword ? "text" : "password"}
                                 placeholder="●●●●●●●●●●"
                                 required
+                                value={confirmPassword}
+                                onChange={handleConfirmPasswordChange}
+                                ref={confirmPasswordRef}
                             />
                             <i
                                 className={`absolute right-3 top-2.5 fa-solid ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"
@@ -207,10 +356,12 @@ const AddStaffAccountPage = () => {
                                 id="selectActivation"
                                 className="h-10 bg-white border-2 rounded-md shadow-md border-gray-100 font-semibold
                                 text-gray-500 text-center w-full"
+                                onChange={handleStatusChange}
+                                value={staffStatus}
                             >
                                 {status.map((stat) => (
                                     <option value={stat.value} key={stat.id}>
-                                        {stat.value}
+                                        {stat.name}
                                     </option>
                                 ))}
                             </select>
@@ -228,10 +379,12 @@ const AddStaffAccountPage = () => {
                                 id="selectRole"
                                 className="h-10 bg-white border-2 rounded-md shadow-md border-gray-100 font-semibold
                                 text-gray-500 text-center w-full"
+                                onChange={handleRoleChange}
+                                value={staffRole}
                             >
                                 {roles.map((stat) => (
                                     <option value={stat.value} key={stat.id}>
-                                        {stat.value}
+                                        {stat.name}
                                     </option>
                                 ))}
                             </select>
