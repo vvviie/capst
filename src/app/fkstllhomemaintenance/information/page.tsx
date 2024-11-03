@@ -7,6 +7,7 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { db } from "@/app/firebase"; // Adjust the import based on your file structure
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import AboutUs from "@/app/components/AboutUs";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const AdminLandingPageMaintenance = () => {
   const [editTabOpen, setEditTabOpen] = useState(false);
@@ -19,6 +20,7 @@ const AdminLandingPageMaintenance = () => {
   const [openHours, setOpenHours] = useState("");
   const [accessibility, setAccessibility] = useState("");
   const [images, setImages] = useState([]); // State for images
+  const [uploadedImages, setUploadedImages] = useState([]); // State for uploaded images
   const maxCharacters = 360;
 
   useEffect(() => {
@@ -42,6 +44,85 @@ const AdminLandingPageMaintenance = () => {
 
     fetchData();
   }, []);
+
+  const convertImageToWebP = (file) => {
+    return new Promise((resolve, reject) => {
+      const imgElement = new window.Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        imgElement.src = e.target.result;
+      };
+
+      imgElement.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Conversion to WebP failed."));
+            }
+          }, "image/webp");
+        } else {
+          reject(new Error("Canvas context is null."));
+        }
+      };
+
+      imgElement.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadImageToStorage = async (file) => {
+    const storage = getStorage();
+    const storageRef = ref(
+      storage,
+      `images/landing/${file.name.split(".").slice(0, -1).join(".")}.webp`
+    );
+
+    try {
+      const webpBlob = await convertImageToWebP(file);
+      const downloadUrl = await uploadBytes(storageRef, webpBlob, {
+        contentType: "image/webp",
+      });
+      const url = await getDownloadURL(storageRef);
+      return url; // Return the URL
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null; // Return null if there's an error
+    }
+  };
+
+  const handleImageUpload = async (event) => {
+    const files = event.target.files;
+    if (files.length > 0) {
+      const uploadedUrls = await Promise.all(
+        Array.from(files).map(async (file) => {
+          if (uploadedImages.length < 10) {
+            const url = await uploadImageToStorage(file);
+            return url;
+          } else {
+            console.log("Maximum number of images reached.");
+            return null;
+          }
+        })
+      );
+      const filteredUrls = uploadedUrls.filter((url) => url !== null);
+      setUploadedImages((prevImages) => [...prevImages, ...filteredUrls]);
+    }
+  };
 
   const handleAboutUsChange = (e) => {
     setAboutUsText(e.target.value);
@@ -84,19 +165,18 @@ const AdminLandingPageMaintenance = () => {
     try {
       // Update the Firestore document with the new values
       await updateDoc(docRef, {
-        aboutUs: aboutUsText, // Use hyphenated field names
+        aboutUs: aboutUsText,
         location: location,
         operatingDays: operatingDays,
         openHours: openHours,
         accessibility: accessibility,
+        img: [...images, ...uploadedImages],
       });
 
-      // Show the popup after successful update
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false);
       }, 750);
-      // Reload the page after hiding the popup
       window.location.reload();
     } catch (error) {
       console.error("Error updating document: ", error.message);
@@ -217,16 +297,17 @@ const AdminLandingPageMaintenance = () => {
               <h1 className="w-full text-start text-xl font-bold text-orange-950 md:mb-[-14px]">
                 Images -{" "}
                 <span className="text-gray-600 font-semibold">
-                  {images.length} / 10
+                  {images.length + uploadedImages.length} / 10
                 </span>
               </h1>
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4 mt-4">
-                <button className="shadow-md rounded-md aspect-square border-2 border-gray-100 flex flex-col justify-center items-center gap-1">
+                {/* <button className="shadow-md rounded-md aspect-square border-2 border-gray-100 flex flex-col justify-center items-center gap-1">
                   <i className="fa-solid fa-circle-plus text-gray-300 text-3xl md:text-6xl group-hover:text-gray-400"></i>
                   <span className="text-xs md:text-lg text-gray-300 font-bold group-hover:text-gray-400">
                     Add photo
                   </span>
-                </button>
+                </button> */}
+
                 {images.map((img, index) => (
                   <div key={index} className="aspect-square relative">
                     <button className="w-6 h-6 rounded-full bg-orange-950 shadow-md absolute top-[-5px] right-[-5px] text-white z-20 flex items-center justify-center">
@@ -240,6 +321,29 @@ const AdminLandingPageMaintenance = () => {
                     />
                   </div>
                 ))}
+                {uploadedImages.map((img, index) => (
+                  <div key={index} className="aspect-square relative">
+                    <Image
+                      src={img}
+                      alt={`Uploaded Image ${index + 1}`}
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                  </div>
+                ))}
+                <label className="shadow-md rounded-md aspect-square border-2 border-gray-100 flex flex-col justify-center items-center gap-1 cursor-pointer">
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden" // Hide the input element
+                  />
+                  <i className="fa-solid fa-circle-plus text-gray-300 text-3xl md:text-6xl group-hover:text-gray-400"></i>
+                  <span className="text-xs md:text-lg text-gray-300 font-bold group-hover:text-gray-400">
+                    Add photo
+                  </span>
+                </label>
               </div>
               <div className="w-full flex flex-col gap-4">
                 <h1 className="w-full text-start text-xl font-bold text-orange-950 mt-4 mb-[-8px]">
