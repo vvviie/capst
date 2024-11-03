@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { getAuth, createUserWithEmailAndPassword} from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import createNewUser from "@/pages/api/createNewUser";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -128,7 +129,6 @@ const AddStaffAccountPage = () => {
         }, 3000);
     };
 
-    //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
     const handleSubmit = async () => {
         setErrorMessage("");
     
@@ -155,36 +155,48 @@ const AddStaffAccountPage = () => {
         }
     
         try {
-            // Create user in Firebase Authentication
-            const userCredential = await createUserWithEmailAndPassword(auth, formattedUsername, password);
-            const user = userCredential.user;
-    
-            // Save additional user info in Firestore under 'staff' collection
-            await setDoc(doc(db, "staff", formattedUsername), {
-                firstName,
-                lastName,
-                staffStatus,
-                staffRole,
-                username: formattedUsername,
-                uid: user.uid, // Store user UID for reference
+            // Call the API to create the user
+            const response = await fetch('/api/createNewUser', { // Ensure this path matches your API route
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: formattedUsername,
+                    password: password,
+                }),
             });
     
-            console.log("User created with Document ID:", formattedUsername);
-            setIsPopupVisible(true);
-            setTimeout(() => {
-                setIsPopupVisible(false);
-            }, 750);
-
-            setTimeout(() => {
-                router.push("/fkstllaccounts");    
-              }, 3000); // Optional: delay before redirecting
+            const data = await response.json();
     
+            if (response.ok) {
+                // Save additional user info in Firestore under 'staff' collection
+                await setDoc(doc(db, "staff", formattedUsername), {
+                    firstName,
+                    lastName,
+                    staffStatus,
+                    staffRole,
+                    username: formattedUsername,
+                    uid: data.uid, // Store user UID from the API response
+                });
+    
+                console.log("User created with Document ID:", formattedUsername);
+                setIsPopupVisible(true);
+                setTimeout(() => {
+                    setIsPopupVisible(false);
+                }, 750);
+    
+                setTimeout(() => {
+                    router.push("/fkstllaccounts");    
+                }, 3000); // Optional: delay before redirecting
+            } else {
+                displayError(data.error || "Error creating account. Please try again.");
+            }
         } catch (error) {
-            console.error("Error creating user:", error.message);
+            console.error("Error creating user:", error);
             displayError("Error creating account. Please try again.");
         }
     };
-    
 
     return (
         <div
