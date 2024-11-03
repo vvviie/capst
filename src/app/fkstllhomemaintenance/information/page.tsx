@@ -8,15 +8,6 @@ import { db } from "@/app/firebase"; // Adjust the import based on your file str
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import AboutUs from "@/app/components/AboutUs";
 
-const images = [
-  { id: 1, img: "/fikaplace/1.jpg" },
-  { id: 2, img: "/fikaplace/2.jpg" },
-  { id: 3, img: "/fikaplace/3.jpg" },
-  { id: 4, img: "/fikaplace/4.jpg" },
-  { id: 5, img: "/fikaplace/5.jpg" },
-  { id: 6, img: "/fikaplace/6.jpg" },
-];
-
 const AdminLandingPageMaintenance = () => {
   const [editTabOpen, setEditTabOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
@@ -27,6 +18,7 @@ const AdminLandingPageMaintenance = () => {
   const [operatingDays, setOperatingDays] = useState("");
   const [openHours, setOpenHours] = useState("");
   const [accessibility, setAccessibility] = useState("");
+  const [images, setImages] = useState([]); // State for images
   const maxCharacters = 360;
 
   useEffect(() => {
@@ -42,6 +34,7 @@ const AdminLandingPageMaintenance = () => {
         setOperatingDays(docSnap.data()["operatingDays"] || ""); // Set initial Operating Days
         setOpenHours(docSnap.data()["openHours"] || ""); // Set initial Open Hours
         setAccessibility(docSnap.data()["accessibility"] || ""); // Set initial Accessibility
+        setImages(docSnap.data()["img"] || []); // Set initial images from Firestore
       } else {
         console.log("No such document!");
       }
@@ -147,12 +140,14 @@ const AdminLandingPageMaintenance = () => {
                   >
                     &#9664;
                   </button>
-                  <Image
-                    src={images[currentImage].img}
-                    alt={`Image ${currentImage + 1}`}
-                    fill
-                    className="object-cover rounded-md"
-                  />
+                  {images.length > 0 && (
+                    <Image
+                      src={images[currentImage]}
+                      alt={`Image ${currentImage + 1}`}
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                  )}
                   <button
                     onClick={nextImage}
                     className="absolute right-2 z-10 h-8 aspect-square pl-0.5 text-sm bg-orange-950 text-white rounded-full hover:bg-orange-900"
@@ -162,11 +157,11 @@ const AdminLandingPageMaintenance = () => {
                 </div>
               </div>
               <div className="hidden sm:grid sm:gap-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 lg:gap-2 mt-4">
-                {images.map((img) => (
-                  <div key={img.id} className="aspect-square relative">
+                {images.map((img, index) => (
+                  <div key={index} className="aspect-square relative">
                     <Image
-                      src={img.img}
-                      alt={`Image ${img.id}`}
+                      src={img}
+                      alt={`Image ${index + 1}`}
                       fill
                       className="object-cover rounded-md"
                     />
@@ -232,14 +227,14 @@ const AdminLandingPageMaintenance = () => {
                     Add photo
                   </span>
                 </button>
-                {images.map((img) => (
-                  <div key={img.id} className="aspect-square relative">
+                {images.map((img, index) => (
+                  <div key={index} className="aspect-square relative">
                     <button className="w-6 h-6 rounded-full bg-orange-950 shadow-md absolute top-[-5px] right-[-5px] text-white z-20 flex items-center justify-center">
                       <span className="mb-1">x</span>
                     </button>
                     <Image
-                      src={img.img}
-                      alt={`Image ${img.id}`}
+                      src={img}
+                      alt={`Image ${index + 1}`}
                       fill
                       className="object-cover rounded-md"
                     />
