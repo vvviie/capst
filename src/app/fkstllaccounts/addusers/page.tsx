@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import createNewUser from "@/pages/api/createNewUser";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -138,44 +139,50 @@ const AddUsersAccountPage = () => {
         }, 3000); // 3 seconds
     };
 
-    //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
     const handleSubmit = async () => {
         if (validateInputs()) {
             try {
-                const userCredential = await createUserWithEmailAndPassword(auth, username, password);
-                const user = userCredential.user;
+                // Create user in Firebase Authentication using Admin SDK
+                const response = await fetch("/api/createNewUser", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ username, password }),
+                });
     
-                // Send email verification
-                await sendEmailVerification(user);
-                
-                // Set the verification message with the username
-                setVerificationMessage(`Verification email was sent to ${username}.`);
+                // Check for response errors
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Error creating user: ${errorData.error || response.statusText}`);
+                }
     
-                // Clear the verification message after 3 seconds
-                setTimeout(() => {
-                    setVerificationMessage("");
-                }, 3000); // 3000 milliseconds = 3 seconds
+                const { uid } = await response.json(); // Get the UID from the response
+    
+                // Validate UID
+                if (!uid) {
+                    throw new Error("UID is undefined. User creation may have failed.");
+                }
+    
+                // Now, handle Firestore insertion
+                const now = new Date();
+                const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+                const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     
                 const firstTimeVoucherRef = doc(db, "vouchers", "firstTimeVoucher");
                 const voucherSnap = await getDoc(firstTimeVoucherRef);
+                let userData;
     
                 if (voucherSnap.exists()) {
                     const firstTimeVoucher = voucherSnap.data();
-                    const now = new Date();
-                    const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
-                        now.getDate()
-                    ).padStart(2, "0")}/${now.getFullYear()}`;
-                    const time = `${String(now.getHours()).padStart(2, "0")}:${String(
-                        now.getMinutes()
-                    ).padStart(2, "0")}`;
-    
-                    await setDoc(doc(db, "users", username), {
+                    userData = {
+                        uid,
                         username,
                         firstName,
                         lastName,
                         address,
                         phoneNumber,
-                        role: "user",
+                        role: "user", // or "admin" based on your logic
                         totalPaid: 0,
                         vouchers: {
                             firstTimeVoucher: {
@@ -191,34 +198,45 @@ const AddUsersAccountPage = () => {
                                 timeCreated: time,
                             },
                         },
-                    });
+                    };
                 }
+    
+                // Log userData for debugging
+                console.log("User data to be written to Firestore:", userData);
+    
+                // Insert user data into Firestore
+                try {
+                    await setDoc(doc(db, "users", username), userData);
+                } catch (firestoreError) {
+                    console.error("Error writing document to Firestore:", firestoreError);
+                    throw new Error(`Firestore Error: ${firestoreError.message}`);
+                }
+    
+                // Set the verification message
+                setVerificationMessage(`The account of ${username} was created successfully.`);
+                setTimeout(() => {
+                    setVerificationMessage("");
+                }, 3000);
+    
+                // Show popup and redirect
                 setIsPopupVisible(true);
                 setTimeout(() => {
                     setIsPopupVisible(false);
                 }, 3000);
-
                 setTimeout(() => {
                     router.push("/fkstllaccounts");    
-                  }, 3000); // Optional: delay before redirecting
-
-            } catch (error) {
-                if (error.code === 'auth/email-already-in-use') {
-                    setErrorMessage(`The email is already in use. Please try with another email.`);
-                    setTimeout(() => {
-                        setErrorMessage("");
-                    }, 5000); // 3000 milliseconds = 3 seconds
-                } else {
-                    setErrorMessage(`An error occurred: ${error.message}`);
-                    setTimeout(() => {
-                        setErrorMessage("");
-                    }, 5000); // 3000 milliseconds = 3 seconds
-                }
+                }, 3000); // Optional: delay before redirecting
     
-                // Clear the error message after 3 seconds
+            } catch (error) {
+                // Handle different types of errors gracefully
+                if (error.message.includes("email already in use")) {
+                    setErrorMessage("The email address is already in use. Please try logging in or use a different email.");
+                } else {
+                    setErrorMessage(`${error.message}`);
+                }
                 setTimeout(() => {
-                    setVerificationMessage("");
-                }, 3000); // 3000 milliseconds = 3 seconds
+                    setErrorMessage("");
+                }, 5000);
             }
         }
     };

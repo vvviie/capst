@@ -52,6 +52,7 @@ const roles = [
 
 const AddStaffAccountPage = () => {
     //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
+    const router = useRouter(); // Initialize useRouter
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -130,54 +131,60 @@ const AddStaffAccountPage = () => {
     //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
     const handleSubmit = async () => {
         setErrorMessage("");
-
+    
         if (!username || !firstName || !lastName || !password || !confirmPassword || !staffStatus || !staffRole) {
             displayError("All fields must be filled up.");
             return;
         }
-
+    
         if (username.includes("@")) {
             displayError("Username must not contain '@'.");
             return;
         }
-
+    
         const formattedUsername = `${username}@fikastallestaff.com`;
-
+    
         if (password.length < 6) {
             displayError("Password must be at least 6 characters long.");
             return;
         }
-
+    
         if (password !== confirmPassword) {
             displayError("Passwords do not match!");
             return;
         }
-
+    
         try {
             // Create user in Firebase Authentication
             const userCredential = await createUserWithEmailAndPassword(auth, formattedUsername, password);
             const user = userCredential.user;
-
+    
             // Save additional user info in Firestore under 'staff' collection
             await setDoc(doc(db, "staff", formattedUsername), {
                 firstName,
                 lastName,
                 staffStatus,
                 staffRole,
-                email: formattedUsername,
+                username: formattedUsername,
                 uid: user.uid, // Store user UID for reference
             });
-
+    
             console.log("User created with Document ID:", formattedUsername);
             setIsPopupVisible(true);
             setTimeout(() => {
                 setIsPopupVisible(false);
             }, 750);
+
+            setTimeout(() => {
+                router.push("/fkstllaccounts");    
+              }, 3000); // Optional: delay before redirecting
+    
         } catch (error) {
             console.error("Error creating user:", error.message);
             displayError("Error creating account. Please try again.");
         }
     };
+    
 
     return (
         <div
