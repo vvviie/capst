@@ -31,6 +31,9 @@ const AdminLandingPageMaintenance = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
 
+  const [isLimitModalVisible, setIsLimitModalVisible] = useState(false);
+  const [limitModalMessage, setLimitModalMessage] = useState("");
+
   // Function to open the modal
   const openModal = (img) => {
     setImageToDelete(img);
@@ -137,9 +140,21 @@ const AdminLandingPageMaintenance = () => {
   const handleImageUpload = async (event) => {
     const files = event.target.files;
     if (files.length > 0) {
+      const totalImages = images.length + uploadedImages.length; // Calculate total images
+
+      // Check if adding new images would exceed the limit
+      if (totalImages >= 10) {
+        setLimitModalMessage(
+          "Maximum number of images reached. Please delete an existing image to upload a new one."
+        );
+        setIsLimitModalVisible(true); // Show the modal
+        return; // Exit if the maximum number of images is reached
+      }
+
       const uploadedUrls = await Promise.all(
         Array.from(files).map(async (file) => {
-          if (uploadedImages.length < 10) {
+          if (uploadedImages.length < 10 - images.length) {
+            // Check remaining capacity
             const url = await uploadImageToStorage(file);
             return url;
           } else {
@@ -148,6 +163,7 @@ const AdminLandingPageMaintenance = () => {
           }
         })
       );
+
       const filteredUrls = uploadedUrls.filter((url) => url !== null);
       setUploadedImages((prevImages) => [...prevImages, ...filteredUrls]);
     }
@@ -270,6 +286,26 @@ const AdminLandingPageMaintenance = () => {
               onClick={onCancel}
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const LimitExceededModal = ({ isVisible, message, onClose }) => {
+    if (!isVisible) return null;
+  
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50"> {/* Added z-50 */}
+        <div className="bg-white p-4 sm:p-6 rounded shadow-md max-w-sm w-full">
+          <h2 className="text-lg font-bold mb-4 text-center">{message}</h2>
+          <div className="flex justify-end">
+            <button
+              className="px-4 py-2 bg-orange-950 text-white rounded hover:bg-orange-600"
+              onClick={onClose}
+            >
+              Close
             </button>
           </div>
         </div>
@@ -438,6 +474,11 @@ const AdminLandingPageMaintenance = () => {
                     />
                   </div>
                 ))}
+                <LimitExceededModal
+                  isVisible={isLimitModalVisible}
+                  message={limitModalMessage}
+                  onClose={() => setIsLimitModalVisible(false)}
+                />
               </div>
 
               <div className="w-full flex flex-col gap-4">
