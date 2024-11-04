@@ -7,8 +7,13 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { db } from "@/app/firebase"; // Adjust the import based on your file structure
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import AboutUs from "@/app/components/AboutUs";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-
+import {
+  getStorage,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 const AdminLandingPageMaintenance = () => {
   const [editTabOpen, setEditTabOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
@@ -22,6 +27,30 @@ const AdminLandingPageMaintenance = () => {
   const [images, setImages] = useState([]); // State for images
   const [uploadedImages, setUploadedImages] = useState([]); // State for uploaded images
   const maxCharacters = 360;
+
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [imageToDelete, setImageToDelete] = useState(null);
+
+  // Function to open the modal
+  const openModal = (img) => {
+    setImageToDelete(img);
+    setIsModalVisible(true);
+  };
+
+  // Function to confirm deletion
+  const confirmDelete = async () => {
+    if (imageToDelete) {
+      await handleRemoveImage(imageToDelete);
+    }
+    setIsModalVisible(false);
+    setImageToDelete(null);
+  };
+
+  // Function to cancel deletion
+  const cancelDelete = () => {
+    setIsModalVisible(false);
+    setImageToDelete(null);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -124,6 +153,37 @@ const AdminLandingPageMaintenance = () => {
     }
   };
 
+  const handleRemoveImage = async (imageUrl) => {
+    const storage = getStorage();
+    const imageRef = ref(storage, imageUrl);
+
+    try {
+      // Check if the image is in uploadedImages
+      if (uploadedImages.includes(imageUrl)) {
+        // If it's in uploadedImages, just remove it from the state
+        setUploadedImages((prevImages) =>
+          prevImages.filter((img) => img !== imageUrl)
+        );
+        console.log("Temporary image removed successfully");
+      } else {
+        // If it's in images, delete it from storage
+        await deleteObject(imageRef);
+
+        // Update Firestore document to remove the image URL
+        const docRef = doc(db, "webContent", "landing_infoSection");
+        await updateDoc(docRef, {
+          img: images.filter((img) => img !== imageUrl), // Filter out the deleted image
+        });
+
+        // Update local state
+        setImages((prevImages) => prevImages.filter((img) => img !== imageUrl));
+        console.log("Image deleted successfully");
+      }
+    } catch (error) {
+      console.error("Error removing image: ", error);
+    }
+  };
+
   const handleAboutUsChange = (e) => {
     setAboutUsText(e.target.value);
   };
@@ -189,6 +249,32 @@ const AdminLandingPageMaintenance = () => {
 
   const prevImage = () => {
     setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+  };
+
+  const ConfirmationModal = ({ isVisible, message, onConfirm, onCancel }) => {
+    if (!isVisible) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4">
+        <div className="bg-white p-4 sm:p-6 rounded shadow-md max-w-sm w-full">
+          <h2 className="text-lg font-bold mb-4 text-center">{message}</h2>
+          <div className="flex flex-col sm:flex-row justify-end">
+            <button
+              className="mb-2 sm:mb-0 sm:mr-2 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+              onClick={onConfirm}
+            >
+              Yes, delete
+            </button>
+            <button
+              className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+              onClick={onCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -301,36 +387,6 @@ const AdminLandingPageMaintenance = () => {
                 </span>
               </h1>
               <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4 mt-4">
-                {/* <button className="shadow-md rounded-md aspect-square border-2 border-gray-100 flex flex-col justify-center items-center gap-1">
-                  <i className="fa-solid fa-circle-plus text-gray-300 text-3xl md:text-6xl group-hover:text-gray-400"></i>
-                  <span className="text-xs md:text-lg text-gray-300 font-bold group-hover:text-gray-400">
-                    Add photo
-                  </span>
-                </button> */}
-
-                {images.map((img, index) => (
-                  <div key={index} className="aspect-square relative">
-                    <button className="w-6 h-6 rounded-full bg-orange-950 shadow-md absolute top-[-5px] right-[-5px] text-white z-20 flex items-center justify-center">
-                      <span className="mb-1">x</span>
-                    </button>
-                    <Image
-                      src={img}
-                      alt={`Image ${index + 1}`}
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                  </div>
-                ))}
-                {uploadedImages.map((img, index) => (
-                  <div key={index} className="aspect-square relative">
-                    <Image
-                      src={img}
-                      alt={`Uploaded Image ${index + 1}`}
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                  </div>
-                ))}
                 <label className="shadow-md rounded-md aspect-square border-2 border-gray-100 flex flex-col justify-center items-center gap-1 cursor-pointer">
                   <input
                     type="file"
@@ -344,7 +400,46 @@ const AdminLandingPageMaintenance = () => {
                     Add photo
                   </span>
                 </label>
+                {images.map((img, index) => (
+                  <div key={index} className="aspect-square relative">
+                    <button
+                      className="w-6 h-6 rounded-full bg-orange-950 shadow-md absolute top-[-5px] right-[-5px] text-white z-20 flex items-center justify-center"
+                      onClick={() => openModal(img)} // Open the confirmation modal
+                    >
+                      <span className="mb-1">x</span>
+                    </button>
+                    <Image
+                      src={img}
+                      alt={`Image ${index + 1}`}
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                  </div>
+                ))}
+                <ConfirmationModal
+                  isVisible={isModalVisible}
+                  message="This image is already uploaded. Are you sure you want to delete it?"
+                  onConfirm={confirmDelete}
+                  onCancel={cancelDelete}
+                />
+                {uploadedImages.map((img, index) => (
+                  <div key={index} className="aspect-square relative">
+                    <button
+                      className="w-6 h-6 rounded-full bg-orange-950 shadow-md absolute top-[-5px] right-[-5px] text-white z-20 flex items-center justify-center"
+                      onClick={() => handleRemoveImage(img)} // Call the remove function
+                    >
+                      <span className="mb-1">x</span>
+                    </button>
+                    <Image
+                      src={img}
+                      alt={`Uploaded Image ${index + 1}`}
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                  </div>
+                ))}
               </div>
+
               <div className="w-full flex flex-col gap-4">
                 <h1 className="w-full text-start text-xl font-bold text-orange-950 mt-4 mb-[-8px]">
                   Information
