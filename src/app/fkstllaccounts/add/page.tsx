@@ -75,31 +75,31 @@ const AddStaffAccountPage = () => {
     const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setUsername(value);
-        console.log(`Username: ${value}`);
+        //console.log(`Username: ${value}`);
     };
 
     const handleFirstNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setFirstName(value);
-        console.log(`First Name: ${value}`);
+        //console.log(`First Name: ${value}`);
     };
 
     const handleLastNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setLastName(value);
-        console.log(`Last Name: ${value}`);
+        //console.log(`Last Name: ${value}`);
     };
 
     const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setPassword(value);
-        console.log(`Password: ${value}`);
+        //console.log(`Password: ${value}`);
     };
 
     const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setConfirmPassword(value);
-        console.log(`Confirm Password: ${value}`);
+        //console.log(`Confirm Password: ${value}`);
     };
 
     const togglePasswordVisibility = () => {
@@ -113,13 +113,13 @@ const AddStaffAccountPage = () => {
     const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedStatus = event.target.value;
         setStaffStatus(selectedStatus);
-        console.log("Selected status:", selectedStatus); // Console log the selected status
+        //console.log("Selected status:", selectedStatus); // Console log the selected status
     };
 
     const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedStatus = event.target.value;
         setStaffRole(selectedStatus);
-        console.log("Selected status:", selectedStatus); // Console log the selected status
+        //console.log("Selected status:", selectedStatus); // Console log the selected status
     };
 
     const displayError = (message) => {
@@ -180,7 +180,7 @@ const AddStaffAccountPage = () => {
                     uid: data.uid, // Store user UID from the API response
                 });
     
-                console.log("User created with Document ID:", formattedUsername);
+                //console.log("User created with Document ID:", formattedUsername);
                 setIsPopupVisible(true);
                 setTimeout(() => {
                     setIsPopupVisible(false);

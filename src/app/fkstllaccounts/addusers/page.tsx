@@ -53,43 +53,43 @@ const AddUsersAccountPage = () => {
     const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setUsername(value);
-        console.log(`Username: ${value}`);
+        //console.log(`Username: ${value}`);
     };
 
     const handlePasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setPassword(value);
-        console.log(`Password: ${value}`);
+        //console.log(`Password: ${value}`);
     };
 
     const handleConfirmPasswordChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setConfirmPassword(value);
-        console.log(`Confirm Password: ${value}`);
+        //console.log(`Confirm Password: ${value}`);
     };
 
     const handleFirstNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setFirstName(value);
-        console.log(`First Name: ${value}`);
+        //console.log(`First Name: ${value}`);
     };
 
     const handleLastNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setLastName(value);
-        console.log(`Last Name: ${value}`);
+        //console.log(`Last Name: ${value}`);
     };
 
     const handlePhoneNumberChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setPhoneNumber(value);
-        console.log(`Phone Number: ${value}`);
+        //console.log(`Phone Number: ${value}`);
     };
 
     const handleAddressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value;
         setAddress(value);
-        console.log(`Address: ${value}`);
+        //console.log(`Address: ${value}`);
     };
 
     const togglePasswordVisibility = () => {
@@ -202,7 +202,7 @@ const AddUsersAccountPage = () => {
                 }
     
                 // Log userData for debugging
-                console.log("User data to be written to Firestore:", userData);
+                //console.log("User data to be written to Firestore:", userData);
     
                 // Insert user data into Firestore
                 try {

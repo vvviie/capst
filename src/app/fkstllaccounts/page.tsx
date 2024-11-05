@@ -1,12 +1,11 @@
 "use client";
-
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import AdminStaffFilter from "../components/AdminStaffFilter";
 import UsersFilter from "../components/UsersFilter";
 import { auth, db } from "../firebase";
 import {
-    collection,
+collection,
     getDocs,
     query,
     where,
@@ -14,6 +13,8 @@ import {
     deleteDoc,
     getDoc,
     DocumentData,
+    updateDoc,
+    onSnapshot,
 } from "firebase/firestore";
 import {
     onAuthStateChanged,
@@ -24,64 +25,25 @@ import {
 } from "firebase/auth"; // Import Firebase Auth methods
 
 //#region Staff Sample Acc
-type staff = {
+type Staff = {
     username: string;
     firstName: string;
     lastName: string;
     role: string;
-    dateCreated: string;
-    activated: boolean;
+    status: string;
+    uid: string;
 };
 
-type listStaff = staff[];
-
-const staffAccounts: listStaff = [
-    {
-        username: "jorgeangelo@gmail.com",
-        firstName: "Jorge Angelo",
-        lastName: "Pangilinan",
-        role: "Bar",
-        dateCreated: "10/28/2024",
-        activated: true,
-    },
-    {
-        username: "johanncarl@gmail.com",
-        firstName: "Johann Carl",
-        lastName: "Fellizar",
-        role: "Kitchen",
-        dateCreated: "10/28/2024",
-        activated: true,
-    },
-    {
-        username: "jericko@gmail.com",
-        firstName: "Jericko",
-        lastName: "Gomez",
-        role: "Kitchen",
-        dateCreated: "10/28/2024",
-        activated: true,
-    },
-];
+type listStaff = Staff[];
 
 const status = [
-    {
-        id: 1,
-        value: "Activated",
-    },
-    {
-        id: 2,
-        value: "Deactivated",
-    },
+    { id: 1, name: "Activated", value: "activated" },
+    { id: 2, name: "Deactivated", value: "deactivated" },
 ];
 
 const roles = [
-    {
-        id: 1,
-        value: "Bar",
-    },
-    {
-        id: 2,
-        value: "Kitchen",
-    },
+    { id: 1, name: "Bar", value: "bar" },
+    { id: 2, name: "Kitchen", value: "kitchen" },
 ];
 //#endregion
 
@@ -97,12 +59,12 @@ type user = {
 };
 
 type listUser = user[];
-
 //#endregion
 
 const AccountsListPage = () => {
     const [accountType, setAccountType] = useState("users");
     const [userAccounts, setUserAccounts] = useState<listUser>([]);
+    const [staffAccounts, setStaffAccounts] = useState<listStaff>([]);
     const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
         {}
     );
@@ -113,6 +75,7 @@ const AccountsListPage = () => {
     const handleFilterChange = (status) => {
         setFilteredStatus(status);
     };
+    
 
     const toggleOrder = (id: string) => {
         setExpandedOrders((prev) => ({
@@ -133,25 +96,78 @@ const AccountsListPage = () => {
         setSearchInput(event.target.value);
     };
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            const usersCollection = collection(db, "users");
-            const q = query(usersCollection, where("role", "==", "user"));
-            const userSnapshot = await getDocs(q);
-            const users: listUser = userSnapshot.docs.map((doc) => ({
+    const handleStatusChange = async (username, newStatus) => {
+        const staffRef = doc(db, "staff", username); // Reference the specific staff document
+        try {
+            await updateDoc(staffRef, { staffStatus: newStatus }); // Update the staff status in Firestore
+            //console.log(`Updated ${username} status to ${newStatus}`);
+        } catch (error) {
+            console.error("Error updating status: ", error);
+        }
+    };
+    
+    const handleRoleChange = async (username, newRole) => {
+        const staffRef = doc(db, "staff", username); // Reference the specific staff document
+        try {
+            await updateDoc(staffRef, { staffRole: newRole }); // Update the staff role in Firestore
+            //console.log(`Updated ${username} role to ${newRole}`);
+        } catch (error) {
+            console.error("Error updating role: ", error);
+        }
+    };    
+
+    const fetchUsers = async () => {
+        const usersCollection = collection(db, "users");
+        const q = query(usersCollection, where("role", "==", "user"));
+        const userSnapshot = await getDocs(q);
+        const users = userSnapshot.docs.map((doc) => ({
+            username: doc.data().username,
+            firstName: doc.data().firstName,
+            lastName: doc.data().lastName,
+            address: doc.data().address,
+            phone: doc.data().phoneNumber,
+            totalPaid: doc.data().totalPaid,
+            role: doc.data().role,
+        }));
+        setUserAccounts(users);
+    };
+
+    // Function to fetch staff data with real-time updates
+    const fetchStaff = () => {
+        const staffCollection = collection(db, "staff");
+
+        // Subscribe to changes in the staff collection
+        const unsubscribe = onSnapshot(staffCollection, (snapshot) => {
+            const staff = snapshot.docs.map((doc) => ({
                 username: doc.data().username,
                 firstName: doc.data().firstName,
                 lastName: doc.data().lastName,
-                address: doc.data().address,
-                phone: doc.data().phoneNumber,
-                totalPaid: doc.data().totalPaid,
-                role: doc.data().role,
+                role: doc.data().staffRole,
+                status: doc.data().staffStatus,
+                uid: doc.data().uid,
             }));
-            setUserAccounts(users);
-        };
+            setStaffAccounts(staff); // Update state with the new staff data
+        });
 
-        fetchUsers();
-    }, []);
+        // Cleanup function to unsubscribe from the listener when the component unmounts
+        return unsubscribe;
+    };
+
+    // Call fetchStaff in a useEffect hook to set up the listener
+    useEffect(() => {
+        const unsubscribe = fetchStaff();
+
+        // Cleanup on unmount
+        return () => unsubscribe();
+    }, []); // Empty dependency array to run once on mount
+
+    useEffect(() => {
+        if (accountType === "users") {
+            fetchUsers();
+        } else if (accountType === "staff") {
+            fetchStaff();
+        }
+    }, [accountType]);
 
     const statusInfo = status.find((s) => s.value === filteredStatus); // Move this outside
 
@@ -176,6 +192,17 @@ const AccountsListPage = () => {
             : false;
     
         return matchesSearch && (filteredStatus === "All" || matchesStatus);
+    });
+
+    const filteredStaffAccounts = staffAccounts.filter((staff) => {
+        const matchesSearch = 
+            staff.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+            staff.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+            staff.username.toLowerCase().startsWith(searchInput.toLowerCase());
+    
+        const matchesRole = filteredStatus === "All" || staff.role === filteredStatus;
+    
+        return matchesSearch && matchesRole;
     });
 
     const reauthenticateUser = async (email: string, password: string) => {
@@ -207,7 +234,43 @@ const AccountsListPage = () => {
             });
 
             const data = await response.json(); // Get the response data
-            console.log("Response data:", data); // Log the response data
+            //console.log("Response data:", data); // Log the response data
+
+            if (response.ok) {
+                // If the deletion was successful, update the state accordingly
+                setUserAccounts((prev) =>
+                    prev.filter((user) => user.username !== username)
+                );
+            } else {
+                // Since we've already read the response body, we can use 'data' here
+                console.error("Error data:", data); // Log error message
+                alert(`Failed to delete user: ${data.error || "Please try again."}`);
+            }
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            alert("Failed to delete user. Please try again.");
+        }
+    };
+
+    const handleDeleteStaff = async (username: string) => {
+        try {
+            // Ensure username is provided
+            if (!username) {
+                alert("Please provide a username to delete.");
+                return;
+            }
+
+            // Call the delete API with the username
+            const response = await fetch("/api/deleteStaff", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ username }), // Correctly send the username
+            });
+
+            const data = await response.json(); // Get the response data
+            //console.log("Response data:", data); // Log the response data
 
             if (response.ok) {
                 // If the deletion was successful, update the state accordingly
@@ -254,7 +317,7 @@ const AccountsListPage = () => {
                         {accountType === "users" ? (
                             <UsersFilter onFilterChange={handleFilterChange} />
                         ) : (
-                            <AdminStaffFilter />
+                            <AdminStaffFilter onFilterChange={handleFilterChange}/>
                         )}
                     </div>
                     <div className="flex gap-2 items-center justify-between w-full md:w-1/2">
@@ -262,7 +325,7 @@ const AccountsListPage = () => {
                         <select
                             name="selectAccounts"
                             id="selectAccounts"
-                            className="w-2/3 rounded-md border-2 border-gray-100 shadow-md h-10 bg-whitep px-4 font-bold text-center
+                            className="w-2/3 rounded-md border-2 border-gray-100 shadow-md h-10 bg-whitep font-bold text-center
                             text-gray-500"
                             onChange={handleCategoryChange}
                         >
@@ -367,9 +430,9 @@ const AccountsListPage = () => {
                         href={`/fkstllaccounts/editusers/${users.username}`}
                         className="h-10 text-center pt-1.5 font-bold text-gray-500 bg-white w-1/2 border-gray-100
                         border-2 shadow-md rounded-md hover:bg-gray-50 hover:scale-[1.02] duration-200"
-                      >
+                    >
                         Edit
-                      </Link> */}
+                    </Link> */}
                                             {/* DELETE BUTTON */}
                                             <button
                                                 className="h-10 w-full bg-red-500 font-bold text-white rounded-md shadow-md
@@ -387,7 +450,7 @@ const AccountsListPage = () => {
                 ) : (
                     <div className="w-full flex flex-col justify-center gap-2">
                         {/* STAFF ACCOUNTS */}
-                        {staffAccounts.map((staff) => (
+                        {filteredStaffAccounts.map((staff) => (
                             <div
                                 className="w-full bg-white border-2 border-gray-100 shadow-md rounded-md p-2
                                     flex flex-col justify-center gap-2"
@@ -417,10 +480,12 @@ const AccountsListPage = () => {
                                             id="selectActivation"
                                             className="h-10 bg-white border-2 rounded-md shadow-md border-gray-100 font-semibold
                                             text-gray-500 text-center w-full"
+                                            value={staff.status}
+                                            onChange={(e) => handleStatusChange(staff.username, e.target.value)}
                                         >
                                             {status.map((stat) => (
                                                 <option value={stat.value} key={stat.id}>
-                                                    {stat.value}
+                                                    {stat.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -438,10 +503,12 @@ const AccountsListPage = () => {
                                             id="selectRole"
                                             className="h-10 bg-white border-2 rounded-md shadow-md border-gray-100 font-semibold
                                             text-gray-500 text-center w-full"
+                                            value={staff.role}
+                                            onChange={(e) => handleRoleChange(staff.username, e.target.value)}
                                         >
                                             {roles.map((stat) => (
                                                 <option value={stat.value} key={stat.id}>
-                                                    {stat.value}
+                                                    {stat.name}
                                                 </option>
                                             ))}
                                         </select>
@@ -459,6 +526,7 @@ const AccountsListPage = () => {
                                     <button
                                         className="h-10 bg-red-500 rounded-md shadow-md font-semibold
                                         text-orange-50 text-center w-1/4 hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                        onClick={() => handleDeleteStaff(staff.username)}
                                     >
                                         Delete
                                     </button>
