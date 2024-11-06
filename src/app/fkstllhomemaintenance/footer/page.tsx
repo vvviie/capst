@@ -121,8 +121,32 @@ const FooterMaintenancePage = () => {
                                         <select
                                             name="active"
                                             id="selectActive"
-                                            className="border-2 border-gray-100 rounded-md shadow-md text-center w-1/2 mb-4 h-10 font-bold
-                      bg-white text-gray-500"
+                                            className="border-2 border-gray-100 rounded-md shadow-md text-center w-1/2 mb-4 h-10 font-bold bg-white text-gray-500"
+                                            value={soc.active ? "true" : "false"} // Reflect current active status
+                                            onChange={async (e) => {
+                                                const updatedSocials = [...socials];
+                                                updatedSocials[index].active = e.target.value === "true"; // Update active status
+    
+                                                // Update state
+                                                setSocials(updatedSocials);
+    
+                                                // Optionally, update Firestore directly
+                                                const footerData = {
+                                                    tel: tel,
+                                                    socials: updatedSocials.map(soc => ({
+                                                        name: soc.name,
+                                                        url: soc.url,
+                                                        active: soc.active // Include active status
+                                                    })),
+                                                };
+    
+                                                try {
+                                                    await setDoc(doc(db, "webContent", "footerSection"), footerData); // Update Firestore
+                                                    console.log("Document successfully updated!");
+                                                } catch (error) {
+                                                    console.error("Error updating document: ", error);
+                                                }
+                                            }}
                                         >
                                             <option value="true">Active</option>
                                             <option value="false">Inactive</option>
@@ -131,7 +155,7 @@ const FooterMaintenancePage = () => {
                                 ))}
                                 <button
                                     className="w-full bg-orange-950 font-bold text-white h-10 rounded-md shadow-md
-                hover:bg-orange-900 hover:scale-[1.02] duration-200"
+                                    hover:bg-orange- 900 hover:scale-[1.02] duration-200"
                                     onClick={() => setOpen(true)}
                                 >
                                     Edit
@@ -192,23 +216,12 @@ const FooterMaintenancePage = () => {
                                             }}
                                             required
                                         />
-                                        <div className="w-full flex justify-end">
-                                            <select
-                                                name="active"
-                                                id="selectActive"
-                                                className="border-2 border-gray-100 rounded-md shadow-md text-center w-1/2 mb-4 h-10 font-bold
-                      bg-white text-gray-500"
-                                            >
-                                                <option value="true">Active</option>
-                                                <option value="false">Inactive</option>
-                                            </select>
-                                        </div>
                                     </div>
                                 ))}
                             </div>
 
                             {/* BUTTONS CONTAINER */}
-                            <div className="w-full flex gap-2">
+                            <div className="w-full flex gap-2 mt-4">
                                 <button
                                     className="w-2/3 bg-orange-950 font-bold text-white h-10 rounded-md shadow-md
                 hover:bg-orange-900 hover:scale-[1.02] duration-200"
@@ -226,7 +239,7 @@ const FooterMaintenancePage = () => {
                 border-2 border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200"
                                     onClick={() => setOpen(false)}
                                 >
- Cancel
+                                    Cancel
                                 </button>
                             </div>
                         </div>
