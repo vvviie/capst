@@ -126,20 +126,21 @@ const FooterMaintenancePage = () => {
                                             onChange={async (e) => {
                                                 const updatedSocials = [...socials];
                                                 updatedSocials[index].active = e.target.value === "true"; // Update active status
-    
+
                                                 // Update state
                                                 setSocials(updatedSocials);
-    
+
                                                 // Optionally, update Firestore directly
                                                 const footerData = {
                                                     tel: tel,
                                                     socials: updatedSocials.map(soc => ({
                                                         name: soc.name,
                                                         url: soc.url,
+                                                        icon: soc.icon, // Include icon class
                                                         active: soc.active // Include active status
                                                     })),
                                                 };
-    
+
                                                 try {
                                                     await setDoc(doc(db, "webContent", "footerSection"), footerData); // Update Firestore
                                                     console.log("Document successfully updated!");
@@ -155,7 +156,7 @@ const FooterMaintenancePage = () => {
                                 ))}
                                 <button
                                     className="w-full bg-orange-950 font-bold text-white h-10 rounded-md shadow-md
-                                    hover:bg-orange- 900 hover:scale-[1.02] duration-200"
+                                    hover:bg-orange-900 hover:scale-[1.02] duration-200"
                                     onClick={() => setOpen(true)}
                                 >
                                     Edit
@@ -209,9 +210,21 @@ const FooterMaintenancePage = () => {
                                             type="text"
                                             placeholder={`${soc.name} URL`}
                                             value={soc.url}
-                                            onChange={(e) => {
+ onChange={(e) => {
                                                 const updatedSocials = [...socials];
                                                 updatedSocials[index].url = e.target.value;
+                                                setSocials(updatedSocials);
+                                            }}
+                                            required
+                                        />
+                                        <input
+                                            className="border-2 border-solid border-gray-300 w-full h-10 pl-2 rounded-md bg-white"
+                                            type="text"
+                                            placeholder="Icon class (e.g., fa-facebook-f)"
+                                            value={soc.icon}
+                                            onChange={(e) => {
+                                                const updatedSocials = [...socials];
+                                                updatedSocials[index].icon = e.target.value; // Update icon class
                                                 setSocials(updatedSocials);
                                             }}
                                             required
