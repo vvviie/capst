@@ -65,9 +65,9 @@ const AccountsListPage = () => {
         setFilteredStatus(status);
     };
     
-    const handleFilterStaffChange = (status, role) => {
+    const handleFilterStaffChange = (status: string, role: string) => {
         setFilteredStaffStatus(status);
-        setFilteredStaffRole(role); // Ensure you have a state for role
+        setFilteredStaffRole(role);
     };
 
     const toggleOrder = (id: string) => {
@@ -173,6 +173,13 @@ const AccountsListPage = () => {
     };
 
     useEffect(() => {
+        if (accountType === "staff") {
+        setFilteredStaffStatus("all");
+        setFilteredStaffRole("all");
+        }
+    }, [accountType]);
+
+    useEffect(() => {
         const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
             if (user) {
                 // Only fetch staff data if authenticated
@@ -236,17 +243,14 @@ const AccountsListPage = () => {
     });
 
     const filteredStaffAccounts = staffAccounts.filter((staff) => {
-        const matchesSearch =
-        staff.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
-        staff.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
-        staff.username.toLowerCase().startsWith(searchInput.toLowerCase());
-
-        const matchesStatus =
-        filteredStaffStatus === "all" || staff.status === filteredStaffStatus;
-
-        const matchesRole =
-        filteredStaffRole === "all" || staff.role === filteredStaffRole;
-
+        const matchesSearch = 
+            staff.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+            staff.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+            staff.username.toLowerCase().startsWith(searchInput.toLowerCase());
+    
+        const matchesStatus = filteredStaffStatus === "all" || staff.status === filteredStaffStatus;
+        const matchesRole = filteredStaffRole === "all" || staff.role === filteredStaffRole;
+    
         return matchesSearch && matchesStatus && matchesRole;
     });
 
@@ -362,12 +366,7 @@ const AccountsListPage = () => {
                         {accountType === "users" ? (
                             <UsersFilter onFilterChange={handleFilterChange} />
                         ) : (
-                            <AdminStaffFilter
-                            onFilterChange={(status, role) => {
-                                setFilteredStaffStatus(status);
-                                setFilteredStaffRole(role);
-                            }}
-                            />
+                            <AdminStaffFilter onFilterChange={handleFilterStaffChange} />
                         )}
                     </div>
                     <div className="flex gap-2 items-center justify-between w-full md:w-1/2">
