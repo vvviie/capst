@@ -56,6 +56,8 @@ const AccountsListPage = () => {
     const [searchInput, setSearchInput] = useState("");
     const [isAdmin, setIsAdmin] = useState(false);
     const [filteredStatus, setFilteredStatus] = useState("All");
+    const [filteredStaffStatus, setFilteredStaffStatus] = useState("all");
+    const [filteredStaffRole, setFilteredStaffRole] = useState("all"); // Initial value of "all"
     const router = useRouter(); // Initialize useRouter
     const auth = getAuth();
 
@@ -63,6 +65,10 @@ const AccountsListPage = () => {
         setFilteredStatus(status);
     };
     
+    const handleFilterStaffChange = (status, role) => {
+        setFilteredStaffStatus(status);
+        setFilteredStaffRole(role); // Ensure you have a state for role
+    };
 
     const toggleOrder = (id: string) => {
         setExpandedOrders((prev) => ({
@@ -230,14 +236,18 @@ const AccountsListPage = () => {
     });
 
     const filteredStaffAccounts = staffAccounts.filter((staff) => {
-        const matchesSearch = 
-            staff.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
-            staff.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
-            staff.username.toLowerCase().startsWith(searchInput.toLowerCase());
-    
-        const matchesRole = filteredStatus === "All" || staff.role === filteredStatus;
-    
-        return matchesSearch && matchesRole;
+        const matchesSearch =
+        staff.firstName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+        staff.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
+        staff.username.toLowerCase().startsWith(searchInput.toLowerCase());
+
+        const matchesStatus =
+        filteredStaffStatus === "all" || staff.status === filteredStaffStatus;
+
+        const matchesRole =
+        filteredStaffRole === "all" || staff.role === filteredStaffRole;
+
+        return matchesSearch && matchesStatus && matchesRole;
     });
 
     const reauthenticateUser = async (email: string, password: string) => {
@@ -352,7 +362,12 @@ const AccountsListPage = () => {
                         {accountType === "users" ? (
                             <UsersFilter onFilterChange={handleFilterChange} />
                         ) : (
-                            <AdminStaffFilter onFilterChange={handleFilterChange}/>
+                            <AdminStaffFilter
+                            onFilterChange={(status, role) => {
+                                setFilteredStaffStatus(status);
+                                setFilteredStaffRole(role);
+                            }}
+                            />
                         )}
                     </div>
                     <div className="flex gap-2 items-center justify-between w-full md:w-1/2">
