@@ -6,8 +6,6 @@ import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { db } from "@/app/firebase"; // Adjust the import based on your file structure
 import {
-  collection,
-  getDocs,
   doc,
   updateDoc,
   getDoc,
@@ -43,8 +41,25 @@ const AdminLandingPageMaintenance = () => {
   }, []);
 
   const handleSubmit = async () => {
+    const docRef = doc(db, "webContent", "landing_heroSection");
     if (isEditMode) {
-      // Handle update logic here if needed
+      // Handle update logic here
+      const updatedSlides = slidesData.map((slide) =>
+        slide.id === newSlide.id ? newSlide : slide
+      );
+      setSlidesData(updatedSlides);
+
+      // Update Firestore
+      await updateDoc(docRef, {
+        slides: updatedSlides, // Assuming 'slides' is the field you want to update
+      });
+
+      // Show popup
+      setIsPopupVisible(true);
+      setTimeout(() => {
+        setIsPopupVisible(false);
+        setAddSlideClicked(false); // Close the add slide form
+      }, 750);
     } else {
       // Add new slide logic
       const newId = slidesData.length + 1; // Increment ID for the new slide
@@ -52,7 +67,6 @@ const AdminLandingPageMaintenance = () => {
       setSlidesData(updatedSlides);
 
       // Update Firestore
-      const docRef = doc(db, "webContent", "landing_heroSection");
       await updateDoc(docRef, {
         slides: updatedSlides, // Assuming 'slides' is the field you want to update
       });
@@ -141,9 +155,9 @@ const AdminLandingPageMaintenance = () => {
                     {/* EDIT BUTTON */}
                     <button
                       className="bg-white border-2 border-gray-100 shadow-md
-                    rounded-md text-gray-500 w-2/3 font-bold h-10
-                    hover:bg-gray-50 hover:scale-[1.02] duration-200"
-                      onClick={handleEditClick}
+                      rounded-md text-gray-500 w-2/3 font-bold h-10
+                      hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                      onClick={() => handleEditClick(slide)} // Pass the slide data to handleEditClick
                     >
                       Edit
                     </button>
@@ -231,11 +245,15 @@ const AdminLandingPageMaintenance = () => {
                         id="inputProdImg"
                         type="text"
                         placeholder="File Name"
+                        value={newSlide.img}
+                        onChange={(e) =>
+                          setNewSlide({ ...newSlide, img: e.target.value })
+                        }
                       />
                       {/* UPLOAD BUTTON */}
                       <button
                         className="h-10 w-1/2 font-bold text-gray-600 bg-white border-2 border-gray-100 shadow-md rounded-md
-                hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                        hover:bg-gray-50 hover:scale-[1.02] duration-200"
                       >
                         Upload
                       </button>
@@ -285,26 +303,6 @@ const AdminLandingPageMaintenance = () => {
                       value={newSlide.desc}
                       onChange={(e) =>
                         setNewSlide({ ...newSlide, desc: e.target.value })
-                      }
-                      required
-                    />
-                  </div>
-                  <div className="w-full flex flex-col gap-1 items-center justify-center">
-                    <label
-                      className="text-orange-950 text-sm w-full text-left space-x-1"
-                      htmlFor="inputImage"
-                    >
-                      <span>Image URL</span>
-                    </label>
-                    <input
-                      className="border-2 border-solid border-orange-900 w-full h-10 pl-4 rounded-md bg-orange-50"
-                      name="inputImage"
-                      id="inputImage"
-                      type="text"
-                      placeholder="Image URL"
-                      value={newSlide.img}
-                      onChange={(e) =>
-                        setNewSlide({ ...newSlide, img: e.target.value })
                       }
                       required
                     />
