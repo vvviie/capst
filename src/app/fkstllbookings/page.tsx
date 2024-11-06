@@ -1,9 +1,11 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CheckoutPopup from "../components/CheckoutPopup";
 import Link from "next/link";
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 //#region Sample Data
 type res = {
@@ -28,116 +30,10 @@ type res = {
 
 type resList = res[];
 
-let reservations: resList = [
-  {
-    id: "1301740947",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 5,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PENDING",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 250,
-  },
-  {
-    id: "1123456789",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 3,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PENDING",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 150,
-  },
-  {
-    id: "1123555789",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 3,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "TO PAY",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 150,
-  },
-  {
-    id: "1123156789",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 3,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PAID",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 150,
-  },
-  {
-    id: "7072664596",
-    buffetChosen: {
-      Dessert: ["Mango Tapioca"],
-      Mains: ["Chicken Saltimbocca", "Tuscan Chicken"],
-      Pasta: ["Shrimp Aglio Olio"],
-      Veggies: ["Chicken Mango Salad"],
-    },
-    packageOffer: "Package A",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 30,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PENDING",
-    timeReserved: "10:56",
-    timeToBeReserved: "12PM to 4PM",
-    type: "Event",
-    totalPrice: 16500,
-  },
-  {
-    id: "7062664596",
-    buffetChosen: {
-      Dessert: ["Mango Tapioca"],
-      Mains: ["Chicken Saltimbocca", "Tuscan Chicken"],
-      Pasta: ["Shrimp Aglio Olio"],
-      Veggies: ["Chicken Mango Salad"],
-    },
-    packageOffer: "Package A",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 30,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PAID",
-    timeReserved: "10:56",
-    timeToBeReserved: "12PM to 4PM",
-    type: "Event",
-    totalPrice: 16500,
-  },
-  {
-    id: "7062660596",
-    buffetChosen: {
-      Dessert: ["Mango Tapioca"],
-      Mains: ["Chicken Saltimbocca", "Tuscan Chicken"],
-      Pasta: ["Shrimp Aglio Olio"],
-      Veggies: ["Chicken Mango Salad"],
-    },
-    packageOffer: "Package A",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 30,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "TO PAY",
-    timeReserved: "10:56",
-    timeToBeReserved: "12PM to 4PM",
-    type: "Event",
-    totalPrice: 16500,
-  },
-];
 //#endregion
 
 const AdminCheckReservationsPage = () => {
+  const [reservations, setReservations] = useState<res[]>([]);
   const [resType, setResType] = useState("table");
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
@@ -200,6 +96,71 @@ const AdminCheckReservationsPage = () => {
       [id]: !prev[id],
     }));
   };
+
+  useEffect(() => {
+    const fetchReservations = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "tableReservations"));
+        const fetchedReservations: res[] = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as res[];
+  
+        // Helper function to convert time to 24-hour format and handle time ranges
+        const parseDateTime = (date: string, time: string) => {
+          // Extract start time if it's a range (e.g., "12PM to 4PM" -> "12PM")
+          const startTime = time.split(" to ")[0];
+          
+          // Parse date and time to a consistent format
+          return new Date(`${date} ${convertTo24Hour(startTime)}`);
+        };
+  
+        // Helper function to convert "4:30PM" or "12PM" to "16:30" or "12:00" (24-hour time)
+        const convertTo24Hour = (time: string) => {
+          const [timePart, modifier] = time.split(/(AM|PM)/i);
+          let [hours, minutes] = timePart.split(":").map(Number);
+          if (!minutes) minutes = 0;
+          
+          if (modifier.toUpperCase() === "PM" && hours < 12) {
+            hours += 12;
+          }
+          if (modifier.toUpperCase() === "AM" && hours === 12) {
+            hours = 0;
+          }
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        };
+  
+        // Sort reservations by parsed date and time in descending order
+        const sortedReservations = fetchedReservations.sort((a, b) => {
+          const dateA = a.dateToBeReserved && a.timeToBeReserved
+            ? parseDateTime(a.dateToBeReserved, a.timeToBeReserved).getTime()
+            : 0;
+          const dateB = b.dateToBeReserved && b.timeToBeReserved
+            ? parseDateTime(b.dateToBeReserved, b.timeToBeReserved).getTime()
+            : 0;
+  
+          return dateB - dateA; // Descending order
+        });
+  
+        console.log("Sorted Reservations:", sortedReservations); // Log to verify order
+  
+        // Log the buffetChosen if it exists
+        sortedReservations.forEach((res) => {
+          if (res.buffetChosen) {
+            console.log("Buffet Chosen for Reservation ID", res.id, ":", res.buffetChosen);
+          }
+        });
+  
+        setReservations(sortedReservations);
+      } catch (error) {
+        console.error("Error fetching reservations:", error);
+      }
+    };
+  
+    fetchReservations();
+  }, []);
+
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -277,11 +238,11 @@ const AdminCheckReservationsPage = () => {
                           {/* NUMBER OF PERSONS + PRICE CONTAINER */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                           <p
                             className={`text-sm font-semibold text-${
@@ -428,32 +389,37 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                            {Object.entries(res.buffetChosen).map(
-                              ([category, items], index) => (
-                                <div
-                                  key={index}
-                                  className="pl-2 w-full flex flex-col gap-2"
-                                >
-                                  <h1
-                                    className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center
-                              font-semibold shadow-sm"
+                          {Object.entries(res.buffetChosen).map(([category, items], index) => {
+                          console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
+                          
+                          // Ensure items is a string and split it into an array if needed
+                          let itemsArray = [];
+                          if (typeof items === 'string') {
+                            itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
+                          } else if (Array.isArray(items)) {
+                            itemsArray = items; // If it's already an array, use it directly
+                          } else {
+                            console.warn(`Expected 'items' to be a string or an array but got:`, items);
+                          }
+
+                          return (
+                            <div key={index} className="pl-2 w-full flex flex-col gap-2">
+                              <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
+                                {category}
+                              </h1>
+                              <div className="w-full flex flex-wrap gap-1">
+                                {itemsArray.map((item, itemIndex) => (
+                                  <span
+                                    key={itemIndex}
+                                    className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
                                   >
-                                    {category}
-                                  </h1>
-                                  <div className="w-full flex flex-wrap gap-1">
-                                    {items.map((item, itemIndex) => (
-                                      <span
-                                        key={itemIndex}
-                                        className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center
-                                    shadow-sm"
-                                      >
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            )}
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                           </div>
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
@@ -676,32 +642,37 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                            {Object.entries(res.buffetChosen).map(
-                              ([category, items], index) => (
-                                <div
-                                  key={index}
-                                  className="pl-2 w-full flex flex-col gap-2"
-                                >
-                                  <h1
-                                    className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center
-                            font-semibold shadow-sm"
+                          {Object.entries(res.buffetChosen).map(([category, items], index) => {
+                          console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
+                          
+                          // Ensure items is a string and split it into an array if needed
+                          let itemsArray = [];
+                          if (typeof items === 'string') {
+                            itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
+                          } else if (Array.isArray(items)) {
+                            itemsArray = items; // If it's already an array, use it directly
+                          } else {
+                            console.warn(`Expected 'items' to be a string or an array but got:`, items);
+                          }
+
+                          return (
+                            <div key={index} className="pl-2 w-full flex flex-col gap-2">
+                              <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
+                                {category}
+                              </h1>
+                              <div className="w-full flex flex-wrap gap-1">
+                                {itemsArray.map((item, itemIndex) => (
+                                  <span
+                                    key={itemIndex}
+                                    className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
                                   >
-                                    {category}
-                                  </h1>
-                                  <div className="w-full flex flex-wrap gap-1">
-                                    {items.map((item, itemIndex) => (
-                                      <span
-                                        key={itemIndex}
-                                        className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center
-                                  shadow-sm"
-                                      >
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            )}
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                           </div>
                           {/* BUTTON CONTAINER */}
                           <div className="flex gap-2 items-center w-full mt-1">
