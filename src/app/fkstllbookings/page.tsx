@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import CheckoutPopup from "../components/CheckoutPopup";
 import Link from "next/link";
 import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
 
 //#region Sample Data
 type res = {
@@ -44,44 +44,79 @@ const AdminCheckReservationsPage = () => {
   const [isPaidVisible, setIsPaidVisible] = useState(false);
   const [isCancelVisible, setIsCancelVisible] = useState(false);
 
-  const handleToPayment = () => {
-    setIsToPaymentVisible(true);
-
-    setTimeout(() => {
-      setIsToPaymentVisible(false);
-    }, 750);
+  const handleToPayment = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "TO PAY"
+      });
+      
+      setIsToPaymentVisible(true);
+      setTimeout(() => {
+        setIsToPaymentVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'TO PAY':", error);
+    }
   };
-
-  const handleReject = () => {
-    setIsRejectedVisible(true);
-
-    setTimeout(() => {
-      setIsRejectedVisible(false);
-    }, 750);
+  
+  const handleReject = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "REJECTED"
+      });
+  
+      setIsRejectedVisible(true);
+      setTimeout(() => {
+        setIsRejectedVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'REJECTED':", error);
+    }
   };
-
-  const handlePaid = () => {
-    setIsPaidVisible(true);
-
-    setTimeout(() => {
-      setIsPaidVisible(false);
-    }, 750);
+  
+  const handlePaid = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "PAID"
+      });
+  
+      setIsPaidVisible(true);
+      setTimeout(() => {
+        setIsPaidVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'PAID':", error);
+    }
   };
-
-  const handleCancel = () => {
-    setIsCancelVisible(true);
-
-    setTimeout(() => {
-      setIsCancelVisible(false);
-    }, 750);
+  
+  const handleCancel = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "CANCELLED"
+      });
+  
+      setIsCancelVisible(true);
+      setTimeout(() => {
+        setIsCancelVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'CANCELLED':", error);
+    }
   };
-
-  const handleMarkAsDone = () => {
-    setIsMarkAsDoneVisible(true);
-
-    setTimeout(() => {
-      setIsMarkAsDoneVisible(false);
-    }, 750);
+  
+  const handleMarkAsDone = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "DONE"
+      });
+  
+      setIsMarkAsDoneVisible(true);
+      setTimeout(() => {
+        setIsMarkAsDoneVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'DONE':", error);
+    }
   };
 
   const handleCategoryChange = (
@@ -98,9 +133,10 @@ const AdminCheckReservationsPage = () => {
   };
 
   useEffect(() => {
-    const fetchReservations = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "tableReservations"));
+    // Create a real-time listener for the tableReservations collection
+    const unsubscribe = onSnapshot(
+      collection(db, "tableReservations"),
+      (querySnapshot) => {
         const fetchedReservations: res[] = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -110,7 +146,7 @@ const AdminCheckReservationsPage = () => {
         const parseDateTime = (date: string, time: string) => {
           // Extract start time if it's a range (e.g., "12PM to 4PM" -> "12PM")
           const startTime = time.split(" to ")[0];
-          
+  
           // Parse date and time to a consistent format
           return new Date(`${date} ${convertTo24Hour(startTime)}`);
         };
@@ -120,7 +156,7 @@ const AdminCheckReservationsPage = () => {
           const [timePart, modifier] = time.split(/(AM|PM)/i);
           let [hours, minutes] = timePart.split(":").map(Number);
           if (!minutes) minutes = 0;
-          
+  
           if (modifier.toUpperCase() === "PM" && hours < 12) {
             hours += 12;
           }
@@ -152,15 +188,16 @@ const AdminCheckReservationsPage = () => {
         });
   
         setReservations(sortedReservations);
-      } catch (error) {
+      },
+      (error) => {
         console.error("Error fetching reservations:", error);
       }
-    };
+    );
   
-    fetchReservations();
+    // Clean up the listener when the component unmounts
+    return () => unsubscribe();
   }, []);
-
-
+  
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -279,7 +316,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handleToPayment()}
+                                onClick={() => handleToPayment(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>To Payment</span>
