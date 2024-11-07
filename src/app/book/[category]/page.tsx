@@ -45,6 +45,7 @@ const ReservationPage = () => {
   const [totalHours, setTotalHours] = useState(0);
   const packagePricePerPerson = 550; // Price per person
   const [totalPrice, setTotalPrice] = useState(0);
+  const [totalPriceT, setTotalPriceT] = useState(0);
   const [chosenItems, setChosenItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
@@ -276,6 +277,7 @@ const ReservationPage = () => {
         status: "PENDING",
         dateToBeReserved: formattedDateToBeReserved,
         timeToBeReserved,
+        totalPrice: totalPriceT,
         type: "Table",
       });
 
@@ -308,6 +310,14 @@ const ReservationPage = () => {
       setTotalPrice(numberOfPersonsEvent * packagePricePerPerson);
     }
   }, [numberOfPersonsEvent]);
+
+  useEffect(() => {
+    if (numberOfPersonsTable < 1) {
+      setTotalPriceT(0);
+    } else {
+      setTotalPriceT(numberOfPersonsTable * 50);
+    }
+  }, [numberOfPersonsTable]);
 
   const handlePersonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^0-9]/g, ""); // Strip out non-numeric characters
@@ -865,7 +875,7 @@ const ReservationPage = () => {
             <i className="fa fa-book text-sm" aria-hidden="true"></i>
             <span className="font-bold text-md">
               {slug === "table"
-                ? "Reserve Table"
+                ? "Reserve Table (PHP " + totalPriceT + ")"
                 : slug === "event"
                 ? "Reserve Place (PHP " + totalPrice + ")"
                 : "Book Mobile Café"}{" "}
@@ -873,10 +883,14 @@ const ReservationPage = () => {
           </button>
           <p
             className={`${
-              slug === "event" ? "" : "hidden"
+              slug === "event" ? "" : slug === "table" ? "" : "hidden"
             } text-xs text-orange-900 text-center mt-[-10px]`}
           >
-            There must be a 50% downpayment upon reservation.
+            {slug === "event"
+              ? "There must be a 50% downpayment upon reservation."
+              : slug === "table"
+              ? "The reservation fee would be deductable to the total bill upon ordering."
+              : ""}
           </p>
         </form>
         {/* IMAGE CONTAINER */}
