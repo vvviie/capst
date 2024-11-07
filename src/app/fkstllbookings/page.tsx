@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import CheckoutPopup from "../components/CheckoutPopup";
 import Link from "next/link";
 import { db } from "../firebase";
-import { collection, getDocs, doc, updateDoc, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, onSnapshot, deleteDoc, getDoc } from "firebase/firestore";
+import jsPDF from "jspdf";
 
 //#region Sample Data
 type res = {
@@ -43,6 +44,7 @@ const AdminCheckReservationsPage = () => {
   const [isMarkAsDoneVisible, setIsMarkAsDoneVisible] = useState(false);
   const [isPaidVisible, setIsPaidVisible] = useState(false);
   const [isCancelVisible, setIsCancelVisible] = useState(false);
+  const [isPendingVisible, setIsPendingVisible] = useState(false);
 
   const handleToPayment = async (id: string) => {
     try {
@@ -88,6 +90,21 @@ const AdminCheckReservationsPage = () => {
       console.error("Error updating status to 'PAID':", error);
     }
   };
+
+  const handleMarkAsPending = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "PENDING"
+      });
+  
+      setIsPendingVisible(true);
+      setTimeout(() => {
+        setIsPendingVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'PENDING':", error);
+    }
+  };
   
   const handleCancel = async (id: string) => {
     try {
@@ -104,6 +121,20 @@ const AdminCheckReservationsPage = () => {
     }
   };
   
+  const handleDelete = async (id: string) => {
+    try {
+      // Delete the document that matches the provided ID
+      await deleteDoc(doc(db, "tableReservations", id));
+  
+      setIsCancelVisible(true);
+      setTimeout(() => {
+        setIsCancelVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    }
+  };
+
   const handleMarkAsDone = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
@@ -118,6 +149,46 @@ const AdminCheckReservationsPage = () => {
       console.error("Error updating status to 'DONE':", error);
     }
   };
+
+  const handlePrintDetails = async (id: string) => {
+    try {
+      const docSnap = await getDoc(doc(db, "tableReservations", id));
+  
+      if (docSnap.exists()) {
+        const reservation = docSnap.data();
+  
+        const doc = new jsPDF();
+        
+        // Set font for title, address, and details to 16px, bold, centered
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+  
+        // Title and address - Centered
+        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
+  
+        // Add spacing
+        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+  
+        // Set font for content text to 14px and justified
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+  
+        // Booking Details - Justified
+        const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
+\nJust present this as as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+        doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
+  
+        doc.autoPrint();
+        doc.output("dataurlnewwindow");
+      } else {
+        console.log("No such document!");
+      }
+    } catch (error) {
+      console.error("Error handling reservation details:", error);
+    }
+  };
+  
 
   const handleCategoryChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -283,7 +354,7 @@ const AdminCheckReservationsPage = () => {
                           </p>
                           <p
                             className={`text-sm font-semibold text-${
-                              res.status === "PENDING" ? "red-500" : "blue-500"
+                              res.status === "PENDING" || res.status === "CANCELLED" || res.status === "REJECTED" ? "red-500" : "blue-500"
                             } flex gap-1 items-center select-none`}
                           >
                             {res.status}
@@ -305,17 +376,19 @@ const AdminCheckReservationsPage = () => {
                           ></i>
                         </span>
                       </div>
+                      {/* BUTTON CONTAINER */}
                       {expandedOrders[res.id] && (
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                        border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() => handleToPayment(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
@@ -323,31 +396,58 @@ const AdminCheckReservationsPage = () => {
                               </button>
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                        hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleReject()}
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleReject(res.id)}
                               >
                                 Reject
                               </button>
                             </div>
-                          ) : (
+                          ) : res.status === "CANCELLED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                        border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePaid()}
+                                border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => handleMarkAsPending(res.id)}
+                              >
+                                Mark as Pending
+                              </button>
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : res.status === "DONE" ? (
+                            <div className="flex items-center w-full mt-1">
+                              <button
+                                className="w-full h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-blue-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handlePrintDetails(res.id)}
+                              >
+                                Print Details
+                              </button>
+                            </div>
+                          ) : res.status !== "REJECTED" ? (
+                            <div className="flex gap-2 items-center w-full mt-1">
+                              <button
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
+                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => handlePaid(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
                               </button>
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                        hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleCancel()}
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleCancel(res.id)}
                               >
                                 Cancel
                               </button>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -387,11 +487,11 @@ const AdminCheckReservationsPage = () => {
                           {/* PERSONS AND PRICE CONTAINER */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                           {/* STATUS */}
                           <p
@@ -426,9 +526,9 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                          {Object.entries(res.buffetChosen).map(([category, items], index) => {
+                          {res.buffetChosen && Object.entries(res.buffetChosen).map(([category, items], index) => {
                           console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
-                          
+
                           // Ensure items is a string and split it into an array if needed
                           let itemsArray = [];
                           if (typeof items === 'string') {
@@ -438,6 +538,7 @@ const AdminCheckReservationsPage = () => {
                           } else {
                             console.warn(`Expected 'items' to be a string or an array but got:`, items);
                           }
+
 
                           return (
                             <div key={index} className="pl-2 w-full flex flex-col gap-2">
@@ -464,7 +565,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handleToPayment()}
+                                onClick={() => handleToPayment(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>To Payment</span>
@@ -472,7 +573,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                         hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleReject()}
+                                onClick={() => handleReject(res.id)}
                               >
                                 Reject
                               </button>
@@ -482,7 +583,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePaid()}
+                                onClick={() => handlePaid(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -490,7 +591,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                         hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleCancel()}
+                                onClick={() => handleCancel(res.id)}
                               >
                                 Cancel
                               </button>
@@ -568,11 +669,11 @@ const AdminCheckReservationsPage = () => {
                           {/* USER PERSONS AND PRICE CONTAINER */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                         </div>
 
@@ -602,7 +703,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-full h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex justify-center items-center"
-                                onClick={() => handleMarkAsDone()}
+                                onClick={() => handleMarkAsDone(res.id)}
                               >
                                 <i className="fa-solid fa-circle-check"></i>
                                 <span>Mark as Done</span>
@@ -648,11 +749,11 @@ const AdminCheckReservationsPage = () => {
                           {/* USER EMAIL */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                         </div>
 
@@ -679,9 +780,9 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                          {Object.entries(res.buffetChosen).map(([category, items], index) => {
+                          {res.buffetChosen && Object.entries(res.buffetChosen).map(([category, items], index) => {
                           console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
-                          
+
                           // Ensure items is a string and split it into an array if needed
                           let itemsArray = [];
                           if (typeof items === 'string') {
@@ -716,7 +817,7 @@ const AdminCheckReservationsPage = () => {
                             <button
                               className="w-full h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex justify-center items-center"
-                              onClick={() => handleMarkAsDone()}
+                              onClick={() => handleMarkAsDone(res.id)}
                             >
                               <i className="fa-solid fa-circle-check"></i>
                               <span>Mark as Done</span>
@@ -745,6 +846,9 @@ const AdminCheckReservationsPage = () => {
 
         {/* CANCEL POP UP */}
         {isCancelVisible && <CheckoutPopup message="Booking Canceled!" />}
+
+        {/* PENDING POP UP */}
+        {isPendingVisible && <CheckoutPopup message="Marked as Pending!" />}
       </div>
     </div>
   );
