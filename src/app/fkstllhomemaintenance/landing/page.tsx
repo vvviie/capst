@@ -86,6 +86,15 @@ const AdminLandingPageMaintenance = () => {
 
   //
 
+  const handleRemoveSlide = async (slideId) => {
+    const updatedSlides = slidesData.filter((slide) => slide.id !== slideId);
+    setSlidesData(updatedSlides);
+    const docRef = doc(db, "webContent", "landing_heroSection");
+    await updateDoc(docRef, {
+      slides: updatedSlides,
+    });
+  };
+
   const handleSubmit = async () => {
     const docRef = doc(db, "webContent", "landing_heroSection");
     const storage = getStorage();
@@ -222,11 +231,12 @@ const AdminLandingPageMaintenance = () => {
                     >
                       Edit
                     </button>
-                    {/* DELETE BUTTON */}
+                    {/* REMOVE SLIDE BUTTON */}
                     <button
                       className="bg-red-500 border-2 border-red-500 shadow-md
-                    rounded-md text-white w-1/3 font-bold h-10
-                    hover:bg-red-400 hover:border-red-400 hover:scale-[1.02] duration-200"
+    rounded-md text-white w-1/3 font-bold h-10
+    hover:bg-red-400 hover:border-red-400 hover:scale-[1.02] duration-200"
+                      onClick={() => handleRemoveSlide(slide.id)} // Pass slide.id to identify the slide to remove
                     >
                       Remove
                     </button>
@@ -310,6 +320,7 @@ const AdminLandingPageMaintenance = () => {
                         onChange={(e) =>
                           setNewSlide({ ...newSlide, img: e.target.value })
                         }
+                        readOnly
                       />
                       <input
                         type="file"
