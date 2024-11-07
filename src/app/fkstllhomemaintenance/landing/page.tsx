@@ -4,12 +4,9 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Image from "next/image";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { db } from "@/app/firebase"; // Adjust the import based on your file structure
-import {
-  doc,
-  updateDoc,
-  getDoc,
-} from "firebase/firestore";
+import { db } from "@/app/firebase";
+import { doc, updateDoc, getDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const AdminLandingPageMaintenance = () => {
   const [addSlideClicked, setAddSlideClicked] = useState(false);
@@ -17,6 +14,7 @@ const AdminLandingPageMaintenance = () => {
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [newSlide, setNewSlide] = useState({ title: "", desc: "", img: "" });
   const [slidesData, setSlidesData] = useState([]); // Initialize as empty array
+  const [imageFile, setImageFile] = useState(null); // Store the selected file
 
   useEffect(() => {
     const fetchSlides = async () => {
@@ -40,43 +38,106 @@ const AdminLandingPageMaintenance = () => {
     fetchSlides();
   }, []);
 
+  //
+  const convertImageToWebP = (file) => {
+    return new Promise((resolve, reject) => {
+      const imgElement = new window.Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        imgElement.src = e.target.result;
+      };
+
+      imgElement.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Conversion to WebP failed."));
+            }
+          }, "image/webp");
+        } else {
+          reject(new Error("Canvas context is null."));
+        }
+      };
+
+      imgElement.onerror = (err) => reject(err);
+      reader.onerror = (err) => reject(err);
+
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageSelect = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setImageFile(file);
+      const webpBlob = await convertImageToWebP(file);
+      const objectURL = URL.createObjectURL(webpBlob);
+      setNewSlide({ ...newSlide, img: objectURL });
+    }
+  };
+
+  //
+
   const handleSubmit = async () => {
     const docRef = doc(db, "webContent", "landing_heroSection");
-    if (isEditMode) {
-      // Handle update logic here
-      const updatedSlides = slidesData.map((slide) =>
-        slide.id === newSlide.id ? newSlide : slide
-      );
-      setSlidesData(updatedSlides);
+    const storage = getStorage();
 
-      // Update Firestore
-      await updateDoc(docRef, {
-        slides: updatedSlides, // Assuming 'slides' is the field you want to update
-      });
+    try {
+      // Handle image upload only if there's a new image file selected
+      let imageUrl = newSlide.img;
+      if (imageFile) {
+        const storageRef = ref(
+          storage,
+          `images/landing/hero/${imageFile.name
+            .split(".")
+            .slice(0, -1)
+            .join(".")}.webp`
+        );
 
-      // Show popup
+        // Convert image to WebP format and upload it to Firebase Storage
+        const webpBlob = await convertImageToWebP(imageFile);
+        await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
+        imageUrl = await getDownloadURL(storageRef); // Get the download URL of the uploaded image
+      }
+
+      // Update slide with the uploaded image URL (or keep the existing image URL if in edit mode)
+      const slideData = { ...newSlide, img: imageUrl };
+
+      if (isEditMode) {
+        // Edit existing slide logic
+        const updatedSlides = slidesData.map((slide) =>
+          slide.id === newSlide.id ? slideData : slide
+        );
+        setSlidesData(updatedSlides);
+
+        // Update Firestore document with edited slides array
+        await updateDoc(docRef, { slides: updatedSlides });
+      } else {
+        // Add new slide logic
+        const newId = slidesData.length + 1; // Create a new unique ID for the new slide
+        const updatedSlides = [...slidesData, { ...slideData, id: newId }];
+        setSlidesData(updatedSlides);
+
+        // Update Firestore document with new slides array
+        await updateDoc(docRef, { slides: updatedSlides });
+      }
+
+      // popup
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false);
         setAddSlideClicked(false); // Close the add slide form
       }, 750);
-    } else {
-      // Add new slide logic
-      const newId = slidesData.length + 1; // Increment ID for the new slide
-      const updatedSlides = [...slidesData, { ...newSlide, id: newId }];
-      setSlidesData(updatedSlides);
-
-      // Update Firestore
-      await updateDoc(docRef, {
-        slides: updatedSlides, // Assuming 'slides' is the field you want to update
-      });
-
-      // Show popup
-      setIsPopupVisible(true);
-      setTimeout(() => {
-        setIsPopupVisible(false);
-        setAddSlideClicked(false); // Close the add slide form
-      }, 750);
+    } catch (error) {
+      console.error("Error handling form submission:", error);
     }
   };
 
@@ -250,13 +311,19 @@ const AdminLandingPageMaintenance = () => {
                           setNewSlide({ ...newSlide, img: e.target.value })
                         }
                       />
-                      {/* UPLOAD BUTTON */}
-                      <button
-                        className="h-10 w-1/2 font-bold text-gray-600 bg-white border-2 border-gray-100 shadow-md rounded-md
-                        hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden" // Hides the file input
+                        id="file-upload"
+                      />
+                      <label
+                        htmlFor="file-upload"
+                        className="h-10 w-1/2 font-bold text-gray-600 bg-white border-2 border-gray-100 shadow-md rounded-md hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center cursor-pointer"
                       >
-                        Upload
-                      </button>
+                        Choose Image
+                      </label>
                     </div>
                   </div>
                 </div>
