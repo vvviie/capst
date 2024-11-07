@@ -220,7 +220,7 @@ const AdminCheckReservationsPage = () => {
   
         // Add Buffet Chosen details
         if (reservation.buffetChosen) {
-          let buffetYPosition = 80; // Start position for the buffet section
+          let buffetYPosition = 120; // Start position for the buffet section
   
           doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
