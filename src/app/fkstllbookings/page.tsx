@@ -188,6 +188,82 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
+
+  const handlePrintEventDetails = async (id: string) => {
+    try {
+      const docSnap = await getDoc(doc(db, "tableReservations", id));
+  
+      if (docSnap.exists()) {
+        const reservation = docSnap.data();
+  
+        const doc = new jsPDF();
+  
+        // Set font for title, address, and details to 16px, bold, centered
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+  
+        // Title and address - Centered
+        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
+  
+        // Add spacing
+        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+  
+        // Set font for content text to 14px and justified
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+  
+        // Booking Details - Justified
+        const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
+        \nJust present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+        doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
+  
+        // Add Buffet Chosen details
+        if (reservation.buffetChosen) {
+          let buffetYPosition = 80; // Start position for the buffet section
+  
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text("Buffet Chosen:", 20, buffetYPosition); // Buffet section title
+          buffetYPosition += 10;
+  
+          // Iterate over buffet categories and their items
+          Object.entries(reservation.buffetChosen).forEach(([category, items], index) => {
+            // Ensure items is a string and split it into an array if needed
+            let itemsArray = [];
+            if (typeof items === 'string') {
+              itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
+            } else if (Array.isArray(items)) {
+              itemsArray = items; // If it's already an array, use it directly
+            }
+  
+            // Add category title
+            doc.setFont("helvetica", "bold");
+            doc.text(category, 20, buffetYPosition);
+            buffetYPosition += 8;
+  
+            // Add items under the category
+            doc.setFont("helvetica", "normal");
+            itemsArray.forEach((item, itemIndex) => {
+              doc.text(`- ${item}`, 30, buffetYPosition);
+              buffetYPosition += 6;
+            });
+  
+            // Add spacing after each category
+            buffetYPosition += 6;
+          });
+        }
+  
+        doc.autoPrint();
+        doc.output("dataurlnewwindow");
+      } else {
+        console.log("No such document!");
+      }
+    } catch (error) {
+      console.error("Error handling reservation details:", error);
+    }
+  };
+  
   
 
   const handleCategoryChange = (
@@ -576,6 +652,16 @@ const AdminCheckReservationsPage = () => {
                                 onClick={() => handleReject(res.id)}
                               >
                                 Reject
+                              </button>
+                            </div>
+                          ) : res.status === "DONE" ? (
+                            <div className="flex gap-2 items-center w-full mt-1">
+                              <button
+                                className="w-full h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-blue-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handlePrintEventDetails(res.id)}
+                              >
+                                Print Details
                               </button>
                             </div>
                           ) : (
