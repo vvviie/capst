@@ -4,25 +4,10 @@ import React, { useState, useEffect } from "react";
 import AdminStaffFilter from "../components/AdminStaffFilter";
 import UsersFilter from "../components/UsersFilter";
 import { auth, db } from "../firebase";
-import {
-collection,
-    getDocs,
-    query,
-    where,
-    doc,
-    deleteDoc,
-    getDoc,
-    DocumentData,
-    updateDoc,
-    onSnapshot,
-} from "firebase/firestore";
-import {
-    onAuthStateChanged,
-    getAuth,
-    EmailAuthProvider,
-    reauthenticateWithCredential,
-    deleteUser,
-} from "firebase/auth"; // Import Firebase Auth methods
+import { useRouter } from "next/navigation";
+import { collection, getDocs, query, where, doc, deleteDoc, getDoc, DocumentData, updateDoc, onSnapshot } from "firebase/firestore";
+import { onAuthStateChanged, getAuth, EmailAuthProvider, reauthenticateWithCredential, deleteUser } from "firebase/auth"; // Import Firebase Auth methods
+import Cookies from "js-cookie";
 
 //#region Staff Sample Acc
 type Staff = {
@@ -71,11 +56,19 @@ const AccountsListPage = () => {
     const [searchInput, setSearchInput] = useState("");
     const [isAdmin, setIsAdmin] = useState(false);
     const [filteredStatus, setFilteredStatus] = useState("All");
+    const [filteredStaffStatus, setFilteredStaffStatus] = useState("all");
+    const [filteredStaffRole, setFilteredStaffRole] = useState("all"); // Initial value of "all"
+    const router = useRouter(); // Initialize useRouter
+    const auth = getAuth();
 
     const handleFilterChange = (status) => {
         setFilteredStatus(status);
     };
     
+    const handleFilterStaffChange = (status: string, role: string) => {
+        setFilteredStaffStatus(status);
+        setFilteredStaffRole(role);
+    };
 
     const toggleOrder = (id: string) => {
         setExpandedOrders((prev) => ({
@@ -117,23 +110,43 @@ const AccountsListPage = () => {
     };    
 
     const fetchUsers = async () => {
-        const usersCollection = collection(db, "users");
-        const q = query(usersCollection, where("role", "==", "user"));
-        const userSnapshot = await getDocs(q);
-        const users = userSnapshot.docs.map((doc) => ({
-            username: doc.data().username,
-            firstName: doc.data().firstName,
-            lastName: doc.data().lastName,
-            address: doc.data().address,
-            phone: doc.data().phoneNumber,
-            totalPaid: doc.data().totalPaid,
-            role: doc.data().role,
-        }));
-        setUserAccounts(users);
-    };
+        try {
+            // Ensure there is an authenticated user
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                throw new Error("User is not authenticated");
+            }
+    
+            const usersCollection = collection(db, "users");
+            const q = query(usersCollection, where("role", "==", "user"));
+            const userSnapshot = await getDocs(q);
+            const users = userSnapshot.docs.map((doc) => ({
+                username: doc.data().username,
+                firstName: doc.data().firstName,
+                lastName: doc.data().lastName,
+                address: doc.data().address,
+                phone: doc.data().phoneNumber,
+                totalPaid: doc.data().totalPaid,
+                role: doc.data().role,
+            }));
+            setUserAccounts(users);
+        } catch (error) {
+            console.error("Error fetching users:", error);
+            if (error.message.includes("insufficient permissions")) {
+                alert("You do not have permission to access this data. Please check your authentication status.");
+            }
+        }
+    };    
 
     // Function to fetch staff data with real-time updates
     const fetchStaff = () => {
+    try {
+        // Ensure there is an authenticated user
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+            throw new Error("User is not authenticated");
+        }
+
         const staffCollection = collection(db, "staff");
 
         // Subscribe to changes in the staff collection
@@ -149,17 +162,52 @@ const AccountsListPage = () => {
             setStaffAccounts(staff); // Update state with the new staff data
         });
 
-        // Cleanup function to unsubscribe from the listener when the component unmounts
+        // Return the unsubscribe function for cleanup
         return unsubscribe;
+    } catch (error) {
+        console.error("Error fetching staff:", error);
+        if (error.message.includes("insufficient permissions")) {
+            alert("You do not have permission to access this data. Please check your authentication status.");
+        }
+    }
     };
 
-    // Call fetchStaff in a useEffect hook to set up the listener
     useEffect(() => {
-        const unsubscribe = fetchStaff();
+        if (accountType === "staff") {
+        setFilteredStaffStatus("all");
+        setFilteredStaffRole("all");
+        }
+    }, [accountType]);
 
-        // Cleanup on unmount
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Only fetch staff data if authenticated
+                const unsubscribeStaff = fetchStaff();
+    
+                // Cleanup: unsubscribe from Firestore listener when the component unmounts
+                return () => {
+                    if (unsubscribeStaff) unsubscribeStaff();
+                };
+            } else {
+                router.push("/"); // Redirect to login if not authenticated
+            }
+        });
+    
+        // Cleanup for auth listener
+        return () => unsubscribeAuth();
+    }, [router]);
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (!user || !Cookies.get("admin")) {
+                // Redirect to home page if user is not logged in or does not have the "admin" cookie
+                router.push("/");
+            }
+        });
+
         return () => unsubscribe();
-    }, []); // Empty dependency array to run once on mount
+    }, [auth, router]);
 
     useEffect(() => {
         if (accountType === "users") {
@@ -200,9 +248,10 @@ const AccountsListPage = () => {
             staff.lastName.toLowerCase().startsWith(searchInput.toLowerCase()) ||
             staff.username.toLowerCase().startsWith(searchInput.toLowerCase());
     
-        const matchesRole = filteredStatus === "All" || staff.role === filteredStatus;
+        const matchesStatus = filteredStaffStatus === "all" || staff.status === filteredStaffStatus;
+        const matchesRole = filteredStaffRole === "all" || staff.role === filteredStaffRole;
     
-        return matchesSearch && matchesRole;
+        return matchesSearch && matchesStatus && matchesRole;
     });
 
     const reauthenticateUser = async (email: string, password: string) => {
@@ -317,7 +366,7 @@ const AccountsListPage = () => {
                         {accountType === "users" ? (
                             <UsersFilter onFilterChange={handleFilterChange} />
                         ) : (
-                            <AdminStaffFilter onFilterChange={handleFilterChange}/>
+                            <AdminStaffFilter onFilterChange={handleFilterStaffChange} />
                         )}
                     </div>
                     <div className="flex gap-2 items-center justify-between w-full md:w-1/2">

@@ -27,8 +27,8 @@ interface AdminStaffFilterProps {
 
 const AdminStaffFilter: React.FC<AdminStaffFilterProps> = ({ onFilterChange }) => {
   const [open, setOpen] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>("All");
-  const [selectedRole, setSelectedRole] = useState<string>("All");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedRole, setSelectedRole] = useState<string>("all");
   const formRef = useRef<HTMLFormElement | null>(null);
 
   // Close form when clicking outside

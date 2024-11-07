@@ -1,9 +1,12 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import CheckoutPopup from "../components/CheckoutPopup";
 import Link from "next/link";
+import { db } from "../firebase";
+import { collection, getDocs, doc, updateDoc, onSnapshot, deleteDoc, getDoc } from "firebase/firestore";
+import jsPDF from "jspdf";
 
 //#region Sample Data
 type res = {
@@ -28,116 +31,10 @@ type res = {
 
 type resList = res[];
 
-let reservations: resList = [
-  {
-    id: "1301740947",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 5,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PENDING",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 250,
-  },
-  {
-    id: "1123456789",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 3,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PENDING",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 150,
-  },
-  {
-    id: "1123555789",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 3,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "TO PAY",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 150,
-  },
-  {
-    id: "1123156789",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 3,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PAID",
-    timeReserved: "10:56",
-    timeToBeReserved: "4:30PM",
-    type: "Table",
-    totalPrice: 150,
-  },
-  {
-    id: "7072664596",
-    buffetChosen: {
-      Dessert: ["Mango Tapioca"],
-      Mains: ["Chicken Saltimbocca", "Tuscan Chicken"],
-      Pasta: ["Shrimp Aglio Olio"],
-      Veggies: ["Chicken Mango Salad"],
-    },
-    packageOffer: "Package A",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 30,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PENDING",
-    timeReserved: "10:56",
-    timeToBeReserved: "12PM to 4PM",
-    type: "Event",
-    totalPrice: 16500,
-  },
-  {
-    id: "7062664596",
-    buffetChosen: {
-      Dessert: ["Mango Tapioca"],
-      Mains: ["Chicken Saltimbocca", "Tuscan Chicken"],
-      Pasta: ["Shrimp Aglio Olio"],
-      Veggies: ["Chicken Mango Salad"],
-    },
-    packageOffer: "Package A",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 30,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "PAID",
-    timeReserved: "10:56",
-    timeToBeReserved: "12PM to 4PM",
-    type: "Event",
-    totalPrice: 16500,
-  },
-  {
-    id: "7062660596",
-    buffetChosen: {
-      Dessert: ["Mango Tapioca"],
-      Mains: ["Chicken Saltimbocca", "Tuscan Chicken"],
-      Pasta: ["Shrimp Aglio Olio"],
-      Veggies: ["Chicken Mango Salad"],
-    },
-    packageOffer: "Package A",
-    dateReserved: "10/30/2024",
-    dateToBeReserved: "11/06/2024",
-    numberOfPersons: 30,
-    reservedBy: "jerickogomez22@gmail.com",
-    status: "TO PAY",
-    timeReserved: "10:56",
-    timeToBeReserved: "12PM to 4PM",
-    type: "Event",
-    totalPrice: 16500,
-  },
-];
 //#endregion
 
 const AdminCheckReservationsPage = () => {
+  const [reservations, setReservations] = useState<res[]>([]);
   const [resType, setResType] = useState("table");
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
@@ -147,46 +44,151 @@ const AdminCheckReservationsPage = () => {
   const [isMarkAsDoneVisible, setIsMarkAsDoneVisible] = useState(false);
   const [isPaidVisible, setIsPaidVisible] = useState(false);
   const [isCancelVisible, setIsCancelVisible] = useState(false);
+  const [isPendingVisible, setIsPendingVisible] = useState(false);
 
-  const handleToPayment = () => {
-    setIsToPaymentVisible(true);
-
-    setTimeout(() => {
-      setIsToPaymentVisible(false);
-    }, 750);
+  const handleToPayment = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "TO PAY"
+      });
+      
+      setIsToPaymentVisible(true);
+      setTimeout(() => {
+        setIsToPaymentVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'TO PAY':", error);
+    }
+  };
+  
+  const handleReject = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "REJECTED"
+      });
+  
+      setIsRejectedVisible(true);
+      setTimeout(() => {
+        setIsRejectedVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'REJECTED':", error);
+    }
+  };
+  
+  const handlePaid = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "PAID"
+      });
+  
+      setIsPaidVisible(true);
+      setTimeout(() => {
+        setIsPaidVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'PAID':", error);
+    }
   };
 
-  const handleReject = () => {
-    setIsRejectedVisible(true);
-
-    setTimeout(() => {
-      setIsRejectedVisible(false);
-    }, 750);
+  const handleMarkAsPending = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "PENDING"
+      });
+  
+      setIsPendingVisible(true);
+      setTimeout(() => {
+        setIsPendingVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'PENDING':", error);
+    }
+  };
+  
+  const handleCancel = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "CANCELLED"
+      });
+  
+      setIsCancelVisible(true);
+      setTimeout(() => {
+        setIsCancelVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'CANCELLED':", error);
+    }
+  };
+  
+  const handleDelete = async (id: string) => {
+    try {
+      // Delete the document that matches the provided ID
+      await deleteDoc(doc(db, "tableReservations", id));
+  
+      setIsCancelVisible(true);
+      setTimeout(() => {
+        setIsCancelVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    }
   };
 
-  const handlePaid = () => {
-    setIsPaidVisible(true);
-
-    setTimeout(() => {
-      setIsPaidVisible(false);
-    }, 750);
+  const handleMarkAsDone = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "DONE"
+      });
+  
+      setIsMarkAsDoneVisible(true);
+      setTimeout(() => {
+        setIsMarkAsDoneVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'DONE':", error);
+    }
   };
 
-  const handleCancel = () => {
-    setIsCancelVisible(true);
-
-    setTimeout(() => {
-      setIsCancelVisible(false);
-    }, 750);
+  const handlePrintDetails = async (id: string) => {
+    try {
+      const docSnap = await getDoc(doc(db, "tableReservations", id));
+  
+      if (docSnap.exists()) {
+        const reservation = docSnap.data();
+  
+        const doc = new jsPDF();
+        
+        // Set font for title, address, and details to 16px, bold, centered
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+  
+        // Title and address - Centered
+        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
+  
+        // Add spacing
+        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+  
+        // Set font for content text to 14px and justified
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+  
+        // Booking Details - Justified
+        const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
+\nJust present this as as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+        doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
+  
+        doc.autoPrint();
+        doc.output("dataurlnewwindow");
+      } else {
+        console.log("No such document!");
+      }
+    } catch (error) {
+      console.error("Error handling reservation details:", error);
+    }
   };
-
-  const handleMarkAsDone = () => {
-    setIsMarkAsDoneVisible(true);
-
-    setTimeout(() => {
-      setIsMarkAsDoneVisible(false);
-    }, 750);
-  };
+  
 
   const handleCategoryChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -200,6 +202,73 @@ const AdminCheckReservationsPage = () => {
       [id]: !prev[id],
     }));
   };
+
+  useEffect(() => {
+    // Create a real-time listener for the tableReservations collection
+    const unsubscribe = onSnapshot(
+      collection(db, "tableReservations"),
+      (querySnapshot) => {
+        const fetchedReservations: res[] = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as res[];
+  
+        // Helper function to convert time to 24-hour format and handle time ranges
+        const parseDateTime = (date: string, time: string) => {
+          // Extract start time if it's a range (e.g., "12PM to 4PM" -> "12PM")
+          const startTime = time.split(" to ")[0];
+  
+          // Parse date and time to a consistent format
+          return new Date(`${date} ${convertTo24Hour(startTime)}`);
+        };
+  
+        // Helper function to convert "4:30PM" or "12PM" to "16:30" or "12:00" (24-hour time)
+        const convertTo24Hour = (time: string) => {
+          const [timePart, modifier] = time.split(/(AM|PM)/i);
+          let [hours, minutes] = timePart.split(":").map(Number);
+          if (!minutes) minutes = 0;
+  
+          if (modifier.toUpperCase() === "PM" && hours < 12) {
+            hours += 12;
+          }
+          if (modifier.toUpperCase() === "AM" && hours === 12) {
+            hours = 0;
+          }
+          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        };
+  
+        // Sort reservations by parsed date and time in descending order
+        const sortedReservations = fetchedReservations.sort((a, b) => {
+          const dateA = a.dateToBeReserved && a.timeToBeReserved
+            ? parseDateTime(a.dateToBeReserved, a.timeToBeReserved).getTime()
+            : 0;
+          const dateB = b.dateToBeReserved && b.timeToBeReserved
+            ? parseDateTime(b.dateToBeReserved, b.timeToBeReserved).getTime()
+            : 0;
+  
+          return dateB - dateA; // Descending order
+        });
+  
+        console.log("Sorted Reservations:", sortedReservations); // Log to verify order
+  
+        // Log the buffetChosen if it exists
+        sortedReservations.forEach((res) => {
+          if (res.buffetChosen) {
+            console.log("Buffet Chosen for Reservation ID", res.id, ":", res.buffetChosen);
+          }
+        });
+  
+        setReservations(sortedReservations);
+      },
+      (error) => {
+        console.error("Error fetching reservations:", error);
+      }
+    );
+  
+    // Clean up the listener when the component unmounts
+    return () => unsubscribe();
+  }, []);
+  
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -277,15 +346,15 @@ const AdminCheckReservationsPage = () => {
                           {/* NUMBER OF PERSONS + PRICE CONTAINER */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                           <p
                             className={`text-sm font-semibold text-${
-                              res.status === "PENDING" ? "red-500" : "blue-500"
+                              res.status === "PENDING" || res.status === "CANCELLED" || res.status === "REJECTED" ? "red-500" : "blue-500"
                             } flex gap-1 items-center select-none`}
                           >
                             {res.status}
@@ -307,49 +376,78 @@ const AdminCheckReservationsPage = () => {
                           ></i>
                         </span>
                       </div>
+                      {/* BUTTON CONTAINER */}
                       {expandedOrders[res.id] && (
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                        border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handleToPayment()}
+                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => handleToPayment(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>To Payment</span>
                               </button>
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                        hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleReject()}
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleReject(res.id)}
                               >
                                 Reject
                               </button>
                             </div>
-                          ) : (
+                          ) : res.status === "CANCELLED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                        border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePaid()}
+                                border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => handleMarkAsPending(res.id)}
+                              >
+                                Mark as Pending
+                              </button>
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : res.status === "DONE" ? (
+                            <div className="flex items-center w-full mt-1">
+                              <button
+                                className="w-full h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-blue-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handlePrintDetails(res.id)}
+                              >
+                                Print Details
+                              </button>
+                            </div>
+                          ) : res.status !== "REJECTED" ? (
+                            <div className="flex gap-2 items-center w-full mt-1">
+                              <button
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
+                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => handlePaid(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
                               </button>
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                        hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleCancel()}
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleCancel(res.id)}
                               >
                                 Cancel
                               </button>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -389,11 +487,11 @@ const AdminCheckReservationsPage = () => {
                           {/* PERSONS AND PRICE CONTAINER */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                           {/* STATUS */}
                           <p
@@ -428,32 +526,38 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                            {Object.entries(res.buffetChosen).map(
-                              ([category, items], index) => (
-                                <div
-                                  key={index}
-                                  className="pl-2 w-full flex flex-col gap-2"
-                                >
-                                  <h1
-                                    className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center
-                              font-semibold shadow-sm"
+                          {res.buffetChosen && Object.entries(res.buffetChosen).map(([category, items], index) => {
+                          console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
+
+                          // Ensure items is a string and split it into an array if needed
+                          let itemsArray = [];
+                          if (typeof items === 'string') {
+                            itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
+                          } else if (Array.isArray(items)) {
+                            itemsArray = items; // If it's already an array, use it directly
+                          } else {
+                            console.warn(`Expected 'items' to be a string or an array but got:`, items);
+                          }
+
+
+                          return (
+                            <div key={index} className="pl-2 w-full flex flex-col gap-2">
+                              <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
+                                {category}
+                              </h1>
+                              <div className="w-full flex flex-wrap gap-1">
+                                {itemsArray.map((item, itemIndex) => (
+                                  <span
+                                    key={itemIndex}
+                                    className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
                                   >
-                                    {category}
-                                  </h1>
-                                  <div className="w-full flex flex-wrap gap-1">
-                                    {items.map((item, itemIndex) => (
-                                      <span
-                                        key={itemIndex}
-                                        className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center
-                                    shadow-sm"
-                                      >
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            )}
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                           </div>
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
@@ -461,7 +565,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handleToPayment()}
+                                onClick={() => handleToPayment(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>To Payment</span>
@@ -469,7 +573,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                         hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleReject()}
+                                onClick={() => handleReject(res.id)}
                               >
                                 Reject
                               </button>
@@ -479,7 +583,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePaid()}
+                                onClick={() => handlePaid(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -487,7 +591,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                         hover:bg-red-400 hover:scale-[1.02] duration-200"
-                                onClick={() => handleCancel()}
+                                onClick={() => handleCancel(res.id)}
                               >
                                 Cancel
                               </button>
@@ -565,11 +669,11 @@ const AdminCheckReservationsPage = () => {
                           {/* USER PERSONS AND PRICE CONTAINER */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                         </div>
 
@@ -599,7 +703,7 @@ const AdminCheckReservationsPage = () => {
                               <button
                                 className="w-full h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex justify-center items-center"
-                                onClick={() => handleMarkAsDone()}
+                                onClick={() => handleMarkAsDone(res.id)}
                               >
                                 <i className="fa-solid fa-circle-check"></i>
                                 <span>Mark as Done</span>
@@ -645,11 +749,11 @@ const AdminCheckReservationsPage = () => {
                           {/* USER EMAIL */}
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
-                            <span>{`${res.numberOfPersons} PAX - PHP ${
-                              res.totalPrice
-                                ? res.totalPrice.toFixed(2)
-                                : "0.00"
-                            }`}</span>
+                            {resType === "event" ? (
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                            ) : resType === "table" ? (
+                              <span>{`${res.numberOfPersons} PAX`}</span>
+                            ) : null}
                           </p>
                         </div>
 
@@ -676,39 +780,44 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                            {Object.entries(res.buffetChosen).map(
-                              ([category, items], index) => (
-                                <div
-                                  key={index}
-                                  className="pl-2 w-full flex flex-col gap-2"
-                                >
-                                  <h1
-                                    className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center
-                            font-semibold shadow-sm"
+                          {res.buffetChosen && Object.entries(res.buffetChosen).map(([category, items], index) => {
+                          console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
+
+                          // Ensure items is a string and split it into an array if needed
+                          let itemsArray = [];
+                          if (typeof items === 'string') {
+                            itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
+                          } else if (Array.isArray(items)) {
+                            itemsArray = items; // If it's already an array, use it directly
+                          } else {
+                            console.warn(`Expected 'items' to be a string or an array but got:`, items);
+                          }
+
+                          return (
+                            <div key={index} className="pl-2 w-full flex flex-col gap-2">
+                              <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
+                                {category}
+                              </h1>
+                              <div className="w-full flex flex-wrap gap-1">
+                                {itemsArray.map((item, itemIndex) => (
+                                  <span
+                                    key={itemIndex}
+                                    className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
                                   >
-                                    {category}
-                                  </h1>
-                                  <div className="w-full flex flex-wrap gap-1">
-                                    {items.map((item, itemIndex) => (
-                                      <span
-                                        key={itemIndex}
-                                        className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center
-                                  shadow-sm"
-                                      >
-                                        {item}
-                                      </span>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            )}
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
                           </div>
                           {/* BUTTON CONTAINER */}
                           <div className="flex gap-2 items-center w-full mt-1">
                             <button
                               className="w-full h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
                         border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex justify-center items-center"
-                              onClick={() => handleMarkAsDone()}
+                              onClick={() => handleMarkAsDone(res.id)}
                             >
                               <i className="fa-solid fa-circle-check"></i>
                               <span>Mark as Done</span>
@@ -737,6 +846,9 @@ const AdminCheckReservationsPage = () => {
 
         {/* CANCEL POP UP */}
         {isCancelVisible && <CheckoutPopup message="Booking Canceled!" />}
+
+        {/* PENDING POP UP */}
+        {isPendingVisible && <CheckoutPopup message="Marked as Pending!" />}
       </div>
     </div>
   );
