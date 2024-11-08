@@ -111,7 +111,7 @@ const ReservationsPage = () => {
             timeToBeReserved: data.timeToBeReserved || "N/A",
             numberOfPersons: data.numberOfPersons || 1,
             reservedBy: data.reservedBy,
-            status: data.status === "PENDING" ? "Requested" : data.status,
+            status: data.status === "PENDING" ? "REQUESTED" : data.status,
             package: data.packageOffer || "d",
             buffet: buffetChosen,
             price: data.totalPrice || 0,
@@ -179,9 +179,15 @@ const ReservationsPage = () => {
                       <span className="">{res.type}</span>
                       <span
                         className={`${
-                          res.status === "Requested"
-                            ? "text-blue-500"
-                            : "text-green-500"
+                          res.status === "REQUESTED" ?
+                          "text-orange-500":
+                          res.status === "TO PAY" ? 
+                          "text-yellow-500" :
+                          res.status === "PAID" ?
+                          "text-blue-500" :
+                          res.status === "DONE" ?
+                          "text-green-500" :
+                          "text-gray-500"
                         }`}
                       >
                         {res.status}
@@ -203,7 +209,7 @@ const ReservationsPage = () => {
 
                       {/* PRICE IF IT IS EVENT OR IN THE FUTURE, MOBILE CART */}
                       <span className={`font-bold text-gray-600`}>
-                        {res.type === "Table" ? "" : `PHP ${res.price.toFixed(2)}`}
+                        {`PHP ${res.price.toFixed(2)}`}
                       </span>
                     </div>
                   </div>

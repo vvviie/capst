@@ -348,16 +348,15 @@ const AdminCheckReservationsPage = () => {
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
-      justify-center items-start md:items-center
+      justify-center items-start md:items-center h-auto md:min-h-[calc(100vh-56px)]
     lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
     >
       {/* MAIN CONTAINER */}
       <div
-        className="w-full flex flex-col gap-10 md:flex-row md:items-start md:justify-center
-      md:h-[805px]"
+        className="w-full flex flex-col gap-10 md:flex-row md:items-start md:justify-center md:min-h-[67vh]"
       >
         {/* REQUESTS CONTAINER */}
-        <div className="w-full flex flex-col gap-2 max-w-[580px]">
+        <div className="w-full flex flex-col gap-2 max-w-[580px] max-h-[720px] overflow-auto pb-3">
           {/* HEADER AND BUTTON FOR SWITCHING RESERVATIONS */}
           <div className="w-full flex gap-2 justify-between items-center">
             {/* HEADER */}
@@ -693,7 +692,7 @@ const AdminCheckReservationsPage = () => {
         </div>
 
         {/* BOOKED RESERVATIONS CONTAINER */}
-        <div className="flex flex-col gap-2 max-w-[580px]">
+        <div className="flex flex-col gap-2 max-w-[580px] max-h-[720px] overflow-auto pb-3">
           {/* HEADER AND DATE FILTER CONTAINER */}
           <div className="w-full flex gap-2 items-center justify-between">
             {/* HEADER */}
