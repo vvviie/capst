@@ -627,7 +627,7 @@ const ReservationPage = () => {
                     name="timeHour"
                     id="inputTimeHour"
                     type="number"
-                    placeholder="Hour (12-19)"
+                    placeholder="Hour (12-7)"
                     min={12}
                     max={19}
                     required

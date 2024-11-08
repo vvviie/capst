@@ -1,56 +1,59 @@
 "use client";
 import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Link from "next/link";
-import React, { useState } from "react";
-
-let tel = "(046)1234567";
-
-let socials = [
-    {
-        name: "Facebook",
-        active: true,
-        icon: "fa-brands fa-facebook-f",
-        url: "https://www.facebook.com/fikastalle/",
-    },
-    {
-        name: "Messenger",
-        active: true,
-        icon: "fab fa-facebook-messenger",
-        url: "https://www.facebook.com/fikastalle/",
-    },
-    {
-        name: "Instagram",
-        active: true,
-        icon: "fa-brands fa-instagram",
-        url: "https://www.instagram.com/fikastalle.fikakafe/",
-    },
-    {
-        name: "Tiktok",
-        active: true,
-        icon: "fa-brands fa-tiktok",
-        url: "https://www.tiktok.com/@fikastalle",
-    },
-    {
-        name: "Email",
-        active: true,
-        icon: "fa-solid fa-envelope",
-        url: "mailto:emailaddressngfikastalle@gmail.com",
-    },
-];
+import React, { useState, useEffect } from "react";
+import { db } from "@/app/firebase"; // Adjust the import based on your file structure
+import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
 
 const FooterMaintenancePage = () => {
     const [open, setOpen] = useState(false);
-
-    //   PARA LANG SA POP-UP KAPAG NAG-UPDATE BUTTON
     const [isPopupVisible, setIsPopupVisible] = useState(false);
+    
+    // State to hold telephone and social media URLs
+    const [tel, setTel] = useState("");
+    const [socials, setSocials] = useState([]);
 
-    //   PARA LANG SA POP-UP KAPAG NAG-UPDATE BUTTON
-    const handleSubmit = () => {
-        setIsPopupVisible(true);
+    // Fetch existing footer data from Firestore on component mount
+    useEffect(() => {
+        const fetchFooterData = async () => {
+            const docRef = doc(db, "webContent", "footerSection"); // Adjust the path as necessary
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setTel(data.tel);
+                setSocials(data.socials);
+            } else {
+                console.log("No such document!");
+                // Initialize with empty data if no document exists
+                setTel("");
+                setSocials([]);
+            }
+        };
 
-        setTimeout(() => {
-            setIsPopupVisible(false);
-        }, 750);
+        fetchFooterData();
+    }, []);
+
+    const handleSubmit = async () => {
+        try {
+            const footerData = {
+                tel: tel,
+                socials: socials,
+            };
+
+            // Send data to Firestore
+            await setDoc(doc(db, "webContent", "footerSection"), footerData); // Adjust the path as necessary
+
+            // Log the updated data
+            console.log("Document written with ID: ", footerData);
+
+            // Show popup message
+            setIsPopupVisible(true);
+            setTimeout(() => {
+                setIsPopupVisible(false);
+            }, 750);
+        } catch (error) {
+            console.error("Error adding document: ", error);
+        }
     };
 
     return (
@@ -78,7 +81,7 @@ const FooterMaintenancePage = () => {
                 {/* FORM CONTAINER */}
                 <div
                     className="bg-white border-2 border-gray-100 rounded-md shadow-md px-4 pt-2 pb-6
-        flex flex-col gap-2"
+                    flex flex-col gap-2"
                 >
                     {!open ? (
                         // INITIAL DISPLAY
@@ -102,7 +105,7 @@ const FooterMaintenancePage = () => {
                                     </p>
                                 </div>
                                 {/* SOCIALS */}
-                                {socials.map((soc) => (
+                                {socials.map((soc, index) => (
                                     <div className="flex flex-col gap-0.5 w-full" key={soc.name}>
                                         <hr />
                                         <div className="mt-2 w-full flex gap-2 items-center">
@@ -118,8 +121,33 @@ const FooterMaintenancePage = () => {
                                         <select
                                             name="active"
                                             id="selectActive"
-                                            className="border-2 border-gray-100 rounded-md shadow-md text-center w-1/2 mb-4 h-10 font-bold
-                      bg-white text-gray-500"
+                                            className="border-2 border-gray-100 rounded-md shadow-md text-center w-1/2 mb-4 h-10 font-bold bg-white text-gray-500"
+                                            value={soc.active ? "true" : "false"} // Reflect current active status
+                                            onChange={async (e) => {
+                                                const updatedSocials = [...socials];
+                                                updatedSocials[index].active = e.target.value === "true"; // Update active status
+
+                                                // Update state
+                                                setSocials(updatedSocials);
+
+                                                // Optionally, update Firestore directly
+                                                const footerData = {
+                                                    tel: tel,
+                                                    socials: updatedSocials.map(soc => ({
+                                                        name: soc.name,
+                                                        url: soc.url,
+                                                        icon: soc.icon, // Include icon class
+                                                        active: soc.active // Include active status
+                                                    })),
+                                                };
+
+                                                try {
+                                                    await setDoc(doc(db, "webContent", "footerSection"), footerData); // Update Firestore
+                                                    console.log("Document successfully updated!");
+                                                } catch (error) {
+                                                    console.error("Error updating document: ", error);
+                                                }
+                                            }}
                                         >
                                             <option value="true">Active</option>
                                             <option value="false">Inactive</option>
@@ -128,7 +156,7 @@ const FooterMaintenancePage = () => {
                                 ))}
                                 <button
                                     className="w-full bg-orange-950 font-bold text-white h-10 rounded-md shadow-md
-                hover:bg-orange-900 hover:scale-[1.02] duration-200"
+                                    hover:bg-orange-900 hover:scale-[1.02] duration-200"
                                     onClick={() => setOpen(true)}
                                 >
                                     Edit
@@ -157,10 +185,12 @@ const FooterMaintenancePage = () => {
                                         id={`inputTel`}
                                         type="text"
                                         placeholder={`Telephone No.`}
+                                        value={tel}
+                                        onChange={(e) => setTel(e.target.value)}
                                         required
                                     />
                                 </div>
-                                {socials.map((soc) => (
+                                {socials.map((soc, index) => (
                                     <div
                                         key={soc.name}
                                         className="w-full flex flex-col gap-2 items-start justify-center"
@@ -179,25 +209,32 @@ const FooterMaintenancePage = () => {
                                             id={`input${soc.name}`}
                                             type="text"
                                             placeholder={`${soc.name} URL`}
+                                            value={soc.url}
+ onChange={(e) => {
+                                                const updatedSocials = [...socials];
+                                                updatedSocials[index].url = e.target.value;
+                                                setSocials(updatedSocials);
+                                            }}
                                             required
                                         />
-                                        <div className="w-full flex justify-end">
-                                            <select
-                                                name="active"
-                                                id="selectActive"
-                                                className="border-2 border-gray-100 rounded-md shadow-md text-center w-1/2 mb-4 h-10 font-bold
-                      bg-white text-gray-500"
-                                            >
-                                                <option value="true">Active</option>
-                                                <option value="false">Inactive</option>
-                                            </select>
-                                        </div>
+                                        <input
+                                            className="border-2 border-solid border-gray-300 w-full h-10 pl-2 rounded-md bg-white"
+                                            type="text"
+                                            placeholder="Icon class (e.g., fa-facebook-f)"
+                                            value={soc.icon}
+                                            onChange={(e) => {
+                                                const updatedSocials = [...socials];
+                                                updatedSocials[index].icon = e.target.value; // Update icon class
+                                                setSocials(updatedSocials);
+                                            }}
+                                            required
+                                        />
                                     </div>
                                 ))}
                             </div>
 
                             {/* BUTTONS CONTAINER */}
-                            <div className="w-full flex gap-2">
+                            <div className="w-full flex gap-2 mt-4">
                                 <button
                                     className="w-2/3 bg-orange-950 font-bold text-white h-10 rounded-md shadow-md
                 hover:bg-orange-900 hover:scale-[1.02] duration-200"

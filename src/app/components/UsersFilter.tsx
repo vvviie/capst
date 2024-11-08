@@ -1,45 +1,27 @@
+// UsersFilter Component
 "use client";
-
 import Image from "next/image";
 import React, { useState, useEffect, useRef } from "react";
 
-const status = [
-    {
-        id: 1,
-        value: "All",
-    },
-    {
-        id: 2,
-        value: "Regular",
-    },
-    {
-        id: 3,
-        value: "Bronze",
-    },
-    {
-        id: 4,
-        value: "Silver",
-    },
-    {
-        id: 5,
-        value: "Gold",
-    },
-    {
-        id: 6,
-        value: "Diamond",
-    },
+const statusOptions = [
+    { id: 1, value: "All", min: 0, max: Infinity },
+    { id: 2, value: "Regular", min: 0, max: 999 },
+    { id: 3, value: "Bronze", min: 1000, max: 4999 },
+    { id: 4, value: "Silver", min: 5000, max: 9999 },
+    { id: 5, value: "Gold", min: 10000, max: 19999 },
+    { id: 6, value: "Diamond", min: 20000, max: Infinity },
 ];
 
-const UsersFilter = () => {
+const UsersFilter = ({ onFilterChange }) => {
     const [open, setOpen] = useState(false);
-    const formRef = useRef<HTMLFormElement | null>(null);
+    const [selectedStatus, setSelectedStatus] = useState("All");
+    const formRef = useRef(null);
 
-    // CLOSE FORM WHEN CLICK OUTSIDE
-    const handleClickOutside = (event: MouseEvent) => {
-        if (formRef.current && !formRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (event) => {     
+        if (formRef.current && !formRef.current.contains(event.target)) {
             setOpen(false);
         }
-    };
+    };  
 
     useEffect(() => {
         if (open) {
@@ -47,11 +29,14 @@ const UsersFilter = () => {
         } else {
             document.removeEventListener("mousedown", handleClickOutside);
         }
-
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [open]);
+
+    const handleStatusChange = (value) => {
+        setSelectedStatus(value);
+        onFilterChange(value);
+        setOpen(false);
+    };
 
     return (
         <div className="h-6 w-6 cursor-pointer z-10 relative mr-2">
@@ -70,15 +55,14 @@ const UsersFilter = () => {
                     <form
                         ref={formRef}
                         id="drinksFilter"
-                        className="bg-white rounded-md shadow-xl p-8 flex flex-col gap-2 min-w-72 mx-10
-                            max-h-[720px] overflow-auto border-2 border-gray-100 mt-[-200px]"
+                        className="bg-white rounded-md shadow-xl p-8 flex flex-col gap-2 min-w-72 mx-10 max-h-[720px] overflow-auto border-2 border-gray-100 mt-[-200px]"
                     >
-                        <h1 className="`text-xl text-left font-semibold text-orange-950 my-1">
+                        <h1 className="text-xl text-left font-semibold text-orange-950 my-1">
                             Status
                         </h1>
                         <hr />
                         <div className="grid grid-cols-2 sm:grid-cols-3">
-                            {status.map((stat) => (
+                            {statusOptions.map((stat) => (
                                 <div
                                     className="flex items-center justify-start space-x-2 mx-1 my-3"
                                     key={stat.id}
@@ -88,6 +72,8 @@ const UsersFilter = () => {
                                         name="status"
                                         id={`radio${stat.value}`}
                                         className="w-4 h-4"
+                                        checked={selectedStatus === stat.value}
+                                        onChange={() => handleStatusChange(stat.value)}
                                     />
                                     <span className="text-sm text-center">{stat.value}</span>
                                 </div>
@@ -95,9 +81,8 @@ const UsersFilter = () => {
                         </div>
                         <button
                             type="button"
-                            className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4
-                            hover:bg-orange-900 hover:scale-[1.02] duration-300"
-                            onClick={() => setOpen(false)}
+                            className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4 hover:bg-orange-900 hover:scale-[1.02] duration-300"
+                            onClick={() => handleStatusChange(selectedStatus)}
                         >
                             Apply Filter
                         </button>

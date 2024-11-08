@@ -126,7 +126,7 @@ const SignupPage: React.FC = () => {
       const verificationTimeout = setTimeout(() => {
         setMessage("Email verification timed out. Please try again.");
         setMessageColor("red");
-      }, 30000); // 30 seconds timeout
+      }, 150000); // 30 seconds timeout
 
       const verified = await new Promise<boolean>((resolve) => {
         const interval = setInterval(async () => {

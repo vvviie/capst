@@ -182,7 +182,7 @@ const Navbar = () => {
               <Link href="/fkstllvouchers">Vouchers/Promos</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Bookings</Link>
+              <Link href="/fkstllbookings">Bookings</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
               <Link href="/">Orders</Link>
