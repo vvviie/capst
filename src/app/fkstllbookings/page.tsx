@@ -45,6 +45,7 @@ const AdminCheckReservationsPage = () => {
   const [isPaidVisible, setIsPaidVisible] = useState(false);
   const [isCancelVisible, setIsCancelVisible] = useState(false);
   const [isPendingVisible, setIsPendingVisible] = useState(false);
+  const [filterDate, setFilterDate] = useState<string>("");
 
   const handleToPayment = async (id: string) => {
     try {
@@ -176,7 +177,7 @@ const AdminCheckReservationsPage = () => {
   
         // Booking Details - Justified
         const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
-\nJust present this as as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+\nWith the reservation's consumables amounting to PHP ${reservation.totalPrice}, please do note that this would be deducted towards your total bill upon ordering.\n\nJust present this as as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
         doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
   
         doc.autoPrint();
@@ -209,18 +210,31 @@ const AdminCheckReservationsPage = () => {
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
   
-        // Set font for content text to 14px and justified
+        // Set font for general content text to 14px, normal, left-aligned
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
   
-        // Booking Details - Justified
-        const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
-        \nJust present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
-        doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
+        // First part of the booking details text
+        const initialText = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.`;
+        doc.text(initialText, 20, 60, { maxWidth: 170, align: "left" });
   
-        // Add Buffet Chosen details
+        // Bold text for the total bill information
+        const boldText = `Upon reviewing, your total bill to be settled would amount to PHP ${reservation.totalPrice}.`;
+        doc.setFont("helvetica", "bold");
+        doc.text(boldText, 20, 90, { maxWidth: 170, align: "left" });
+  
+        // Reset font to normal for the remaining content
+        doc.setFont("helvetica", "normal");
+        const closingText = `Just present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+        doc.text(closingText, 20, 105, { maxWidth: 170, align: "left" });
+  
+        doc.setFont("helvetica", "normal");
+        const confirText = `Here is the breakdown of your chosen items for ${reservation.packageOffer}:`;
+        doc.text(confirText, 20, 125, { maxWidth: 170, align: "left" });
+  
+        // Add Buffet Chosen details if available
         if (reservation.buffetChosen) {
-          let buffetYPosition = 120; // Start position for the buffet section
+          let buffetYPosition = 135; // Start position for the buffet section
   
           doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
@@ -291,10 +305,7 @@ const AdminCheckReservationsPage = () => {
   
         // Helper function to convert time to 24-hour format and handle time ranges
         const parseDateTime = (date: string, time: string) => {
-          // Extract start time if it's a range (e.g., "12PM to 4PM" -> "12PM")
           const startTime = time.split(" to ")[0];
-  
-          // Parse date and time to a consistent format
           return new Date(`${date} ${convertTo24Hour(startTime)}`);
         };
   
@@ -334,7 +345,20 @@ const AdminCheckReservationsPage = () => {
           }
         });
   
-        setReservations(sortedReservations);
+        const parsedFilterDate = filterDate ? new Date(filterDate) : null;
+
+      const filteredReservations = parsedFilterDate
+        ? sortedReservations.filter((res) => {
+            // Convert dateToBeReserved to a Date object for comparison
+            const reservationDate = res.dateToBeReserved
+              ? new Date(res.dateToBeReserved)
+              : null;
+            // Compare only the date part, ignoring time
+            return reservationDate && reservationDate.toDateString() === parsedFilterDate.toDateString();
+          })
+        : sortedReservations;
+  
+        setReservations(filteredReservations); // Set filtered or all reservations
       },
       (error) => {
         console.error("Error fetching reservations:", error);
@@ -343,7 +367,9 @@ const AdminCheckReservationsPage = () => {
   
     // Clean up the listener when the component unmounts
     return () => unsubscribe();
-  }, []);
+  }, [filterDate]); // Re-run when filterDate changes
+
+
   
   return (
     <div
@@ -424,16 +450,26 @@ const AdminCheckReservationsPage = () => {
                             {resType === "event" ? (
                               <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
                             ) : resType === "table" ? (
-                              <span>{`${res.numberOfPersons} PAX`}</span>
+                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
                             ) : null}
                           </p>
                           <p
-                            className={`text-sm font-semibold text-${
-                              res.status === "PENDING" || res.status === "CANCELLED" || res.status === "REJECTED" ? "red-500" : "blue-500"
-                            } flex gap-1 items-center select-none`}
-                          >
-                            {res.status}
-                          </p>
+                          className={`text-sm font-semibold flex gap-1 items-center select-none ${
+                            res.status === "PENDING" || res.status === "CANCELLED"
+                              ? "text-red-500"
+                              : res.status === "REQUESTED"
+                              ? "text-orange-500"
+                              : res.status === "TO PAY"
+                              ? "text-yellow-500"
+                              : res.status === "PAID"
+                              ? "text-blue-500"
+                              : res.status === "DONE"
+                              ? "text-green-500"
+                              : "text-gray-500" // Default color if no status matches
+                          }`}
+                        >
+                          {res.status}
+                        </p>
                         </div>
 
                         {/* ARROW */}
@@ -570,12 +606,22 @@ const AdminCheckReservationsPage = () => {
                           </p>
                           {/* STATUS */}
                           <p
-                            className={`text-sm font-semibold text-${
-                              res.status === "PENDING" ? "red-500" : "blue-500"
-                            } flex gap-1 items-center select-none`}
-                          >
-                            {res.status}
-                          </p>
+                          className={`text-sm font-semibold flex gap-1 items-center select-none ${
+                            res.status === "PENDING" || res.status === "CANCELLED"
+                              ? "text-red-500"
+                              : res.status === "REQUESTED"
+                              ? "text-orange-500"
+                              : res.status === "TO PAY"
+                              ? "text-yellow-500"
+                              : res.status === "PAID"
+                              ? "text-blue-500"
+                              : res.status === "DONE"
+                              ? "text-green-500"
+                              : "text-gray-500" // Default color if no status matches
+                          }`}
+                        >
+                          {res.status}
+                        </p>
                         </div>
 
                         {/* ARROW */}
@@ -639,7 +685,7 @@ const AdminCheckReservationsPage = () => {
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                        border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() => handleToPayment(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
@@ -647,14 +693,31 @@ const AdminCheckReservationsPage = () => {
                               </button>
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                        hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
                                 onClick={() => handleReject(res.id)}
                               >
                                 Reject
                               </button>
                             </div>
-                          ) : res.status === "DONE" ? (
+                          ) : res.status === "CANCELLED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
+                              <button
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
+                                border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => handleMarkAsPending(res.id)}
+                              >
+                                Mark as Pending
+                              </button>
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          ) : res.status === "DONE" ? (
+                            <div className="flex items-center w-full mt-1">
                               <button
                                 className="w-full h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-blue-400 hover:scale-[1.02] duration-200"
@@ -663,11 +726,11 @@ const AdminCheckReservationsPage = () => {
                                 Print Details
                               </button>
                             </div>
-                          ) : (
+                          ) : res.status !== "REJECTED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                        border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() => handlePaid(res.id)}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
@@ -675,13 +738,13 @@ const AdminCheckReservationsPage = () => {
                               </button>
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                        hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
                                 onClick={() => handleCancel(res.id)}
                               >
                                 Cancel
                               </button>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       )}
                     </div>
@@ -705,6 +768,8 @@ const AdminCheckReservationsPage = () => {
                 type="date"
                 name="dateFilter"
                 id="inputDateFilter"
+                value={filterDate}
+                onChange={(e) => setFilterDate(e.target.value)}
                 className="border-2 border-solid border-gray-200 text-sm sm:text-base w-2/3 max-w-40 text-center
                        text-gray-600 md:text-lg h-10 pl-2 rounded-md bg-gray-50 md:w-full font-semibold pr-2"
               />
