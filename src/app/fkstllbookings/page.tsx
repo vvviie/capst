@@ -225,7 +225,9 @@ const AdminCheckReservationsPage = () => {
             text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200 text-center max-w-40"
                 onChange={handleCategoryChange}
               >
-                <option value="table">Table</option>
+                <option value="table" className="text">
+                  Table
+                </option>
                 <option value="event">Exclusive</option>
               </select>
               <Link
