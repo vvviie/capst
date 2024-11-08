@@ -14,6 +14,7 @@ import {
   deleteDoc,
   getDoc,
 } from "firebase/firestore";
+import AdminReservationFilter from "../components/AdminReservationFilter";
 import jsPDF from "jspdf";
 
 //#region Sample Data
@@ -312,25 +313,27 @@ const AdminCheckReservationsPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-orange-950">
               Requests
             </h1>
-            <div className="w-full flex justify-end items-center gap-1">
-              <select
-                className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
+
+            <select
+              className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
             text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200 text-center max-w-40"
-                onChange={handleCategoryChange}
-              >
-                <option value="table">Table</option>
-                <option value="event">Exclusive</option>
-              </select>
-              <Link
-                href={`/fkstllbookings/${
-                  resType === "table" ? "table" : "event"
-                }`}
-                className="bg-orange-950 rounded-md shadow-md text-white pt-2
-            font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200"
-              >
-                Add
-              </Link>
-            </div>
+              onChange={handleCategoryChange}
+            >
+              <option value="table">Table</option>
+              <option value="event">Exclusive</option>
+            </select>
+          </div>
+          <div className="w-full flex justify-between items-center gap-1">
+            <Link
+              href={`/fkstllbookings/${
+                resType === "table" ? "table" : "event"
+              }`}
+              className="bg-orange-950 rounded-md shadow-md text-white pt-2 text-center
+font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
+            >
+              Add
+            </Link>
+            <AdminReservationFilter />
           </div>
           {/* BOOKING REQUESTS */}
           <div className="w-full flex flex-col gap-2 max-h-[720px]">
