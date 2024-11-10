@@ -554,19 +554,40 @@ const OrdersPage = () => {
                     ))}
 
                     {/* CANCEL BUTTON */}
-                    {(order.status === "TO PAY" || order.status === "PAID") && (
-                      <button
-                        className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md
-                        hover:scale-[1.03] duration-300"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          //console.log("Cancel button clicked");
-                          setOrderToCancel(order.id); // Set the order ID to cancel
-                          setConfirmPopup(true); // Show the confirmation popup
-                        }}
-                      >
-                        Cancel Order
-                      </button>
+                    {order.status === "TO PAY" && (
+                      <div className="w-full flex items-center gap-1">
+                        <button
+                          className={`font-bold bg-white border-2 rounded-md text-gray-500 py-2 shadow-md
+                        hover:scale-[1.03] duration-300 border-gray-100 hover:bg-gray-50 w-2/3 space-x-2
+                        ${order.payment !== "Card" && "hidden"}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            //console.log("Cancel button clicked");
+                            setOrderToCancel(order.id); // Set the order ID to cancel
+                            setConfirmPopup(true); // Show the confirmation popup
+                          }}
+                        >
+                          <i
+                            className="fa fa-credit-card"
+                            aria-hidden="true"
+                          ></i>
+                          <span>Pay with Card</span>
+                        </button>
+                        <button
+                          className={`${
+                            order.payment === "Card" ? "w-1/3" : "w-full"
+                          } font-bold bg-red-500 rounded-md text-white py-2 shadow-md
+                        hover:scale-[1.03] duration-300 border-2 border-red-500`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            //console.log("Cancel button clicked");
+                            setOrderToCancel(order.id); // Set the order ID to cancel
+                            setConfirmPopup(true); // Show the confirmation popup
+                          }}
+                        >
+                          Cancel{order.payment !== "Card" && " Order"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}

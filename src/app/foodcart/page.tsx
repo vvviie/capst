@@ -75,6 +75,8 @@ const CartPage = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
   const [promoType, setPromoType] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
+  const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
+
   const closeVoucherForm = () => {
     if (!voucherApplied) {
       setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
@@ -211,18 +213,18 @@ const CartPage = () => {
         const available = promoData?.available || false;
         const promoType = promoData?.deductionType; // Set the promo type
 
-      // Add more console logs to help debug
-      console.log("Promo Data:", promoData); // Log the whole promo data
-      console.log("Promo Type from promoData:", promoType); // Log promo type
-      setPromoType(promoType); // Set the promo type
+        // Add more console logs to help debug
+        console.log("Promo Data:", promoData); // Log the whole promo data
+        console.log("Promo Type from promoData:", promoType); // Log promo type
+        setPromoType(promoType); // Set the promo type
 
         if (available) {
           let promoDiscount = 0; // Initialize promoDiscount
-        
+
           // Log the subtotal and discount values
           console.log("Initial subtotal:", subtotal);
           console.log("Discount value (should be decimal):", discount);
-        
+
           if (promoType === "percent") {
             promoDiscount = subtotal * discount; // Calculate promoDiscount as a percentage of subtotal
             console.log("Calculated promo discount (percent):", promoDiscount);
@@ -230,35 +232,38 @@ const CartPage = () => {
             promoDiscount = discount; // Fixed discount
             console.log("Applied fixed promo discount:", promoDiscount);
           }
-        
+
           const newTotalCartPrice = subtotal - promoDiscount; // Calculate new total price after discount
-          console.log("New total cart price after discount:", newTotalCartPrice);
-        
+          console.log(
+            "New total cart price after discount:",
+            newTotalCartPrice
+          );
+
           // Resetting voucher states
           setVoucherApplied(false);
           setVoucherDeduction(0);
           setVoucherType("");
           setDiscountedVoucher(0);
-        
+
           // Setting discount percent in state
           setDiscountPercent(discount); // Set the discount value in decimal
-        
+
           // Set discounted promo value
           setDiscountedPromo(Number(promoDiscount.toFixed(2))); // Should reflect the correct promo discount
-        
+
           // Updating total cart price
           setTotalCartPrice(newTotalCartPrice);
           setPromoApplied(true);
           setAppliedPromoCode(promoCode);
-          
+
           // Display success message
           setShowSuccess(true);
           setTimeout(() => {
             setShowSuccess(false);
           }, 3000);
-    
+
           //await updateDoc(promoDocRef, {
-            //timesUsed: (promoData?.timesUsed || 0) + 1,
+          //timesUsed: (promoData?.timesUsed || 0) + 1,
           //});
 
           openDiscountPromoForm(false);
@@ -570,57 +575,57 @@ const CartPage = () => {
   //#endregion
 
   //#region Handling of Options to be Passed in Orders
-const handleSubmitOrder = () => {
-  let finalTotal = subtotal; // Start with the initial subtotal
+  const handleSubmitOrder = () => {
+    let finalTotal = subtotal; // Start with the initial subtotal
 
-  // Check if a promo has been applied
-  if (promoApplied) {
-    let promoDiscount = 0; // Initialize promoDiscount
+    // Check if a promo has been applied
+    if (promoApplied) {
+      let promoDiscount = 0; // Initialize promoDiscount
 
-    // Calculate promo discount based on type
-    if (promoType === "percent") {
-      promoDiscount = subtotal * discountPercent; // Calculate percentage discount
-    } else {
-      promoDiscount = discountPercent; // Use fixed discount
+      // Calculate promo discount based on type
+      if (promoType === "percent") {
+        promoDiscount = subtotal * discountPercent; // Calculate percentage discount
+      } else {
+        promoDiscount = discountPercent; // Use fixed discount
+      }
+
+      setPromoDiscount(promoDiscount); // Set the calculated promo discount
+      finalTotal -= promoDiscount; // Reduce finalTotal by promoDiscount
     }
 
-    setPromoDiscount(promoDiscount); // Set the calculated promo discount
-    finalTotal -= promoDiscount; // Reduce finalTotal by promoDiscount
-  }
+    // Check if a voucher has been applied
+    if (voucherApplied) {
+      let voucherDiscount = 0; // Initialize voucherDiscount
 
-  // Check if a voucher has been applied
-  if (voucherApplied) {
-    let voucherDiscount = 0; // Initialize voucherDiscount
-
-    // Calculate voucher discount based on type
-    if (voucherType === "percent") {
-      voucherDiscount = finalTotal * voucherDeduction; // Calculate percentage discount
-      finalTotal -= voucherDiscount; // Reduce finalTotal by voucherDiscount
-    } else if (voucherType === "minus") {
-      finalTotal -= voucherDeduction; // Use fixed discount
+      // Calculate voucher discount based on type
+      if (voucherType === "percent") {
+        voucherDiscount = finalTotal * voucherDeduction; // Calculate percentage discount
+        finalTotal -= voucherDiscount; // Reduce finalTotal by voucherDiscount
+      } else if (voucherType === "minus") {
+        finalTotal -= voucherDeduction; // Use fixed discount
+      }
     }
-  }
 
-  // Ensure finalTotal does not go below zero
-  finalTotal = Math.max(finalTotal, 0);
+    // Ensure finalTotal does not go below zero
+    finalTotal = Math.max(finalTotal, 0);
 
-  // Prepare order data to be sent
-  const orderData = {
-    modeOfPayment: modeOfPayment,
-    selectedOption: selectedOption,
-    selectedServeTime: selectedServeTime,
-    finalSubtotal: finalTotal,
+    // Prepare order data to be sent
+    const orderData = {
+      modeOfPayment: modeOfPayment,
+      selectedOption: selectedOption,
+      selectedServeTime: selectedServeTime,
+      finalSubtotal: finalTotal,
+    };
+
+    // Proceed with completing the order
+    handleCompleteOrder(
+      orderData.modeOfPayment,
+      orderData.selectedOption,
+      orderData.selectedServeTime,
+      orderData.finalSubtotal
+    );
   };
-
-  // Proceed with completing the order
-  handleCompleteOrder(
-    orderData.modeOfPayment,
-    orderData.selectedOption,
-    orderData.selectedServeTime,
-    orderData.finalSubtotal
-  );
-};
-//#endregion
+  //#endregion
 
   //#region Handling of Completion of Orders
   const handleCompleteOrder = async (
@@ -718,25 +723,28 @@ const handleSubmitOrder = () => {
 
       const completedOrdersRef = doc(db, "completedOrders", customOrderId);
 
-      const promoDiscounted = typeof discountedPromo === 'number' && !isNaN(discountedPromo)
-        ? parseFloat(discountedPromo.toString()) // Ensure it's treated as a number
-        : 0;
+      const promoDiscounted =
+        typeof discountedPromo === "number" && !isNaN(discountedPromo)
+          ? parseFloat(discountedPromo.toString()) // Ensure it's treated as a number
+          : 0;
 
-        console.log("Final Document Data:", {
-          user: userEmail,
-          items: completedOrderItems,
-          totalItems: totalItems,
-          subtotal: finalSubtotal || 0,
-          totalCartPrice: totalCartPrice,
-          modeOfPayment: modeOfPayment,
-          selectedOption: selectedOption,
-          selectedServeTime: serveTime,
-          cartId: originalOrderId,
-          dateCreated: date,
-          timeCreated: time,
-          status: "TO PAY",
-          promoDiscounted: promoDiscounted,
-          voucherDiscounted: discountedVoucher ? Math.round(discountedVoucher * 100) / 100 : 0,
+      console.log("Final Document Data:", {
+        user: userEmail,
+        items: completedOrderItems,
+        totalItems: totalItems,
+        subtotal: finalSubtotal || 0,
+        totalCartPrice: totalCartPrice,
+        modeOfPayment: modeOfPayment,
+        selectedOption: selectedOption,
+        selectedServeTime: serveTime,
+        cartId: originalOrderId,
+        dateCreated: date,
+        timeCreated: time,
+        status: "TO PAY",
+        promoDiscounted: promoDiscounted,
+        voucherDiscounted: discountedVoucher
+          ? Math.round(discountedVoucher * 100) / 100
+          : 0,
       });
 
       await setDoc(completedOrdersRef, {
@@ -1295,33 +1303,70 @@ const handleSubmitOrder = () => {
                 <div className="flex justify-between items-center px-4">
                   <span>Voucher</span>
                   <span className="font-bold text-lg text-gray-600">
-                    -P{discountedVoucher}
+                    -PHP {discountedVoucher}
                   </span>
                 </div>
               )}
             </div>
 
-            {/* CODE AND VOUCHER BUTTON CONTAINER */}
-            <div className="w-full flex gap-2 items-center">
-              {/* VOUCHER BUTTON */}
-              <button
-                onClick={() => openVoucherForm(true)}
-                className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
-                py-2 rounded-lg mt-3 mb-2 flex-1 flex items-center justify-center
-                hover:scale-[1.03] duration-300 hover:bg-gray-50"
-              >
-                <i className="fa-solid fa-ticket text-gray-600 text-xl"></i>
-                <span className="font-bold text-lg"> Use Voucher</span>
-              </button>
-              {/* PROMO CODE BUTTON */}
-              <button
-                onClick={() => openDiscountPromoForm(true)}
-                className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
-                py-2 rounded-lg mt-3 mb-2 flex-1 hover:scale-[1.03] duration-300 hover:bg-gray-50"
-              >
-                <span className="font-bold text-lg">!% Use Promo Code</span>
-              </button>
-            </div>
+            {!openSeniorPWD ? (
+              // CODE AND VOUCHER BUTTON CONTAINER
+              <div className="w-full flex gap-2 items-center">
+                {/* VOUCHER BUTTON */}
+                <button
+                  onClick={() => openVoucherForm(true)}
+                  className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
+              py-2 rounded-lg mt-3 mb-2 flex-1 flex items-center justify-center
+              hover:scale-[1.03] duration-300 hover:bg-gray-50"
+                >
+                  <i className="fa-solid fa-ticket text-gray-600 text-xl"></i>
+                  <span className="font-bold text-lg"> Use Voucher</span>
+                </button>
+                {/* PROMO CODE BUTTON */}
+                <button
+                  onClick={() => openDiscountPromoForm(true)}
+                  className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
+              py-2 rounded-lg mt-3 mb-2 flex-1 hover:scale-[1.03] duration-300 hover:bg-gray-50"
+                >
+                  <span className="font-bold text-lg">!% Use Promo Code</span>
+                </button>
+              </div>
+            ) : (
+              // SENIOR CITIZEN / PWD ID UPLOAD
+              <div className="w-full flex flex-col gap-2 items-center mt-4">
+                <span className=" text-gray-500 w-full text-left">
+                  Upload Image of ID
+                </span>
+                <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
+                  <Image src={""} alt="" fill className="object-cover" />
+                </div>
+                <div className="w-full flex gap-2 items-center">
+                  <div className="w-full flex flex-col gap-1 items-center justify-center">
+                    <label
+                      className="text-orange-950 text-sm w-full text-left space-x-1"
+                      htmlFor="imageName"
+                    >
+                      <span>Image File Name</span>
+                    </label>
+                    <div className="w-full flex items-center gap-1">
+                      <input
+                        className="border-2 border-solid border-orange-900 w-2/3 h-10 pl-4 rounded-md bg-orange-50"
+                        name="imageName"
+                        id="imageName"
+                        type="text"
+                        placeholder="Image Name"
+                      />
+                      <button
+                        className="h-10 w-1/3 bg-white border-2 border-gray-100 shadow-md rounded-md font-bold
+                      text-gray-600"
+                      >
+                        Upload
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* PROMO CODE FORM */}
             {discountPromoForm && (
@@ -1471,6 +1516,29 @@ const handleSubmitOrder = () => {
               </div>
             )}
 
+            <button
+              className={`${
+                openSeniorPWD
+                  ? "bg-red-500 hover:bg-red-400 text-white"
+                  : "bg-white border-2 border-gray-50 text-gray-600 hover:bg-gray-50"
+              } hover:scale-[1.02]
+              shadow-md rounded-md w-full h-12 font-bold flex items-center gap-2 justify-center mt-2 duration-200`}
+              onClick={() => {
+                openSeniorPWD
+                  ? setOpenSeniorPWD(false)
+                  : setOpenSeniorPWD(true);
+              }}
+            >
+              {openSeniorPWD ? (
+                <span>Cancel Using Senior / P.W.D. ID</span>
+              ) : (
+                <>
+                  <i className="fa fa-id-card text-lg" aria-hidden="true"></i>
+                  <span>Use Senior Citizen / P.W.D. ID</span>
+                </>
+              )}
+            </button>
+
             {/* PAYMENT OPTIONS CONTAINER */}
             <div className="flex flex-col gap-2">
               <h1 className="text-gray-500">Payment Options</h1>
@@ -1517,21 +1585,21 @@ const handleSubmitOrder = () => {
               <div className="flex justify-between items-center px-4 py-4">
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
-                {"PHP "}
+                  {"PHP "}
                   {(() => {
                     let finalTotal = subtotal; // Start with the subtotal
 
                     /// Apply promo discount if applicable
-                  if (promoApplied) {
-                    let promoDiscount = 0; // Initialize promoDiscount
-                    if (promoType === "percent") {
-                      promoDiscount = subtotal * discountPercent; // Calculate percentage discount
-                    } else {
-                      promoDiscount = discountPercent; // Fixed discount amount
+                    if (promoApplied) {
+                      let promoDiscount = 0; // Initialize promoDiscount
+                      if (promoType === "percent") {
+                        promoDiscount = subtotal * discountPercent; // Calculate percentage discount
+                      } else {
+                        promoDiscount = discountPercent; // Fixed discount amount
+                      }
+                      finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+                      //console.log("Applied promo discount:", promoDiscount);
                     }
-                    finalTotal -= promoDiscount; // Deduct promo discount from subtotal
-                    //console.log("Applied promo discount:", promoDiscount);
-                  }
 
                     // Apply voucher discount if applicable
                     if (voucherApplied) {
