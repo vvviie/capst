@@ -5,7 +5,16 @@ import { useState, useEffect } from "react";
 import CheckoutPopup from "../components/CheckoutPopup";
 import Link from "next/link";
 import { db } from "../firebase";
-import { collection, getDocs, doc, updateDoc, onSnapshot, deleteDoc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  onSnapshot,
+  deleteDoc,
+  getDoc,
+} from "firebase/firestore";
+import AdminReservationFilter from "../components/AdminReservationFilter";
 import jsPDF from "jspdf";
 
 //#region Sample Data
@@ -51,9 +60,9 @@ const AdminCheckReservationsPage = () => {
   const handleToPayment = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "TO PAY"
+        status: "TO PAY",
       });
-      
+
       setIsToPaymentVisible(true);
       setTimeout(() => {
         setIsToPaymentVisible(false);
@@ -62,13 +71,13 @@ const AdminCheckReservationsPage = () => {
       console.error("Error updating status to 'TO PAY':", error);
     }
   };
-  
+
   const handleReject = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "REJECTED"
+        status: "REJECTED",
       });
-  
+
       setIsRejectedVisible(true);
       setTimeout(() => {
         setIsRejectedVisible(false);
@@ -77,13 +86,13 @@ const AdminCheckReservationsPage = () => {
       console.error("Error updating status to 'REJECTED':", error);
     }
   };
-  
+
   const handlePaid = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "PAID"
+        status: "PAID",
       });
-  
+
       setIsPaidVisible(true);
       setTimeout(() => {
         setIsPaidVisible(false);
@@ -96,9 +105,9 @@ const AdminCheckReservationsPage = () => {
   const handleMarkAsPending = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "PENDING"
+        status: "PENDING",
       });
-  
+
       setIsPendingVisible(true);
       setTimeout(() => {
         setIsPendingVisible(false);
@@ -107,13 +116,13 @@ const AdminCheckReservationsPage = () => {
       console.error("Error updating status to 'PENDING':", error);
     }
   };
-  
+
   const handleCancel = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "CANCELLED"
+        status: "CANCELLED",
       });
-  
+
       setIsCancelVisible(true);
       setTimeout(() => {
         setIsCancelVisible(false);
@@ -122,13 +131,13 @@ const AdminCheckReservationsPage = () => {
       console.error("Error updating status to 'CANCELLED':", error);
     }
   };
-  
+
   const handleDelete = async (id: string) => {
     try {
       // Delete the document that matches the provided ID
       await deleteDoc(doc(db, "tableReservations", id));
   
-      setIsDeleteVisible(true);
+      setIsCancelVisible(true);
       setTimeout(() => {
         setIsDeleteVisible(false);
       }, 750);
@@ -140,9 +149,9 @@ const AdminCheckReservationsPage = () => {
   const handleMarkAsDone = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "DONE"
+        status: "DONE",
       });
-  
+
       setIsMarkAsDoneVisible(true);
       setTimeout(() => {
         setIsMarkAsDoneVisible(false);
@@ -155,120 +164,39 @@ const AdminCheckReservationsPage = () => {
   const handlePrintDetails = async (id: string) => {
     try {
       const docSnap = await getDoc(doc(db, "tableReservations", id));
-  
+
       if (docSnap.exists()) {
         const reservation = docSnap.data();
-  
+
         const doc = new jsPDF();
-        
+
         // Set font for title, address, and details to 16px, bold, centered
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-  
+
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
-  
+        doc.text(
+          "Brgy. Iba, Silang, Cavite, 4118",
+          105,
+          30,
+          null,
+          null,
+          "center"
+        );
+
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
-  
+
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
-  
+
         // Booking Details - Justified
         const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
 \nWith the reservation's consumables amounting to PHP ${reservation.totalPrice}, please do note that this would be deducted towards your total bill upon ordering.\n\nJust present this as as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
         doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
-  
-        doc.autoPrint();
-        doc.output("dataurlnewwindow");
-      } else {
-        console.log("No such document!");
-      }
-    } catch (error) {
-      console.error("Error handling reservation details:", error);
-    }
-  };
 
-  const handlePrintEventDetails = async (id: string) => {
-    try {
-      const docSnap = await getDoc(doc(db, "tableReservations", id));
-  
-      if (docSnap.exists()) {
-        const reservation = docSnap.data();
-  
-        const doc = new jsPDF();
-  
-        // Set font for title, address, and details to 16px, bold, centered
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-  
-        // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
-  
-        // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
-  
-        // Set font for general content text to 14px, normal, left-aligned
-        doc.setFontSize(12);
-        doc.setFont("helvetica", "normal");
-  
-        // First part of the booking details text
-        const initialText = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.`;
-        doc.text(initialText, 20, 60, { maxWidth: 170, align: "left" });
-  
-        // Bold text for the total bill information
-        const boldText = `Upon reviewing, your total bill to be settled would amount to PHP ${reservation.totalPrice}.`;
-        doc.setFont("helvetica", "bold");
-        doc.text(boldText, 20, 90, { maxWidth: 170, align: "left" });
-  
-        // Reset font to normal for the remaining content
-        doc.setFont("helvetica", "normal");
-        const closingText = `Just present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
-        doc.text(closingText, 20, 105, { maxWidth: 170, align: "left" });
-  
-        doc.setFont("helvetica", "normal");
-        const confirText = `Here is the breakdown of your chosen items for ${reservation.packageOffer}:`;
-        doc.text(confirText, 20, 125, { maxWidth: 170, align: "left" });
-  
-        // Add Buffet Chosen details if available
-        if (reservation.buffetChosen) {
-          let buffetYPosition = 135; // Start position for the buffet section
-  
-          doc.setFontSize(12);
-          doc.setFont("helvetica", "bold");
-          doc.text("Buffet Chosen:", 20, buffetYPosition); // Buffet section title
-          buffetYPosition += 10;
-  
-          // Iterate over buffet categories and their items
-          Object.entries(reservation.buffetChosen).forEach(([category, items], index) => {
-            // Ensure items is a string and split it into an array if needed
-            let itemsArray = [];
-            if (typeof items === 'string') {
-              itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
-            } else if (Array.isArray(items)) {
-              itemsArray = items; // If it's already an array, use it directly
-            }
-  
-            // Add category title
-            doc.setFont("helvetica", "bold");
-            doc.text(category, 20, buffetYPosition);
-            buffetYPosition += 8;
-  
-            // Add items under the category
-            doc.setFont("helvetica", "normal");
-            itemsArray.forEach((item, itemIndex) => {
-              doc.text(`- ${item}`, 30, buffetYPosition);
-              buffetYPosition += 6;
-            });
-  
-            // Add spacing after each category
-            buffetYPosition += 6;
-          });
-        }
-  
         doc.autoPrint();
         doc.output("dataurlnewwindow");
       } else {
@@ -278,7 +206,6 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
-  
   
 
   const handleCategoryChange = (
@@ -303,74 +230,71 @@ const AdminCheckReservationsPage = () => {
           id: doc.id,
           ...doc.data(),
         })) as res[];
-  
+
         // Helper function to convert time to 24-hour format and handle time ranges
         const parseDateTime = (date: string, time: string) => {
           const startTime = time.split(" to ")[0];
+  
+          // Parse date and time to a consistent format
           return new Date(`${date} ${convertTo24Hour(startTime)}`);
         };
-  
+
         // Helper function to convert "4:30PM" or "12PM" to "16:30" or "12:00" (24-hour time)
         const convertTo24Hour = (time: string) => {
           const [timePart, modifier] = time.split(/(AM|PM)/i);
           let [hours, minutes] = timePart.split(":").map(Number);
           if (!minutes) minutes = 0;
-  
+
           if (modifier.toUpperCase() === "PM" && hours < 12) {
             hours += 12;
           }
           if (modifier.toUpperCase() === "AM" && hours === 12) {
             hours = 0;
           }
-          return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+          return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+            2,
+            "0"
+          )}`;
         };
-  
+
         // Sort reservations by parsed date and time in descending order
         const sortedReservations = fetchedReservations.sort((a, b) => {
-          const dateA = a.dateToBeReserved && a.timeToBeReserved
-            ? parseDateTime(a.dateToBeReserved, a.timeToBeReserved).getTime()
-            : 0;
-          const dateB = b.dateToBeReserved && b.timeToBeReserved
-            ? parseDateTime(b.dateToBeReserved, b.timeToBeReserved).getTime()
-            : 0;
-  
+          const dateA =
+            a.dateToBeReserved && a.timeToBeReserved
+              ? parseDateTime(a.dateToBeReserved, a.timeToBeReserved).getTime()
+              : 0;
+          const dateB =
+            b.dateToBeReserved && b.timeToBeReserved
+              ? parseDateTime(b.dateToBeReserved, b.timeToBeReserved).getTime()
+              : 0;
+
           return dateB - dateA; // Descending order
         });
-  
+
         console.log("Sorted Reservations:", sortedReservations); // Log to verify order
-  
+
         // Log the buffetChosen if it exists
         sortedReservations.forEach((res) => {
           if (res.buffetChosen) {
-            console.log("Buffet Chosen for Reservation ID", res.id, ":", res.buffetChosen);
+            console.log(
+              "Buffet Chosen for Reservation ID",
+              res.id,
+              ":",
+              res.buffetChosen
+            );
           }
         });
   
-        const parsedFilterDate = filterDate ? new Date(filterDate) : null;
-
-      const filteredReservations = parsedFilterDate
-        ? sortedReservations.filter((res) => {
-            // Convert dateToBeReserved to a Date object for comparison
-            const reservationDate = res.dateToBeReserved
-              ? new Date(res.dateToBeReserved)
-              : null;
-            // Compare only the date part, ignoring time
-            return reservationDate && reservationDate.toDateString() === parsedFilterDate.toDateString();
-          })
-        : sortedReservations;
-  
-        setReservations(filteredReservations); // Set filtered or all reservations
+        setReservations(sortedReservations);
       },
       (error) => {
         console.error("Error fetching reservations:", error);
       }
     );
-  
+
     // Clean up the listener when the component unmounts
     return () => unsubscribe();
-  }, [filterDate]); // Re-run when filterDate changes
-
-
+  }, []);
   
   return (
     <div
@@ -390,25 +314,27 @@ const AdminCheckReservationsPage = () => {
             <h1 className="text-xl sm:text-2xl font-bold text-orange-950">
               Requests
             </h1>
-            <div className="w-full flex justify-end items-center gap-1">
-              <select
-                className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
+
+            <select
+              className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
             text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200 text-center max-w-40"
-                onChange={handleCategoryChange}
-              >
-                <option value="table">Table</option>
-                <option value="event">Exclusive</option>
-              </select>
-              <Link
-                href={`/fkstllbookings/${
-                  resType === "table" ? "table" : "event"
-                }`}
-                className="bg-orange-950 rounded-md shadow-md text-white pt-2
-            font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200"
-              >
-                Add
-              </Link>
-            </div>
+              onChange={handleCategoryChange}
+            >
+              <option value="table">Table</option>
+              <option value="event">Exclusive</option>
+            </select>
+          </div>
+          <div className="w-full flex justify-between items-center gap-1">
+            <Link
+              href={`/fkstllbookings/${
+                resType === "table" ? "table" : "event"
+              }`}
+              className="bg-orange-950 rounded-md shadow-md text-white pt-2 text-center
+font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
+            >
+              Add
+            </Link>
+            <AdminReservationFilter />
           </div>
           {/* BOOKING REQUESTS */}
           <div className="w-full flex flex-col gap-2 max-h-[720px]">
@@ -449,28 +375,22 @@ const AdminCheckReservationsPage = () => {
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
                             {resType === "event" ? (
-                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                              <span>{`${res.numberOfPersons} PAX - PHP ${
+                                res.totalPrice
+                                  ? res.totalPrice.toFixed(2)
+                                  : "0.00"
+                              }`}</span>
                             ) : resType === "table" ? (
                               <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
                             ) : null}
                           </p>
                           <p
-                          className={`text-sm font-semibold flex gap-1 items-center select-none ${
-                            res.status === "PENDING" || res.status === "CANCELLED"
-                              ? "text-red-500"
-                              : res.status === "REQUESTED"
-                              ? "text-orange-500"
-                              : res.status === "TO PAY"
-                              ? "text-yellow-500"
-                              : res.status === "PAID"
-                              ? "text-blue-500"
-                              : res.status === "DONE"
-                              ? "text-green-500"
-                              : "text-gray-500" // Default color if no status matches
-                          }`}
-                        >
-                          {res.status}
-                        </p>
+                            className={`text-sm font-semibold text-${
+                              res.status === "PENDING" || res.status === "CANCELLED" || res.status === "REJECTED" ? "red-500" : "blue-500"
+                            } flex gap-1 items-center select-none`}
+                          >
+                            {res.status}
+                          </p>
                         </div>
 
                         {/* ARROW */}
@@ -494,7 +414,7 @@ const AdminCheckReservationsPage = () => {
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
-                          
+
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
@@ -617,7 +537,11 @@ const AdminCheckReservationsPage = () => {
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
                             {resType === "event" ? (
-                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                              <span>{`${res.numberOfPersons} PAX - PHP ${
+                                res.totalPrice
+                                  ? res.totalPrice.toFixed(2)
+                                  : "0.00"
+                              }`}</span>
                             ) : resType === "table" ? (
                               <span>{`${res.numberOfPersons} PAX`}</span>
                             ) : null}
@@ -665,38 +589,53 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                          {res.buffetChosen && Object.entries(res.buffetChosen).map(([category, items], index) => {
-                          console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
+                            {res.buffetChosen &&
+                              Object.entries(res.buffetChosen).map(
+                                ([category, items], index) => {
+                                  console.log(
+                                    "Buffet Category:",
+                                    category,
+                                    "Items:",
+                                    items
+                                  ); // Log each buffet category and its items
 
-                          // Ensure items is a string and split it into an array if needed
-                          let itemsArray = [];
-                          if (typeof items === 'string') {
-                            itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
-                          } else if (Array.isArray(items)) {
-                            itemsArray = items; // If it's already an array, use it directly
-                          } else {
-                            console.warn(`Expected 'items' to be a string or an array but got:`, items);
-                          }
+                                  // Ensure items is a string and split it into an array if needed
+                                  let itemsArray = [];
+                                  if (typeof items === "string") {
+                                    itemsArray = items
+                                      .split(",")
+                                      .map((item) => item.trim()); // Split by commas and trim extra spaces
+                                  } else if (Array.isArray(items)) {
+                                    itemsArray = items; // If it's already an array, use it directly
+                                  } else {
+                                    console.warn(
+                                      `Expected 'items' to be a string or an array but got:`,
+                                      items
+                                    );
+                                  }
 
-
-                          return (
-                            <div key={index} className="pl-2 w-full flex flex-col gap-2">
-                              <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
-                                {category}
-                              </h1>
-                              <div className="w-full flex flex-wrap gap-1">
-                                {itemsArray.map((item, itemIndex) => (
-                                  <span
-                                    key={itemIndex}
-                                    className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
-                                  >
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="pl-2 w-full flex flex-col gap-2"
+                                    >
+                                      <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
+                                        {category}
+                                      </h1>
+                                      <div className="w-full flex flex-wrap gap-1">
+                                        {itemsArray.map((item, itemIndex) => (
+                                          <span
+                                            key={itemIndex}
+                                            className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
+                                          >
+                                            {item}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              )}
                           </div>
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
@@ -855,7 +794,11 @@ const AdminCheckReservationsPage = () => {
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
                             {resType === "event" ? (
-                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                              <span>{`${res.numberOfPersons} PAX - PHP ${
+                                res.totalPrice
+                                  ? res.totalPrice.toFixed(2)
+                                  : "0.00"
+                              }`}</span>
                             ) : resType === "table" ? (
                               <span>{`${res.numberOfPersons} PAX`}</span>
                             ) : null}
@@ -935,7 +878,11 @@ const AdminCheckReservationsPage = () => {
                           <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                             <i className="fa-solid fa-people-group text-sm"></i>
                             {resType === "event" ? (
-                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                              <span>{`${res.numberOfPersons} PAX - PHP ${
+                                res.totalPrice
+                                  ? res.totalPrice.toFixed(2)
+                                  : "0.00"
+                              }`}</span>
                             ) : resType === "table" ? (
                               <span>{`${res.numberOfPersons} PAX`}</span>
                             ) : null}
@@ -965,37 +912,53 @@ const AdminCheckReservationsPage = () => {
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
-                          {res.buffetChosen && Object.entries(res.buffetChosen).map(([category, items], index) => {
-                          console.log("Buffet Category:", category, "Items:", items); // Log each buffet category and its items
+                            {res.buffetChosen &&
+                              Object.entries(res.buffetChosen).map(
+                                ([category, items], index) => {
+                                  console.log(
+                                    "Buffet Category:",
+                                    category,
+                                    "Items:",
+                                    items
+                                  ); // Log each buffet category and its items
 
-                          // Ensure items is a string and split it into an array if needed
-                          let itemsArray = [];
-                          if (typeof items === 'string') {
-                            itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
-                          } else if (Array.isArray(items)) {
-                            itemsArray = items; // If it's already an array, use it directly
-                          } else {
-                            console.warn(`Expected 'items' to be a string or an array but got:`, items);
-                          }
+                                  // Ensure items is a string and split it into an array if needed
+                                  let itemsArray = [];
+                                  if (typeof items === "string") {
+                                    itemsArray = items
+                                      .split(",")
+                                      .map((item) => item.trim()); // Split by commas and trim extra spaces
+                                  } else if (Array.isArray(items)) {
+                                    itemsArray = items; // If it's already an array, use it directly
+                                  } else {
+                                    console.warn(
+                                      `Expected 'items' to be a string or an array but got:`,
+                                      items
+                                    );
+                                  }
 
-                          return (
-                            <div key={index} className="pl-2 w-full flex flex-col gap-2">
-                              <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
-                                {category}
-                              </h1>
-                              <div className="w-full flex flex-wrap gap-1">
-                                {itemsArray.map((item, itemIndex) => (
-                                  <span
-                                    key={itemIndex}
-                                    className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
-                                  >
-                                    {item}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="pl-2 w-full flex flex-col gap-2"
+                                    >
+                                      <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
+                                        {category}
+                                      </h1>
+                                      <div className="w-full flex flex-wrap gap-1">
+                                        {itemsArray.map((item, itemIndex) => (
+                                          <span
+                                            key={itemIndex}
+                                            className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
+                                          >
+                                            {item}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              )}
                           </div>
                           {/* BUTTON CONTAINER */}
                           <div className="flex gap-2 items-center w-full mt-1">
