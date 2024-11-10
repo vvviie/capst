@@ -137,7 +137,7 @@ const AdminCheckReservationsPage = () => {
       // Delete the document that matches the provided ID
       await deleteDoc(doc(db, "tableReservations", id));
   
-      setIsCancelVisible(true);
+      setIsDeleteVisible(true);
       setTimeout(() => {
         setIsDeleteVisible(false);
       }, 750);

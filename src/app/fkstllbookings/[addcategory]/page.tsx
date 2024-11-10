@@ -11,7 +11,7 @@ import { auth, db } from "@/app/firebase";
 import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, doc, setDoc, addDoc } from "firebase/firestore";
+import { collection, doc, setDoc, addDoc, getDoc } from "firebase/firestore";
 
 const AdminReservationPage = () => {
   //#region Global Variables
@@ -22,6 +22,9 @@ const AdminReservationPage = () => {
   const slug = pathname.split("/").pop();
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [reservedByUser, setReservedByUser] = useState<string | null>(null);
+  const [reservedDate, setReservedDate] = useState<string | null>(null);
+
   const router = useRouter();
 
   const [minDate, setMinDate] = useState(""); // used by "table" & "event"
@@ -45,6 +48,7 @@ const AdminReservationPage = () => {
   const [totalHours, setTotalHours] = useState(0);
   const packagePricePerPerson = 550; // Price per person
   const [totalPrice, setTotalPrice] = useState(0);
+  const [totalPriceT, setTotalPriceT] = useState(0);
   const [chosenItems, setChosenItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
@@ -54,7 +58,7 @@ const AdminReservationPage = () => {
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      const loggedIn = !!authUser && authUser.emailVerified;
+      const loggedIn = !!authUser;
       setIsLoggedIn(loggedIn);
       setUserEmail(authUser?.email || null);
     });
@@ -70,7 +74,7 @@ const AdminReservationPage = () => {
     } else {
       // Cookie is found, proceed to check Firebase auth state
       const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-        if (authUser && authUser.emailVerified) {
+        if (authUser) {
           setIsLoggedIn(true);
         }
       });
@@ -188,7 +192,7 @@ const AdminReservationPage = () => {
       return;
     }
     e.preventDefault();
-
+  
     const dateInput = (document.getElementById("inputDate") as HTMLInputElement)
       ?.value;
     const hourInput = parseInt(
@@ -200,40 +204,50 @@ const AdminReservationPage = () => {
       10
     );
     const num = numberOfPersonsTable;
-
+  
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
       setError("Please fill in all required fields."); // Show error message
       setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
       return;
     }
-
+  
     // Check for hour input of 0 specifically
     if (hourInput === 0) {
       setError("Please enter a valid hour."); // Show error message for invalid hour
       setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
       return;
     }
-
+  
     // Validate date
     if (!validateDate(dateInput)) {
       setTimeout(() => setDateError(""), 3000); // Clear the date error after 3 seconds
       return;
     }
-
+  
     // Check if the number of persons is less than 30 or greater than 50
-    if (numberOfPersonsEvent < 30 || numberOfPersonsEvent > 50) {
-      setError(true); // Trigger error state
-      setErrorMessage("Number of persons must be between 30 and 50.");
+    if (numberOfPersonsTable > 20) {
+      setError("Number of persons must be below 20.");
       setTimeout(() => {
         setError(false);
       }, 5000); // Clear the error after 5 seconds
       return;
     }
-
+  
+    if (reservedByUser) {
+      const userDocRef = doc(db, "users", reservedByUser);
+      const userDoc = await getDoc(userDocRef);
+  
+      if (!userDoc.exists()) {
+        setError("Email given was invalid."); 
+        setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+        return;
+      }
+  }
+  
     const orderId = generateOrderId();
     const now = new Date();
-
+  
     const dateReserved = `${String(now.getMonth() + 1).padStart(
       2,
       "0"
@@ -241,7 +255,7 @@ const AdminReservationPage = () => {
     const timeReserved = `${String(now.getHours()).padStart(2, "0")}:${String(
       now.getMinutes()
     ).padStart(2, "0")}`;
-
+  
     // Format date and time to be reserved
     const dateToBeReserved = new Date(dateInput);
     const formattedDateToBeReserved = `${String(
@@ -250,37 +264,38 @@ const AdminReservationPage = () => {
       2,
       "0"
     )}/${dateToBeReserved.getFullYear()}`;
-
+  
     const timeToBeReserved = `${
       hourInput > 9 ? hourInput : hourInput % 12
     }:${String(minuteInput).padStart(2, "0")}PM`;
-
+  
     // Log the reservation details
-    console.log("Submitting reservation with the following details:");
-    console.log({
-      orderId,
-      dateReserved,
-      timeReserved,
-      numberOfPersons: num,
-      reservedBy: userEmail,
-      status: "PENDING",
-      dateToBeReserved: formattedDateToBeReserved,
-      timeToBeReserved,
-      type: "Table",
-    });
-
+    //console.log("Submitting reservation with the following details:");
+    //console.log({
+      //orderId,
+      //dateReserved,
+      //timeReserved,
+      //numberOfPersons: num,
+      //reservedBy: reservedByUser,
+      //status: "PENDING",
+      //dateToBeReserved: formattedDateToBeReserved,
+      //timeToBeReserved,
+      //type: "Table",
+    //});
+  
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
         timeReserved,
         numberOfPersons: numberOfPersonsTable,
-        reservedBy: userEmail,
+        reservedBy: reservedByUser,
         status: "PENDING",
         dateToBeReserved: formattedDateToBeReserved,
         timeToBeReserved,
+        totalPrice: totalPriceT,
         type: "Table",
       });
-
+  
       console.log("Reservation successfully saved.");
       setIsPopupVisible(true); // Show success popup
       setTimeout(() => setIsPopupVisible(false), 750);
@@ -310,6 +325,14 @@ const AdminReservationPage = () => {
       setTotalPrice(numberOfPersonsEvent * packagePricePerPerson);
     }
   }, [numberOfPersonsEvent]);
+
+  useEffect(() => {
+    if (numberOfPersonsTable < 1) {
+      setTotalPriceT(0);
+    } else {
+      setTotalPriceT(numberOfPersonsTable * 50);
+    }
+  }, [numberOfPersonsTable]);
 
   const handlePersonsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/[^0-9]/g, ""); // Strip out non-numeric characters
@@ -462,6 +485,20 @@ const AdminReservationPage = () => {
     }
     //#endregion
 
+    if (reservedByUser) {
+      const userDocRef = doc(db, "users", reservedByUser);
+      const userDoc = await getDoc(userDocRef);
+  
+      if (!userDoc.exists()) {
+        setError(true);
+      setErrorMessage('Email must be valid.');
+      setTimeout(() => {
+        setError(false);
+      }, 5000);
+      return;
+      }
+  }
+
     if (chosenItems.length === 0) {
       setError(true);
       setErrorMessage('Please complete the "Buffet Contents" selection.');
@@ -525,7 +562,7 @@ const AdminReservationPage = () => {
         totalPrice: totalPrice,
         status: "REQUESTED",
         type: "Event",
-        reservedBy: userEmail,
+        reservedBy: reservedByUser,
       });
       setIsPopupVisible(true);
       setTimeout(() => {
@@ -538,6 +575,20 @@ const AdminReservationPage = () => {
   };
 
   //#endregion
+
+  const handleUsernameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.value;
+    //console.log("Input Value:", newValue); // Log the current input value
+    setReservedByUser(newValue);
+  };
+
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const [year, month, day] = event.target.value.split("-");
+    const formattedDate = `${month}/${day}/${year}`;
+    console.log("Selected Date (MM/DD/YYYY):", formattedDate); // Log the formatted date
+    setReservedDate(formattedDate);
+  };
+
 
   return (
     <div
@@ -611,6 +662,7 @@ const AdminReservationPage = () => {
                   type="email"
                   placeholder="Username of Reservee"
                   required
+                  onChange={handleUsernameChange}
                 />
               </div>
               {/* DATE */}
@@ -626,6 +678,7 @@ const AdminReservationPage = () => {
                   type="date"
                   min={minDate}
                   required
+                  onChange={handleDateChange}
                 />
 
                 <p className="text-xs text-orange-900 pl-2">
@@ -639,12 +692,12 @@ const AdminReservationPage = () => {
                   <span>Time</span>
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
-                  <input
+                <input
                     className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeHour"
                     id="inputTimeHour"
                     type="number"
-                    placeholder="Hour (12-19)"
+                    placeholder="Hour (12-7)"
                     min={12}
                     max={19}
                     required
@@ -715,6 +768,7 @@ const AdminReservationPage = () => {
                   type="email"
                   placeholder="Username of Reservee"
                   required
+                  onChange={handleUsernameChange}
                 />
               </div>
               {/* DATE */}
@@ -728,7 +782,6 @@ const AdminReservationPage = () => {
                   name="date"
                   id="inputDate"
                   type="date"
-                  value={date}
                   min={minDate}
                   onChange={(e) => setDate(e.target.value)}
                   required
@@ -745,7 +798,7 @@ const AdminReservationPage = () => {
                   <span>Time</span>
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
-                  <input
+                <input
                     className="border-2 border-solid border-orange-900 w-1/4 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeStartingHour"
                     id="inputTimeStartingHour"
@@ -754,6 +807,7 @@ const AdminReservationPage = () => {
                     pattern="[0-9]*"
                     value={startTime === 0 ? "" : startTime} // to handle default 12 with clearing issue
                     onChange={(e) => handleManualTimeChange(e, true)}
+                    placeholder="12-8" //placeholder
                     required
                   />
                   <span className="text-gray-500">TO</span>
@@ -766,6 +820,7 @@ const AdminReservationPage = () => {
                     pattern="[0-9]*"
                     value={endTime === 0 ? "" : endTime}
                     onChange={(e) => handleManualTimeChange(e, false)}
+                    placeholder="1-9"
                     required
                   />
                   <span className="text-gray-500">PM</span>
@@ -897,7 +952,7 @@ const AdminReservationPage = () => {
             <i className="fa fa-book text-sm" aria-hidden="true"></i>
             <span className="font-bold text-md">
               {slug === "table"
-                ? "Reserve Table"
+                ? "Reserve Table (PHP " + totalPriceT + ")"
                 : slug === "event"
                 ? "Reserve Place (PHP " + totalPrice + ")"
                 : "Book Mobile Café"}{" "}

@@ -30,26 +30,31 @@ const Navbar = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser && authUser.emailVerified) {
+      if (authUser) {
+        // Check if the email belongs to a staff member
+        const isStaff = authUser.email.endsWith("@fikastallestaff.com");
+        const collectionName = isStaff ? "staff" : "users";
+        const roleField = isStaff ? "staffRole" : "role";
+  
         try {
-          const userDoc = await getDoc(doc(db, "users", authUser.email));
+          const userDoc = await getDoc(doc(db, collectionName, authUser.email));
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setFirstName(userData.firstName);
-            setRole(userData.role); // Set the role from Firestore
+            setRole(userData[roleField]); // Set the role from Firestore based on collection
             setUser(authUser);
-
+  
             // Real-time listener for tempOrder updates
             const tempOrdersRef = collection(db, "tempOrders");
             const q = query(tempOrdersRef, where("user", "==", authUser.email));
-
+  
             unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
               let tempOrderDocId = null;
-
+  
               querySnapshot.forEach((doc) => {
                 tempOrderDocId = doc.id;
               });
-
+  
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
                 unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
@@ -72,9 +77,11 @@ const Navbar = () => {
               }
             });
           } else {
+            // User document does not exist in Firestore
             setUser(null);
             setFirstName("");
             setRole(""); // Clear the role if user does not exist
+  
             // Clean up listeners
             if (unsubscribeCartRef.current) {
               unsubscribeCartRef.current();
@@ -86,12 +93,14 @@ const Navbar = () => {
             }
           }
         } catch (error) {
-          // Handle any errors that occur while fetching user data
+          console.error("Error fetching user data:", error);
         }
       } else {
+        // User is logged out
         setUser(null);
         setFirstName("");
         setRole(""); // Clear the role when logged out
+  
         // Clean up listeners
         if (unsubscribeCartRef.current) {
           unsubscribeCartRef.current();
@@ -103,10 +112,10 @@ const Navbar = () => {
         }
       }
     });
-
+  
     // Check for cookies when the component mounts
     checkCookiesAndLogout();
-
+  
     // Cleanup
     return () => {
       unsubscribe();
@@ -169,48 +178,39 @@ const Navbar = () => {
       <div className="hidden md:flex font-semibold">
         {role === "admin" ? (
           <>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Home</Link>
-            </div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/">Home</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllproduct">Menu</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllhomemaintenance">Landing</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllvouchers">Vouchers/Promos</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllbookings">Bookings</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllorders">Orders</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllaccounts">Accounts</Link></div>
+          </>
+        ) : role === "bar" || role === "kitchen" ? (
+          <>
+            <div className="flex justify-start">
             <div className="px-4 hover:text-yellow-100">
               <Link href="/fkstllproduct">Menu</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
-              <Link href="/fkstllhomemaintenance">Landing</Link>
+              <Link href="/fkstllorders">Orders</Link>
             </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/fkstllvouchers">Vouchers/Promos</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/fkstllbookings">Bookings</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Orders</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/fkstllaccounts">Accounts</Link>
-            </div>
+          </div>
           </>
         ) : (
           <>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/">Home</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/menu">Menu</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/book">Book</Link>
-            </div>
-            <div className="px-4 hover:text-yellow-100">
-              <Link href="/orders">Orders</Link>
-            </div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/">Home</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/menu">Menu</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/book">Book</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/orders">Orders</Link></div>
           </>
         )}
       </div>
+  
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
-          {role !== "admin" && ( // Only show for non-admin users
+          {/* Only show for non-admin, non-kitchen, non-bar users */}
+          {(role !== "admin" && role !== "kitchen" && role !== "bar") && (
             <div>
               <Link href="/foodcart" className="relative flex gap-2 group hover:text-yellow-100 items-center">
                 <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">{totalItems}</span>
@@ -219,12 +219,22 @@ const Navbar = () => {
               </Link>
             </div>
           )}
-          {role !== "admin" && <div><NotificationBell /></div>} {/* Only show notification for non-admin users */}
-          <div>
-            <Link href="/profile">
-              <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
-            </Link>
-          </div>
+  
+          {/* Only show NotificationBell for non-admin, non-kitchen, non-bar users */}
+          {(role !== "admin" && role !== "kitchen" && role !== "bar") && <div><NotificationBell /></div>}
+  
+          {/* Show profile and logout for regular users */}
+          {role === "user" && (
+            <>
+              <div>
+                <Link href="/profile">
+                  <i className="fa-solid fa-circle-user text-2xl text-white hover:text-yellow-100"></i>
+                </Link>
+              </div>
+            </>
+          )}
+  
+          {/* Always show Logout button for logged-in users */}
           <div>
             <Link href="/" onClick={handleLogout} className="hover:text-yellow-100">Logout</Link>
           </div>

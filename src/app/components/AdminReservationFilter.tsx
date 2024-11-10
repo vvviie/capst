@@ -10,8 +10,8 @@ type FilterOption = {
 };
 
 const statusOptions: FilterOption[] = [
-  { id: 1, name: "All", value: "all" },
-  { id: 2, name: "PEDNING", value: "pending" },
+  { id: 1, name: "ALL", value: "all" },
+  { id: 2, name: "PENDING", value: "pending" },
   { id: 3, name: "TO PAY", value: "topay" },
   { id: 4, name: "PAID", value: "paid" },
   { id: 5, name: "REJECTED", value: "rejected" },

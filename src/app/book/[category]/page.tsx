@@ -223,9 +223,9 @@ const ReservationPage = () => {
     }
 
     // Check if the number of persons is less than 30 or greater than 50
-    if (numberOfPersonsEvent < 30 || numberOfPersonsEvent > 50) {
+    if (numberOfPersonsTable > 20) {
       setError(true); // Trigger error state
-      setErrorMessage("Number of persons must be between 30 and 50.");
+      setErrorMessage("Number of persons must be below 20.");
       setTimeout(() => {
         setError(false);
       }, 5000); // Clear the error after 5 seconds

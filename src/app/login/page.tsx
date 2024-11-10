@@ -55,60 +55,86 @@ const LoginPage = () => {
 
   const fetchUserDetails = async (email) => {
     try {
-      const userRef = doc(firestore, "users", email);
+      const isStaff = email.endsWith("@fikastallestaff.com");
+      const collectionName = isStaff ? "staff" : "users";
+      const roleField = isStaff ? "staffRole" : "role";
+  
+      console.log(`Fetching from collection: ${collectionName} with email: ${email}`);
+  
+      const userRef = doc(firestore, collectionName, email);
       const userDoc = await getDoc(userRef);
+  
       if (userDoc.exists()) {
+        console.log("Document exists in Firestore.");
+  
         const userData = userDoc.data();
-        const role = userData.role;
+        const role = userData[roleField];
+        console.log(`Fetched role: ${role}`);
+  
+        if (!role) {
+          setMessage({
+            text: `Role field '${roleField}' not found in document.`,
+            type: "error",
+          });
+        }
         return role;
       } else {
         setMessage({
-          text: "No user details found in Firestore.",
+          text: `No user details found in Firestore for email: ${email} in collection: ${collectionName}.`,
           type: "error",
         });
+        console.log(`Document does not exist for email: ${email}`);
         return null;
       }
     } catch (error) {
-      setMessage({ text: "Error fetching user details.", type: "error" });
+      console.error("Error fetching user details:", error);
+      setMessage({ text: `Error fetching user details: ${error.message}`, type: "error" });
       return null;
     }
   };
-
+  
   const handleLogin = async (event) => {
     event.preventDefault();
     const email = event.target.email.value;
     const password = event.target.password.value;
-
+  
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        // Check email verification
-        if (!user.emailVerified) {
-            setMessage({ text: "Please verify your email.", type: "error" });
-            await signOut(auth); // Sign out if email not verified
-        } else {
-            // Fetch user role from Firestore
-            const role = await fetchUserDetails(email);
-            
-            if (role) {
-                // Set cookie based on user role
-                if (role === "admin") {
-                    Cookies.set("admin", user.refreshToken, { expires: 1 / 24 }); // Set the cookie value to "admin"
-                } else {
-                    Cookies.set("user", user.refreshToken, { expires: 1 / 24 }); // Set refresh token for regular users
-                }
-                
-                router.push("/"); // Redirect to the homepage
-            }
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+  
+      // Determine if the email belongs to staff
+      const isStaff = email.endsWith("@fikastallestaff.com");
+  
+      // Only check email verification if it's a user, not staff
+      if (!isStaff && !user.emailVerified) {
+        setMessage({ text: "Please verify your email.", type: "error" });
+        await signOut(auth); // Sign out if email is not verified
+      } else {
+        // Fetch user role from the appropriate Firestore collection
+        const role = await fetchUserDetails(email);
+  
+        if (role) {
+          // Set cookie based on user role
+          if (role === "admin") {
+            Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
+          } else if (role === "bar") {
+            Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
+          } else if (role === "kitchen") {
+            Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
+          } else
+            Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
+          }
+  
+          router.push("/"); // Redirect to the homepage
         }
-    } catch (error) {
-        setMessage({ text: "Invalid username or password.", type: "error" });
+      }
+    catch (error) {
+      setMessage({ text: `Invalid username or password.`, type: "error" });
     }
-
+  
     // Clear message after 3 seconds
     setTimeout(() => setMessage(null), 3000);
-};
+  };
 
   return (
     <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
