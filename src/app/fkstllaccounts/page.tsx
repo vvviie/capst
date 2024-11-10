@@ -178,7 +178,11 @@ const AccountsListPage = () => {
           status: doc.data().staffStatus,
           uid: doc.data().uid,
         }));
-        setStaffAccounts(staff); // Update state with the new staff data
+
+        // Filter out the staff with role "admin"
+        const filteredStaff = staff.filter((staffMember) => staffMember.role !== "admin");
+
+        setStaffAccounts(filteredStaff); // Update state with the filtered staff data
       });
 
       // Return the unsubscribe function for cleanup
@@ -192,6 +196,7 @@ const AccountsListPage = () => {
       }
     }
   };
+
 
   useEffect(() => {
     if (accountType === "staff") {
