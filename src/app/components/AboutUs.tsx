@@ -49,9 +49,16 @@ const AboutUs = () => {
   }, [images.length]);
 
   return (
-    <div className="relative h-[calc(100vh-56px)] gap-2 flex flex-col-reverse items-center py-4 justify-between xl:flex-row xl:justify-center xl:px-56 xl:gap-4 w-full  xl:bg-[url('/backgrounds/bg2.png')] xl:bg-cover xl:bg-no-repeat xl:bg-center">
+    <div
+      className="relative gap-2 flex flex-col-reverse items-center py-4 justify-between px-10 md:px-24
+    lg:flex-row lg:justify-center xl:px-56 lg:gap-4 w-full  lg:bg-[url('/backgrounds/bg2.png')]
+    lg:bg-cover lg:bg-no-repeat lg:bg-center lg:min-h-[calc(100vh-56px)]"
+    >
       {/* IMAGES CONTAINER */}
-      <div className="relative w-[calc(100%-1rem)] h-1/3 p-2 overflow-hidden rounded-md md:h-1/2 xl:h-2/3 xl:flex-1 xl:shadow-xl">
+      <div
+        className="relative w-[calc(100%-1rem)] h-1/3 p-2 overflow-hidden rounded-md aspect-square
+      lg:ml-4 lg:flex-1 xl:ml-0 xl:shadow-xl"
+      >
         {images.length > 0 && (
           <Image
             src={images[currentSlide]} // Use the image URL directly
@@ -62,15 +69,13 @@ const AboutUs = () => {
         )}
       </div>
       {/* DETAIL CONTAINER */}
-      <div className="flex flex-col gap-0 lg:px-2 xl:flex-1 2xl:gap-8 md:justify-center md:items-center md:h-1/2 md:px-20">
+      <div className="flex flex-col gap-4 py-4 lg:px-2 lg:flex-1 2xl:gap-8 md:justify-center md:items-center md:h-1/2">
         {/* ABOUT US TEXT */}
-        <div className="flex flex-col gap-2 justify-center items-center">
+        <div className="flex flex-col gap-1 justify-center items-center">
           <h1 className="text-2xl text-orange-950 font-bold lg:text-3xl">
             About Us
           </h1>
-          <p className="text-center px-4 lg:px-24 xl:px-4 xl:text-justify">
-            {aboutUsText}
-          </p>
+          <p className="text-justify px-4">{aboutUsText}</p>
         </div>
         {/* OTHER DETAILS TEXT DYNAMIC CONTAINER */}
         <div className="flex flex-col gap-2 justify-center items-center">
