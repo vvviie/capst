@@ -732,7 +732,7 @@ const ReservationPage = () => {
                     pattern="[0-9]*"
                     value={startTime === 0 ? "" : startTime} // to handle default 12 with clearing issue
                     onChange={(e) => handleManualTimeChange(e, true)}
-                    placeholder="12-8"
+                    placeholder="12-8" //placeholder
                     required
                   />
                   <span className="text-gray-500">TO</span>
