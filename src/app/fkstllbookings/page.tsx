@@ -45,6 +45,7 @@ const AdminCheckReservationsPage = () => {
   const [isPaidVisible, setIsPaidVisible] = useState(false);
   const [isCancelVisible, setIsCancelVisible] = useState(false);
   const [isPendingVisible, setIsPendingVisible] = useState(false);
+  const [isDeleteVisible, setIsDeleteVisible] = useState(false);
   const [filterDate, setFilterDate] = useState<string>("");
 
   const handleToPayment = async (id: string) => {
@@ -127,9 +128,9 @@ const AdminCheckReservationsPage = () => {
       // Delete the document that matches the provided ID
       await deleteDoc(doc(db, "tableReservations", id));
   
-      setIsCancelVisible(true);
+      setIsDeleteVisible(true);
       setTimeout(() => {
-        setIsCancelVisible(false);
+        setIsDeleteVisible(false);
       }, 750);
     } catch (error) {
       console.error("Error deleting document:", error);
@@ -531,16 +532,33 @@ const AdminCheckReservationsPage = () => {
                               </button>
                             </div>
                           ) : res.status === "DONE" ? (
-                            <div className="flex items-center w-full mt-1">
+                            <div className="flex gap-2 items-center w-full mt-1">
                               <button
-                                className="w-full h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                                          hover:bg-blue-400 hover:scale-[1.02] duration-200"
+                                className="w-2/3 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white gap-1
+                                          hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() => handlePrintDetails(res.id)}
                               >
                                 Print Details
                               </button>
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >
+                                Delete
+                              </button>
                             </div>
-                          ) : res.status !== "REJECTED" ? (
+                          ) : res.status === "REJECTED" ? (
+                            <div className="flex items-center w-full mt-1">
+                              <button
+                                className="w-full h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >  
+                              Delete
+                              </button>
+                            </div>          
+                          ): res.status !== "REJECTED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
@@ -717,15 +735,32 @@ const AdminCheckReservationsPage = () => {
                               </button>
                             </div>
                           ) : res.status === "DONE" ? (
-                            <div className="flex items-center w-full mt-1">
+                            <div className="flex gap-2 items-center w-full mt-1">
                               <button
-                                className="w-full h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                                          hover:bg-blue-400 hover:scale-[1.02] duration-200"
+                                className="w-2/3 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white gap-1
+                                          hover:bg-blue-400 hover:scale-[1.02] flex items-center justify-center duration-200"
                                 onClick={() => handlePrintEventDetails(res.id)}
                               >
                                 Print Details
                               </button>
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >
+                                Delete
+                                </button>
                             </div>
+                          ) : res.status === "REJECTED" ? (
+                            <div className="flex items-center w-full mt-1">
+                              <button
+                                className="w-full h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleDelete(res.id)}
+                              >  
+                              Delete
+                              </button>
+                            </div>          
                           ) : res.status !== "REJECTED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
@@ -999,6 +1034,9 @@ const AdminCheckReservationsPage = () => {
 
         {/* PENDING POP UP */}
         {isPendingVisible && <CheckoutPopup message="Marked as Pending!" />}
+
+        {/* DELETE POP UP */}
+        {isDeleteVisible && <CheckoutPopup message="Booking Deleted!" />}
       </div>
     </div>
   );

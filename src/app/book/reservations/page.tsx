@@ -11,9 +11,11 @@ import {
   where,
   deleteDoc,
   doc,
+  getDoc,
 } from "firebase/firestore";
 import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
+import jsPDF from "jspdf";
 
 const ReservationsPage = () => {
   const [expandedRes, setExpandedRes] = useState<Record<string, boolean>>({});
@@ -139,6 +141,134 @@ const ReservationsPage = () => {
     }
   };
 
+  const handlePrintDetails = async (id: string) => {
+    try {
+      const docSnap = await getDoc(doc(db, "tableReservations", id));
+  
+      if (docSnap.exists()) {
+        const reservation = docSnap.data();
+  
+        const doc = new jsPDF();
+        
+        // Set font for title, address, and details to 16px, bold, centered
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+  
+        // Title and address - Centered
+        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
+  
+        // Add spacing
+        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+  
+        // Set font for content text to 14px and justified
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+  
+        // Booking Details - Justified
+        const text = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.
+\nWith the reservation's consumables amounting to PHP ${reservation.totalPrice}, please do note that this would be deducted towards your total bill upon ordering.\n\nJust present this as as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+        doc.text(text, 20, 60, { maxWidth: 170, align: "left" });
+  
+        doc.autoPrint();
+        doc.output("dataurlnewwindow");
+      } else {
+        console.log("No such document!");
+      }
+    } catch (error) {
+      console.error("Error handling reservation details:", error);
+    }
+  };
+
+  const handlePrintEventDetails = async (id: string) => {
+    try {
+      const docSnap = await getDoc(doc(db, "tableReservations", id));
+  
+      if (docSnap.exists()) {
+        const reservation = docSnap.data();
+  
+        const doc = new jsPDF();
+  
+        // Set font for title, address, and details to 16px, bold, centered
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+  
+        // Title and address - Centered
+        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
+  
+        // Add spacing
+        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+  
+        // Set font for general content text to 14px, normal, left-aligned
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+  
+        // First part of the booking details text
+        const initialText = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.`;
+        doc.text(initialText, 20, 60, { maxWidth: 170, align: "left" });
+  
+        // Bold text for the total bill information
+        const boldText = `Upon reviewing, your total bill to be settled would amount to PHP ${reservation.totalPrice}.`;
+        doc.setFont("helvetica", "bold");
+        doc.text(boldText, 20, 90, { maxWidth: 170, align: "left" });
+  
+        // Reset font to normal for the remaining content
+        doc.setFont("helvetica", "normal");
+        const closingText = `Just present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
+        doc.text(closingText, 20, 105, { maxWidth: 170, align: "left" });
+  
+        doc.setFont("helvetica", "normal");
+        const confirText = `Here is the breakdown of your chosen items for ${reservation.packageOffer}:`;
+        doc.text(confirText, 20, 125, { maxWidth: 170, align: "left" });
+  
+        // Add Buffet Chosen details if available
+        if (reservation.buffetChosen) {
+          let buffetYPosition = 135; // Start position for the buffet section
+  
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.text("Buffet Chosen:", 20, buffetYPosition); // Buffet section title
+          buffetYPosition += 10;
+  
+          // Iterate over buffet categories and their items
+          Object.entries(reservation.buffetChosen).forEach(([category, items], index) => {
+            // Ensure items is a string and split it into an array if needed
+            let itemsArray = [];
+            if (typeof items === 'string') {
+              itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
+            } else if (Array.isArray(items)) {
+              itemsArray = items; // If it's already an array, use it directly
+            }
+  
+            // Add category title
+            doc.setFont("helvetica", "bold");
+            doc.text(category, 20, buffetYPosition);
+            buffetYPosition += 8;
+  
+            // Add items under the category
+            doc.setFont("helvetica", "normal");
+            itemsArray.forEach((item, itemIndex) => {
+              doc.text(`- ${item}`, 30, buffetYPosition);
+              buffetYPosition += 6;
+            });
+  
+            // Add spacing after each category
+            buffetYPosition += 6;
+          });
+        }
+  
+        doc.autoPrint();
+        doc.output("dataurlnewwindow");
+      } else {
+        console.log("No such document!");
+      }
+    } catch (error) {
+      console.error("Error handling reservation details:", error);
+    }
+  };
+
+
   return (
     <div className="min-h-[calc(100vh-56px)] gap-6 mt-14 px-10 py-8 flex flex-col items-center md:px-24 lg:gap-8 lg:flex-row-reverse lg:items-start lg:justify-center xl:px-56">
       {/* BACKGROUND IMAGE CONTAINER */}
@@ -256,17 +386,38 @@ const ReservationsPage = () => {
                       Date Requested:{" "}
                       {res.dateReserved + " - " + res.timeReserved}
                     </span>
-                    {/* CANCEL BUTTON */}
-                    <button
-                      className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md hover: scale-[1.03] duration-300"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedReservationId(res.id);
-                        setConfirmPopup(true);
-                      }}
-                    >
-                      Cancel Reservation
-                    </button>
+                    {/* CONDITIONAL BUTTON RENDERING */}
+                    {res.status === "REJECTED" || res.status === "CANCELLED" || res.status === "PAID" ? null : (
+                      res.status === "DONE" ? (
+                        res.type === "Table" ? (
+                          <button
+                            className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
+                            onClick={() => handlePrintDetails(res.id)}
+                          >
+                            Print Details
+                          </button>
+                        ) : res.type === "Event" ? (
+                          <button
+                            className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
+                            onClick={() => handlePrintEventDetails(res.id)}
+                          >
+                            Print Details
+                          </button>
+                        ) : null
+                      ) : (
+                        <button
+                          className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedReservationId(res.id);
+                            setConfirmPopup(true);
+                          }}
+                        >
+                          Cancel Reservation
+                        </button>
+                      )
+                    )}
+
                   </div>
                 )}
               </div>
