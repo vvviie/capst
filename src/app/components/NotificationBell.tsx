@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
 import {
@@ -124,6 +124,7 @@ const NotificationBell = () => {
   //#endregion
 
   //#region Fetching of Orders
+  
   useEffect(() => {
   const fetchOrders = async () => {
     if (!userEmail) return;
@@ -194,6 +195,7 @@ const NotificationBell = () => {
 //#endregion
 
 //#region Fetching of Table Reservations
+
 const fetchTableReservations = () => {
   if (!userEmail) return;
 
@@ -210,7 +212,9 @@ const fetchTableReservations = () => {
           id: doc.id,
           type: "Table Reservation",
           subject: `New Booking for: ${data.type || "Unknown"}`,
-          details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${data.status || "in progress"}.`,
+          details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
+            data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
+          }.`,
           time: data.timeReserved || "N/A",
           date: data.dateReserved || "N/A",
           read: data.isRead || false,
