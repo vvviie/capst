@@ -77,6 +77,8 @@ const CartPage = () => {
   const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
   const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
 
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [lastName, setLastName] = useState<string | null>(null);
   const closeVoucherForm = () => {
     if (!voucherApplied) {
       setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
@@ -130,6 +132,35 @@ const CartPage = () => {
     }
   }, [router]);
 
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!userEmail) return; // Exit if there's no user email
+
+      try {
+        // Reference to the users collection
+        const userRef = doc(db, "users", userEmail);
+        
+        // Fetch the user document
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setFirstName(userData.firstName); // Set first name
+          setLastName(userData.lastName); // Set last name
+          
+          // Log the first name and last name
+          console.log("First Name:", userData.firstName);
+          console.log("Last Name:", userData.lastName);
+        } else {
+          console.log("No such user document!");
+        }
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+      }
+    };
+
+    fetchUserDetails();
+  }, [userEmail]); // Dependency array to run effect when userEmail changes
   //#endregion
 
   //#region Handling of Order Options
@@ -730,6 +761,7 @@ const CartPage = () => {
 
       console.log("Final Document Data:", {
         user: userEmail,
+        userName: `${firstName} ${lastName}`, // Add user's name
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -749,6 +781,7 @@ const CartPage = () => {
 
       await setDoc(completedOrdersRef, {
         user: userEmail,
+        userName: `${firstName} ${lastName}`,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
