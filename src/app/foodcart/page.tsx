@@ -23,6 +23,7 @@ import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import CheckoutPopup from "../components/CheckoutPopup";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 //#endregion
 
 //#region Voucher data form
@@ -75,18 +76,28 @@ const CartPage = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
   const [promoType, setPromoType] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
-  const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
+
 
   //#region NEW useState variables
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
+
+  // For Image
+  const [imageUrl, setImageUrl] = useState("");
+
+  // For Image's File Name
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef(null);
+
+  const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
+  //#endregion
+
   const closeVoucherForm = () => {
     if (!voucherApplied) {
       setSelectedVoucher(null); // Clear the selected voucher if no voucher is applied
     }
     openVoucherForm(false); // Close the voucher form
   };
-  //#endregion
 
   const now = new Date();
 
@@ -629,6 +640,111 @@ const CartPage = () => {
   };
   //#endregion
 
+  const handleUploadClick = () => {
+    // Trigger the file input click
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0]; // Get the uploaded file
+    if (file) {
+      const validTypes = ["image/jpeg", "image/png"];
+      if (!validTypes.includes(file.type)) {
+        console.error("Invalid file type. Please upload a PNG or JPEG.");
+        return;
+      }
+      setFileName(file.name); // Update the file name in state
+      const previewUrl = URL.createObjectURL(file); // Create a local URL for preview
+      setImageUrl(previewUrl); // Update the image preview state
+
+      try {
+        // Convert and upload the image immediately
+        const webpUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+        console.log("Uploaded image URL:", webpUrl);
+      } catch (error) {
+        console.error("Error during image processing:", error);
+      }
+    }
+  };
+
+  // Function to convert image to WebP using canvas
+  const convertImageToWebP = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const imgElement = new window.Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        imgElement.src = e.target.result as string;
+      };
+
+      imgElement.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+
+          // Convert to WebP format
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Conversion to WebP failed."));
+            }
+          }, "image/webp");
+        } else {
+          reject(new Error("Canvas context is null."));
+        }
+      };
+
+      imgElement.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.readAsDataURL(file); // Read the file as Data URL
+    });
+  };
+
+  // Function to upload image to Firebase Storage
+  const uploadImageToStorage = async (file) => {
+    const storage = getStorage();
+    const storageRef = ref(
+      storage,
+      `images/tempImg${file.name.split(".").slice(0, -1).join(".")}.webp`
+    ); // Update path to WebP
+
+    try {
+      // Convert the image to WebP format
+      const webpBlob = await convertImageToWebP(file);
+      console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
+      console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
+
+      // Create URL for the WebP Blob to preview
+      const webpUrl = URL.createObjectURL(webpBlob);
+      console.log("Converted to WebP:", webpUrl); // Log the WebP URL
+      setImageUrl(webpUrl); // Set this URL for preview, if needed
+
+      // Upload the WebP file
+      await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
+      const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+      return downloadUrl; // Return the URL
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null; // Return null if there's an error
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl(""); // Remove the image preview
+    setFileName(""); // Clear the file name
+    fileInputRef.current.value = ""; // Clear the file input
+  };
+
   //#region Handling of Completion of Orders
   const handleCompleteOrder = async (
     modeOfPayment: string,
@@ -730,12 +846,29 @@ const CartPage = () => {
           ? parseFloat(discountedPromo.toString()) // Ensure it's treated as a number
           : 0;
 
+      // Upload the image if it exists
+      let finalImageUrl;
+      if (fileInputRef.current.files[0]) {
+        const file = fileInputRef.current.files[0]; // Get the uploaded file
+        try {
+          finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
+          if (!finalImageUrl) {
+            console.error("Image upload failed, using placeholder.");
+            //finalImageUrl = await fetchPlaceholderImageUrl(); // Use placeholder if upload fails
+          }
+        } catch (error) {
+          console.error("Error during image processing:", error);
+          //finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if there's an error
+        }
+      } else {
+        //finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
+      }
+
       console.log("Final Document Data:", {
         user: userEmail,
         userName: `${firstName} ${lastName}`, // Add user's name
-        //pwdSenior: boolean,
-        //discountDeduc: int,
-        //idImg: string,
+        pwdSenior: openSeniorPWD,
+        idImg: finalImageUrl,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -743,7 +876,7 @@ const CartPage = () => {
         modeOfPayment: modeOfPayment,
         selectedOption: selectedOption,
         selectedServeTime: serveTime,
-        cartId: originalOrderId,
+        cartId: originalOrderId,  
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
@@ -756,9 +889,8 @@ const CartPage = () => {
       await setDoc(completedOrdersRef, {
         user: userEmail,
         userName: `${firstName} ${lastName}`, // Add user's name
-        //pwdSenior: boolean,
-        //discountDeduc: int,
-        //idImg: string,
+        pwdSenior: openSeniorPWD,
+        idImg: finalImageUrl,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -1350,7 +1482,12 @@ const CartPage = () => {
                   Upload Image of ID
                 </span>
                 <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
-                  <Image src={""} alt="" fill className="object-cover" />
+                  <Image
+                    src={imageUrl}
+                    alt="ID"
+                    fill
+                    className="object-cover"
+                  />
                 </div>
                 <div className="w-full flex gap-2 items-center">
                   <div className="w-full flex flex-col gap-1 items-center justify-center">
@@ -1367,13 +1504,23 @@ const CartPage = () => {
                         id="imageName"
                         type="text"
                         placeholder="Image Name"
+                        value={fileName} // Set the value to the file name
+                        readOnly // Make the input read-only
                       />
                       <button
                         className="h-10 w-1/3 bg-white border-2 border-gray-100 shadow-md rounded-md font-bold
                       text-gray-600"
+                        onClick={handleUploadClick}
                       >
                         Upload
                       </button>
+                      <input
+                        type="file"
+                        accept="image/*" // Accept image files only
+                        ref={fileInputRef} // Attach the ref
+                        style={{ display: "none" }} // Hide the input
+                        onChange={handleFileChange}
+                      />
                     </div>
                   </div>
                 </div>
