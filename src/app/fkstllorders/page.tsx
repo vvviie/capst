@@ -1,11 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import React, { useRef, useState } from "react";
-
-// LOWERCASE OF ADMIN, BAR, AND KITCHEN
-const user = "bar";
-const hasOrder = true;
+import React, { useRef, useState, useEffect } from "react";
+import Cookies from "js-cookie";
+import { db } from "../firebase";
+import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 
 // #region Sample Data
 
@@ -19,151 +18,104 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  items: { title: string; price: number; tags: string[] }[];
+  items: { title: string; price: number; tags: string[] }[]; 
   id: string;
   pwdSenior: boolean;
   idPic?: string;
   pwdSeniorDiscountApplied?: boolean;
   sampleDiscountDeduction?: number;
+  slug: string;
 };
 
-type Orders = Order[];
+const fetchCompletedOrders = async (): Promise<Order[]> => {
+  const orders: Order[] = [];
+  const querySnapshot = await getDocs(collection(db, "completedOrders"));
+  
+  for (const doc of querySnapshot.docs) {
+    const data = doc.data();
+    const userEmail = data.user;  // Assuming userEmail is stored in the 'user' field
+    
+    // Query the 'users' collection for the user document that matches the userEmail
+    const userQuerySnapshot = await getDocs(query(collection(db, "users"), where("username", "==", userEmail)));
+    
+    let userName = '';  // Default userName in case no user is found
+    if (!userQuerySnapshot.empty) {
+      const userDoc = userQuerySnapshot.docs[0].data();
+      const firstName = userDoc.firstName || '';  // If no firstName, use an empty string
+      const lastName = userDoc.lastName || '';  // If no lastName, use an empty string
+      userName = `${firstName} ${lastName}`.trim();  // Combine firstName and lastName
+    }
 
-const userOrders: Orders = [
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "17:21",
-    price: 340,
-    status: "TO PAY",
-    pwdSenior: true,
-    sampleDiscountDeduction: 40,
-    idPic: "/coffee.jpg",
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "542352134124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "17:21",
-    price: 360,
-    status: "PAID",
-    pwdSenior: false,
-    where: "Table",
-    payment: "Card",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "522222134124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "16:21",
-    price: 360,
-    status: "PREP",
-    pwdSenior: false,
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "553352133124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "15:21",
-    price: 360,
-    status: "READY",
-    pwdSenior: false,
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "564552133124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "14:21",
-    price: 360,
-    status: "DONE",
-    pwdSenior: false,
-    where: "Pick-up",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "575452133124",
-  },
-];
+    // Map the items as before, with logic based on their slug
+    const items = data.items.map((item: any) => {
+      let tags: string[] = [];
+    
+      // Conditional logic based on the 'slug' of each individual item
+      if (item.slug === 'drinks') {
+        tags = [item.selectedDrinkSize, item.note];  // If slug is 'drinks', use selectedDrinkSize and note
+      } else if (item.slug === 'maincourse') {
+        tags = [item.mainCourseOption, item.note];  // If slug is 'maincourse', use mainCourseOption
+      } else if (item.slug === 'snacks') {
+        tags = [item.note];  // If slug is 'snacks', use note
+      } else if (item.slug === 'pastries') {
+        tags = [item.note];  // If slug is 'pastries', use note
+      } else {
+        tags = [item.note];  // Default: just use note for other cases
+      }
+    
+      return {
+        title: item.productTitle,
+        price: item.totalPrice,
+        tags: tags,  // Set the tags based on the slug for each item
+      };
+    });
 
+    const order: Order = {
+      id: doc.id,
+      userName: userName,  // Use the fetched and combined userName
+      userEmail: userEmail, // Keep the userEmail
+      date: data.dateCreated, // Ensure this matches the correct field in Firestore
+      time: data.timeCreated, // Ensure this matches the correct field in Firestore
+      price: data.subtotal, // Ensure this matches the correct field in Firestore
+      status: data.status,
+      where: data.selectedOption, // Ensure this matches the correct field in Firestore
+      payment: data.modeOfPayment, // Ensure this matches the correct field in Firestore
+      items: items,
+      pwdSenior: data.pwdSenior,
+      idPic: data.idPic,
+      pwdSeniorDiscountApplied: data.pwdSeniorDiscountApplied,
+      sampleDiscountDeduction: data.sampleDiscountDeduction,
+      promo: data.promoDiscounted,
+      slug: data.slug, // Make sure to include the slug at the order level if needed
+    };
+    
+    console.log("Order fetched:", order); // Log each order
+    orders.push(order);
+  }
+
+  console.log("All fetched orders:", orders); // Log all orders
+  return orders;
+};
 // #endregion
 
 const AdminAndStaffOrdersPage = () => {
   const [reversePosition, setReversePosition] = useState(false);
   const [orderStatCat, setOrderStatCat] = useState("all");
   const [enlargePicture, setEnlargePicture] = useState(false);
+  const [hasOrder, setHasOrder] = useState(false);
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [applySrPWD, setApplySrPWD] = useState(false);
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
+  const [user, setUser] = useState<string>("");
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const orders = await fetchCompletedOrders();
+      setUserOrders(orders);
+      setHasOrder(orders.length > 0);
+    };
+    loadOrders();
+  }, []);
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
@@ -195,6 +147,22 @@ const AdminAndStaffOrdersPage = () => {
         : "done"
     );
   };
+
+  useEffect(() => {
+    const cookies = Cookies.get(); // Retrieve all cookies
+
+    // Check if specific cookies exist and set the user role accordingly
+    if (cookies["admin"]) {
+      setUser("admin");
+    } else if (cookies["kitchen"]) {
+      setUser("kitchen");
+    } else if (cookies["bar"]) {
+      setUser("bar");
+    } 
+    
+    console.log("User role is set to:", user);
+  }, [user]); // Add `userRole` as a dependency to log updates if it changes
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -258,7 +226,7 @@ const AdminAndStaffOrdersPage = () => {
                         {/* HEADERS CONTAINER */}
                         <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                           <span className="">ID: {order.id}</span>
-                          <span className="">P{order.price}</span>
+                          <span className="">PHP {order.price}</span>
                         </div>
                         {/* SUBHEADER CONTAINER */}
                         <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -386,7 +354,7 @@ const AdminAndStaffOrdersPage = () => {
                           </div>
                         )}
                         {/* PROMO, IF THERE IS ONE */}
-                        {order.promo && (
+                        {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
                               Promo discount
@@ -531,7 +499,7 @@ const AdminAndStaffOrdersPage = () => {
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                             <span className="">ID: {order.id}</span>
-                            <span className="">P{order.price}</span>
+                            <span className="">PHP {order.price}</span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -662,7 +630,7 @@ const AdminAndStaffOrdersPage = () => {
                             </div>
                           )}
                           {/* PROMO, IF THERE IS ONE */}
-                          {order.promo && (
+                          {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
                             <div className="font-bold text-sm flex justify-between items-center">
                               <span className="font-semibold">
                                 Promo discount
@@ -775,7 +743,7 @@ const AdminAndStaffOrdersPage = () => {
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                             <span className="">ID: {order.id}</span>
-                            <span className="">P{order.price}</span>
+                            <span className="">PHP {order.price}</span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -906,7 +874,7 @@ const AdminAndStaffOrdersPage = () => {
                             </div>
                           )}
                           {/* PROMO, IF THERE IS ONE */}
-                          {order.promo && (
+                          {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
                             <div className="font-bold text-sm flex justify-between items-center">
                               <span className="font-semibold">
                                 Promo discount

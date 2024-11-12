@@ -109,26 +109,32 @@ const LoginPage = () => {
       if (!isStaff && !user.emailVerified) {
         setMessage({ text: "Please verify your email.", type: "error" });
         await signOut(auth); // Sign out if email is not verified
-      } else {
-        // Fetch user role from the appropriate Firestore collection
-        const role = await fetchUserDetails(email);
-  
-        if (role) {
-          // Set cookie based on user role
-          if (role === "admin") {
-            Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
-          } else if (role === "bar") {
-            Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
-          } else if (role === "kitchen") {
-            Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
-          } else
-            Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
-          }
-  
-          router.push("/"); // Redirect to the homepage
-        }
+        return;
       }
-    catch (error) {
+  
+      // Fetch user role from Firestore
+      const role = await fetchUserDetails(email);
+  
+      if (role) {
+        // Set cookie and redirect based on user role
+        if (role === "admin") {
+          Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
+          router.push("/"); // Redirect to the homepage
+        } else if (role === "bar") {
+          Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
+          router.push("/fkstllorders");
+        } else if (role === "kitchen") {
+          Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
+          router.push("/fkstllorders");
+        } else {
+          Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
+          router.push("/"); // Redirect to the homepage for general users
+        }
+      } else {
+        // Handle case where role is undefined or not fetched
+        await signOut(auth); // Sign out if no role is found
+      }
+    } catch (error) {
       setMessage({ text: `Invalid username or password.`, type: "error" });
     }
   

@@ -44,6 +44,7 @@ type resList = res[];
 
 const AdminCheckReservationsPage = () => {
   const [reservations, setReservations] = useState<res[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [resType, setResType] = useState("table");
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
@@ -56,6 +57,8 @@ const AdminCheckReservationsPage = () => {
   const [isPendingVisible, setIsPendingVisible] = useState(false);
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
   const [filterDate, setFilterDate] = useState<string>("");
+  const [isFilterClicked, setIsFilterClicked] = useState<boolean>(false);
+  const [selectedFilterDate, setSelectedFilterDate] = useState<string>("");
 
   const handleToPayment = async (id: string) => {
     try {
@@ -221,8 +224,31 @@ const AdminCheckReservationsPage = () => {
     }));
   };
 
+  const handleStatusChange = (status: string) => setSelectedStatus(status);
+
+  const formatDate = (date: string) => {
+    const parsedDate = new Date(date);
+    return `${String(parsedDate.getMonth() + 1).padStart(2, "0")}/${String(parsedDate.getDate()).padStart(2, "0")}/${parsedDate.getFullYear()}`;
+  };
+
+  // Filter button click handler
+  const handleFilterClick = () => {
+    // Log the date in MM/DD/YYYY format when the filter button is clicked
+    console.log("Filter Date (MM/DD/YYYY):", formatDate(selectedFilterDate));
+  
+    setFilterDate(selectedFilterDate); // Now set the filterDate when the filter button is clicked
+    setIsFilterClicked(true); // Trigger the filter action (which will be used in useEffect)
+  };
+
+  const handleDateChange = (e) => {
+    const selectedDate = e.target.value;
+    console.log("Selected date:", selectedDate); // Log the selected date
+  
+    // Update the state with the selected date
+    setSelectedFilterDate(selectedDate);
+  };
+
   useEffect(() => {
-    // Create a real-time listener for the tableReservations collection
     const unsubscribe = onSnapshot(
       collection(db, "tableReservations"),
       (querySnapshot) => {
@@ -230,35 +256,42 @@ const AdminCheckReservationsPage = () => {
           id: doc.id,
           ...doc.data(),
         })) as res[];
-
-        // Helper function to convert time to 24-hour format and handle time ranges
+  
         const parseDateTime = (date: string, time: string) => {
           const startTime = time.split(" to ")[0];
-  
-          // Parse date and time to a consistent format
           return new Date(`${date} ${convertTo24Hour(startTime)}`);
         };
-
-        // Helper function to convert "4:30PM" or "12PM" to "16:30" or "12:00" (24-hour time)
+  
         const convertTo24Hour = (time: string) => {
           const [timePart, modifier] = time.split(/(AM|PM)/i);
           let [hours, minutes] = timePart.split(":").map(Number);
           if (!minutes) minutes = 0;
-
-          if (modifier.toUpperCase() === "PM" && hours < 12) {
-            hours += 12;
-          }
-          if (modifier.toUpperCase() === "AM" && hours === 12) {
-            hours = 0;
-          }
-          return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
-            2,
-            "0"
-          )}`;
+          if (modifier.toUpperCase() === "PM" && hours < 12) hours += 12;
+          if (modifier.toUpperCase() === "AM" && hours === 12) hours = 0;
+          return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
         };
-
-        // Sort reservations by parsed date and time in descending order
-        const sortedReservations = fetchedReservations.sort((a, b) => {
+  
+        // Convert filterDate to Date object for comparison
+        const formattedFilterDate = filterDate ? new Date(filterDate) : null;
+  
+        // Apply selected status and date filters
+        const filteredReservations = fetchedReservations.filter((reservation) => {
+          const matchesStatus =
+            selectedStatus === "all" || reservation.status === selectedStatus;
+  
+          // Compare the dates correctly by converting both to Date objects
+          const reservationDate = new Date(reservation.dateToBeReserved);
+          const matchesDate =
+            !formattedFilterDate ||
+            reservationDate.toDateString() === formattedFilterDate.toDateString();
+  
+          return matchesStatus && matchesDate;
+        });
+  
+        const sortedAndFilteredReservations = filteredReservations.sort((a, b) => {
+          if (a.status < b.status) return -1;
+          if (a.status > b.status) return 1;
+  
           const dateA =
             a.dateToBeReserved && a.timeToBeReserved
               ? parseDateTime(a.dateToBeReserved, a.timeToBeReserved).getTime()
@@ -267,35 +300,29 @@ const AdminCheckReservationsPage = () => {
             b.dateToBeReserved && b.timeToBeReserved
               ? parseDateTime(b.dateToBeReserved, b.timeToBeReserved).getTime()
               : 0;
-
+  
           return dateB - dateA; // Descending order
         });
-
-        console.log("Sorted Reservations:", sortedReservations); // Log to verify order
-
-        // Log the buffetChosen if it exists
-        sortedReservations.forEach((res) => {
-          if (res.buffetChosen) {
-            console.log(
-              "Buffet Chosen for Reservation ID",
-              res.id,
-              ":",
-              res.buffetChosen
-            );
-          }
-        });
   
-        setReservations(sortedReservations);
+        console.log("Sorted and Filtered Reservations:", sortedAndFilteredReservations);
+        setReservations(sortedAndFilteredReservations);
       },
       (error) => {
         console.error("Error fetching reservations:", error);
       }
     );
-
-    // Clean up the listener when the component unmounts
-    return () => unsubscribe();
-  }, []);
   
+    return () => unsubscribe();
+  }, [selectedStatus, filterDate, isFilterClicked]);
+
+  useEffect(() => {
+    if (selectedFilterDate === "") {
+      setIsFilterClicked(false); // Reset the filter state when date is cleared
+    } else {
+      setIsFilterClicked(true); // Apply filter when date is set
+    }
+  }, [selectedFilterDate]); // Trigger useEffect when selectedFilterDate changes
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -334,7 +361,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
             >
               Add
             </Link>
-            <AdminReservationFilter />
+            <AdminReservationFilter onStatusChange={handleStatusChange} />
           </div>
           {/* BOOKING REQUESTS */}
           <div className="w-full flex flex-col gap-2 max-h-[720px]">
@@ -738,18 +765,19 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
             </h1>
             {/* DATE SEARCH/FILTER BAR */}
             <div className="w-full flex justify-end items-center gap-1">
-              <input
-                type="date"
-                name="dateFilter"
-                id="inputDateFilter"
-                value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
-                className="border-2 border-solid border-gray-200 text-sm sm:text-base w-2/3 max-w-40 text-center
-                       text-gray-600 md:text-lg h-10 pl-2 rounded-md bg-gray-50 md:w-full font-semibold pr-2"
-              />
+            <input
+              type="date"
+              name="dateFilter"
+              id="inputDateFilter"
+              value={selectedFilterDate}
+              onChange={handleDateChange}
+              className="border-2 border-solid border-gray-200 text-sm sm:text-base w-2/3 max-w-40 text-center
+                        text-gray-600 md:text-lg h-10 pl-2 rounded-md bg-gray-50 md:w-full font-semibold pr-2"
+            />
               <button
                 className="bg-orange-950 rounded-md shadow-md text-white
-            font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200"
+                    font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200"
+                onClick={handleFilterClick}
               >
                 Filter
               </button>
