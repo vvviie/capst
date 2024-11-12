@@ -25,6 +25,7 @@ import {
   deleteUser,
 } from "firebase/auth"; // Import Firebase Auth methods
 import Cookies from "js-cookie";
+import AccGiveVoucherForm from "../components/AccGiveVoucherForm";
 
 //#region Staff Sample Acc
 type Staff = {
@@ -77,6 +78,11 @@ const AccountsListPage = () => {
   const [filteredStaffRole, setFilteredStaffRole] = useState("all"); // Initial value of "all"
   const router = useRouter(); // Initialize useRouter
   const auth = getAuth();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const toggleForm = () => {
+    setIsFormOpen((prev) => !prev);
+  };
 
   const handleFilterChange = (status) => {
     setFilteredStatus(status);
@@ -180,7 +186,9 @@ const AccountsListPage = () => {
         }));
 
         // Filter out the staff with role "admin"
-        const filteredStaff = staff.filter((staffMember) => staffMember.role !== "admin");
+        const filteredStaff = staff.filter(
+          (staffMember) => staffMember.role !== "admin"
+        );
 
         setStaffAccounts(filteredStaff); // Update state with the filtered staff data
       });
@@ -196,7 +204,6 @@ const AccountsListPage = () => {
       }
     }
   };
-
 
   useEffect(() => {
     if (accountType === "staff") {
@@ -514,9 +521,21 @@ const AccountsListPage = () => {
                     >
                         Edit
                     </Link> */}
+                      {/* GIVE VOUCHER BUTTON */}
+                      <button
+                        className="h-10 w-2/3 bg-white border-2 border-gray-100 font-bold rounded-md shadow-md
+                                    hover:bg-gray-50 hover:scale-[1.02] duration-200 mt-2 text-gray-500"
+                        onClick={() => {
+                          setIsFormOpen(true);
+                          e.stopPropagation();
+                          toggleForm();
+                        }}
+                      >
+                        Send Discount
+                      </button>
                       {/* DELETE BUTTON */}
                       <button
-                        className="h-10 w-full bg-red-500 font-bold text-white rounded-md shadow-md
+                        className="h-10 w-1/3 bg-red-500 font-bold text-white rounded-md shadow-md
                                                 hover:bg-red-400 hover:scale-[1.02] duration-200 mt-2"
                         onClick={() => handleDeleteUser(user.username)}
                       >
@@ -621,6 +640,7 @@ const AccountsListPage = () => {
           </div>
         )}
       </div>
+      <AccGiveVoucherForm isOpen={isFormOpen} toggleForm={toggleForm} />
     </div>
   );
 };

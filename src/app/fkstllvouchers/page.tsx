@@ -297,18 +297,20 @@ const VoucherListPage = () => {
                       Unavailable
                     </option>
                   </select>
-                  <button
-                    className="rounded-sm shadow-md bg-orange-200 w-2/3 text-center
+                  {selectedType === "vouchers" && (
+                    <button
+                      className="rounded-sm shadow-md bg-orange-200 w-2/3 text-center
                     font-semibold text-amber-900 hover:bg-orange-100 hover:scale-[.98] duration-200 text-sm
                     min-h-10"
-                    onClick={() => {
-                      setIsFormOpen(true);
-                      e.stopPropagation();
-                      toggleForm();
-                    }}
-                  >
-                    Give to Users
-                  </button>
+                      onClick={() => {
+                        setIsFormOpen(true);
+                        e.stopPropagation();
+                        toggleForm();
+                      }}
+                    >
+                      Give to Users
+                    </button>
+                  )}
                   <Link
                     href={
                       selectedType === "promoCodes"
@@ -339,11 +341,7 @@ const VoucherListPage = () => {
           ))}
         </div>
       </div>
-      <GiveVoucherForm
-        isOpen={isFormOpen}
-        toggleForm={toggleForm}
-        typeOfPromo={selectedType}
-      />
+      <GiveVoucherForm isOpen={isFormOpen} toggleForm={toggleForm} />
     </div>
   );
 };

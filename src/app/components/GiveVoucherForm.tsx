@@ -42,7 +42,7 @@ const tierList: tiers = [
   },
 ];
 
-const GiveVoucherForm = ({ isOpen, toggleForm, typeOfPromo }) => {
+const GiveVoucherForm = ({ isOpen, toggleForm }) => {
   const formRef = useRef(null);
   const [type, setType] = useState("user"); // Set the initial value to match the first option
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
@@ -89,7 +89,7 @@ const GiveVoucherForm = ({ isOpen, toggleForm, typeOfPromo }) => {
         {/* HEADER */}
         <div className="flex gap-2 items-center justify-between">
           <h1 className="font-semibold text-gray-700 text-lg">
-            Send {typeOfPromo === "vouchers" ? "Voucher" : "Code"} To
+            Send Voucher To
           </h1>
           <select
             name="type"
@@ -191,14 +191,10 @@ const GiveVoucherForm = ({ isOpen, toggleForm, typeOfPromo }) => {
             }, 750);
           }}
         >
-          Send {typeOfPromo === "vouchers" ? "Voucher" : "Code"}
+          Send Voucher
         </button>
       </form>
-      {isPopUpVisible && (
-        <CheckoutPopup
-          message={`${typeOfPromo === "vouchers" ? "Voucher" : "Code"} sent!`}
-        />
-      )}
+      {isPopUpVisible && <CheckoutPopup message={`Voucher sent!`} />}
     </div>
   );
 };
