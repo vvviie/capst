@@ -8,7 +8,6 @@ import { useState, useEffect, useRef } from "react";
 import { getAuth, createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
-import createNewUser from "@/pages/api/createNewUser";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -142,29 +141,38 @@ const AddUsersAccountPage = () => {
     const handleSubmit = async () => {
         if (validateInputs()) {
             try {
-                // Create user in Firebase Authentication using Admin SDK
+                // Prepare data for the request
+                const requestData = {
+                    username, // Ensure this holds the email
+                    password, // Ensure this holds the password
+                };
+    
+                // Send data to backend API for user creation
                 const response = await fetch("/api/createNewUser", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify({ username, password }),
+                    body: JSON.stringify(requestData), // Send structured data as JSON
                 });
     
-                // Check for response errors
+                // Handle errors from backend response
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(`Error creating user: ${errorData.error || response.statusText}`);
                 }
     
-                const { uid } = await response.json(); // Get the UID from the response
+                // Extract UID and email from response data
+                const responseData = await response.json();
+                const { uid, email } = responseData;
     
-                // Validate UID
-                if (!uid) {
-                    throw new Error("UID is undefined. User creation may have failed.");
-                }
+                // Step 2: Notify user about verification email
+                setVerificationMessage(`A verification email has been sent to ${email}. Please verify your email.`);
+                setTimeout(() => {
+                    setVerificationMessage("");
+                }, 3000);
     
-                // Now, handle Firestore insertion
+                // Step 3: Prepare Firestore data
                 const now = new Date();
                 const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
                 const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -178,11 +186,12 @@ const AddUsersAccountPage = () => {
                     userData = {
                         uid,
                         username,
+                        verified: true,
                         firstName,
                         lastName,
                         address,
                         phoneNumber,
-                        role: "user", // or "admin" based on your logic
+                        role: "user", // You can set this dynamically if needed
                         totalPaid: 0,
                         vouchers: {
                             firstTimeVoucher: {
@@ -201,46 +210,30 @@ const AddUsersAccountPage = () => {
                     };
                 }
     
-                // Log userData for debugging
-                //console.log("User data to be written to Firestore:", userData);
-    
-                // Insert user data into Firestore
+                // Step 4: Insert user data into Firestore immediately after verification email is sent
                 try {
                     await setDoc(doc(db, "users", username), userData);
+                    setTimeout(() => {
+                        setIsPopupVisible(true);
+                        setTimeout(() => {
+                            setIsPopupVisible(false);
+                        }, 3000);
+                    }, 3000);
                 } catch (firestoreError) {
                     console.error("Error writing document to Firestore:", firestoreError);
                     throw new Error(`Firestore Error: ${firestoreError.message}`);
                 }
     
-                // Set the verification message
-                setVerificationMessage(`The account of ${username} was created successfully.`);
-                setTimeout(() => {
-                    setVerificationMessage("");
-                }, 3000);
-    
-                // Show popup and redirect
-                setIsPopupVisible(true);
-                setTimeout(() => {
-                    setIsPopupVisible(false);
-                }, 3000);
-                setTimeout(() => {
-                    router.push("/fkstllaccounts");    
-                }, 3000); // Optional: delay before redirecting
-    
             } catch (error) {
-                // Handle different types of errors gracefully
-                if (error.message.includes("email already in use")) {
-                    setErrorMessage("The email address is already in use. Please try logging in or use a different email.");
-                } else {
-                    setErrorMessage(`${error.message}`);
-                }
+                console.error("Error during email verification or Firestore update:", error);
+                setErrorMessage(`${error.message}`);
                 setTimeout(() => {
                     setErrorMessage("");
                 }, 5000);
             }
         }
     };
-
+    
     return (
         <div
             className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 

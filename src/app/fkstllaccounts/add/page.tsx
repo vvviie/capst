@@ -156,7 +156,7 @@ const AddStaffAccountPage = () => {
     
         try {
             // Call the API to create the user
-            const response = await fetch('/api/createNewUser', { // Ensure this path matches your API route
+            const response = await fetch('/api/createNewStaff', { // Ensure this path matches your API route
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
