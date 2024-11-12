@@ -4,7 +4,7 @@ import Image from "next/image";
 import React, { useRef, useState } from "react";
 
 // LOWERCASE OF ADMIN, BAR, AND KITCHEN
-const user = "bar";
+const user = "admin";
 const hasOrder = true;
 
 // #region Sample Data

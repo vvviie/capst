@@ -77,6 +77,7 @@ const CartPage = () => {
   const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
   const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
 
+  //#region NEW useState variables
   const [firstName, setFirstName] = useState<string | null>(null);
   const [lastName, setLastName] = useState<string | null>(null);
   const closeVoucherForm = () => {
@@ -85,6 +86,7 @@ const CartPage = () => {
     }
     openVoucherForm(false); // Close the voucher form
   };
+  //#endregion
 
   const now = new Date();
 
@@ -131,37 +133,6 @@ const CartPage = () => {
       return () => unsubscribeAuth();
     }
   }, [router]);
-
-  useEffect(() => {
-    const fetchUserDetails = async () => {
-      if (!userEmail) return; // Exit if there's no user email
-
-      try {
-        // Reference to the users collection
-        const userRef = doc(db, "users", userEmail);
-        
-        // Fetch the user document
-        const userDoc = await getDoc(userRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          setFirstName(userData.firstName); // Set first name
-          setLastName(userData.lastName); // Set last name
-          
-          // Log the first name and last name
-          console.log("First Name:", userData.firstName);
-          console.log("Last Name:", userData.lastName);
-        } else {
-          console.log("No such user document!");
-        }
-      } catch (error) {
-        console.error("Error fetching user details:", error);
-      }
-    };
-
-    fetchUserDetails();
-  }, [userEmail]); // Dependency array to run effect when userEmail changes
-  //#endregion
 
   //#region Handling of Order Options
   const handleOptionChange = (value: string) => {
@@ -762,6 +733,9 @@ const CartPage = () => {
       console.log("Final Document Data:", {
         user: userEmail,
         userName: `${firstName} ${lastName}`, // Add user's name
+        //pwdSenior: boolean,
+        //discountDeduc: int,
+        //idImg: string,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -781,7 +755,10 @@ const CartPage = () => {
 
       await setDoc(completedOrdersRef, {
         user: userEmail,
-        userName: `${firstName} ${lastName}`,
+        userName: `${firstName} ${lastName}`, // Add user's name
+        //pwdSenior: boolean,
+        //discountDeduc: int,
+        //idImg: string,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -1084,6 +1061,7 @@ const CartPage = () => {
   }
 
   return (
+    //#region hide
     <div
       className={`flex flex-col ${
         isEmpty
@@ -1341,7 +1319,7 @@ const CartPage = () => {
                 </div>
               )}
             </div>
-
+            {/*#endregion*/}
             {!openSeniorPWD ? (
               // CODE AND VOUCHER BUTTON CONTAINER
               <div className="w-full flex gap-2 items-center">
@@ -1365,6 +1343,7 @@ const CartPage = () => {
                 </button>
               </div>
             ) : (
+              //#endregion
               // SENIOR CITIZEN / PWD ID UPLOAD
               <div className="w-full flex flex-col gap-2 items-center mt-4">
                 <span className=" text-gray-500 w-full text-left">
@@ -1403,6 +1382,7 @@ const CartPage = () => {
 
             {/* PROMO CODE FORM */}
             {discountPromoForm && (
+              //#region hide
               <div
                 className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
                 onClick={() => openDiscountPromoForm(false)} // Close modal when clicking on the background
