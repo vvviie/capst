@@ -4,7 +4,8 @@ import Image from "next/image";
 import React, { useRef, useState, useEffect } from "react";
 import Cookies from "js-cookie";
 import { db } from "../firebase";
-import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
+import CheckoutPopup from "../components/CheckoutPopup";
+import { getFirestore, collection, getDocs, query, where, deleteDoc, updateDoc, doc, getDoc, onSnapshot} from "firebase/firestore";
 
 // #region Sample Data
 type Order = {
@@ -24,6 +25,7 @@ type Order = {
   pwdSeniorDiscountApplied?: boolean;
   sampleDiscountDeduction?: number;
   slug: string;
+  subtotal: number;
 };
 // #endregion
 
@@ -38,13 +40,23 @@ const AdminAndStaffOrdersPage = () => {
   const [discounts, setDiscounts] = useState<{ [orderId: string]: boolean }>({});
   const [user, setUser] = useState<string>("");
 
+  const [isPaidVisible, setIsPaidVisible] = useState(false);
+  const [isMarkAsPrepVisible, setIsMarkAsPrepVisible] = useState(false);
+  const [isMarkAsReadyVisible, setIsMarkAsReadyVisible] = useState(false);
+  const [isMarkAsDoneVisible, setIsMarkAsDoneVisible] = useState(false);
+
+  const [isCancelVisible, setIsCancelVisible] = useState(false);
+  const [isDeleteVisible, setIsDeleteVisible] = useState(false);
+
+
   useEffect(() => {
-    const loadOrders = async () => {
-      const orders = await fetchCompletedOrders();
+    const unsubscribe = fetchCompletedOrders((orders) => {
       setUserOrders(orders);
       setHasOrder(orders.length > 0);
-    };
-    loadOrders();
+    });
+    
+    // Clean up the listener on component unmount
+    return () => unsubscribe();
   }, []);
 
   const toggleOrder = (id: string) => {
@@ -83,65 +95,71 @@ const AdminAndStaffOrdersPage = () => {
     return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
   };
 
-  const fetchCompletedOrders = async (): Promise<Order[]> => {
-    const orders: Order[] = [];
-    const querySnapshot = await getDocs(collection(db, "completedOrders"));
-    
-    for (const doc of querySnapshot.docs) {
-      const data = doc.data();
-      let highestPricedItem = data.items[0]; // Initialize with the first item
-      let highestPrice = highestPricedItem.totalPrice;
-      
-      // Find the highest-priced item in the current order
-      data.items.forEach((item: any) => {
-        if (item.totalPrice > highestPrice) {
-          highestPricedItem = item;
-          highestPrice = item.totalPrice;
-        }
-      });
+  const fetchCompletedOrders = (setOrders: React.Dispatch<React.SetStateAction<Order[]>>) => {
+    const unsubscribe = onSnapshot(collection(db, "completedOrders"), (querySnapshot) => {
+      const orders: Order[] = [];
   
-      const items = data.items.map((item: any) => {
-        let discountedPrice = item.totalPrice;
-        
-        // Apply the discount only if this order's Sr/PWD discount is active
-        if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
-          discountedPrice = item.totalPrice * 0.8;
-        }
-        
-        return {
-          title: item.productTitle,
-          price: discountedPrice,
-          tags: item.slug === 'drinks' ? [item.selectedDrinkSize, item.note] : [item.note],
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        let highestPricedItem = data.items[0]; // Initialize with the first item
+        let highestPrice = highestPricedItem.totalPrice;
+  
+        // Find the highest-priced item in the current order
+        data.items.forEach((item: any) => {
+          if (item.totalPrice > highestPrice) {
+            highestPricedItem = item;
+            highestPrice = item.totalPrice;
+          }
+        });
+  
+        const items = data.items.map((item: any) => {
+          let discountedPrice = item.totalPrice;
+  
+          // Apply the discount only if this order's Sr/PWD discount is active
+          if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
+            discountedPrice = item.totalPrice * 0.8;
+          }
+  
+          return {
+            title: item.productTitle,
+            price: discountedPrice,
+            tags: item.slug === 'drinks' ? [item.selectedDrinkSize, item.note] : [item.note],
+          };
+        });
+  
+        // Recalculate the total price
+        const totalPrice = items.reduce((total, item) => total + item.price, 0);
+  
+        const order: Order = {
+          id: doc.id,
+          userName: data.userName,
+          userEmail: data.user,
+          date: data.dateCreated,
+          time: formatTime(data.timeCreated),
+          price: totalPrice,
+          status: data.status,
+          where: data.selectedOption,
+          payment: data.modeOfPayment,
+          items: items,
+          pwdSenior: data.pwdSenior,
+          idPic: data.idImg,
+          pwdSeniorDiscountApplied: applySrPWD[doc.id], // Track if the discount was applied
+          sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
+          promo: data.promoDiscounted,
+          slug: data.slug,
+          subtotal: data.subtotal || totalPrice, // Use subtotal from DB or calculated totalPrice if missing
         };
+  
+        orders.push(order);
       });
   
-      // Recalculate the total price
-      const totalPrice = items.reduce((total, item) => total + item.price, 0);
+      // Update the orders state with the new data
+      setOrders(orders);
+    });
   
-      const order: Order = {
-        id: doc.id,
-        userName: data.userName,
-        userEmail: data.user,
-        date: data.dateCreated,
-        time: formatTime(data.timeCreated),
-        price: totalPrice,
-        status: data.status,
-        where: data.selectedOption,
-        payment: data.modeOfPayment,
-        items: items,
-        pwdSenior: data.pwdSenior,
-        idPic: data.idImg,
-        pwdSeniorDiscountApplied: applySrPWD[doc.id], // Track if the discount was applied
-        sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
-        promo: data.promoDiscounted,
-        slug: data.slug,
-      };
-  
-      orders.push(order);
-    }
-  
-    return orders;
+    return unsubscribe; // Return the unsubscribe function to stop listening when needed
   };
+  
 
   // FOR OPENING NG POP UP
   const [confirmPopup, setConfirmPopup] = useState(false);
@@ -165,6 +183,143 @@ const AdminAndStaffOrdersPage = () => {
         ? "ready"
         : "done"
     );
+  };
+
+    const handlePaid = async (id: string) => {
+      try {
+          // Fetch the specific order document from Firestore
+          const orderRef = doc(db, "completedOrders", id);
+          const orderDoc = await getDoc(orderRef);
+          if (!orderDoc.exists()) {
+              console.error("Order not found");
+              return;
+          }
+
+          const orderData = orderDoc.data();
+
+          // Determine if the Sr/PWD discount should be applied
+          const applyDiscount = applySrPWD[id];
+          let totalPrice = orderData.subtotal; // assuming `subtotal` is stored in the database
+          let sampleDiscountDeduction = 0;
+          let pwdSeniorStatus = false; // Track the pwdSenior status
+
+          // Calculate the discount only if applySrPWD is true and items exist
+          if (applyDiscount && orderData.items) {
+              pwdSeniorStatus = true; // Set pwdSenior to true if applying the discount
+
+              // Find the highest-priced item
+              let highestPricedItem = orderData.items[0];
+              let highestPrice = highestPricedItem.totalPrice;
+
+              orderData.items.forEach((item: any) => {
+                  if (item.totalPrice > highestPrice) {
+                      highestPricedItem = item;
+                      highestPrice = item.totalPrice;
+                  }
+              });
+
+              // Calculate the discount
+              sampleDiscountDeduction = highestPricedItem.totalPrice * 0.2;
+              totalPrice -= sampleDiscountDeduction;
+
+              // Console logging for verification
+              console.log("Original Total Price:", orderData.subtotal);
+              console.log("Discounted Amount:", sampleDiscountDeduction);
+              console.log("New Total Price:", totalPrice);
+          } else {
+              pwdSeniorStatus = false; // Set pwdSenior to false if no discount is applied
+          }
+
+          // Update the document with the new status, discounted total price, and pwdSenior status
+          await updateDoc(orderRef, {
+              status: "PAID",
+              subtotal: totalPrice, // update subtotal with the discounted total
+              sampleDiscountDeduction: sampleDiscountDeduction,
+              pwdSenior: pwdSeniorStatus, // update pwdSenior based on discount application
+          });
+
+          setIsPaidVisible(true);
+          setTimeout(() => {
+              setIsPaidVisible(false);
+          }, 750);
+      } catch (error) {
+          console.error("Error updating status to 'PAID':", error);
+      }
+  };
+  
+
+  const handlePrep = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "completedOrders", id), {
+        status: "PREP",
+      });
+
+      setIsMarkAsPrepVisible(true);
+      setTimeout(() => {
+        setIsMarkAsPrepVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'DONE':", error);
+    }
+  };
+
+  const handleReady = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "completedOrders", id), {
+        status: "READY",
+      });
+
+      setIsMarkAsReadyVisible(true);
+      setTimeout(() => {
+        setIsMarkAsReadyVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'DONE':", error);
+    }
+  };
+
+  const handleDone = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "completedOrders", id), {
+        status: "DONE",
+      });
+
+      setIsMarkAsDoneVisible(true);
+      setTimeout(() => {
+        setIsMarkAsDoneVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'DONE':", error);
+    }
+  };
+
+  const handleCancel = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "completedOrders", id), {
+        status: "CANCELLED",
+      });
+
+      setIsCancelVisible(true);
+      setTimeout(() => {
+        setIsCancelVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'CANCELLED':", error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      // Delete the document that matches the provided ID
+      await deleteDoc(doc(db, "completedOrders", id));
+  
+      setIsDeleteVisible(true);
+      setTimeout(() => {
+        setIsDeleteVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error deleting document:", error);
+    }
   };
 
   useEffect(() => {
@@ -245,7 +400,11 @@ const AdminAndStaffOrdersPage = () => {
                         {/* HEADERS CONTAINER */}
                         <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                           <span className="">ID: {order.id}</span>
-                          <span className="">PHP {applySrPWD[order.id] ? (order.price - order.sampleDiscountDeduction) : order.price}</span>
+                          <span>
+                            PHP {order.status === "TO PAY" 
+                              ? (applySrPWD[order.id] ? (order.price - order.sampleDiscountDeduction) : order.price)
+                              : order.subtotal}
+                          </span>
                         </div>
                         {/* SUBHEADER CONTAINER */}
                         <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -293,12 +452,13 @@ const AdminAndStaffOrdersPage = () => {
                         {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                         <div className="font-bold text-sm flex justify-between items-center">
                           <span className="font-semibold">
-                            Applied for Senior/PWD?
+                            {order.status !== "TO PAY" ? "Senior Citizen / PWD Discount Given?" : "Applied for Senior/PWD?"}
                           </span>
                           <span>{order.pwdSenior ? "Yes" : "No"}</span>
                         </div>
-                        {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                        {applySrPWD[order.id] && (
+
+                        {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
+                        {((order.status === "TO PAY" && order.pwdSenior && applySrPWD[order.id]) || (order.status !== "TO PAY" && order.pwdSenior)) && (
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">Senior Citizen/PWD Discount</span>
                             <span>{order.sampleDiscountDeduction}</span>
@@ -366,7 +526,7 @@ const AdminAndStaffOrdersPage = () => {
                           </div>
                         )}
                         {/* PROMO, IF THERE IS ONE */}
-                        {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
+                        {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && order.promo !== 0 && (
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
                               Promo discount
@@ -374,21 +534,53 @@ const AdminAndStaffOrdersPage = () => {
                             <span>{order.promo}</span>
                           </div>
                         )}
-                        {order.items.map((items) => (
-                          <div className="flex flex-col gap-1">
-                            <hr />
-                            {/* ITEM TITLE AND PRICE CONTAINER */}
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                {items.title}
-                              </span>
-                              <span>{items.price}</span>
+                        {order.items.map((item) => {
+                          // Determine if this item is the highest-priced item
+                          const isHighestPriced = item.price === Math.max(...order.items.map((i) => i.price));
+
+                          // Apply discount conditionally based on the order's status and senior discount eligibility
+                          const discountAmount = (isHighestPriced && 
+                            ((order.status === "TO PAY" && applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
+                            (order.status !== "TO PAY" && order.pwdSenior))) // Discount if status is not 'TO PAY' and it's a senior order
+                            ? item.price * 0.2
+                            : 0;
+
+                          // Calculate discounted price if the discount applies
+                          const discountedPrice = isHighestPriced ? item.price - discountAmount : item.price;
+
+                          return (
+                            <div className="flex flex-col gap-1" key={item.title}>
+                              <hr />
+                              {/* ITEM TITLE AND PRICE CONTAINER */}
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  {item.title}
+                                  {isHighestPriced && ( // Only show discounted label for the highest-priced item
+                                    ((order.status === "TO PAY" && applySrPWD[order.id]) || 
+                                    (order.status !== "TO PAY" && order.pwdSenior)) && ( // Apply condition to show discount label
+                                      <span className="text-green-600 text-xs ml-2">
+                                        (discounted: {discountAmount})
+                                      </span>
+                                    )
+                                  )}
+                                </span>
+                                <span
+                                  className={isHighestPriced && ( // Highlight the discounted price
+                                    ((order.status === "TO PAY" && applySrPWD[order.id]) || 
+                                    (order.status !== "TO PAY" && order.pwdSenior))
+                                  ) ? "text-green-600" : ""}
+                                >
+                                  {discountedPrice}
+                                </span>
+                              </div>
+                              {item.tags.map((tag, index) => (
+                                <p className="text-xs" key={index}>
+                                  -{tag}
+                                </p>
+                              ))}
                             </div>
-                            {items.tags.map((tags) => (
-                              <p className="text-xs">-{tags}</p>
-                            ))}
-                          </div>
-                        ))}
+                          );
+                        })}
 
                         {/* USERNAME */}
                         <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
@@ -415,6 +607,22 @@ const AdminAndStaffOrdersPage = () => {
                                 : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
                             } shadow-md hover:scale-[1.02] duration-200
                       rounded-md h-10`}
+                      onClick={() => {
+                        if (order.status === "TO PAY") {
+                          handlePaid(order.id);
+                        }
+                        else if (order.status === "PAID") {
+                          handlePrep(order.id);
+                        }
+
+                        else if (order.status === "PREP") {
+                          handleReady(order.id);
+                        }
+
+                        else if (order.status === "READY") {
+                          handleDone(order.id);
+                        }
+                      }}
                           >
                             {order.status === "TO PAY"
                               ? "Mark as Paid"
@@ -431,10 +639,8 @@ const AdminAndStaffOrdersPage = () => {
                               order.status === "DONE" && "hidden"
                             } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
                       hover:scale-[1.02] duration-200 hover:bg-red-400 `}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              console.log("Cancel button clicked");
-                              setConfirmPopup(true);
+                            onClick={() => {
+                              handleCancel(order.id);
                             }}
                           >
                             Cancel
@@ -511,7 +717,11 @@ const AdminAndStaffOrdersPage = () => {
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                             <span className="">ID: {order.id}</span>
-                            <span className="">PHP {order.price}</span>
+                            <span>
+                              PHP {order.status === "TO PAY" 
+                                ? (applySrPWD[order.id] ? (order.price - order.sampleDiscountDeduction) : order.price)
+                                : order.subtotal}
+                            </span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -559,19 +769,20 @@ const AdminAndStaffOrdersPage = () => {
                             <span>{order.payment}</span>
                           </div>
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
+                        <div className="font-bold text-sm flex justify-between items-center">
+                          <span className="font-semibold">
+                            {order.status !== "TO PAY" ? "Senior Citizen / PWD Discount Given?" : "Applied for Senior/PWD?"}
+                          </span>
+                          <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                        </div>
+
+                        {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
+                        {((order.status === "TO PAY" && order.pwdSenior && applySrPWD[order.id]) || (order.status !== "TO PAY" && order.pwdSenior)) && (
                           <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              Applied for Senior/PWD?
-                            </span>
-                            <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                            <span className="font-semibold">Senior Citizen/PWD Discount</span>
+                            <span>{order.sampleDiscountDeduction}</span>
                           </div>
-                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                          {applySrPWD[order.id] && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">Senior Citizen/PWD Discount</span>
-                              <span>{order.sampleDiscountDeduction}</span>
-                            </div>
-                          )}
+                        )}
                           {/* PICTURE OF ID CONTAINER */}
                           {order.pwdSenior && (
                             <>
@@ -619,52 +830,77 @@ const AdminAndStaffOrdersPage = () => {
                             </>
                           )}
 
-                          {/* APPLY SENIOR / PWD DISCOUNT */}
-                          {order.status === "TO PAY" && (
-                            <div className="w-full flex justify-end">
-                              <button
-                                className={`h-10 ${
-                                  applySrPWD
-                                    ? "bg-red-500 hover:bg-red-400 text-white"
-                                    : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"
-                                } shadow-md hover:scale-[1.02] duration-200
-                    rounded-md font-bold w-full`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  applySrPWD
-                                    ? setApplySrPWD(false)
-                                    : setApplySrPWD(true);
-                                }}
+                          {/* Apply Sr/PWD Discount Button */}
+                        {order.status === "TO PAY" && (
+                          <div className="w-full flex justify-end">
+                            <button
+                              className={`h-10 ${applySrPWD[order.id] ? "bg-red-500 hover:bg-red-400 text-white" : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"} shadow-md hover:scale-[1.02] duration-200 rounded-md font-bold w-full`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSrPWD(order.id); // Toggle the Sr/PWD discount for this order only
+                              }}
+                            >
+                              {applySrPWD[order.id] ? "Cancel" : "Apply"} Sr/PWD Discount
+                            </button>
+                          </div>
+                        )}
+                        {/* PROMO, IF THERE IS ONE */}
+                        {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && order.promo !== 0 && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">
+                              Promo discount
+                            </span>
+                            <span>{order.promo}</span>
+                          </div>
+                        )}
+                          {order.items.map((item) => {
+                            // Determine if this item is the highest-priced item
+                            const isHighestPriced =
+                              item.price ===
+                              Math.max(...order.items.map((i) => i.price));
+                            const discountAmount =
+                              isHighestPriced && applySrPWD[order.id]
+                                ? item.price * 0.2
+                                : 0;
+                            const discountedPrice = isHighestPriced
+                              ? item.price - discountAmount
+                              : item.price;
+
+                            return (
+                              <div
+                                className="flex flex-col gap-1"
+                                key={item.title}
                               >
-                                {applySrPWD ? "Cancel" : "Apply"} Sr/PWD
-                                Discount
-                              </button>
-                            </div>
-                          )}
-                          {/* PROMO, IF THERE IS ONE */}
-                          {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Promo discount
-                              </span>
-                              <span>{order.promo}</span>
-                            </div>
-                          )}
-                          {order.items.map((items) => (
-                            <div className="flex flex-col gap-1">
-                              <hr />
-                              {/* ITEM TITLE AND PRICE CONTAINER */}
-                              <div className="font-bold text-sm flex justify-between items-center">
-                                <span className="font-semibold">
-                                  {items.title}
-                                </span>
-                                <span>{items.price}</span>
+                                <hr />
+                                {/* ITEM TITLE AND PRICE CONTAINER */}
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    {item.title}
+                                    {isHighestPriced &&
+                                      applySrPWD[order.id] && (
+                                        <span className="text-green-600 text-xs ml-2">
+                                          (discounted: {discountAmount})
+                                        </span>
+                                      )}
+                                  </span>
+                                  <span
+                                    className={
+                                      isHighestPriced && applySrPWD[order.id]
+                                        ? "text-green-600"
+                                        : ""
+                                    }
+                                  >
+                                    {discountedPrice}
+                                  </span>
+                                </div>
+                                {item.tags.map((tag, index) => (
+                                  <p className="text-xs" key={index}>
+                                    -{tag}
+                                  </p>
+                                ))}
                               </div>
-                              {items.tags.map((tags) => (
-                                <p className="text-xs">-{tags}</p>
-                              ))}
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {/* USERNAME */}
                           <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
@@ -693,6 +929,11 @@ const AdminAndStaffOrdersPage = () => {
                                   : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full"
                               } shadow-md hover:scale-[1.02] duration-200
                       rounded-md h-10`}
+                            onClick={() => {
+                              if (order.status === "TO PAY") {
+                                handlePaid(order.id);
+                              }
+                            }}
                             >
                               {order.status === "TO PAY"
                                 ? "Mark as Paid"
@@ -755,7 +996,11 @@ const AdminAndStaffOrdersPage = () => {
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                             <span className="">ID: {order.id}</span>
-                            <span className="">PHP {order.price}</span>
+                            <span>
+                              PHP {order.status === "TO PAY" 
+                                ? (applySrPWD[order.id] ? (order.price - order.sampleDiscountDeduction) : order.price)
+                                : order.subtotal}
+                            </span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -803,19 +1048,20 @@ const AdminAndStaffOrdersPage = () => {
                             <span>{order.payment}</span>
                           </div>
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
+                        <div className="font-bold text-sm flex justify-between items-center">
+                          <span className="font-semibold">
+                            {order.status !== "TO PAY" ? "Senior Citizen / PWD Discount Given?" : "Applied for Senior/PWD?"}
+                          </span>
+                          <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                        </div>
+
+                        {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
+                        {((order.status === "TO PAY" && order.pwdSenior && applySrPWD[order.id]) || (order.status !== "TO PAY" && order.pwdSenior)) && (
                           <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              Applied for Senior/PWD?
-                            </span>
-                            <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                            <span className="font-semibold">Senior Citizen/PWD Discount</span>
+                            <span>{order.sampleDiscountDeduction}</span>
                           </div>
-                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                          {applySrPWD[order.id] && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">Senior Citizen/PWD Discount</span>
-                              <span>{order.sampleDiscountDeduction}</span>
-                            </div>
-                          )}
+                        )}
                           {/* PICTURE OF ID CONTAINER */}
                           {order.pwdSenior && (
                             <>
@@ -863,52 +1109,77 @@ const AdminAndStaffOrdersPage = () => {
                             </>
                           )}
 
-                          {/* APPLY SENIOR / PWD DISCOUNT */}
-                          {order.status === "TO PAY" && (
-                            <div className="w-full flex justify-end">
-                              <button
-                                className={`h-10 ${
-                                  applySrPWD
-                                    ? "bg-red-500 hover:bg-red-400 text-white"
-                                    : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"
-                                } shadow-md hover:scale-[1.02] duration-200
-                    rounded-md font-bold w-full`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  applySrPWD
-                                    ? setApplySrPWD(false)
-                                    : setApplySrPWD(true);
-                                }}
+                          {/* Apply Sr/PWD Discount Button */}
+                        {order.status === "TO PAY" && (
+                          <div className="w-full flex justify-end">
+                            <button
+                              className={`h-10 ${applySrPWD[order.id] ? "bg-red-500 hover:bg-red-400 text-white" : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"} shadow-md hover:scale-[1.02] duration-200 rounded-md font-bold w-full`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSrPWD(order.id); // Toggle the Sr/PWD discount for this order only
+                              }}
+                            >
+                              {applySrPWD[order.id] ? "Cancel" : "Apply"} Sr/PWD Discount
+                            </button>
+                          </div>
+                        )}
+                        {/* PROMO, IF THERE IS ONE */}
+                        {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && order.promo !== 0 && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">
+                              Promo discount
+                            </span>
+                            <span>{order.promo}</span>
+                          </div>
+                        )}
+                          {order.items.map((item) => {
+                            // Determine if this item is the highest-priced item
+                            const isHighestPriced =
+                              item.price ===
+                              Math.max(...order.items.map((i) => i.price));
+                            const discountAmount =
+                              isHighestPriced && applySrPWD[order.id]
+                                ? item.price * 0.2
+                                : 0;
+                            const discountedPrice = isHighestPriced
+                              ? item.price - discountAmount
+                              : item.price;
+
+                            return (
+                              <div
+                                className="flex flex-col gap-1"
+                                key={item.title}
                               >
-                                {applySrPWD ? "Cancel" : "Apply"} Sr/PWD
-                                Discount
-                              </button>
-                            </div>
-                          )}
-                          {/* PROMO, IF THERE IS ONE */}
-                          {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Promo discount
-                              </span>
-                              <span>{order.promo}</span>
-                            </div>
-                          )}
-                          {order.items.map((items) => (
-                            <div className="flex flex-col gap-1">
-                              <hr />
-                              {/* ITEM TITLE AND PRICE CONTAINER */}
-                              <div className="font-bold text-sm flex justify-between items-center">
-                                <span className="font-semibold">
-                                  {items.title}
-                                </span>
-                                <span>{items.price}</span>
+                                <hr />
+                                {/* ITEM TITLE AND PRICE CONTAINER */}
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    {item.title}
+                                    {isHighestPriced &&
+                                      applySrPWD[order.id] && (
+                                        <span className="text-green-600 text-xs ml-2">
+                                          (discounted: {discountAmount})
+                                        </span>
+                                      )}
+                                  </span>
+                                  <span
+                                    className={
+                                      isHighestPriced && applySrPWD[order.id]
+                                        ? "text-green-600"
+                                        : ""
+                                    }
+                                  >
+                                    {discountedPrice}
+                                  </span>
+                                </div>
+                                {item.tags.map((tag, index) => (
+                                  <p className="text-xs" key={index}>
+                                    -{tag}
+                                  </p>
+                                ))}
                               </div>
-                              {items.tags.map((tags) => (
-                                <p className="text-xs">-{tags}</p>
-                              ))}
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {/* USERNAME */}
                           <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
@@ -937,6 +1208,11 @@ const AdminAndStaffOrdersPage = () => {
                                   : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full"
                               } shadow-md hover:scale-[1.02] duration-200
                       rounded-md h-10`}
+                      onClick={() => {
+                        if (order.status === "TO PAY") {
+                          handlePaid(order.id);
+                        }
+                      }}
                             >
                               {order.status === "TO PAY"
                                 ? "Mark as Paid"
@@ -1008,6 +1284,24 @@ const AdminAndStaffOrdersPage = () => {
             </div>
           </div>
         )}
+
+        {/* MARKED AS DONE POP UP */}
+        {isMarkAsDoneVisible && <CheckoutPopup message="Marked as Done!" />}
+
+        {/* PAID POP UP */}
+        {isPaidVisible && <CheckoutPopup message="Marked as Paid!" />}
+
+        {/* CANCEL POP UP */}
+        {isCancelVisible && <CheckoutPopup message="Booking Canceled!" />}
+
+        {/* PREPARING POP UP */}
+        {isMarkAsPrepVisible && <CheckoutPopup message="Marked as Preparing!" />}
+
+        {/* READY POP UP */}
+        {isMarkAsReadyVisible && <CheckoutPopup message="Marked as Ready!" />}
+
+        {/* DELETE POP UP */}
+        {isDeleteVisible && <CheckoutPopup message="Booking Deleted!" />}
       </div>
     </div>
   );
