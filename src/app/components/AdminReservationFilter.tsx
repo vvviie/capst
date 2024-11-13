@@ -1,7 +1,5 @@
-"use client";
-
-import Image from "next/image";
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 
 type FilterOption = {
   id: number;
@@ -11,19 +9,24 @@ type FilterOption = {
 
 const statusOptions: FilterOption[] = [
   { id: 1, name: "ALL", value: "all" },
-  { id: 2, name: "PENDING", value: "pending" },
-  { id: 3, name: "TO PAY", value: "topay" },
-  { id: 4, name: "PAID", value: "paid" },
-  { id: 5, name: "REJECTED", value: "rejected" },
-  { id: 6, name: "CANCELED", value: "canceled" },
+  { id: 2, name: "REQUESTED", value: "REQUESTED" },
+  { id: 3, name: "PENDING", value: "PENDING" },
+  { id: 4, name: "TO PAY", value: "TO PAY" },
+  { id: 5, name: "PAID", value: "PAID" },
+  { id: 6, name: "REJECTED", value: "REJECTED" },
+  { id: 7, name: "CANCELED", value: "CANCELED" },
+  { id: 8, name: "DONE", value: "DONE" },
 ];
 
-const AdminReservationFilter = () => {
+interface AdminReservationFilterProps {
+  onStatusChange: (status: string) => void;
+}
+
+const AdminReservationFilter: React.FC<AdminReservationFilterProps> = ({ onStatusChange }) => {
   const [open, setOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const formRef = useRef<HTMLFormElement | null>(null);
 
-  // Close form when clicking outside
   const handleClickOutside = (event: MouseEvent) => {
     if (formRef.current && !formRef.current.contains(event.target as Node)) {
       setOpen(false);
@@ -40,6 +43,17 @@ const AdminReservationFilter = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open]);
+
+  // Only update local selectedStatus on radio button change
+  const handleStatusSelect = (value: string) => {
+    setSelectedStatus(value);
+  };
+
+  // Trigger filter update only when clicking "Apply Filter"
+  const applyFilter = () => {
+    onStatusChange(selectedStatus);
+    setOpen(false); // Optionally close the filter menu
+  };
 
   return (
     <div className="h-6 w-6 cursor-pointer z-10 relative mr-2">
@@ -76,7 +90,7 @@ const AdminReservationFilter = () => {
                     id={`radio${stat.value}`}
                     className="w-4 h-4"
                     checked={selectedStatus === stat.value}
-                    onChange={() => setSelectedStatus(stat.value)}
+                    onChange={() => handleStatusSelect(stat.value)}
                   />
                   <span className="text-sm text-center">{stat.name}</span>
                 </div>
@@ -85,6 +99,7 @@ const AdminReservationFilter = () => {
 
             <button
               type="button"
+              onClick={applyFilter}
               className="w-full text-white font-bold text-xl bg-orange-950 px-4 py-2 rounded-md shadow-md mt-4 hover:bg-orange-900 hover:scale-[1.02] duration-300"
             >
               Apply Filter

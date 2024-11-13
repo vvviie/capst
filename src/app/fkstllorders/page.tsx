@@ -1,14 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import React, { useRef, useState } from "react";
-
-// LOWERCASE OF ADMIN, BAR, AND KITCHEN
-const user = "bar";
-const hasOrder = true;
+import React, { useRef, useState, useEffect } from "react";
+import Cookies from "js-cookie";
+import { db } from "../firebase";
+import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 
 // #region Sample Data
-
 type Order = {
   userName: string;
   userEmail: string;
@@ -19,157 +17,130 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  items: { title: string; price: number; tags: string[] }[];
+  items: { title: string; price: number; tags: string[] }[]; 
   id: string;
   pwdSenior: boolean;
   idPic?: string;
   pwdSeniorDiscountApplied?: boolean;
   sampleDiscountDeduction?: number;
+  slug: string;
 };
-
-type Orders = Order[];
-
-const userOrders: Orders = [
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "17:21",
-    price: 340,
-    status: "TO PAY",
-    pwdSenior: true,
-    sampleDiscountDeduction: 40,
-    idPic: "/coffee.jpg",
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "542352134124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "17:21",
-    price: 360,
-    status: "PAID",
-    pwdSenior: false,
-    where: "Table",
-    payment: "Card",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "522222134124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "16:21",
-    price: 360,
-    status: "PREP",
-    pwdSenior: false,
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "553352133124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "15:21",
-    price: 360,
-    status: "READY",
-    pwdSenior: false,
-    where: "Table",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "564552133124",
-  },
-  {
-    userName: "Jorge Angelo Pangilinan",
-    userEmail: "jamp@gmail.com",
-    date: "09/13/2024",
-    time: "14:21",
-    price: 360,
-    status: "DONE",
-    pwdSenior: false,
-    where: "Pick-up",
-    payment: "Cash",
-    items: [
-      {
-        title: "Espresso Shot",
-        price: 80,
-        tags: ["8oz", '"None"'],
-      },
-      {
-        title: "Pasta",
-        price: 280,
-        tags: ['"None"'],
-      },
-    ],
-    id: "575452133124",
-  },
-];
-
 // #endregion
 
 const AdminAndStaffOrdersPage = () => {
   const [reversePosition, setReversePosition] = useState(false);
   const [orderStatCat, setOrderStatCat] = useState("all");
   const [enlargePicture, setEnlargePicture] = useState(false);
-  const [applySrPWD, setApplySrPWD] = useState(false);
-  const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [hasOrder, setHasOrder] = useState(false);
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
+  const [applySrPWD, setApplySrPWD] = useState<{ [key: string]: boolean }>({});
+  const [expandedOrders, setExpandedOrders] = useState<{ [key: string]: boolean }>({});
+  const [discounts, setDiscounts] = useState<{ [orderId: string]: boolean }>({});
+  const [user, setUser] = useState<string>("");
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      const orders = await fetchCompletedOrders();
+      setUserOrders(orders);
+      setHasOrder(orders.length > 0);
+    };
+    loadOrders();
+  }, []);
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
       ...prev,
       [id]: !prev[id],
     }));
+  };
+  
+  const toggleSrPWD = (orderId: string) => {
+    setApplySrPWD((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }));
+  };
+
+  const toggleDiscount = (orderId: string) => {
+    setDiscounts((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId], // Toggle the discount state for this specific order
+    }));
+  };
+
+  
+  const formatTime = (time: string) => {
+    const [hour, minute] = time.split(":").map(Number);
+    const isPM = hour >= 12;
+    
+    // Convert 24-hour time to 12-hour format
+    const formattedHour = hour % 12 === 0 ? 12 : hour % 12;
+    
+    // Determine AM or PM
+    const period = isPM ? "PM" : "AM";
+
+    // Return formatted time
+    return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
+  };
+
+  const fetchCompletedOrders = async (): Promise<Order[]> => {
+    const orders: Order[] = [];
+    const querySnapshot = await getDocs(collection(db, "completedOrders"));
+    
+    for (const doc of querySnapshot.docs) {
+      const data = doc.data();
+      let highestPricedItem = data.items[0]; // Initialize with the first item
+      let highestPrice = highestPricedItem.totalPrice;
+      
+      // Find the highest-priced item in the current order
+      data.items.forEach((item: any) => {
+        if (item.totalPrice > highestPrice) {
+          highestPricedItem = item;
+          highestPrice = item.totalPrice;
+        }
+      });
+  
+      const items = data.items.map((item: any) => {
+        let discountedPrice = item.totalPrice;
+        
+        // Apply the discount only if this order's Sr/PWD discount is active
+        if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
+          discountedPrice = item.totalPrice * 0.8;
+        }
+        
+        return {
+          title: item.productTitle,
+          price: discountedPrice,
+          tags: item.slug === 'drinks' ? [item.selectedDrinkSize, item.note] : [item.note],
+        };
+      });
+  
+      // Recalculate the total price
+      const totalPrice = items.reduce((total, item) => total + item.price, 0);
+  
+      const order: Order = {
+        id: doc.id,
+        userName: data.userName,
+        userEmail: data.user,
+        date: data.dateCreated,
+        time: formatTime(data.timeCreated),
+        price: totalPrice,
+        status: data.status,
+        where: data.selectedOption,
+        payment: data.modeOfPayment,
+        items: items,
+        pwdSenior: data.pwdSenior,
+        idPic: data.idImg,
+        pwdSeniorDiscountApplied: applySrPWD[doc.id], // Track if the discount was applied
+        sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
+        promo: data.promoDiscounted,
+        slug: data.slug,
+      };
+  
+      orders.push(order);
+    }
+  
+    return orders;
   };
 
   // FOR OPENING NG POP UP
@@ -195,6 +166,22 @@ const AdminAndStaffOrdersPage = () => {
         : "done"
     );
   };
+
+  useEffect(() => {
+    const cookies = Cookies.get(); // Retrieve all cookies
+
+    // Check if specific cookies exist and set the user role accordingly
+    if (cookies["admin"]) {
+      setUser("admin");
+    } else if (cookies["kitchen"]) {
+      setUser("kitchen");
+    } else if (cookies["bar"]) {
+      setUser("bar");
+    } 
+    
+    console.log("User role is set to:", user);
+  }, [user]); // Add `userRole` as a dependency to log updates if it changes
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -258,7 +245,7 @@ const AdminAndStaffOrdersPage = () => {
                         {/* HEADERS CONTAINER */}
                         <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                           <span className="">ID: {order.id}</span>
-                          <span className="">P{order.price}</span>
+                          <span className="">PHP {applySrPWD[order.id] ? (order.price - order.sampleDiscountDeduction) : order.price}</span>
                         </div>
                         {/* SUBHEADER CONTAINER */}
                         <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -311,9 +298,9 @@ const AdminAndStaffOrdersPage = () => {
                           <span>{order.pwdSenior ? "Yes" : "No"}</span>
                         </div>
                         {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                        {applySrPWD && (
+                        {applySrPWD[order.id] && (
                           <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">Discount</span>
+                            <span className="font-semibold">Senior Citizen/PWD Discount</span>
                             <span>{order.sampleDiscountDeduction}</span>
                           </div>
                         )}
@@ -364,29 +351,22 @@ const AdminAndStaffOrdersPage = () => {
                           </>
                         )}
 
-                        {/* APPLY SENIOR / PWD DISCOUNT */}
+                        {/* Apply Sr/PWD Discount Button */}
                         {order.status === "TO PAY" && (
                           <div className="w-full flex justify-end">
                             <button
-                              className={`h-10 ${
-                                applySrPWD
-                                  ? "bg-red-500 hover:bg-red-400 text-white"
-                                  : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"
-                              } shadow-md hover:scale-[1.02] duration-200
-                    rounded-md font-bold w-full`}
+                              className={`h-10 ${applySrPWD[order.id] ? "bg-red-500 hover:bg-red-400 text-white" : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"} shadow-md hover:scale-[1.02] duration-200 rounded-md font-bold w-full`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                applySrPWD
-                                  ? setApplySrPWD(false)
-                                  : setApplySrPWD(true);
+                                toggleSrPWD(order.id); // Toggle the Sr/PWD discount for this order only
                               }}
                             >
-                              {applySrPWD ? "Cancel" : "Apply"} Sr/PWD Discount
+                              {applySrPWD[order.id] ? "Cancel" : "Apply"} Sr/PWD Discount
                             </button>
                           </div>
                         )}
                         {/* PROMO, IF THERE IS ONE */}
-                        {order.promo && (
+                        {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
                               Promo discount
@@ -531,7 +511,7 @@ const AdminAndStaffOrdersPage = () => {
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                             <span className="">ID: {order.id}</span>
-                            <span className="">P{order.price}</span>
+                            <span className="">PHP {order.price}</span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -586,9 +566,9 @@ const AdminAndStaffOrdersPage = () => {
                             <span>{order.pwdSenior ? "Yes" : "No"}</span>
                           </div>
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                          {applySrPWD && (
+                          {applySrPWD[order.id] && (
                             <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">Discount</span>
+                              <span className="font-semibold">Senior Citizen/PWD Discount</span>
                               <span>{order.sampleDiscountDeduction}</span>
                             </div>
                           )}
@@ -662,7 +642,7 @@ const AdminAndStaffOrdersPage = () => {
                             </div>
                           )}
                           {/* PROMO, IF THERE IS ONE */}
-                          {order.promo && (
+                          {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
                             <div className="font-bold text-sm flex justify-between items-center">
                               <span className="font-semibold">
                                 Promo discount
@@ -775,7 +755,7 @@ const AdminAndStaffOrdersPage = () => {
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                             <span className="">ID: {order.id}</span>
-                            <span className="">P{order.price}</span>
+                            <span className="">PHP {order.price}</span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -830,9 +810,9 @@ const AdminAndStaffOrdersPage = () => {
                             <span>{order.pwdSenior ? "Yes" : "No"}</span>
                           </div>
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                          {applySrPWD && (
+                          {applySrPWD[order.id] && (
                             <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">Discount</span>
+                              <span className="font-semibold">Senior Citizen/PWD Discount</span>
                               <span>{order.sampleDiscountDeduction}</span>
                             </div>
                           )}
@@ -906,7 +886,7 @@ const AdminAndStaffOrdersPage = () => {
                             </div>
                           )}
                           {/* PROMO, IF THERE IS ONE */}
-                          {order.promo && (
+                          {(order.promo || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
                             <div className="font-bold text-sm flex justify-between items-center">
                               <span className="font-semibold">
                                 Promo discount

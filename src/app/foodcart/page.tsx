@@ -23,6 +23,7 @@ import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import CheckoutPopup from "../components/CheckoutPopup";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 //#endregion
 
 //#region Voucher data form
@@ -75,7 +76,26 @@ const CartPage = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
   const [promoType, setPromoType] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
+
+  //#region NEW useState variables
+  const [firstName, setFirstName] = useState<string | null>(null);
+  const [lastName, setLastName] = useState<string | null>(null);
+
+  // For Image
+  const [imageUrl, setImageUrl] = useState("");
+
+  // For Image's File Name
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef(null);
+
+  // For Firebase Image URL
+  const [firebaseImageUrl, setFirebaseImageUrl] = useState("");
+
   const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
+  const [isVoucherApplied, setIsVoucherApplied] = useState(false);
+  const [isPromoCodeApplied, setIsPromoCodeApplied] = useState(false);
+
+  //#endregion
 
   const closeVoucherForm = () => {
     if (!voucherApplied) {
@@ -95,7 +115,6 @@ const CartPage = () => {
   const time = `${String(now.getHours()).padStart(2, "0")}:${String(
     now.getMinutes()
   ).padStart(2, "0")}`;
-  //#endregion
 
   //#region Handling of All Methods
 
@@ -254,7 +273,9 @@ const CartPage = () => {
           // Updating total cart price
           setTotalCartPrice(newTotalCartPrice);
           setPromoApplied(true);
+          setIsPromoCodeApplied(true);
           setAppliedPromoCode(promoCode);
+          setIsVoucherApplied(false); // Set this to indicate a promo code has been applied
 
           // Display success message
           setShowSuccess(true);
@@ -267,7 +288,6 @@ const CartPage = () => {
           //});
 
           openDiscountPromoForm(false);
-
           setPromoCodeInput("");
         } else {
           setShowError(true);
@@ -342,6 +362,7 @@ const CartPage = () => {
         //console.log(`Discount applied (minus): ${deduction}`);
       }
 
+      // Update the total cart price
       setTotalCartPrice(newTotalCartPrice);
       setVoucherApplied(true);
 
@@ -534,7 +555,35 @@ const CartPage = () => {
     }
   };
   //#endregion
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      if (!userEmail) return; // Exit if there's no user email
 
+      try {
+        // Reference to the users collection
+        const userRef = doc(db, "users", userEmail);
+
+        // Fetch the user document
+        const userDoc = await getDoc(userRef);
+
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setFirstName(userData.firstName); // Set first name
+          setLastName(userData.lastName); // Set last name
+
+          // Log the first name and last name
+          console.log("First Name:", userData.firstName);
+          console.log("Last Name:", userData.lastName);
+        } else {
+          console.log("No such user document!");
+        }
+      } catch (error) {
+        console.error("Error fetching user details:", error);
+      }
+    };
+
+    fetchUserDetails();
+  }, [userEmail]); // Dependency array to run effect when userEmail changes
   //#region Fetching of All Vouchers
   useEffect(() => {
     const fetchVouchers = async () => {
@@ -626,6 +675,114 @@ const CartPage = () => {
     );
   };
   //#endregion
+
+  const handleUploadClick = () => {
+    // Trigger the file input click
+    fileInputRef.current.click();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const validTypes = ["image/jpeg", "image/png"];
+      if (!validTypes.includes(file.type)) {
+        console.error("Invalid file type. Please upload a PNG or JPEG.");
+        return;
+      }
+      setFileName(file.name);
+      const previewUrl = URL.createObjectURL(file);
+      setImageUrl(previewUrl);
+
+      try {
+        // Upload the image and get the URL
+        const webpUrl = await uploadImageToStorage(file);
+        console.log("Uploaded image URL:", webpUrl);
+
+        // Update Firebase image URL in state
+        setFirebaseImageUrl(webpUrl);
+      } catch (error) {
+        console.error("Error during image processing:", error);
+      }
+    }
+  };
+
+  // Function to convert image to WebP using canvas
+  const convertImageToWebP = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const imgElement = new window.Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        imgElement.src = e.target.result as string;
+      };
+
+      imgElement.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+
+          // Convert to WebP format
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Conversion to WebP failed."));
+            }
+          }, "image/webp");
+        } else {
+          reject(new Error("Canvas context is null."));
+        }
+      };
+
+      imgElement.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.readAsDataURL(file); // Read the file as Data URL
+    });
+  };
+
+  // Function to upload image to Firebase Storage
+  const uploadImageToStorage = async (file) => {
+    const storage = getStorage();
+    const storageRef = ref(
+      storage,
+      `images/tempImg/${file.name.split(".").slice(0, -1).join(".")}.webp`
+    ); // Update path to WebP
+
+    try {
+      // Convert the image to WebP format
+      const webpBlob = await convertImageToWebP(file);
+      console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
+      console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
+
+      // Create URL for the WebP Blob to preview
+      const webpUrl = URL.createObjectURL(webpBlob);
+      console.log("Converted to WebP:", webpUrl); // Log the WebP URL
+      setImageUrl(webpUrl); // Set this URL for preview, if needed
+
+      // Upload the WebP file
+      await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
+      const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+      return downloadUrl; // Return the URL
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null; // Return null if there's an error
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl(""); // Remove the image preview
+    setFileName(""); // Clear the file name
+    fileInputRef.current.value = ""; // Clear the file input
+  };
 
   //#region Handling of Completion of Orders
   const handleCompleteOrder = async (
@@ -730,6 +887,10 @@ const CartPage = () => {
 
       console.log("Final Document Data:", {
         user: userEmail,
+        userName: `${firstName} ${lastName}`, // Add user's name
+        pwdSenior: openSeniorPWD,
+        //idImg: NEED THE IMAGE VARIABLE,
+        idImg: firebaseImageUrl,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -749,6 +910,9 @@ const CartPage = () => {
 
       await setDoc(completedOrdersRef, {
         user: userEmail,
+        userName: `${firstName} ${lastName}`, // Add user's name
+        pwdSenior: openSeniorPWD,
+        idImg: firebaseImageUrl,
         items: completedOrderItems,
         totalItems: totalItems,
         subtotal: finalSubtotal || 0,
@@ -1051,6 +1215,7 @@ const CartPage = () => {
   }
 
   return (
+    //#region hide
     <div
       className={`flex flex-col ${
         isEmpty
@@ -1308,7 +1473,6 @@ const CartPage = () => {
                 </div>
               )}
             </div>
-
             {!openSeniorPWD ? (
               // CODE AND VOUCHER BUTTON CONTAINER
               <div className="w-full flex gap-2 items-center">
@@ -1332,14 +1496,24 @@ const CartPage = () => {
                 </button>
               </div>
             ) : (
+              //#endregion
               // SENIOR CITIZEN / PWD ID UPLOAD
               <div className="w-full flex flex-col gap-2 items-center mt-4">
-                <span className=" text-gray-500 w-full text-left">
+                <span className="text-gray-500 w-full text-left">
                   Upload Image of ID
                 </span>
-                <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
-                  <Image src={""} alt="" fill className="object-cover" />
-                </div>
+
+                {imageUrl && (
+                  <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
+                    <Image
+                      src={imageUrl}
+                      alt="ID"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
                 <div className="w-full flex gap-2 items-center">
                   <div className="w-full flex flex-col gap-1 items-center justify-center">
                     <label
@@ -1355,13 +1529,23 @@ const CartPage = () => {
                         id="imageName"
                         type="text"
                         placeholder="Image Name"
+                        value={fileName} // Set the value to the file name
+                        readOnly // Make the input read-only
                       />
                       <button
                         className="h-10 w-1/3 bg-white border-2 border-gray-100 shadow-md rounded-md font-bold
                       text-gray-600"
+                        onClick={handleUploadClick}
                       >
                         Upload
                       </button>
+                      <input
+                        type="file"
+                        accept="image/*" // Accept image files only
+                        ref={fileInputRef} // Attach the ref
+                        style={{ display: "none" }} // Hide the input
+                        onChange={handleFileChange}
+                      />
                     </div>
                   </div>
                 </div>
@@ -1516,28 +1700,29 @@ const CartPage = () => {
               </div>
             )}
 
-            <button
-              className={`${
-                openSeniorPWD
-                  ? "bg-red-500 hover:bg-red-400 text-white"
-                  : "bg-white border-2 border-gray-50 text-gray-600 hover:bg-gray-50"
-              } hover:scale-[1.02]
-              shadow-md rounded-md w-full h-12 font-bold flex items-center gap-2 justify-center mt-2 duration-200`}
-              onClick={() => {
-                openSeniorPWD
-                  ? setOpenSeniorPWD(false)
-                  : setOpenSeniorPWD(true);
-              }}
-            >
-              {openSeniorPWD ? (
-                <span>Cancel Using Senior / P.W.D. ID</span>
-              ) : (
-                <>
-                  <i className="fa fa-id-card text-lg" aria-hidden="true"></i>
-                  <span>Use Senior Citizen / P.W.D. ID</span>
-                </>
-              )}
-            </button>
+            {!(voucherApplied || isPromoCodeApplied) && (
+              <button
+                className={`${
+                  openSeniorPWD
+                    ? "bg-red-500 hover:bg-red-400 text-white"
+                    : "bg-white border-2 border-gray-50 text-gray-600 hover:bg-gray-50"
+                } hover:scale-[1.02] shadow-md rounded-md w-full h-12 font-bold flex items-center gap-2 justify-center mt-2 duration-200`}
+                onClick={() => {
+                  openSeniorPWD
+                    ? setOpenSeniorPWD(false)
+                    : setOpenSeniorPWD(true);
+                }}
+              >
+                {openSeniorPWD ? (
+                  <span>Cancel Using Senior / P.W.D. ID</span>
+                ) : (
+                  <>
+                    <i className="fa fa-id-card text-lg" aria-hidden="true"></i>
+                    <span>Use Senior Citizen / P.W.D. ID</span>
+                  </>
+                )}
+              </button>
+            )}
 
             {/* PAYMENT OPTIONS CONTAINER */}
             <div className="flex flex-col gap-2">
