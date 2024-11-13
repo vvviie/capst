@@ -2,8 +2,16 @@
 import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase"; // Ensure this path is correct
-import { collection, getDocs, updateDoc, doc, deleteDoc, onSnapshot } from "firebase/firestore"; // Import updateDoc and doc
+import {
+  collection,
+  getDocs,
+  updateDoc,
+  doc,
+  deleteDoc,
+  onSnapshot,
+} from "firebase/firestore"; // Import updateDoc and doc
 import { Availability } from "../data"; // Adjust import as necessary
+import GiveVoucherForm from "../components/GiveVoucherForm";
 
 // Voucher Array
 type voucherType = {
@@ -44,7 +52,12 @@ const VoucherListPage = () => {
   const [searchInput, setSearchInput] = useState<string>(""); // State for search input
   const [selectedType, setSelectedType] = useState<string>("vouchers"); // State for selected type
   const filteredItems = selectedType === "vouchers" ? vouchers : promos;
-  
+  const [isFormOpen, setIsFormOpen] = useState(false);
+
+  const toggleForm = () => {
+    setIsFormOpen((prev) => !prev);
+  };
+
   const handleItemClick = (id: string) => {
     setActiveItem(activeItem === id ? null : id);
   };
@@ -56,15 +69,15 @@ const VoucherListPage = () => {
   // Function to fetch vouchers based on selected type
   const fetchItems = () => {
     const collectionRef = collection(db, selectedType);
-    
+
     // Use onSnapshot for real-time updates
     const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
-      const itemsData = snapshot.docs.map(doc => ({
+      const itemsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         available: doc.data().available === true,
       }));
-      
+
       if (selectedType === "vouchers") {
         setVouchers(itemsData as voucherType[]);
         setPromos([]); // Clear promos if vouchers are selected
@@ -73,14 +86,14 @@ const VoucherListPage = () => {
         setVouchers([]); // Clear vouchers if promos are selected
       }
     });
-  
+
     return unsubscribe; // Return unsubscribe function
-  };  
+  };
 
   useEffect(() => {
     // Call fetchItems to set up the listener
     const unsubscribe = fetchItems();
-  
+
     // Cleanup function to unsubscribe from the listener
     return () => {
       unsubscribe(); // Clean up the listener when the component unmounts
@@ -91,22 +104,22 @@ const VoucherListPage = () => {
   const handleAvailabilityChange = async (itemId: string, newValue: string) => {
     const isAvailable = newValue === "Available"; // Convert to boolean
     const itemRef = doc(db, selectedType, itemId); // Reference to the specific document
-  
+
     // Update the document in Firestore
     await updateDoc(itemRef, {
       available: isAvailable,
     });
-  
+
     // Update the local state for either vouchers or promos
     if (selectedType === "vouchers") {
-      setVouchers(prevVouchers => 
-        prevVouchers.map(item => 
+      setVouchers((prevVouchers) =>
+        prevVouchers.map((item) =>
           item.id === itemId ? { ...item, available: isAvailable } : item
         )
       );
     } else if (selectedType === "promoCodes") {
-      setPromos(prevPromos => 
-        prevPromos.map(item => 
+      setPromos((prevPromos) =>
+        prevPromos.map((item) =>
           item.id === itemId ? { ...item, available: isAvailable } : item
         )
       );
@@ -122,9 +135,12 @@ const VoucherListPage = () => {
   };
 
   // Filter vouchers and promos based on search input
-  const filteredResults = filteredItems.filter(item =>
-    (selectedType === "vouchers" ? item.voucherID : item.promoID) && // Check if ID exists
-    (selectedType === "vouchers" ? item.voucherID : item.promoID).toLowerCase().startsWith(searchInput.toLowerCase())
+  const filteredResults = filteredItems.filter(
+    (item) =>
+      (selectedType === "vouchers" ? item.voucherID : item.promoID) && // Check if ID exists
+      (selectedType === "vouchers" ? item.voucherID : item.promoID)
+        .toLowerCase()
+        .startsWith(searchInput.toLowerCase())
   );
 
   // Function to get the appropriate text based on the selected type
@@ -133,9 +149,9 @@ const VoucherListPage = () => {
   };
 
   const getInstructionText = () => {
-    return selectedType === "vouchers" ? 
-      "Tap or hover on the voucher to set availability, edit, or delete." : 
-      "Tap or hover on the promo to set availability, edit, or delete.";
+    return selectedType === "vouchers"
+      ? "Tap or hover on the voucher to set availability, edit, or delete."
+      : "Tap or hover on the promo to set availability, edit, or delete.";
   };
 
   // Function to fetch vouchers or promos based on selected type
@@ -144,9 +160,9 @@ const VoucherListPage = () => {
       try {
         const collectionRef = collection(db, selectedType);
         const snapshot = await getDocs(collectionRef);
-  
+
         if (selectedType === "vouchers") {
-          const vouchersData = snapshot.docs.map(doc => ({
+          const vouchersData = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
             available: doc.data().available === true,
@@ -154,7 +170,7 @@ const VoucherListPage = () => {
           setVouchers(vouchersData as voucherType[]);
           setPromos([]); // Clear promos if vouchers are selected
         } else if (selectedType === "promoCodes") {
-          const promosData = snapshot.docs.map(doc => ({
+          const promosData = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
             available: doc.data().available === true,
@@ -166,7 +182,7 @@ const VoucherListPage = () => {
         console.error("Error fetching items:", error);
       }
     };
-  
+
     fetchItems();
   }, [selectedType]);
 
@@ -178,7 +194,9 @@ const VoucherListPage = () => {
         <div className="flex flex-col gap-4">
           {/* HEADER*/}
           <h1 className="text-2xl font-bold text-orange-950">
-            {selectedType === "vouchers" ? "Voucher Listings" : "Promo Listings"}
+            {selectedType === "vouchers"
+              ? "Voucher Listings"
+              : "Promo Listings"}
           </h1>
           {/* CREATE AND SEARCH CONTAINER */}
           <div className="flex justify-between items-center gap-4">
@@ -191,7 +209,11 @@ const VoucherListPage = () => {
               onChange={(e) => setSelectedType(e.target.value)} // Update selectedType state
             >
               {voucherTypesSelection.map((types) => (
-                <option value={types.value} key={types.id} className="text-center">
+                <option
+                  value={types.value}
+                  key={types.id}
+                  className="text-center"
+                >
                   {types.title}
                 </option>
               ))}
@@ -208,18 +230,24 @@ const VoucherListPage = () => {
           </div>
         </div>
         <p className="text-xs text-gray-500 text-center mt-4">
-          {getInstructionText()} {/* Use the function to get the correct instruction text */}
+          {getInstructionText()}{" "}
+          {/* Use the function to get the correct instruction text */}
         </p>
         {/* PRODUCTS */}
         <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {/* ADD PRODUCT BUTTON */}
           <Link
-            href={selectedType === "promoCodes" ? "/fkstllvouchers/addpromo" : "/fkstllvouchers/addvoucher"} // Change the link as needed
+            href={
+              selectedType === "promoCodes"
+                ? "/fkstllvouchers/addpromo"
+                : "/fkstllvouchers/addvoucher"
+            } // Change the link as needed
             className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer py-4 aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-200 justify-center items-center hover:bg-gray-100 group"
           >
             <i className="fa-solid fa-circle-plus text-gray-300 text-7xl md:text-9xl group-hover:text-gray-400"></i>
             <span className="text-xs md:text-lg text-gray-300 font-bold group-hover:text-gray-400">
-              {getActionText()} {/* Use the function to get the correct action text */}
+              {getActionText()}{" "}
+              {/* Use the function to get the correct action text */}
             </span>
           </Link>
           {/* MENU ITEMS */}
@@ -239,7 +267,9 @@ const VoucherListPage = () => {
               </h1>
               {/* VOUCHER DESCRIPTION */}
               <p className="text-center text-gray-600 text-xs lg:text-sm">
-              {selectedType === "vouchers" ? items.voucherDescription : items.promoDescription}
+                {selectedType === "vouchers"
+                  ? items.voucherDescription
+                  : items.promoDescription}
               </p>
 
               {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
@@ -256,7 +286,9 @@ const VoucherListPage = () => {
                     text-sm font-semibold text-gray-600 min-h-10"
                     onClick={(e) => e.stopPropagation()}
                     value={items.available ? "Available" : "Unavailable"} // Set the dropdown value based on availability
-                    onChange={(e) => handleAvailabilityChange(items.id, e.target.value)} // Handle availability change
+                    onChange={(e) =>
+                      handleAvailabilityChange(items.id, e.target.value)
+                    } // Handle availability change
                   >
                     <option value="Available" className="text-center">
                       Available
@@ -265,8 +297,26 @@ const VoucherListPage = () => {
                       Unavailable
                     </option>
                   </select>
+                  {selectedType === "vouchers" && (
+                    <button
+                      className="rounded-sm shadow-md bg-orange-200 w-2/3 text-center
+                    font-semibold text-amber-900 hover:bg-orange-100 hover:scale-[.98] duration-200 text-sm
+                    min-h-10"
+                      onClick={() => {
+                        setIsFormOpen(true);
+                        e.stopPropagation();
+                        toggleForm();
+                      }}
+                    >
+                      Give to Users
+                    </button>
+                  )}
                   <Link
-                    href={selectedType === "promoCodes" ? `/fkstllvouchers/editpromo/${items.promoID}` : `/fkstllvouchers/editvoucher/${items.voucherID}`}
+                    href={
+                      selectedType === "promoCodes"
+                        ? `/fkstllvouchers/editpromo/${items.promoID}`
+                        : `/fkstllvouchers/editvoucher/${items.voucherID}`
+                    }
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center
                     font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm
                     min-h-10 pt-2"
@@ -291,6 +341,7 @@ const VoucherListPage = () => {
           ))}
         </div>
       </div>
+      <GiveVoucherForm isOpen={isFormOpen} toggleForm={toggleForm} />
     </div>
   );
 };
