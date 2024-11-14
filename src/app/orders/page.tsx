@@ -15,12 +15,14 @@ import {
   runTransaction,
   getDoc,
   onSnapshot,
+  updateDoc,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
 import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
+import CheckoutPopup from "../components/CheckoutPopup";
 
 type Order = {
   userName: string;
@@ -60,6 +62,9 @@ const OrdersPage = () => {
   const router = useRouter();
   const [hasOrder, setHasOrder] = useState(false);
   const [hasRated, setHasRated] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState(null);
+
+  const [isDeleteVisible, setIsDeleteVisible] = useState(false);
 
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(":").map(Number);
@@ -263,6 +268,43 @@ const OrdersPage = () => {
     setHasOrder(userOrders.length > 0); // Update hasOrder based on orders
   }, [userOrders]);
 
+  useEffect(() => {
+    const checkCompletedOrders = async () => {
+      if (!userEmail) return;
+  
+      try {
+        const ordersSnapshot = await getDocs(
+          query(
+            collection(db, "completedOrders"),
+            where("user", "==", userEmail),
+            where("status", "==", "DONE") // Adding condition for 'DONE' status
+          )
+        );
+  
+        let allRated = true;
+        let firstUnratedOrder = null;
+  
+        ordersSnapshot.forEach((doc) => {
+          const order = doc.data();
+          // Check if the order has not been rated and status is "DONE"
+          if (!order.hasRated && order.status === "DONE") {
+            allRated = false;
+            if (!firstUnratedOrder) {
+              firstUnratedOrder = doc.id; // First unrated order with "DONE" status
+            }
+          }
+        });
+  
+        setHasRated(allRated);
+        setCurrentOrderId(firstUnratedOrder);
+      } catch (error) {
+        console.error("Error checking completed orders:", error);
+      }
+    };
+  
+    checkCompletedOrders();
+  }, [userEmail]);  
+
   const handleDeleteOrder = async (orderId) => {
     try {
       await deleteDoc(doc(db, "completedOrders", orderId));
@@ -275,28 +317,29 @@ const OrdersPage = () => {
 
   const handleLikeClick = () => {
     setSelected("like");
+    submitFeedback(true);
   };
 
   const handleDislikeClick = () => {
     setSelected("dislike");
+    submitFeedback(false);
   };
 
+  // Submit Feedback Function
   const submitFeedback = async (positiveFeedback: boolean) => {
-    if (!userEmail) return;
+    if (!userEmail || !currentOrderId || !comment) return;
+
+    //console.log("Submitting feedback with the following details:");
+    //console.log("Comment:", comment); // Log the comment
+    //console.log("Order ID:", currentOrderId);
+    //console.log("Positive Feedback:", positiveFeedback);
 
     const now = new Date();
-    const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
-      now.getDate()
-    ).padStart(2, "0")}/${now.getFullYear()}`;
-    const time = `${String(now.getHours()).padStart(2, "0")}:${String(
-      now.getMinutes()
-    ).padStart(2, "0")}`;
+    const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+    const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const feedbackType = positiveFeedback ? "like" : "dislike";
-    const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(
-      /\./g,
-      "_"
-    )}`; // Replace periods in email to avoid Firestore ID issues
+    const feedbackId = `${feedbackType}_${comment}_${userEmail.replace(/\./g, "_")}`;
 
     try {
       // Submit individual feedback document
@@ -306,50 +349,81 @@ const OrdersPage = () => {
         timeAdded: time,
         comments: comment,
         userEmail,
+        orderId: currentOrderId,
       });
-      //console.log("Feedback submitted successfully.");
 
-      // Update or create feedbackRating document in customerFeedbacks
-      const feedbackRatingRef = doc(db, "customerFeedbacks", "feedbackRating");
+      // Update hasRated field in the completedOrder document
+      await updateDoc(doc(db, "completedOrders", currentOrderId), {
+        hasRated: true,
+      });
 
-      await runTransaction(db, async (transaction) => {
-        const ratingDoc = await transaction.get(feedbackRatingRef);
+      // Fetch the current feedbackRating document to update the tally counts
+      const feedbackRatingDocRef = doc(db, "customerFeedbacks", "feedbackRating");
+      const feedbackRatingDoc = await getDoc(feedbackRatingDocRef);
 
-        let likeTally = positiveFeedback ? 1 : 0;
-        let dislikeTally = positiveFeedback ? 0 : 1;
+      if (feedbackRatingDoc.exists()) {
+        const feedbackData = feedbackRatingDoc.data();
 
-        if (ratingDoc.exists()) {
-          // Update tallies if document exists
-          const currentData = ratingDoc.data();
-          likeTally += currentData.likeTally || 0;
-          dislikeTally += currentData.dislikeTally || 0;
+        let updatedLikeTally = feedbackData.likeTally || 0;
+        let updatedDislikeTally = feedbackData.dislikeTally || 0;
+        let updatedTotalTallies = feedbackData.totalTallies || 0;
+
+        // Increment like or dislike tally
+        if (positiveFeedback) {
+          updatedLikeTally += 1;
+        } else {
+          updatedDislikeTally += 1;
         }
 
-        // Calculate the total tallies and the ratio of likes
-        const totalTallies = likeTally + dislikeTally;
-        const tallyRatio =
-          totalTallies > 0 ? (likeTally / totalTallies) * 100 : 0;
+        // Calculate the tally ratio
+        const totalVotes = updatedLikeTally + updatedDislikeTally;
+        const tallyRatio = totalVotes > 0 ? ((updatedLikeTally / totalVotes) * 100).toFixed(2) : "0";
 
-        // Update or create the feedbackRating document
-        transaction.set(feedbackRatingRef, {
-          likeTally,
-          dislikeTally,
-          totalTallies,
-          tallyRatio: `${tallyRatio.toFixed(2)}%`, // Store as a percentage
+        // Increment totalTallies count
+        updatedTotalTallies += 1;
+
+        // Update the feedbackRating document with the new tallies and ratio
+        await updateDoc(feedbackRatingDocRef, {
+          likeTally: updatedLikeTally,
+          dislikeTally: updatedDislikeTally,
+          tallyRatio: `${tallyRatio}%`,
+          totalTallies: updatedTotalTallies,
         });
+      } else {
+        console.log("Feedback rating document not found.");
+      }
 
-        //console.log("Feedback rating and ratio updated.");
-        setHasRated(true);
+      // Check if all orders are now rated
+      const ordersSnapshot = await getDocs(
+        query(
+          collection(db, "completedOrders"),
+          where("user", "==", userEmail)
+        )
+      );
+
+      let allRated = true;
+      let nextUnratedOrder = null;
+
+      ordersSnapshot.forEach((doc) => {
+        const order = doc.data();
+        if (!order.hasRated) {
+          allRated = false;
+          if (!nextUnratedOrder) {
+            nextUnratedOrder = doc.id; // Next unrated order
+          }
+        }
       });
+
+      setHasRated(allRated);
+      setCurrentOrderId(nextUnratedOrder);
     } catch (error) {
-      //console.error("Error submitting feedback or updating tally:", error);
+      console.error("Error submitting feedback or updating orders:", error);
     }
   };
 
-  const handleCommentChange = (
-    event: React.ChangeEvent<HTMLTextAreaElement>
-  ) => {
+  const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setComment(event.target.value);
+    //console.log(event.target.value);  // Log the comment to verify it's being set
   };
 
   const handleSubmitRating = async (event: React.FormEvent) => {
@@ -509,96 +583,73 @@ const OrdersPage = () => {
     }
   };
 
-  return (
-    <div
-      className="min-h-[calc(100vh-56px)] gap-6 mt-14 px-10 py-8 flex flex-col items-center md:px-24 lg:gap-8
-    lg:flex-row-reverse lg:items-start lg:justify-center xl:px-56"
-    >
-      {/* RATING CONTAINER */}
-      <div className="w-full lg:max-w-[350px]">
-        {!hasRated && hasOrder ? (
-          // ITO LALABAS KAPAG HINDI PA NAKAKAPAG-RATE ANG CUSTOMER TAPOS MAY ORDERS NA SIYA
-          <div className="flex flex-col gap-2">
-            <h1 className="font-bold text-2xl text-orange-950 flex gap-1 items-center">
-              <i className="fa fa-star text-lg mb-[1px]" aria-hidden="true"></i>
-              <span>Rate your Order</span>
-            </h1>
-            <form className="bg-white border-2 border-gray-50 shadow-lg rounded-lg px-6 py-4">
-              <h1 className="font-bold text-2xl text-center mb-4">
-                Tell us about your Fikaställe experience?
-              </h1>
-              {/* RATING AND COMMENTS */}
-              <div
-                className="px-4 py-2 bg-gray-50 rounded-md"
-                style={{
-                  boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
-                }}
+        return (
+          <div
+            className="min-h-[calc(100vh-56px)] gap-6 mt-14 px-10 py-8 flex flex-col items-center md:px-24 lg:gap-8
+          lg:flex-row-reverse lg:items-start lg:justify-center xl:px-56"
+          >
+            {/* RATING CONTAINER */}
+            <div className="w-full lg:max-w-[350px]">
+            {!hasRated && currentOrderId ? (
+        <div className="flex flex-col gap-2">
+          <h1 className="font-bold text-2xl text-orange-950 flex gap-1 items-center">
+            <i className="fa fa-star text-lg mb-[1px]" aria-hidden="true"></i>
+            <span>Rate your Order</span>
+          </h1>
+          <form className="bg-white border-2 border-gray-50 shadow-lg rounded-lg px-6 py-4">
+          <h1 className="font-bold text-2xl text-center mb-2">
+            Tell us about your Fikaställe experience?
+          </h1>
+          <p className="text-1xl text-center text-orange-950 mb-4 ">Order ID: {currentOrderId}</p>
+
+          {/* RATING AND COMMENTS */}
+          <div className="px-4 py-2 bg-gray-50 rounded-md" style={{ boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)" }}>
+            {/* LIKE AND DISLIKE BUTTONS CONTAINER */}
+            <div className="flex w-full justify-center items-center gap-4">
+              <button
+                type="button"
+                onClick={handleLikeClick}  // Directly use the function
+                className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10 hover:scale-[1.03] duration-300 hover:bg-gray-50 ${selected === "like" ? "text-orange-700" : "text-gray-500"}`}
               >
-                {/* LIKE AND DISLIKE BUTTONS CONTAINER */}
-                <div className="flex w-full justify-center items-center gap-4">
-                  {/* LIKE BUTTON */}
-                  <button
-                    type="button"
-                    onClick={handleLikeClick}
-                    className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10
-                      hover:scale-[1.03] duration-300 hover:bg-gray-50 ${
-                        selected === "like"
-                          ? "text-orange-700"
-                          : "text-gray-500"
-                      }`}
-                  >
-                    <i
-                      className="fa fa-thumbs-up text-md"
-                      aria-hidden="true"
-                    ></i>
-                    <span className="font-bold text-lg">Like</span>
-                  </button>
-                  {/* DISLIKE BUTTON */}
-                  <button
-                    type="button"
-                    onClick={handleDislikeClick}
-                    className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10
-                      hover:scale-[1.03] duration-300 hover:bg-gray-50 ${
-                        selected === "dislike"
-                          ? "text-orange-700"
-                          : "text-gray-500"
-                      }`}
-                  >
-                    <i
-                      className="fa fa-thumbs-down text-md"
-                      aria-hidden="true"
-                    ></i>
-                    <span className="font-bold text-lg">Dislike</span>
-                  </button>
-                </div>
-                <p className="text-sm text-gray-600 mt-4 mb-1">
-                  Notes, comments, or suggestions:
-                </p>
-                <textarea
-                  name="comments"
-                  id="commentRows"
-                  className="w-full text-sm pl-3 pr-2 rounded-sm py-1 bg-white mb-2"
-                  rows={4}
-                  style={{
-                    resize: "none",
-                    MozAppearance: "textfield",
-                    boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
-                  }}
-                  placeholder="Provide a brief description of your experience."
-                  value={comment}
-                  onChange={handleCommentChange}
-                ></textarea>
-                <button
-                  className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md
-                  hover:scale-[1.03] duration-300 hover:bg-orange-900"
-                  onClick={handleSubmitRating}
-                >
-                  Submit Rating
-                </button>
-              </div>
-            </form>
+                <i className="fa fa-thumbs-up text-md" aria-hidden="true"></i>
+                <span className="font-bold text-lg">Like</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDislikeClick}  // Directly use the function
+                className={`w-28 bg-white border-gray-50 border-2 shadow-md rounded-md space-x-2 h-10 hover:scale-[1.03] duration-300 hover:bg-gray-50 ${selected === "dislike" ? "text-orange-700" : "text-gray-500"}`}
+              >
+                <i className="fa fa-thumbs-down text-md" aria-hidden="true"></i>
+                <span className="font-bold text-lg">Dislike</span>
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-600 mt-4 mb-1">Notes, comments, or suggestions:</p>
+            <textarea
+              name="comments"
+              className="w-full text-sm pl-3 pr-2 rounded-sm py-1 bg-white mb-2"
+              rows={4}
+              style={{
+                resize: "none",
+                MozAppearance: "textfield",
+                boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)"
+              }}
+              placeholder="Provide a brief description of your experience."
+              value={comment}
+              onChange={handleCommentChange}  // Update comment state
+            ></textarea>
+
+            <button
+              type="button"  // Ensure button doesn't trigger form submission
+              className="w-full py-2 bg-orange-950 font-bold text-white rounded-md shadow-md hover:scale-[1.03] duration-300 hover:bg-orange-900"
+              onClick={() => submitFeedback(selected === "like")}  // Submit feedback with the selected feedback type
+            >
+              Submit Rating
+            </button>
           </div>
-        ) : (
+        </form>
+        </div>
+      ) : (
           // ITO NAMAN ANG LALABAS KAPAG WALA PA SIYANG ORDERS OR NAKAPAG-RATE NA SIYA
 
           <div className="flex flex-col gap-2">
@@ -918,6 +969,9 @@ const OrdersPage = () => {
             </div>
           </div>
         )}
+
+        {/* DELETE POP UP */}
+        {isDeleteVisible && <CheckoutPopup message="Order Deleted!" />}
       </div>
     </div>
   );
