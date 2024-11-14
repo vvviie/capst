@@ -153,13 +153,23 @@ const AdminAndStaffOrdersPage = () => {
         }
       });
   
-      // Update the orders state with filtered data
+      // Sort the orders from latest to oldest by date and time
+      orders.sort((a, b) => {
+        // Compare dates first
+        if (a.date > b.date) return -1;
+        if (a.date < b.date) return 1;
+        
+        // If dates are the same, compare times
+        return a.time > b.time ? -1 : 1;
+      });
+  
+      // Update the orders state with the sorted data
       setUserOrders(orders);
       setHasOrder(orders.length > 0);
     });
   
     return unsubscribe;
-  };
+  };  
 
   // FOR OPENING NG POP UP
   const [confirmPopup, setConfirmPopup] = useState(false);
