@@ -185,68 +185,85 @@ const AdminAndStaffOrdersPage = () => {
     );
   };
 
-    const handlePaid = async (id: string) => {
-      try {
-          // Fetch the specific order document from Firestore
-          const orderRef = doc(db, "completedOrders", id);
-          const orderDoc = await getDoc(orderRef);
-          if (!orderDoc.exists()) {
-              console.error("Order not found");
-              return;
-          }
-
-          const orderData = orderDoc.data();
-
-          // Determine if the Sr/PWD discount should be applied
-          const applyDiscount = applySrPWD[id];
-          let totalPrice = orderData.subtotal; // assuming `subtotal` is stored in the database
-          let sampleDiscountDeduction = 0;
-          let pwdSeniorStatus = false; // Track the pwdSenior status
-
-          // Calculate the discount only if applySrPWD is true and items exist
-          if (applyDiscount && orderData.items) {
-              pwdSeniorStatus = true; // Set pwdSenior to true if applying the discount
-
-              // Find the highest-priced item
-              let highestPricedItem = orderData.items[0];
-              let highestPrice = highestPricedItem.totalPrice;
-
-              orderData.items.forEach((item: any) => {
-                  if (item.totalPrice > highestPrice) {
-                      highestPricedItem = item;
-                      highestPrice = item.totalPrice;
-                  }
-              });
-
-              // Calculate the discount
-              sampleDiscountDeduction = highestPricedItem.totalPrice * 0.2;
-              totalPrice -= sampleDiscountDeduction;
-
-              // Console logging for verification
-              console.log("Original Total Price:", orderData.subtotal);
-              console.log("Discounted Amount:", sampleDiscountDeduction);
-              console.log("New Total Price:", totalPrice);
-          } else {
-              pwdSeniorStatus = false; // Set pwdSenior to false if no discount is applied
-          }
-
-          // Update the document with the new status, discounted total price, and pwdSenior status
-          await updateDoc(orderRef, {
-              status: "PAID",
-              subtotal: totalPrice, // update subtotal with the discounted total
-              sampleDiscountDeduction: sampleDiscountDeduction,
-              pwdSenior: pwdSeniorStatus, // update pwdSenior based on discount application
-          });
-
-          setIsPaidVisible(true);
-          setTimeout(() => {
-              setIsPaidVisible(false);
-          }, 750);
-      } catch (error) {
-          console.error("Error updating status to 'PAID':", error);
+  const handlePaid = async (id: string) => {
+    try {
+      // Fetch the specific order document from Firestore
+      const orderRef = doc(db, "completedOrders", id);
+      const orderDoc = await getDoc(orderRef);
+      if (!orderDoc.exists()) {
+        console.error("Order not found");
+        return;
       }
-  };
   
+      const orderData = orderDoc.data();
+      const userId = orderData.user; // Retrieve the user associated with the order
+  
+      if (!userId) {
+        console.error("User ID not found in the order data");
+        return;
+      }
+  
+      // Determine if the Sr/PWD discount should be applied
+      const applyDiscount = applySrPWD[id];
+      let totalPrice = orderData.subtotal || 0; // Ensure subtotal has a fallback value
+      let sampleDiscountDeduction = 0;
+      let pwdSeniorStatus = false;
+  
+      // Calculate the discount only if applySrPWD is true and items exist
+      if (applyDiscount && orderData.items) {
+        pwdSeniorStatus = true;
+  
+        // Find the highest-priced item for discount calculation
+        let highestPrice = 0;
+        orderData.items.forEach((item: any) => {
+          if (item.totalPrice > highestPrice) {
+            highestPrice = item.totalPrice;
+          }
+        });
+  
+        // Calculate the discount
+        sampleDiscountDeduction = highestPrice * 0.2;
+        totalPrice -= sampleDiscountDeduction;
+  
+        console.log("Original Total Price:", orderData.subtotal);
+        console.log("Discounted Amount:", sampleDiscountDeduction);
+        console.log("New Total Price:", totalPrice);
+      }
+  
+      // Update the order document with new status and totals
+      await updateDoc(orderRef, {
+        status: "PAID",
+        subtotal: totalPrice,
+        sampleDiscountDeduction,
+        pwdSenior: pwdSeniorStatus,
+      });
+  
+      // Fetch the user's document and update the totalPaid field
+      const userRef = doc(db, "users", userId);
+      const userDoc = await getDoc(userRef);
+  
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentTotalPaid = userData.totalPaid || 0;
+        const newTotalPaid = currentTotalPaid + totalPrice;
+  
+        await updateDoc(userRef, {
+          totalPaid: newTotalPaid,
+        });
+      } else {
+        console.error("User document not found");
+      }
+  
+      // Show confirmation of payment
+      setIsPaidVisible(true);
+      setTimeout(() => {
+        setIsPaidVisible(false);
+      }, 750);
+  
+    } catch (error) {
+      console.error("Error updating status to 'PAID' or updating user totalPaid:", error);
+    }
+  };  
 
   const handlePrep = async (id: string) => {
     try {
@@ -423,7 +440,9 @@ const AdminAndStaffOrdersPage = () => {
                                 ? "text-yellow-500"
                                 : order.status === "READY"
                                 ? "text-blue-600"
-                                : "text-green-700"
+                                : order.status === "DONE"
+                                ? "text-green-700"
+                                : "text-red-700"
                             } font-bold`}
                           >
                             {order.status}
@@ -591,19 +610,19 @@ const AdminAndStaffOrdersPage = () => {
                           </span>
                           <span className="font-light">{order.userEmail}</span>
                         </span>
-                        {/* CANCEL BUTTON */}
 
+                        {/* CANCEL BUTTON */}
                         <div className="w-full flex items-center gap-1">
                           <button
                             className={` font-bold ${
                               order.status === "TO PAY"
                                 ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
                                 : order.status === "PAID"
-                                ? "bg-yellow-500 text-white hover:bg-yellow-400 w-2/3"
+                                ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
                                 : order.status === "PREP"
-                                ? "bg-blue-500 text-white hover:bg-blue-400 w-2/3"
+                                ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
                                 : order.status === "READY"
-                                ? "bg-green-700 text-white hover:bg-green-600 w-2/3"
+                                ? "bg-green-700 text-white hover:bg-green-600 w-full"
                                 : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
                             } shadow-md hover:scale-[1.02] duration-200
                       rounded-md h-10`}
@@ -636,15 +655,47 @@ const AdminAndStaffOrdersPage = () => {
                           </button>
                           <button
                             className={`${
-                              order.status === "DONE" && "hidden"
+                              order.status !== "TO PAY" && "hidden"
                             } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                      hover:scale-[1.02] duration-200 hover:bg-red-400 `}
+                            hover:scale-[1.02] duration-200 hover:bg-red-400`}
                             onClick={() => {
                               handleCancel(order.id);
                             }}
                           >
                             Cancel
                           </button>
+                          {order.status === "CANCELLED" && (
+                          <button
+                            className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                                      hover:scale-[1.02] duration-200 hover:bg-red-400"
+                            onClick={() => {
+                              handleDelete(order.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                          )}
+                          {order.status === "DONE" && (
+                          <div className="flex w-full gap-2">
+                            {/* Print Details Button */}
+                            <button
+                              className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                                        hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                              //onClick={() => handlePrintDetails(order.id)}
+                            >
+                              Print Details
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                        hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                              onClick={() => handleDelete(order.id)}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                         </div>
                       </div>
                     )}
@@ -913,52 +964,97 @@ const AdminAndStaffOrdersPage = () => {
                               {order.userEmail}
                             </span>
                           </span>
-                          {/* CANCEL BUTTON */}
 
-                          <div className="w-full flex items-center gap-1">
-                            <button
-                              className={` font-bold ${
-                                order.status === "TO PAY"
-                                  ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
-                                  : order.status === "PAID"
-                                  ? "bg-yellow-500 text-white hover:bg-yellow-400 w-2/3"
-                                  : order.status === "PREP"
-                                  ? "bg-blue-500 text-white hover:bg-blue-400 w-2/3"
-                                  : order.status === "READY"
-                                  ? "bg-green-700 text-white hover:bg-green-600 w-2/3"
-                                  : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full"
-                              } shadow-md hover:scale-[1.02] duration-200
-                      rounded-md h-10`}
-                            onClick={() => {
-                              if (order.status === "TO PAY") {
-                                handlePaid(order.id);
-                              }
-                            }}
-                            >
-                              {order.status === "TO PAY"
-                                ? "Mark as Paid"
+                          {/* CANCEL BUTTON */}
+                        <div className="w-full flex items-center gap-1">
+                          <button
+                            className={` font-bold ${
+                              order.status === "TO PAY"
+                                ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
                                 : order.status === "PAID"
-                                ? "Mark as Prep"
+                                ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
                                 : order.status === "PREP"
-                                ? "Mark as Ready"
-                                : "Mark as Done"}
-                            </button>
+                                ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                : order.status === "READY"
+                                ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
+                            } shadow-md hover:scale-[1.02] duration-200
+                      rounded-md h-10`}
+                      onClick={() => {
+                        if (order.status === "TO PAY") {
+                          handlePaid(order.id);
+                        }
+                        else if (order.status === "PAID") {
+                          handlePrep(order.id);
+                        }
+
+                        else if (order.status === "PREP") {
+                          handleReady(order.id);
+                        }
+
+                        else if (order.status === "READY") {
+                          handleDone(order.id);
+                        }
+                      }}
+                          >
+                            {order.status === "TO PAY"
+                              ? "Mark as Paid"
+                              : order.status === "PAID"
+                              ? "Mark as Prep"
+                              : order.status === "PREP"
+                              ? "Mark as Ready"
+                              : order.status === "READY"
+                              ? "Mark as Done"
+                              : "Hide"}
+                          </button>
+                          <button
+                            className={`${
+                              order.status !== "TO PAY" && "hidden"
+                            } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                            hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                            onClick={() => {
+                              handleCancel(order.id);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          {order.status === "CANCELLED" && (
+                          <button
+                            className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                                      hover:scale-[1.02] duration-200 hover:bg-red-400"
+                            onClick={() => {
+                              handleDelete(order.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                          )}
+                          {order.status === "DONE" && (
+                          <div className="flex w-full gap-2">
+                            {/* Print Details Button */}
                             <button
-                              className={`w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                      hover:scale-[1.02] duration-200 hover:bg-red-400 `}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                console.log("Cancel button clicked");
-                                setConfirmPopup(true);
-                              }}
+                              className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                                        hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                              //onClick={() => handlePrintDetails(order.id)}
                             >
-                              Cancel
+                              Print Details
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                        hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                              onClick={() => handleDelete(order.id)}
+                            >
+                              Delete
                             </button>
                           </div>
+                        )}
                         </div>
-                      )}
-                    </div>
-                  ))
+                      </div>
+                    )}
+                  </div>
+                ))
                 ) : (
                   // IF WALANG MAIPAKITA
                   <div
@@ -1192,52 +1288,97 @@ const AdminAndStaffOrdersPage = () => {
                               {order.userEmail}
                             </span>
                           </span>
+                          
                           {/* CANCEL BUTTON */}
-
-                          <div className="w-full flex items-center gap-1">
-                            <button
-                              className={` font-bold ${
-                                order.status === "TO PAY"
-                                  ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
-                                  : order.status === "PAID"
-                                  ? "bg-yellow-500 text-white hover:bg-yellow-400 w-2/3"
-                                  : order.status === "PREP"
-                                  ? "bg-blue-500 text-white hover:bg-blue-400 w-2/3"
-                                  : order.status === "READY"
-                                  ? "bg-green-700 text-white hover:bg-green-600 w-2/3"
-                                  : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full"
-                              } shadow-md hover:scale-[1.02] duration-200
+                        <div className="w-full flex items-center gap-1">
+                          <button
+                            className={` font-bold ${
+                              order.status === "TO PAY"
+                                ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
+                                : order.status === "PAID"
+                                ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
+                                : order.status === "PREP"
+                                ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                : order.status === "READY"
+                                ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
+                            } shadow-md hover:scale-[1.02] duration-200
                       rounded-md h-10`}
                       onClick={() => {
                         if (order.status === "TO PAY") {
                           handlePaid(order.id);
                         }
+                        else if (order.status === "PAID") {
+                          handlePrep(order.id);
+                        }
+
+                        else if (order.status === "PREP") {
+                          handleReady(order.id);
+                        }
+
+                        else if (order.status === "READY") {
+                          handleDone(order.id);
+                        }
                       }}
-                            >
-                              {order.status === "TO PAY"
-                                ? "Mark as Paid"
-                                : order.status === "PAID"
-                                ? "Mark as Prep"
-                                : order.status === "PREP"
-                                ? "Mark as Ready"
-                                : "Mark as Done"}
-                            </button>
+                          >
+                            {order.status === "TO PAY"
+                              ? "Mark as Paid"
+                              : order.status === "PAID"
+                              ? "Mark as Prep"
+                              : order.status === "PREP"
+                              ? "Mark as Ready"
+                              : order.status === "READY"
+                              ? "Mark as Done"
+                              : "Hide"}
+                          </button>
+                          <button
+                            className={`${
+                              order.status !== "TO PAY" && "hidden"
+                            } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                            hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                            onClick={() => {
+                              handleCancel(order.id);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          {order.status === "CANCELLED" && (
+                          <button
+                            className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                                      hover:scale-[1.02] duration-200 hover:bg-red-400"
+                            onClick={() => {
+                              handleDelete(order.id);
+                            }}
+                          >
+                            Delete
+                          </button>
+                          )}
+                          {order.status === "DONE" && (
+                          <div className="flex w-full gap-2">
+                            {/* Print Details Button */}
                             <button
-                              className={`w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                      hover:scale-[1.02] duration-200 hover:bg-red-400 `}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                console.log("Cancel button clicked");
-                                setConfirmPopup(true);
-                              }}
+                              className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                                        hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                              //onClick={() => handlePrintDetails(order.id)}
                             >
-                              Cancel
+                              Print Details
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                        hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                              onClick={() => handleDelete(order.id)}
+                            >
+                              Delete
                             </button>
                           </div>
+                        )}
                         </div>
-                      )}
-                    </div>
-                  ))
+                      </div>
+                    )}
+                  </div>
+                ))
                 ) : (
                   // IF WALANG MAIPAKITA
                   <div
@@ -1292,7 +1433,7 @@ const AdminAndStaffOrdersPage = () => {
         {isPaidVisible && <CheckoutPopup message="Marked as Paid!" />}
 
         {/* CANCEL POP UP */}
-        {isCancelVisible && <CheckoutPopup message="Booking Canceled!" />}
+        {isCancelVisible && <CheckoutPopup message="Order Canceled!" />}
 
         {/* PREPARING POP UP */}
         {isMarkAsPrepVisible && <CheckoutPopup message="Marked as Preparing!" />}
@@ -1301,7 +1442,7 @@ const AdminAndStaffOrdersPage = () => {
         {isMarkAsReadyVisible && <CheckoutPopup message="Marked as Ready!" />}
 
         {/* DELETE POP UP */}
-        {isDeleteVisible && <CheckoutPopup message="Booking Deleted!" />}
+        {isDeleteVisible && <CheckoutPopup message="Order Deleted!" />}
       </div>
     </div>
   );
