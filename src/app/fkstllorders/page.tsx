@@ -153,14 +153,27 @@ const AdminAndStaffOrdersPage = () => {
         }
       });
   
+      const convertTo24HourFormat = (timeStr) => {
+        const [time, modifier] = timeStr.split(" ");
+        let [hours, minutes] = time.split(":").map(Number);
+  
+        if (modifier === "PM" && hours < 12) hours += 12;
+        if (modifier === "AM" && hours === 12) hours = 0;
+  
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+      };
+  
       // Sort the orders from latest to oldest by date and time
       orders.sort((a, b) => {
         // Compare dates first
         if (a.date > b.date) return -1;
         if (a.date < b.date) return 1;
-        
-        // If dates are the same, compare times
-        return a.time > b.time ? -1 : 1;
+  
+        // If dates are the same, compare converted times
+        const timeA = convertTo24HourFormat(a.time);
+        const timeB = convertTo24HourFormat(b.time);
+  
+        return timeA > timeB ? -1 : 1;
       });
   
       // Update the orders state with the sorted data
@@ -614,7 +627,7 @@ const AdminAndStaffOrdersPage = () => {
                         {((order.status === "TO PAY" && order.pwdSenior && applySrPWD[order.id]) || (order.status !== "TO PAY" && order.pwdSenior)) && (
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">Senior Citizen/PWD Discount</span>
-                            <span>{order.sampleDiscountDeduction}</span>
+                            <span>PHP {order.sampleDiscountDeduction?.toFixed(2)}</span>
                           </div>
                         )}
                         {/* PICTURE OF ID CONTAINER */}
@@ -715,7 +728,7 @@ const AdminAndStaffOrdersPage = () => {
                                   ((order.status === "TO PAY" && applySrPWD[order.id]) || 
                                   (order.status !== "TO PAY" && order.pwdSenior)) && ( // Apply condition to show discount label
                                     <span className="text-green-600 text-xs ml-2">
-                                      (discounted: {discountAmount})
+                                      (discounted: PHP {discountAmount.toFixed(2)})
                                     </span>
                                   )
                                 )}
@@ -726,7 +739,7 @@ const AdminAndStaffOrdersPage = () => {
                                   (order.status !== "TO PAY" && order.pwdSenior))
                                 ) ? "text-green-600" : ""}
                               >
-                                {discountedPrice}
+                                PHP {discountedPrice.toFixed(2)}
                               </span>
                             </div>
                             {item.tags.map((tag, index) => (
@@ -1069,7 +1082,7 @@ const AdminAndStaffOrdersPage = () => {
                                     ((order.status === "TO PAY" && applySrPWD[order.id]) || 
                                     (order.status !== "TO PAY" && order.pwdSenior)) && ( // Apply condition to show discount label
                                       <span className="text-green-600 text-xs ml-2">
-                                        (discounted: {discountAmount})
+                                        (discounted: PHP {discountAmount.toFixed(2)})
                                       </span>
                                     )
                                   )}
@@ -1080,7 +1093,7 @@ const AdminAndStaffOrdersPage = () => {
                                     (order.status !== "TO PAY" && order.pwdSenior))
                                   ) ? "text-green-600" : ""}
                                 >
-                                  {discountedPrice}
+                                  PHP {discountedPrice.toFixed(2)}
                                 </span>
                               </div>
                               {item.tags.map((tag, index) => (
@@ -1395,7 +1408,7 @@ const AdminAndStaffOrdersPage = () => {
                                     ((order.status === "TO PAY" && applySrPWD[order.id]) || 
                                     (order.status !== "TO PAY" && order.pwdSenior)) && ( // Apply condition to show discount label
                                       <span className="text-green-600 text-xs ml-2">
-                                        (discounted: {discountAmount})
+                                        (discounted: PHP {discountAmount.toFixed(2)})
                                       </span>
                                     )
                                   )}
@@ -1406,7 +1419,7 @@ const AdminAndStaffOrdersPage = () => {
                                     (order.status !== "TO PAY" && order.pwdSenior))
                                   ) ? "text-green-600" : ""}
                                 >
-                                  {discountedPrice}
+                                  PHP {discountedPrice.toFixed(2)}
                                 </span>
                               </div>
                               {item.tags.map((tag, index) => (
