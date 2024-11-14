@@ -90,20 +90,20 @@ const AdminCheckReservationsPage = () => {
     }
   };
 
-  const handlePaid = async (id: string) => {
-    try {
-      await updateDoc(doc(db, "tableReservations", id), {
-        status: "PAID",
-      });
+    const handlePaid = async (id: string) => {
+      try {
+        await updateDoc(doc(db, "tableReservations", id), {
+          status: "PAID",
+        });
 
-      setIsPaidVisible(true);
-      setTimeout(() => {
-        setIsPaidVisible(false);
-      }, 750);
-    } catch (error) {
-      console.error("Error updating status to 'PAID':", error);
-    }
-  };
+        setIsPaidVisible(true);
+        setTimeout(() => {
+          setIsPaidVisible(false);
+        }, 750);
+      } catch (error) {
+        console.error("Error updating status to 'PAID':", error);
+      }
+    };
 
   const handleMarkAsPending = async (id: string) => {
     try {
