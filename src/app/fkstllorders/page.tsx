@@ -171,7 +171,7 @@ const AdminAndStaffOrdersPage = () => {
     const value = event.target.value.toLowerCase();
     setOrderStatCat(
       value === "all" ? "ALL" : value === "topay" ? "TO PAY" : value === "paid" ? "PAID" : 
-      value === "prep" ? "PREP" : value === "ready" ? "READY" : "DONE"
+      value === "prep" ? "PREP" : value === "ready" ? "READY" : value === "done" ? "DONE" : "CANCELLED"
     );
   };
 
@@ -509,6 +509,7 @@ const AdminAndStaffOrdersPage = () => {
                 <option value="prep">Prep</option>
                 <option value="ready">Ready</option>
                 <option value="done">Done</option>
+                <option value="cancelled">Cancelled</option>
               </select>
             </div>
             {/* ORDERS LIST CONTAINER */}
