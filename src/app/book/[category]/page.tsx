@@ -52,35 +52,7 @@ const ReservationPage = () => {
   //#endregion
 
   //#region Global EffectHooks
-  useEffect(() => {
-    const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      const loggedIn = !!authUser && authUser.emailVerified;
-      setIsLoggedIn(loggedIn);
-      setUserEmail(authUser?.email || null);
-    });
-
-    // Clean up the listener when component unmounts
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const authToken = Cookies.get("authToken");
-
-    if (!authToken) {
-    } else {
-      // Cookie is found, proceed to check Firebase auth state
-      const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-        if (authUser && authUser.emailVerified) {
-          setIsLoggedIn(true);
-        }
-      });
-
-      // Clean up the listener when component unmounts
-      return () => unsubscribeAuth();
-    }
-  }, [router]);
-
+  
   useEffect(() => {
     if (slug === "table") {
       // Calculate the date 5 days from today for the table reservation
@@ -369,6 +341,48 @@ const ReservationPage = () => {
       numberOfPersonsEvent < 1 ? 0 : basePricePerPerson * numberOfPersonsEvent; // Adjusted check
     setTotalPrice(basePrice + excessCharge);
   }, [totalHours, selectedPackage, numberOfPersonsEvent]);
+
+  // Check for the "user" cookie when the component mounts
+  useEffect(() => {
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie) {
+      // If user cookie is found, set isLoggedIn to true
+      setIsLoggedIn(true);
+    } else {
+      // If no user cookie is found, show the login modal
+      setShowLoginModal(true);
+    }
+
+    // Firebase Authentication listener
+    const auth = getAuth();
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+      if (authUser) {
+        setIsLoggedIn(true); // User is authenticated, set loggedIn to true
+        setUserEmail(authUser.email); // Optionally store the email
+      }
+    });
+
+    // Cleanup Firebase listener when component unmounts
+    return () => unsubscribeAuth();
+
+  }, []); // Empty dependency array to run once when the component mounts
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowLoginModal(false); // Close the modal if clicked outside
+      }
+    };
+
+    if (showLoginModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showLoginModal]);
 
   const handleFinalize = (chosenItemsArray) => {
     setChosenItems(chosenItemsArray);
@@ -924,20 +938,14 @@ const ReservationPage = () => {
             ref={modalRef}
           >
             <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
-            <p className="mb-4">Please sign in to book a reservation.</p>
+            <p className="mb-4">Please sign in to book your reservations with us.</p>
             <div className="flex justify-center items-center gap-4">
               <Link
                 href="/login"
-                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+                className="bg-orange-950 text-white w-full py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
               >
                 Sign in
               </Link>
-              <button
-                className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2"
-                onClick={() => setShowLoginModal(false)}
-              >
-                Close
-              </button>
             </div>
           </div>
         </div>

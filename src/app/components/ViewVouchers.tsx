@@ -68,7 +68,7 @@ const ViewVouchers = () => {
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      if (authUser && authUser.emailVerified) {
+      if (authUser) {
         setIsLoggedIn(true);
         setUserEmail(authUser.email);
       } else {

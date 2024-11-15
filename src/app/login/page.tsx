@@ -69,7 +69,9 @@ const LoginPage = () => {
   
         const userData = userDoc.data();
         const role = userData[roleField];
-        console.log(`Fetched role: ${role}`);
+        const isVerified = userData.verified;
+  
+        console.log(`Fetched role: ${role}, verified: ${isVerified}`);
   
         if (!role) {
           setMessage({
@@ -77,7 +79,9 @@ const LoginPage = () => {
             type: "error",
           });
         }
-        return role;
+  
+        // Return role and verified status
+        return { role, isVerified };
       } else {
         setMessage({
           text: `No user details found in Firestore for email: ${email} in collection: ${collectionName}.`,
@@ -105,30 +109,54 @@ const LoginPage = () => {
       // Determine if the email belongs to staff
       const isStaff = email.endsWith("@fikastallestaff.com");
   
-      // Only check email verification if it's a user, not staff
-      if (!isStaff && !user.emailVerified) {
-        setMessage({ text: "Please verify your email.", type: "error" });
-        await signOut(auth); // Sign out if email is not verified
-      } else {
-        // Fetch user role from the appropriate Firestore collection
-        const role = await fetchUserDetails(email);
+      // If the user is not staff, check if the user has been verified either through email or Firestore
+      if (!isStaff) {
+        const userDetails = await fetchUserDetails(email);
   
-        if (role) {
-          // Set cookie based on user role
-          if (role === "admin") {
-            Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
-          } else if (role === "bar") {
-            Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
-          } else if (role === "kitchen") {
-            Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
-          } else
-            Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
+        if (userDetails) {
+          const { role, isVerified } = userDetails;
+  
+          // If verified field is true, allow login
+          if (isVerified) {
+            console.log("User is verified via Firestore.");
+          } else if (!user.emailVerified) {
+            // If the Firestore "verified" field is false and email is not verified, prompt verification
+            setMessage({ text: "Please verify your email.", type: "error" });
+            await signOut(auth); // Sign out if email is not verified
+            return;
           }
-  
-          router.push("/"); // Redirect to the homepage
+        } else {
+          // If user details are not found, sign them out
+          await signOut(auth); // Sign out if no user details are found
+          return;
         }
       }
-    catch (error) {
+  
+      // Fetch user role from Firestore (using destructuring from the above check)
+      const userDetails = await fetchUserDetails(email);
+      
+      if (userDetails) {
+        const { role } = userDetails;
+  
+        // Now use the role to redirect the user
+        if (role === "admin") {
+          Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
+          router.push("/"); // Redirect to the homepage
+        } else if (role === "bar") {
+          Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
+          router.push("/fkstllorders");
+        } else if (role === "kitchen") {
+          Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
+          router.push("/fkstllorders");
+        } else {
+          Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
+          router.push("/"); // Redirect to the homepage for general users
+        }
+      } else {
+        // Handle case where role is undefined or not fetched
+        await signOut(auth); // Sign out if no role is found
+      }
+    } catch (error) {
       setMessage({ text: `Invalid username or password.`, type: "error" });
     }
   

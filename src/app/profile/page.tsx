@@ -47,7 +47,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser && authUser.emailVerified) {
+      if (authUser) {
         try {
           const userDocRef = doc(db, "users", authUser.email);
           const userDoc = await getDoc(userDocRef);

@@ -149,7 +149,7 @@ const NotificationBell = () => {
                 data.subtotal.toFixed(2) || 0
               } is ${
                 data.status || "in progress"
-              }. Please proceed to the cashier and settle your orders.`,
+              }.`,
               time: data.timeCreated || "N/A",
               date: data.dateCreated || "N/A",
               read: item.isRead || false,
