@@ -294,6 +294,17 @@ const AdminAndStaffOrdersPage = () => {
         pwdSenior: pwdSeniorStatus,
       });
 
+      updateDoc("salesandexpenses")
+      totalsales += totalPrice,
+      week: week16,
+      month: november,
+      year: 2024
+      fullDate: 11/15/2024
+
+      totalOrders += 1
+      doc.id = 11/15/2024
+      totalOrders += 1
+
       // Fetch the user's document and update the totalPaid field
       const userRef = doc(db, "users", userId);
       const userDoc = await getDoc(userRef);

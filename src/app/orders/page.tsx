@@ -16,6 +16,8 @@ import {
   getDoc,
   onSnapshot,
   updateDoc,
+  disableNetwork, 
+  enableNetwork,
 } from "firebase/firestore";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
@@ -112,7 +114,7 @@ const OrdersPage = () => {
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      const loggedIn = !!authUser && authUser.emailVerified;
+      const loggedIn = !!authUser;
       setIsLoggedIn(loggedIn);
       setUserEmail(authUser?.email || null);
     });
@@ -128,7 +130,7 @@ const OrdersPage = () => {
     } else {
       // Cookie is found, proceed to check Firebase auth state
       const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-        if (authUser && authUser.emailVerified) {
+        if (authUser) {
           setIsLoggedIn(true);
         }
       });
@@ -280,33 +282,47 @@ const OrdersPage = () => {
           query(
             collection(db, "completedOrders"),
             where("user", "==", userEmail),
-            where("status", "==", "DONE") // Adding condition for 'DONE' status
+            where("status", "==", "DONE") // Ensure only 'DONE' orders are fetched
           )
         );
   
         let allRated = true;
         let firstUnratedOrder = null;
   
+        // Log the data received to make sure it's being fetched correctly
+        console.log("Fetched orders:", ordersSnapshot.docs.map(doc => doc.data()));
+  
         ordersSnapshot.forEach((doc) => {
           const order = doc.data();
-          // Check if the order has not been rated and status is "DONE"
-          if (!order.hasRated && order.status === "DONE") {
-            allRated = false;
-            if (!firstUnratedOrder) {
-              firstUnratedOrder = doc.id; // First unrated order with "DONE" status
+  
+          // Ensure status is 'DONE' and the order has not been rated
+          if (order.status === "DONE") {
+            if (!order.hasRated) {
+              allRated = false;
+              if (!firstUnratedOrder) {
+                firstUnratedOrder = doc.id; // Mark first unrated order
+              }
             }
+          } else {
+            console.log(`Skipping order ${doc.id} as it is not 'DONE' or has 'REJECTED' status.`);
           }
         });
   
-        setHasRated(allRated);
-        setCurrentOrderId(firstUnratedOrder);
+        // Log what is being set
+        console.log('All rated:', allRated);
+        console.log('First unrated order:', firstUnratedOrder);
+  
+        // Update the state only if all orders are rated, else show the first unrated order
+        setHasRated(allRated); // Set whether all orders are rated or not
+        setCurrentOrderId(firstUnratedOrder); // Set the ID of the first unrated order
+  
       } catch (error) {
         console.error("Error checking completed orders:", error);
       }
     };
   
     checkCompletedOrders();
-  }, [userEmail]); 
+  }, [userEmail]); // Dependency array to rerun when userEmail changes
   
   useEffect(() => {
     const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
@@ -342,23 +358,16 @@ const OrdersPage = () => {
   };
 
   const handleLikeClick = () => {
-    setSelected("like");
-    submitFeedback(true);
+    setSelected("like"); // Update the selected state
   };
-
+  
   const handleDislikeClick = () => {
-    setSelected("dislike");
-    submitFeedback(false);
+    setSelected("dislike"); // Update the selected state
   };
 
-  // Submit Feedback Function
+  // Submit feedback function
   const submitFeedback = async (positiveFeedback: boolean) => {
     if (!userEmail || !currentOrderId || !comment) return;
-
-    //console.log("Submitting feedback with the following details:");
-    //console.log("Comment:", comment); // Log the comment
-    //console.log("Order ID:", currentOrderId);
-    //console.log("Positive Feedback:", positiveFeedback);
 
     const now = new Date();
     const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
@@ -378,12 +387,12 @@ const OrdersPage = () => {
         orderId: currentOrderId,
       });
 
-      // Update hasRated field in the completedOrder document
+      // Update the completedOrder document to mark it as rated
       await updateDoc(doc(db, "completedOrders", currentOrderId), {
         hasRated: true,
       });
 
-      // Fetch the current feedbackRating document to update the tally counts
+      // Update feedback tallies
       const feedbackRatingDocRef = doc(db, "customerFeedbacks", "feedbackRating");
       const feedbackRatingDoc = await getDoc(feedbackRatingDocRef);
 
@@ -394,21 +403,17 @@ const OrdersPage = () => {
         let updatedDislikeTally = feedbackData.dislikeTally || 0;
         let updatedTotalTallies = feedbackData.totalTallies || 0;
 
-        // Increment like or dislike tally
         if (positiveFeedback) {
           updatedLikeTally += 1;
         } else {
           updatedDislikeTally += 1;
         }
 
-        // Calculate the tally ratio
         const totalVotes = updatedLikeTally + updatedDislikeTally;
         const tallyRatio = totalVotes > 0 ? ((updatedLikeTally / totalVotes) * 100).toFixed(2) : "0";
 
-        // Increment totalTallies count
         updatedTotalTallies += 1;
 
-        // Update the feedbackRating document with the new tallies and ratio
         await updateDoc(feedbackRatingDocRef, {
           likeTally: updatedLikeTally,
           dislikeTally: updatedDislikeTally,
@@ -419,12 +424,12 @@ const OrdersPage = () => {
         console.log("Feedback rating document not found.");
       }
 
-      // Check if all orders are now rated
+      setComment("");
+      setSelected(null);
+
+      // Check if all orders are now rated and set the next order ID
       const ordersSnapshot = await getDocs(
-        query(
-          collection(db, "completedOrders"),
-          where("user", "==", userEmail)
-        )
+        query(collection(db, "completedOrders"), where("user", "==", userEmail), where("status", "==", "DONE"))
       );
 
       let allRated = true;
@@ -435,7 +440,7 @@ const OrdersPage = () => {
         if (!order.hasRated) {
           allRated = false;
           if (!nextUnratedOrder) {
-            nextUnratedOrder = doc.id; // Next unrated order
+            nextUnratedOrder = doc.id;
           }
         }
       });
@@ -446,6 +451,7 @@ const OrdersPage = () => {
       console.error("Error submitting feedback or updating orders:", error);
     }
   };
+
 
   const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setComment(event.target.value);
