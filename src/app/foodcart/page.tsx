@@ -36,6 +36,9 @@ type Vouch = {
 };
 //#endregion
 
+//#region REMOVE THIS ONCE EDITED
+const hasImage = true;
+//#endregion
 const CartPage = () => {
   //#region Use State Variables
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -76,6 +79,7 @@ const CartPage = () => {
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
   const [promoType, setPromoType] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number>(0); //done
+  const [expandImage, setExpandImage] = useState(false);
 
   //#region NEW useState variables
   const [firstName, setFirstName] = useState<string | null>(null);
@@ -1072,7 +1076,9 @@ const CartPage = () => {
 
   //#region Checks if the user is logged in or not
   useEffect(() => {
-    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+    const userCookie = document.cookie
+      .split(";")
+      .find((cookie) => cookie.trim().startsWith("user="));
 
     if (userCookie) {
       // If user cookie is found, set isLoggedIn to true
@@ -1093,7 +1099,6 @@ const CartPage = () => {
 
     // Cleanup Firebase listener when component unmounts
     return () => unsubscribeAuth();
-
   }, []); // Empty dependency array to run once when the component mounts
   //#endregion
 
@@ -1775,6 +1780,93 @@ const CartPage = () => {
                 </div>
               </div>
             </div>
+
+            {selectedPayment === "Card" && (
+              <>
+                <h1 className="text-gray-500 mt-2">Scan QR Code</h1>
+                {/* INSTAPAY QR IMAGE CONTAINER */}
+                <div className="relative aspect-square w-full">
+                  <Image
+                    src={`/instapayqr.webp`}
+                    alt=""
+                    fill
+                    className="object-contain cursor-pointer hover:scale-[1.02] duration-200"
+                    onClick={() => setExpandImage(true)}
+                  />
+                </div>
+                {expandImage && (
+                  <div
+                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                    style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                  >
+                    <div className="w-full max-w-[620px] aspect-square relative">
+                      <div
+                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+        absolute top-[8px] right-[8px] flex justify-center items-center z-10
+        hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                        onClick={() => setExpandImage(false)}
+                      >
+                        <span className="font-bold">X</span>
+                      </div>
+                      <Image
+                        src={`/instapayqr.webp`}
+                        alt="idpic"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="w-full flex flex-col gap-2 items-center mt-4">
+                  <span className="text-gray-500 w-full text-left">
+                    Upload Image of Payment Receipt
+                  </span>
+
+                  {hasImage && (
+                    <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
+                      <Image
+                        src={"/coffee.png"}
+                        alt="Receipt"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+
+                  <div className="w-full flex gap-2 items-center">
+                    <div className="w-full flex flex-col gap-1 items-center justify-center">
+                      <label
+                        className="text-orange-950 text-sm w-full text-left space-x-1"
+                        htmlFor="imageName"
+                      >
+                        <span>Image File Name</span>
+                      </label>
+                      <div className="w-full flex items-center gap-1">
+                        <input
+                          className="border-2 border-solid border-orange-900 w-2/3 h-10 pl-4 rounded-md bg-orange-50"
+                          name="imageName"
+                          id="imageName"
+                          type="text"
+                          placeholder="Image Name"
+                          readOnly // Make the input read-only
+                        />
+                        <button
+                          className="h-10 w-1/3 bg-white border-2 border-gray-100 shadow-md rounded-md font-bold
+                      text-gray-600"
+                        >
+                          Upload
+                        </button>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: "none" }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
             <hr />
 
