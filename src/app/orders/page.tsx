@@ -775,7 +775,7 @@ const OrdersPage = () => {
                     <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
                       <span className="">ID: {order.id}</span>
                       <span>
-                            PHP {order.status === "TO PAY" 
+                            PHP {order.status !== "TO PAY" 
                               ? (order.pwdSenior ? (order.price - order.sampleDiscountDeduction) : order.price)
                               : order.subtotal}
                           </span>
@@ -789,7 +789,7 @@ const OrdersPage = () => {
                       {/* STATUS OF PAYMENT */}
                       <span
                         className={`${
-                          order.status === "TO PAY"
+                          order.status === "TO PAY" || order.status === "REJECTED" || order.status === "CANCELLED"
                             ? "text-red-700"
                             : order.status === "PAID"
                             ? "text-orange-500"
@@ -857,7 +857,7 @@ const OrdersPage = () => {
 
                         // Apply discount conditionally based on the order's status and senior discount eligibility
                         const discountAmount = (isHighestPriced && 
-                          ((order.status === "TO PAY" && order.pwdSenior) || // Discount if 'TO PAY' and SrPWD is applied
+                          ((order.status !== "TO PAY" && order.pwdSenior) || // Discount if 'TO PAY' and SrPWD is applied
                           (order.status !== "TO PAY" && order.pwdSenior))) // Discount if status is not 'TO PAY' and it's a senior order
                           ? item.price * 0.2
                           : 0;
@@ -903,25 +903,8 @@ const OrdersPage = () => {
                     {order.status === "TO PAY" && (
                       <div className="w-full flex items-center gap-1">
                         <button
-                          className={`font-bold bg-white border-2 rounded-md text-gray-500 py-2 shadow-md
-                        hover:scale-[1.03] duration-300 border-gray-100 hover:bg-gray-50 w-2/3 space-x-2
-                        ${order.payment !== "Card" && "hidden"}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            //console.log("Cancel button clicked");
-                            setOrderToCancel(order.id); // Set the order ID to cancel
-                            setConfirmPopup(true); // Show the confirmation popup
-                          }}
-                        >
-                          <i
-                            className="fa fa-credit-card"
-                            aria-hidden="true"
-                          ></i>
-                          <span>Pay with Card</span>
-                        </button>
-                        <button
                           className={`${
-                            order.payment === "Card" ? "w-1/3" : "w-full"
+                            order.payment === "Card" ? "w-full" : "w-full"
                           } font-bold bg-red-500 rounded-md text-white py-2 shadow-md
                         hover:scale-[1.03] duration-300 border-2 border-red-500`}
                           onClick={(e) => {
