@@ -11,10 +11,29 @@ import {
   where,
   getDoc,
   onSnapshot,
+  updateDoc,
+  getDocs,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
 import NotificationBell from "./NotificationBell";
+
+interface Voucher {
+  thresholdCondition: number;
+  available: boolean;
+  deductionType: string;
+  thresholdUse: number;
+  usageLimitType: string;
+  validityType: string;
+  voucherDeduction: number;
+  voucherDescription: string;
+  voucherID: string;
+  voucherName: string;
+}
+
+interface Vouchers {
+  [key: string]: Voucher;
+}
 
 const Navbar = () => {
   const [user, setUser] = useState(null);
@@ -23,6 +42,7 @@ const Navbar = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const router = useRouter();
+  const [vouchers, setVouchers] = useState<Vouchers>({});
 
   const unsubscribeAuthRef = useRef(null);
   const unsubscribeCartRef = useRef(null);
@@ -130,6 +150,17 @@ const Navbar = () => {
     };
   }, []);
 
+  const cleanUpListeners = () => {
+    if (unsubscribeCartRef.current) {
+      unsubscribeCartRef.current();
+      unsubscribeCartRef.current = null;
+    }
+    if (unsubscribeDocRef.current) {
+      unsubscribeDocRef.current();
+      unsubscribeDocRef.current = null;
+    }
+  };
+
   const checkCookiesAndLogout = async () => {
     const allCookies = Cookies.get();
     if (Object.keys(allCookies).length === 0) {
@@ -160,6 +191,115 @@ const Navbar = () => {
       // Handle any errors during sign-out
     }
   };
+
+  // Fetch voucher configurations from Firestore
+  const fetchVoucherConfig = async () => {
+    const voucherConfigRef = collection(db, "vouchers");
+    const voucherSnapshot = await getDocs(voucherConfigRef);
+  
+    const voucherConfig: Vouchers = {}; // Initialize as Vouchers type
+  
+    voucherSnapshot.forEach((doc) => {
+      const data = doc.data();
+      const key = doc.id;
+  
+      // Ensure only vouchers from the static voucherConfig are included
+      voucherConfig[key] = {
+        thresholdCondition: data.thresholdCondition,
+        available: data.available,
+        deductionType: data.deductionType,
+        thresholdUse: data.thresholdUse,
+        usageLimitType: data.usageLimitType,
+        validityType: data.validityType,
+        voucherDeduction: data.voucherDeduction,
+        voucherDescription: data.voucherDescription,
+        voucherID: data.voucherID,
+        voucherName: data.voucherName,
+      };
+    });
+  
+    setVouchers(voucherConfig); // Store the fetched voucher config in state
+  };
+
+
+  const checkAndAssignVouchers = async (userDoc, totalPaid) => {
+    const userVouchers = userDoc.data().vouchers || {}; // Fetch existing vouchers or initialize as empty object
+  
+    // Define the thresholds and the corresponding voucher keys
+    const thresholds = [
+      { threshold: 1000, voucherKey: "1000HitVoucher" },
+      { threshold: 5000, voucherKey: "5000HitVoucher" },
+      { threshold: 10000, voucherKey: "10000HitVoucher" },
+      { threshold: 20000, voucherKey: "20000HitVoucher" },
+    ];
+  
+    // Loop through the thresholds to check if the user qualifies for any of the vouchers
+    for (const { threshold, voucherKey } of thresholds) {
+      // Check if the totalPaid exceeds the threshold and the voucher has not been assigned yet
+      if (totalPaid >= threshold && !userVouchers[voucherKey]) {
+        // Fetch voucher details from the database
+        const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey)); // Replace "vouchers" with the correct collection name
+        const voucherData = voucherDoc.data();
+  
+        if (voucherData) {
+          const now = new Date();
+          const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+          const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  
+          // Assign the voucher to the user with all the properties fetched from the database
+          userVouchers[voucherKey] = {
+            used: false,
+            isRead: false,
+            isNotifDeleted: false,
+            dateCreated: date,
+            timeCreated: time,
+            available: voucherData.available,
+            deductionType: voucherData.deductionType,
+            thresholdCondition: voucherData.thresholdCondition,
+            thresholdUse: voucherData.thresholdUse,
+            usageLimitType: voucherData.usageLimitType,
+            validityType: voucherData.validityType,
+            voucherDeduction: voucherData.voucherDeduction,
+            voucherDescription: voucherData.voucherDescription,
+            voucherID: voucherData.voucherID,
+            voucherName: voucherData.voucherName
+          };
+        }
+      }
+    }
+  
+    // Update Firestore with new voucher data
+    await updateDoc(doc(db, "users", userDoc.id), { vouchers: userVouchers });
+  };
+  
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        // Fetch the voucher config from Firestore
+        const fetchedVoucherConfig = await fetchVoucherConfig();
+  
+        // Set the fetched voucher config to state (you may want to store it in state)
+        setVouchers(fetchedVoucherConfig);
+  
+        const fetchUserData = async () => {
+          // Use authUser.email to fetch the user document from Firestore
+          const userDoc = await getDoc(doc(db, "users", authUser.email));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const totalPaid = userData.totalPaid || 0; // Fetch totalPaid from Firestore
+  
+            // Call the function to check and assign vouchers, passing only the required arguments
+            await checkAndAssignVouchers(userDoc, totalPaid);
+          }
+        };
+        fetchUserData();
+      }
+    });
+  
+    // Cleanup function to unsubscribe from the auth state listener when the component unmounts or the user changes
+    return () => unsubscribe();
+  }, [user]); // This will run when the `user` state changes
 
   return (
     <div className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50" style={{ backgroundColor: "#30261F" }}>

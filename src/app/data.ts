@@ -636,7 +636,7 @@ type voucherType = {
   validity?: string;
   unlimited: boolean;
   numberOfTimes?: number;
-}
+};
 
 type voucherTypes = voucherType[];
 
@@ -670,5 +670,600 @@ export const vouchers:voucherTypes = [
     voucherDescription: "Get P20 off when ordering",
     forever: true,
     unlimited: true,
+  },
+];
+
+
+
+export const soldToday = {
+  labels: [
+    "Today",
+  ],
+  datasets: [
+    {
+      label: "Food",
+      data: [2, 4, 5, 3, 2, 1, 6, 7, 1, 4, 6, 10],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Drinks",
+      data: [2, 7, 10, 3, 6, 7, 2, 11, 12, 6, 4],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const soldWeek = {
+  labels: [
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ],
+  datasets: [
+    {
+      label: "Food",
+      data: [2, 4, 5, 3, 2, 1, 6, 7, 1, 4, 6, 10],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Drinks",
+      data: [2, 7, 10, 3, 6, 7, 2, 11, 12, 6, 4],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const soldMonth = {
+  labels: [
+    "Week 1",
+    "Week 2",
+    "Week 3",
+    "Week 4",
+    "Week 5",
+  ],
+  datasets: [
+    {
+      label: "Food",
+      data: [2, 4, 5, 3, 2, 1, 6, 7, 1, 4, 6, 10],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Drinks",
+      data: [2, 7, 10, 3, 6, 7, 2, 11, 12, 6, 4],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const soldYear = {
+  labels: [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sept",
+    "Oct",
+    "Nov",
+    "Dec",
+  ],
+  datasets: [
+    {
+      label: "Food",
+      data: [2, 4, 5, 3, 2, 1, 6, 7, 1, 4, 6, 10],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Drinks",
+      data: [2, 7, 10, 3, 6, 7, 2, 11, 12, 6, 4, 16],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+
+export const salesExpensesToday = {
+  labels: [
+    "Today",
+  ],
+  datasets: [
+    {
+      label: "Sales",
+      data: [10000, 9500, 16430, 4320, 6942, 14420],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Expenses",
+      data: [6000, 7500, 14430, 1320, 4942, 9420],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const salesExpensesWeek = {
+  labels: [
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ],
+  datasets: [
+    {
+      label: "Sales",
+      data: [10000, 9500, 16430, 4320, 6942, 14420],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Expenses",
+      data: [6000, 7500, 14430, 1320, 4942, 9420],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const salesExpensesMonth = {
+  labels: [
+    "Week 1",
+    "Week 2",
+    "Week 3",
+    "Week 4",
+    "Week 5",
+  ],
+  datasets: [
+    {
+      label: "Sales",
+      data: [10000, 9500, 16430, 4320, 6942, 14420],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Expenses",
+      data: [6000, 7500, 14430, 1320, 4942, 9420],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const salesExpensesYear = {
+  labels: [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sept",
+    "Oct",
+    "Nov",
+    "Dec",
+  ],
+  datasets: [
+    {
+      label: "Sales",
+      data: [28000, 45000, 56000, 32000, 24000, 15000, 67000, 75000, 12000, 45000, 63000, 10000],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+    {
+      label: "Expenses",
+      data: [25678, 42456, 19250, 38000, 12000, 15600, 23500, 19000, 12700, 67000, 42000, 16000],
+      borderColor: "#F0565F",
+      backgroundColor: "#F0565F",
+    },
+  ]
+}
+
+export const ordersAveragePerDay = {
+  labels: [
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ],
+  datasets: [
+    {
+      label: "Orders",
+      data: [10, 9, 12, 13, 24, 23],
+      borderColor: "#60A66F",
+      backgroundColor: "#60A66F",
+    },
+  ]
+}
+
+export const LikesDislikes = {
+  labels: [
+    "Likes", "Dislikes"
+  ],
+  datasets: [
+    {
+      label: ["Ratio"],
+      data: [36, 16],
+      backgroundColor: ["#60A66F", "#F0565F",],
+      hoverOffset: 4,
+    },
+  ]
+}
+
+type customerReview = {
+  id: string;
+  like: boolean;
+  name: string;
+  email: string;
+  date: string;
+  time: string;
+  review: string;
+}
+
+type customerReviews = customerReview[];
+
+export const customerReviewList:customerReviews = [
+  {
+    id: "1",
+    like: true,
+    name: "John Doe",
+    email: "johndoe@gmail.com",
+    date: "11/14/2024",
+    time: "12:30",
+    review: "I had an easy time ordering, and the food is also good. Hoping to dine with my friends the next time I go.",
+  },
+  {
+    id: "2",
+    like: true,
+    name: "Emma Smith",
+    email: "emmasmith@gmail.com",
+    date: "11/10/2024",
+    time: "12:30",
+    review: "The ambiance was fantastic, and the drinks were top-notch. Will definitely visit again!",
+  },
+  {
+    id: "3",
+    like: false,
+    name: "Michael Brown",
+    email: "michaelbrown@gmail.com",
+    date: "11/05/2024",
+    time: "12:30",
+    review: "The service was a bit slow, but the food was good. Could use some improvement in timing.",
+  },
+  {
+    id: "4",
+    like: true,
+    name: "Sophia Mae Nakamura",
+    email: "hindinakamahal@gmail.com",
+    date: "10/28/2024",
+    time: "12:30",
+    review: "Loved the variety on the menu, especially the drinks! The oat milk option is a nice touch.",
+  },
+  {
+    id: "5",
+    like: false,
+    name: "David Wilson",
+    email: "davidwilson@gmail.com",
+    date: "10/20/2024",
+    time: "12:30",
+    review: "Food was fine, but I found the seating arrangement uncomfortable. Might give it another try later.",
+  },{
+    id: "6",
+    like: true,
+    name: "Laura Kim",
+    email: "laurakim@gmail.com",
+    date: "10/15/2024",
+    time: "13:45",
+    review: "Exceptional coffee! The barista really knows their craft.",
+},
+{
+    id: "7",
+    like: false,
+    name: "Brian Green",
+    email: "briangreen@gmail.com",
+    date: "10/10/2024",
+    time: "09:00",
+    review: "The music was too loud for a morning coffee spot. Hard to relax.",
+},
+{
+    id: "8",
+    like: true,
+    name: "Ava Patel",
+    email: "avapatel@gmail.com",
+    date: "10/08/2024",
+    time: "18:20",
+    review: "Loved the unique drink flavors! The hibiscus tea was refreshing.",
+},
+{
+    id: "9",
+    like: true,
+    name: "Ethan Lee",
+    email: "ethanlee@gmail.com",
+    date: "10/01/2024",
+    time: "11:15",
+    review: "Perfect spot for studying. Great Wi-Fi and comfortable seating.",
+},
+{
+    id: "10",
+    like: false,
+    name: "Olivia Harris",
+    email: "oliviaharris@gmail.com",
+    date: "09/28/2024",
+    time: "14:00",
+    review: "The pastry I ordered was a bit dry. Might try a different one next time.",
+},
+{
+    id: "11",
+    like: true,
+    name: "James Rodriguez",
+    email: "jamesrodriguez@gmail.com",
+    date: "09/25/2024",
+    time: "08:50",
+    review: "Their coffee is consistently amazing, and I love the cozy vibe.",
+},
+{
+    id: "12",
+    like: false,
+    name: "Isabella Clark",
+    email: "isabellaclark@gmail.com",
+    date: "09/20/2024",
+    time: "17:30",
+    review: "Service was a bit slow during peak hours. Food was worth the wait, though.",
+},
+{
+    id: "13",
+    like: true,
+    name: "Lucas Young",
+    email: "lucasyoung@gmail.com",
+    date: "09/18/2024",
+    time: "10:20",
+    review: "The seasonal pumpkin latte was fantastic! Will come back for it.",
+},
+{
+    id: "14",
+    like: false,
+    name: "Mia Perez",
+    email: "miaperez@gmail.com",
+    date: "09/16/2024",
+    time: "16:45",
+    review: "I found the prices a bit high, but the food quality was good.",
+},
+{
+    id: "15",
+    like: true,
+    name: "Alexander Lopez",
+    email: "alexanderlopez@gmail.com",
+    date: "09/12/2024",
+    time: "12:15",
+    review: "Loved the customizable options. Finally found a place that has oat milk!",
+},
+{
+    id: "16",
+    like: true,
+    name: "Chloe Scott",
+    email: "chloescott@gmail.com",
+    date: "09/09/2024",
+    time: "13:30",
+    review: "Perfect place to catch up with friends. Great vibes and coffee.",
+},
+{
+    id: "17",
+    like: false,
+    name: "Jack Edwards",
+    email: "jackedwards@gmail.com",
+    date: "09/05/2024",
+    time: "15:00",
+    review: "It was okay, but I think the place could use a bit more variety on the menu.",
+},
+{
+    id: "18",
+    like: true,
+    name: "Lily Baker",
+    email: "lilybaker@gmail.com",
+    date: "09/02/2024",
+    time: "11:45",
+    review: "Amazing ambiance! Great for working or just hanging out.",
+},
+{
+    id: "19",
+    like: false,
+    name: "Mason Hill",
+    email: "masonhill@gmail.com",
+    date: "08/30/2024",
+    time: "12:00",
+    review: "The iced tea was too sweet for my taste, but the other drinks were nice.",
+},
+{
+    id: "20",
+    like: true,
+    name: "Grace King",
+    email: "graceking@gmail.com",
+    date: "08/28/2024",
+    time: "17:10",
+    review: "The pastries were fresh, and the staff was friendly. A must-visit!",
+},
+{
+    id: "21",
+    like: true,
+    name: "Henry Garcia",
+    email: "henrygarcia@gmail.com",
+    date: "08/25/2024",
+    time: "08:15",
+    review: "They had my favorite blend, and it was brewed to perfection!",
+},
+{
+    id: "22",
+    like: false,
+    name: "Ava Sanchez",
+    email: "avasanchez@gmail.com",
+    date: "08/22/2024",
+    time: "09:30",
+    review: "The seating could be more comfortable, but the drinks are great.",
+},
+{
+    id: "23",
+    like: true,
+    name: "Benjamin Morris",
+    email: "benjaminmorris@gmail.com",
+    date: "08/18/2024",
+    time: "18:40",
+    review: "The staff was attentive and the food came out quickly.",
+},
+{
+    id: "24",
+    like: true,
+    name: "Hannah Rivera",
+    email: "hannahrivera@gmail.com",
+    date: "08/16/2024",
+    time: "10:05",
+    review: "Loved the vegan options! The oat milk latte was delicious.",
+},
+{
+    id: "25",
+    like: true,
+    name: "William Cooper",
+    email: "williamcooper@gmail.com",
+    date: "08/14/2024",
+    time: "15:20",
+    review: "A great place to chill with friends. The food and drinks were top-notch.",
+},
+{
+    id: "26",
+    like: false,
+    name: "Scarlett Barnes",
+    email: "scarlettbarnes@gmail.com",
+    date: "08/10/2024",
+    time: "11:30",
+    review: "It took a while to get my order, but the staff was apologetic.",
+},
+{
+    id: "27",
+    like: true,
+    name: "Julian Reed",
+    email: "julianreed@gmail.com",
+    date: "08/07/2024",
+    time: "16:55",
+    review: "Excellent service! I felt very welcomed from the moment I walked in.",
+},
+{
+    id: "28",
+    like: true,
+    name: "Ella Rogers",
+    email: "ellarogers@gmail.com",
+    date: "08/05/2024",
+    time: "13:50",
+    review: "The atmosphere was amazing, and the espresso was just perfect!",
+},
+{
+    id: "29",
+    like: false,
+    name: "Landon Powell",
+    email: "landonpowell@gmail.com",
+    date: "08/03/2024",
+    time: "17:30",
+    review: "Decent food, but a bit pricey. Might come back for special occasions.",
+},
+{
+    id: "30",
+    like: true,
+    name: "Madison White",
+    email: "madisonwhite@gmail.com",
+    date: "08/01/2024",
+    time: "12:10",
+    review: "The staff was lovely and the desserts were delightful!",
+},
+];
+
+type topSpending = {
+  username: string;
+  firstName: string;
+  lastName: string;
+  membership: string;
+  amount: number;
+}
+
+type topSpenders = topSpending[];
+
+export const topSpendingCustomers: topSpenders = [
+  {
+    username: "jdoe123@gmail.com",
+    firstName: "John",
+    lastName: "Doe",
+    membership: "BRONZE",
+    amount: 1200.50,
+  },
+  {
+    username: "emsmith@gmail.com",
+    firstName: "Emma",
+    lastName: "Smith",
+    membership: "REGULAR",
+    amount: 980.75,
+  },
+  {
+    username: "michael_b@gmail.com",
+    firstName: "Michael",
+    lastName: "Brown",
+    membership: "BRONZE",
+    amount: 1500.00,
+  },
+  {
+    username: "hindinakamahal@gmail.com",
+    firstName: "Sophia Mae",
+    lastName: "Nakamura",
+    membership: "REGULAR",
+    amount: 820.25,
+  },
+  {
+    username: "liamlee@gmail.com",
+    firstName: "Liam",
+    lastName: "Lee",
+    membership: "BRONZE",
+    amount: 1320.40,
+  },
+];
+
+
+type expense = {
+  id: number;
+  name: string;
+  amount: number;
+}
+
+type expenses = expense[];
+
+export const expenseList:expenses = [
+  {
+    id: 1,
+    name: "Ingredients",
+    amount: 5000,
+  },
+  {
+    id: 2,
+    name: "Utilities",
+    amount: 6000,
+  },
+  {
+    id: 3,
+    name: "Salaries",
+    amount: 4000,
   },
 ]
