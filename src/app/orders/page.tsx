@@ -66,6 +66,9 @@ const OrdersPage = () => {
 
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
 
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const modalRef = useRef<HTMLDivElement>(null);
+
   const formatTime = (time: string) => {
     const [hour, minute] = time.split(":").map(Number);
     const isPM = hour >= 12;
@@ -303,7 +306,30 @@ const OrdersPage = () => {
     };
   
     checkCompletedOrders();
-  }, [userEmail]);  
+  }, [userEmail]); 
+  
+  useEffect(() => {
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+    
+    // If no user cookie is found, show the login modal
+    if (!userCookie) {
+      setShowLoginModal(true);
+    }
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target as Node)
+      ) {
+        setShowLoginModal(false);  // Close the modal if clicked outside
+      }
+    };
+
+    if (showLoginModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showLoginModal]);
 
   const handleDeleteOrder = async (orderId) => {
     try {
@@ -588,6 +614,31 @@ const OrdersPage = () => {
             className="min-h-[calc(100vh-56px)] gap-6 mt-14 px-10 py-8 flex flex-col items-center md:px-24 lg:gap-8
           lg:flex-row-reverse lg:items-start lg:justify-center xl:px-56"
           >
+            {showLoginModal && (
+        <div
+          className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+          onClick={() => setShowLoginModal(false)} // Close modal when clicking on the background
+        >
+          {/* SIGN IN REQUIRED CONTAINER */}
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+            ref={modalRef}
+          >
+            <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
+            <p className="mb-4">Please sign in to place your orders with us.</p>
+            <div className="flex justify-center items-center gap-4">
+              <Link
+                href="/login"
+                className="bg-orange-950 text-white w-full py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+              >
+                Sign in
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
             {/* RATING CONTAINER */}
             <div className="w-full lg:max-w-[350px]">
             {!hasRated && currentOrderId ? (

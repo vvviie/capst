@@ -1072,15 +1072,29 @@ const CartPage = () => {
 
   //#region Checks if the user is logged in or not
   useEffect(() => {
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie) {
+      // If user cookie is found, set isLoggedIn to true
+      setIsLoggedIn(true);
+    } else {
+      // If no user cookie is found, show the login modal
+      setShowLoginModal(true);
+    }
+
+    // Firebase Authentication listener
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      const loggedIn = !!authUser && authUser.emailVerified;
-      setIsLoggedIn(loggedIn);
-      setUserEmail(authUser?.email || null);
+    const unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
+      if (authUser) {
+        setIsLoggedIn(true); // User is authenticated, set loggedIn to true
+        setUserEmail(authUser.email); // Optionally store the email
+      }
     });
 
-    return () => unsubscribe();
-  }, []);
+    // Cleanup Firebase listener when component unmounts
+    return () => unsubscribeAuth();
+
+  }, []); // Empty dependency array to run once when the component mounts
   //#endregion
 
   //#region Fetching of All Items in Cart
