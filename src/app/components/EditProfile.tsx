@@ -25,7 +25,7 @@ const EditProfile = ({
   useEffect(() => {
     const fetchUserData = async () => {
       onAuthStateChanged(auth, async (authUser) => {
-        if (authUser && authUser.emailVerified) {
+        if (authUser) {
           const userDocRef = doc(db, "users", authUser.email ?? "");
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {

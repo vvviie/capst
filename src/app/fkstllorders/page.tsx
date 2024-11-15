@@ -312,6 +312,7 @@ const AdminAndStaffOrdersPage = () => {
     try {
       await updateDoc(doc(db, "completedOrders", id), {
         status: "DONE",
+        hasRated: false,
       });
 
       setIsMarkAsDoneVisible(true);
