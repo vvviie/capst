@@ -141,7 +141,7 @@ const MenuCategoryPage: React.FC = () => {
               selectedCalorie === "all" || drink.calorie === selectedCalorie;
             const matchesSearch = drink.title
               .toLowerCase()
-              .includes(searchText.toLowerCase());
+              .startsWith(searchText.toLowerCase());
             const matchesAllergies =
               selectedAllergies.length === 0 ||
               (Array.isArray(drink.contains) &&
@@ -180,7 +180,7 @@ const MenuCategoryPage: React.FC = () => {
               selectedCalorie === "all" || pasta.calorie === selectedCalorie;
             const matchesSearch = pasta.title
               .toLowerCase()
-              .includes(searchText.toLowerCase());
+              .startsWith(searchText.toLowerCase());
             return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
@@ -207,7 +207,7 @@ const MenuCategoryPage: React.FC = () => {
               selectedCalorie === "all" || sandwich.calorie === selectedCalorie;
             const matchesSearch = sandwich.title
               .toLowerCase()
-              .includes(searchText.toLowerCase());
+              .startsWith(searchText.toLowerCase());
             return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
@@ -235,7 +235,7 @@ const MenuCategoryPage: React.FC = () => {
               mainCourse.calorie === selectedCalorie;
             const matchesSearch = mainCourse.title
               .toLowerCase()
-              .includes(searchText.toLowerCase());
+              .startsWith(searchText.toLowerCase());
             return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
@@ -262,7 +262,7 @@ const MenuCategoryPage: React.FC = () => {
               selectedCalorie === "all" || snack.calorie === selectedCalorie;
             const matchesSearch = snack.title
               .toLowerCase()
-              .includes(searchText.toLowerCase());
+              .startsWith(searchText.toLowerCase());
             return matchesFilter && matchesCalorie && matchesSearch;
           })
           .sort((a, b) => {
@@ -289,7 +289,7 @@ const MenuCategoryPage: React.FC = () => {
               selectedCalorie === "all" || pastry.calorie === selectedCalorie;
             const matchesSearch = pastry.title
               .toLowerCase()
-              .includes(searchText.toLowerCase());
+              .startsWith(searchText.toLowerCase());
 
             // Check if pastry.contains is an array before using includes
             const matchesAllergies =
