@@ -1266,4 +1266,91 @@ export const expenseList:expenses = [
     name: "Salaries",
     amount: 4000,
   },
-]
+];
+
+type tnc = {
+  header: string;
+  desc: string[];
+}
+
+type tncs = tnc[];
+
+export const conditions:tncs = [
+  {
+    header: "Provision of Personal Information",
+    desc: ["Users are required to provide accurate and complete Personal Information (Name, Phone Number, Address, and Email Address) to create an account and use the services of the website.",]
+  },
+  {
+    header: "Use of Email Address",
+    desc: ["Email addresses will be used to:",
+      "Send user notifications related to orders and reservations.",
+      "Inform users about promotions and special offers.",
+      "Verify user accounts.",
+      "Facilitate password reset requests.",
+    ]
+  },
+  {
+    header: "No Refund Policy",
+    desc: ["Payments made for orders or reservations are non-refundable under any circumstances.",]
+  },
+  {
+    header: "Online Payment Verification",
+    desc: ["Users opting for online payments consent to uploading a receipt of payment, which will be verified by the staff of Fikaställe by Fika Kafé.",]
+  },
+  {
+    header: "PWD/Senior Citizen Discount Verification",
+    desc: ["Users availing of the PWD/Senior Citizen discount consent to uploading a valid photo of their ID, which will be verified by the staff of Fikaställe by Fika Kafé.",]
+  },
+  {
+    header: "Exclusivity of Discounts and Promotions",
+    desc: ["The use of PWD/Senior Citizen discounts will forfeit eligibility for vouchers or promotion codes for the same transaction.",]
+  },
+  {
+    header: "Table Reservations",
+    desc: ["A Table Reservation Fee of Php 50.00 per person is required. This amount is consumable during dining in the restaurant.",]
+  },
+  {
+    header: "Exclusive Café Reservations",
+    desc: ["A 50% down payment based on the total cost of the chosen reservation specifications is required for Exclusive Café bookings.",]
+  },
+];
+
+export const terms:tncs = [
+  {
+    header: "User",
+    desc: ["Any individual who registers an account, places an order, or makes a reservation through the Fikaställe by Fika Kafé website.",]
+  },
+  {
+    header: "Personal Information",
+    desc: ["Refers to any information provided by the user upon registration, including Name, Phone Number, Address, and Email Address.",]
+  },
+  {
+    header: "Online Payment",
+    desc: ["Payment transactions made via digital payment platforms integrated into the website.",]
+  },
+  {
+    header: "PWD/Senior Citizen Discount",
+    desc: ["A legally mandated discount provided to individuals holding valid Persons with Disabilities (PWD) or Senior Citizen IDs, subject to verification.",]
+  },
+  {
+    header: "Vouchers or Promotion Codes",
+    desc: ["Special offers or discounts applied to reduce the total amount payable by the user, subject to terms of use.",]
+  },
+  {
+    header: "Table Reservation Fee",
+    desc: ["A fee of Php 50.00 per person, applicable to table reservations and consumable for dining purposes.",]
+  },
+  {
+    header: "Exclusive Café Reservation",
+    desc: ["The process of booking the entire café for private events, requiring a 50% down payment based on the total chosen specifications.",]
+  },
+];
+
+export const introduction:tnc = {
+  header: "Terms and Conditions for Fikaställe by Fika Kafé Online Services",
+  desc: ["Welcome to the official online ordering, reservation, and restaurant management website for Fikaställe by Fika Kafé. By signing up and using our platform, you agree to the following Terms and Conditions. Please read these terms carefully before proceeding."]
+}
+
+export const conclusion = "By proceeding to sign up and use the Fikaställe by Fika Kafé website, you acknowledge and agree to abide by these terms and conditions. These terms are subject to change at the discretion of Fikaställe by Fika Kafé, and users will be notified of updates via email or website announcements.";
+export const conclusion2 = "If you have any questions or concerns regarding these terms, please contact us directly via our customer service channels."
+
