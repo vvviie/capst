@@ -169,6 +169,16 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
       // }
       try {
         for (const recipient of recipients) {
+
+          // Get the current date and time
+          const now = new Date();
+        
+          // Format date as MM/DD/YYYY
+          const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
+        
+          // Format time as HH:MM (without seconds and milliseconds)
+          const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
           const userDocRef = doc(db, "users", recipient);
           const userDoc = await getDoc(userDocRef); // Fetch the user document
           const userData = userDoc.data();
@@ -201,8 +211,8 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
             used: false,
             isRead: false,
             isNotifDeleted: false,
-            dateCreated: new Date().toLocaleDateString(),
-            timeCreated: new Date().toLocaleTimeString(),
+            dateCreated: date,
+            timeCreated: time,
             available: voucherData.available,
             deductionType: voucherData.deductionType,
             thresholdCondition: voucherData.thresholdCondition || null, // Assign null if undefined

@@ -124,7 +124,6 @@ const NotificationBell = () => {
   //#endregion
 
   //#region Fetching of Orders
-  
   useEffect(() => {
     const fetchOrders = async () => {
       if (!userEmail) return;
@@ -132,18 +131,19 @@ const NotificationBell = () => {
       const tempOrdersRef = collection(db, "completedOrders");
       const q = query(tempOrdersRef, where("user", "==", userEmail));
   
-      const unsubscribe = onSnapshot(q, async (querySnapshot) => {
-        const fetchedNotifications: notifs = [];
+      const fetchedNotificationsMap = new Map<string, notifs>(); // Use Map to track unique notifications
   
-        // Fetching order notifications
+      const unsubscribe = onSnapshot(q, async (querySnapshot) => {
+        // Fetch order notifications
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           const items = data.items || [];
   
           items.forEach((item: any, index: number) => {
-            if (!item.isNotifDeleted) {
+            const notificationId = `${doc.id}-${index}`;
+            if (!item.isNotifDeleted && !fetchedNotificationsMap.has(notificationId)) {
               const notification = {
-                id: `${doc.id}-${index}`,
+                id: notificationId,
                 type: "Order Item",
                 subject: `Order Status: ${data.status || "Unknown"}`,
                 details: `Your order '${doc.id}' with subtotal PHP ${data.subtotal.toFixed(2) || 0} is ${
@@ -153,48 +153,72 @@ const NotificationBell = () => {
                 date: data.dateCreated || "N/A",
                 read: item.isRead || false,
               };
-              fetchedNotifications.push(notification);
+              fetchedNotificationsMap.set(notificationId, notification); // Add to the Map
             }
           });
         });
   
-        // Add all voucher notifications
+        // Add voucher notifications
         voucherNotifs.forEach((voucher) => {
-          const voucherNotification = {
-            id: voucher.id,
-            type: "Voucher",
-            subject: "New Voucher Claimed",
-            details: `Congratulations! ${voucher.details}`,
-            time: voucher.time,
-            date: voucher.date,
-            read: voucher.read, // Use the actual read status
-          };
-          fetchedNotifications.push(voucherNotification);
+          if (!fetchedNotificationsMap.has(voucher.id)) {
+            const voucherNotification = {
+              id: voucher.id,
+              type: "Voucher",
+              subject: "New Voucher Claimed",
+              details: `Congratulations! ${voucher.details}`,
+              time: voucher.time,
+              date: voucher.date,
+              read: voucher.read,
+            };
+            fetchedNotificationsMap.set(voucher.id, voucherNotification); // Add to the Map
+          }
         });
+  
+        // Fetch user notifications from the users database
+        const notifRef = doc(db, "users", userEmail);
+        const userSnapshot = await getDoc(notifRef); // One-time fetch
+        const userData = userSnapshot.data();
+  
+        if (userData && userData.notifications) {
+          const notificationsMap = userData.notifications;
+  
+          Object.keys(notificationsMap).forEach((notifId) => {
+            if (!fetchedNotificationsMap.has(notifId)) {
+              const notifData = notificationsMap[notifId];
+              if (!notifData.isNotifDeleted) {
+                const userNotification = {
+                  id: notifId,
+                  type: "Notification",
+                  subject: notifData.subject || "No Subject",
+                  details: notifData.body || "No Details",
+                  time: notifData.timeCreated || "N/A",
+                  date: notifData.dateCreated || "N/A",
+                  read: notifData.isRead || false,
+                };
+                fetchedNotificationsMap.set(notifId, userNotification); // Add to the Map
+              }
+            }
+          });
+        }
   
         // Fetch table reservations and append to notifications
-        await fetchTableReservations(fetchedNotifications); // Make sure to await the fetch
+        await fetchTableReservations(Array.from(fetchedNotificationsMap.values()));
   
-        // Sort notifications by date and time in descending order
-        fetchedNotifications.sort((a, b) => {
+        // Sort all notifications by date and time in descending order
+        const sortedNotifications = Array.from(fetchedNotificationsMap.values()).sort((a, b) => {
           const dateA = new Date(`${a.date} ${a.time}`);
           const dateB = new Date(`${b.date} ${b.time}`);
-          return dateB.getTime() - dateA.getTime(); // Descending order
+          return dateB.getTime() - dateA.getTime();
         });
   
-        setNotifItems(fetchedNotifications);
-        setHasUnreadNotifs(fetchedNotifications.some((notif) => !notif.read));
+        // Update notifications state
+        setNotifItems(sortedNotifications);
+        setHasUnreadNotifs(sortedNotifications.some((notif) => !notif.read));
       });
   
-      // Fetch notifications using the `fetchNotifications` function
-      const unsubscribeNotifications = fetchNotifications();
-  
-      // Clean up listeners when the component unmounts or the userEmail changes
+      // Clean up when the component unmounts or dependencies change
       return () => {
         unsubscribe();
-        if (unsubscribeNotifications) {
-          unsubscribeNotifications(); // Only invoke if defined
-        }
       };
     };
   
@@ -517,77 +541,100 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
   //#endregion
 
   //#region Mark All Notifications as Read
-  const markAllAsRead = async () => {
-    try {
-      if (!userEmail) {
-        return; // Exit if userEmail is not available
-      }
+const markAllAsRead = async () => {
+  try {
+    if (!userEmail) {
+      return; // Exit if userEmail is not available
+    }
 
-      // Process all notifications: Orders, Vouchers, and Table Reservations
-      await Promise.all(
-        notifItems.map(async (notif) => {
-          if (notif.type === "Voucher") {
-            // Handle Voucher notifications
-            const userDocRef = doc(db, "users", userEmail);
-            const userDoc = await getDoc(userDocRef);
+    // Process all notifications: Orders, Vouchers, and Table Reservations
+    await Promise.all(
+      notifItems.map(async (notif) => {
+        if (notif.type === "Voucher") {
+          // Handle Voucher notifications
+          const userDocRef = doc(db, "users", userEmail);
+          const userDoc = await getDoc(userDocRef);
 
-            if (userDoc.exists()) {
-              const userData = userDoc.data();
-              const userVouchers = userData.vouchers || {};
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const userVouchers = userData.vouchers || {};
 
-              // Update read status in vouchers
-              const updatedVouchers = Object.entries(userVouchers).map(
-                ([key, value]) => {
-                  if (value.voucherID === notif.id) {
-                    return { ...value, isRead: true }; // Mark as read
-                  }
-                  return value;
+            // Update read status in vouchers
+            const updatedVouchers = Object.entries(userVouchers).map(
+              ([key, value]) => {
+                if (value.voucherID === notif.id) {
+                  return { ...value, isRead: true }; // Mark as read
                 }
-              );
-
-              await updateDoc(userDocRef, { vouchers: updatedVouchers });
-            }
-
-            // Update local state for vouchers
-            const newVoucherNotifs = [...voucherNotifs].map((voucher) =>
-              voucher.id === notif.id ? { ...voucher, read: true } : voucher
+                return value;
+              }
             );
-            setVoucherNotifs(newVoucherNotifs);
-          } else if (notif.type === "Order Item") {
-            // Handle Order notifications
-            const [docId, itemIndex] = notif.id.split("-");
-            const completedOrderRef = doc(db, "completedOrders", docId);
-            const notifDoc = await getDoc(completedOrderRef);
-            if (notifDoc.exists()) {
-              const notifData = notifDoc.data();
-              const updatedItems = [...notifData.items];
-              updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                isRead: true,
+
+            await updateDoc(userDocRef, { vouchers: updatedVouchers });
+          }
+
+          // Update local state for vouchers
+          const newVoucherNotifs = [...voucherNotifs].map((voucher) =>
+            voucher.id === notif.id ? { ...voucher, read: true } : voucher
+          );
+          setVoucherNotifs(newVoucherNotifs);
+        } else if (notif.type === "Order Item") {
+          // Handle Order notifications
+          const [docId, itemIndex] = notif.id.split("-");
+          const completedOrderRef = doc(db, "completedOrders", docId);
+          const notifDoc = await getDoc(completedOrderRef);
+          if (notifDoc.exists()) {
+            const notifData = notifDoc.data();
+            const updatedItems = [...notifData.items];
+            updatedItems[itemIndex] = {
+              ...updatedItems[itemIndex],
+              isRead: true,
+            };
+            await updateDoc(completedOrderRef, { items: updatedItems });
+          }
+        } else if (notif.type === "Table Reservation") {
+          // Handle Table Reservation notifications
+          const reservationRef = doc(db, "tableReservations", notif.id);
+          const reservationDoc = await getDoc(reservationRef);
+          if (reservationDoc.exists()) {
+            await updateDoc(reservationRef, { isRead: true });
+          }
+        } else if (notif.type === "Notification") {
+          // Handle User notifications (from users collection)
+          const userDocRef = doc(db, "users", userEmail);
+          const userDoc = await getDoc(userDocRef);
+
+          if (userDoc.exists()) {
+            const userNotifications = userDoc.data().notifications || {};
+            const notificationKey = Object.keys(userNotifications).find(
+              (key) => key === notif.id
+            );
+
+            if (notificationKey) {
+              // Update read status for the specific user notification
+              const updatedNotification = {
+                ...userNotifications[notificationKey],
+                isRead: true, // Mark as read
               };
-              await updateDoc(completedOrderRef, { items: updatedItems });
-            }
-          } else if (notif.type === "Table Reservation") {
-            // Handle Table Reservation notifications
-            const reservationRef = doc(db, "tableReservations", notif.id);
-            const reservationDoc = await getDoc(reservationRef);
-            if (reservationDoc.exists()) {
-              await updateDoc(reservationRef, { isRead: true });
+
+              await updateDoc(userDocRef, {
+                [`notifications.${notificationKey}`]: updatedNotification,
+              });
             }
           }
-        })
-      );
+        }
+      })
+    );
 
-      // Update all local notifications to read
-      setNotifItems((prevNotifs) =>
-        prevNotifs.map((notif) => ({ ...notif, read: true }))
-      );
-      setHasUnreadNotifs(false);
-    } catch (error) {
-      //console.error("Error marking all notifications as read:", error);
-    }
-  };
-  //#endregion
+    // Update all local notifications to read
+    setNotifItems((prevNotifs) =>
+      prevNotifs.map((notif) => ({ ...notif, read: true }))
+    );
+    setHasUnreadNotifs(false); // Set the "has unread notifications" flag to false
+  } catch (error) {
+    console.error("Error marking all notifications as read:", error);
+  }
+};
+//#endregion
 
   //#region Delete All Notifications
   const deleteAllNotifs = async () => {
