@@ -75,7 +75,7 @@ const MenuCategoryPage: React.FC = () => {
 
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [searchText, setSearchText] = useState<string>("");
-  const [selectedCalorie, setSelectedCalorie] = useState(null);
+  const [selectedCalorie, setSelectedCalorie] = useState<string>("all");
 
   const { hotDrinks } = useHotDrinks();
   const { icedDrinks } = useIcedDrinks();
@@ -138,7 +138,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || drink.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null || drink.calorie === selectedCalorie;
+              selectedCalorie === "all" || drink.calorie === selectedCalorie;
             const matchesSearch = drink.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
@@ -177,7 +177,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || pasta.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null || pasta.calorie === selectedCalorie;
+              selectedCalorie === "all" || pasta.calorie === selectedCalorie;
             const matchesSearch = pasta.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
@@ -204,7 +204,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || sandwich.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null || sandwich.calorie === selectedCalorie;
+              selectedCalorie === "all" || sandwich.calorie === selectedCalorie;
             const matchesSearch = sandwich.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
@@ -231,7 +231,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || mainCourse.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null ||
+              selectedCalorie === "all" ||
               mainCourse.calorie === selectedCalorie;
             const matchesSearch = mainCourse.title
               .toLowerCase()
@@ -259,7 +259,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || snack.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null || snack.calorie === selectedCalorie;
+              selectedCalorie === "all" || snack.calorie === selectedCalorie;
             const matchesSearch = snack.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
@@ -286,7 +286,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesFilter =
               selectedFilter === "all" || pastry.type === selectedFilter;
             const matchesCalorie =
-              selectedCalorie === null || pastry.calorie === selectedCalorie;
+              selectedCalorie === "all" || pastry.calorie === selectedCalorie;
             const matchesSearch = pastry.title
               .toLowerCase()
               .includes(searchText.toLowerCase());
