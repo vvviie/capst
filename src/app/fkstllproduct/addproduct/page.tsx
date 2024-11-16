@@ -584,7 +584,7 @@ const AddProductPage = () => {
             prodCategory: selectedCat === "drinks" ? passableSelectedDrinkType : selectedCat, // Logic for prodCategory
             prodID: newProdID,
             title: itemName,
-            type: passableSelectedDrinkType || "",
+            type: selectedDrinkType || "",
             contains: selectedAllergens.length > 0 ? selectedAllergens : [""], // Allergens only
     
             // Optional drink fields
