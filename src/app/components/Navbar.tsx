@@ -318,7 +318,7 @@ const Navbar = () => {
       <div className="hidden md:flex font-semibold">
         {role === "admin" ? (
           <>
-            <div className="px-4 hover:text-yellow-100"><Link href="/">Home</Link></div>
+            <div className="px-4 hover:text-yellow-100"><Link href="/adminhome">Home</Link></div>
             <div className="px-4 hover:text-yellow-100"><Link href="/fkstllproduct">Menu</Link></div>
             <div className="px-4 hover:text-yellow-100"><Link href="/fkstllhomemaintenance">Landing</Link></div>
             <div className="px-4 hover:text-yellow-100"><Link href="/fkstllvouchers">Vouchers/Promos</Link></div>

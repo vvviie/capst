@@ -141,7 +141,7 @@ const LoginPage = () => {
         // Now use the role to redirect the user
         if (role === "admin") {
           Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
-          router.push("/"); // Redirect to the homepage
+          router.push("/adminhome"); // Redirect to the homepage
         } else if (role === "bar") {
           Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
           router.push("/fkstllorders");

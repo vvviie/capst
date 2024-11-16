@@ -53,6 +53,9 @@ const VoucherListPage = () => {
   const [selectedType, setSelectedType] = useState<string>("vouchers"); // State for selected type
   const filteredItems = selectedType === "vouchers" ? vouchers : promos;
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState<voucherType | null>(
+    null
+  ); // State for selected voucher
 
   const toggleForm = () => {
     setIsFormOpen((prev) => !prev);
@@ -117,6 +120,33 @@ const VoucherListPage = () => {
           item.id === itemId ? { ...item, available: isAvailable } : item
         )
       );
+
+      // Update users who have received this voucher
+      const usersRef = collection(db, "users");
+      const usersSnapshot = await getDocs(usersRef);
+
+      // Iterate through each user and update their vouchers
+      const userUpdates = usersSnapshot.docs.map(async (userDoc) => {
+        const userData = userDoc.data();
+        if (userData.vouchers && userData.vouchers.hasOwnProperty(itemId)) {
+          // If the user has this voucher, update the availability
+          const existingVoucher = userData.vouchers[itemId]; // Get the existing voucher data
+
+          // Create an updated voucher object with the existing fields and the new availability
+          const updatedVoucher = {
+            ...existingVoucher,
+            available: isAvailable, // Update only the availability
+          };
+
+          // Update the user's document with the new vouchers state
+          await updateDoc(doc(usersRef, userDoc.id), {
+            [`vouchers.${itemId}`]: updatedVoucher, // Update only the specific voucher
+          });
+        }
+      });
+
+      // Wait for all user updates to complete
+      await Promise.all(userUpdates);
     } else if (selectedType === "promoCodes") {
       setPromos((prevPromos) =>
         prevPromos.map((item) =>
@@ -302,10 +332,11 @@ const VoucherListPage = () => {
                       className="rounded-sm shadow-md bg-orange-200 w-2/3 text-center
                     font-semibold text-amber-900 hover:bg-orange-100 hover:scale-[.98] duration-200 text-sm
                     min-h-10"
-                      onClick={() => {
+                      onClick={(e) => {
+                        setSelectedVoucher(items); // Set the selected voucher
                         setIsFormOpen(true);
                         e.stopPropagation();
-                        toggleForm();
+                        //toggleForm();
                       }}
                     >
                       Give to Users
@@ -341,7 +372,11 @@ const VoucherListPage = () => {
           ))}
         </div>
       </div>
-      <GiveVoucherForm isOpen={isFormOpen} toggleForm={toggleForm} />
+      <GiveVoucherForm
+        isOpen={isFormOpen}
+        toggleForm={toggleForm}
+        selectedVoucher={selectedVoucher}
+      />
     </div>
   );
 };
