@@ -5,25 +5,32 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 
 // Drinks
-import useHotDrinks from "@/app/hooks/useHotDrinks";
+/* import useHotDrinks from "@/app/hooks/useHotDrinks";
 import useIcedDrinks from "@/app/hooks/useIcedDrinks";
 import useBlendedDrinks from "@/app/hooks/useBlendedDrinks";
-import useAffogatoDrinks from "@/app/hooks/useAffogatoDrinks";
+import useAffogatoDrinks from "@/app/hooks/useAffogatoDrinks"; */
+
+import useAllDrinks from "@/app/hooks/useAllDrinks"; // The new hook
 
 // Pasta
-import usePasta from "@/app/hooks/usePasta";
+/* import usePasta from "@/app/hooks/usePasta"; */
+import useAllPasta from "@/app/hooks/useAllPasta";
 
 // Sandwiches
-import useSandwich from "@/app/hooks/useSandwich";
+/* import useSandwich from "@/app/hooks/useSandwich"; */
+import useAllSandwiches from "@/app/hooks/useAllSandwiches";
 
 // Main Courses
-import useMainCourse from "@/app/hooks/useMainCourse";
+/* import useMainCourse from "@/app/hooks/useMainCourse"; */
+import useAllMainCourses from "@/app/hooks/useAllMainCourses";
 
 // Snacks
-import useSnacks from "@/app/hooks/useSnacks";
+/* import useSnacks from "@/app/hooks/useSnacks"; */
+import useAllSnacks from "@/app/hooks/useAllSnacks";
 
 // Pastries
-import usePastries from "@/app/hooks/usePastries";
+/* import usePastries from "@/app/hooks/usePastries"; */
+import useAllPastries from "@/app/hooks/useAllPastries";
 
 import Link from "next/link";
 
@@ -77,45 +84,65 @@ const MenuCategoryPage: React.FC = () => {
   const [searchText, setSearchText] = useState<string>("");
   const [selectedCalorie, setSelectedCalorie] = useState<string>("all");
 
-  const { hotDrinks } = useHotDrinks();
-  const { icedDrinks } = useIcedDrinks();
-  const { blendedDrinks } = useBlendedDrinks();
-  const { affogatoDrinks } = useAffogatoDrinks();
+  const formatCategoryTitle = (category: string) => {
+    return category
+      .replace(/([A-Z])/g, " $1") // Insert space before capital letters
+      .replace(/^./, (str) => str.toUpperCase()) // Capitalize the first letter
+      .trim();
+  };
 
-  const drinks: DrinksCategoryData = [
-    { title: "Hot Drinks", drinks: hotDrinks },
-    { title: "Iced Drinks", drinks: icedDrinks },
-    { title: "Blended Drinks", drinks: blendedDrinks },
-    { title: "Affogato Drinks", drinks: affogatoDrinks },
-  ];
+  const { drinksByCategory } = useAllDrinks();
 
-  const { servingPasta } = usePasta();
+  // Convert drinksByCategory into a format compatible with your existing structure
+  const drinks: DrinksCategoryData = Object.entries(drinksByCategory).map(
+    ([category, drinks]) => ({
+      title: formatCategoryTitle(category), // Use the utility function here
+      drinks,
+    })
+  );
 
-  const pastas: PastasCategoryData = [{ title: "Pasta", pastas: servingPasta }];
+  const { pastasByCategory } = useAllPasta();
 
-  const { servingSandwich } = useSandwich();
+  const pastas: PastasCategoryData = Object.entries(pastasByCategory).map(
+    ([category, pastas]) => ({
+      title: formatCategoryTitle(category), // Use the utility function here
+      pastas,
+    })
+  );
 
-  const sandwiches: SandwichesCategoryData = [
-    { title: "Sandwiches", sandwiches: servingSandwich },
-  ];
+  const { sandwichesByCategory } = useAllSandwiches();
 
-  const { servingMainCourse } = useMainCourse();
+  const sandwiches: SandwichesCategoryData = Object.entries(sandwichesByCategory).map(
+    ([category, sandwiches]) => ({
+      title: formatCategoryTitle(category), // Use the utility function here
+      sandwiches,
+    })
+  );
 
-  const mainCourses: MainCourseCategoryData = [
-    { title: "Main Courses", mainCourses: servingMainCourse },
-  ];
+  const { mainCoursesByCategory} = useAllMainCourses();
 
-  const { servingSnacks } = useSnacks();
+  const mainCourses: MainCourseCategoryData = Object.entries(mainCoursesByCategory).map(
+    ([category, mainCourses]) => ({
+      title: formatCategoryTitle(category), // Use the utility function here
+      mainCourses,
+    })
+  );
 
-  const snacks: SnacksCategoryData = [
-    { title: "Snacks", snacks: servingSnacks },
-  ];
+  const { snacksByCategory } = useAllSnacks();
+  const snacks: SnacksCategoryData = Object.entries(snacksByCategory).map(
+    ([category, snacks]) => ({
+      title: formatCategoryTitle(category), // Use the utility function here
+      snacks,
+    })
+  );
 
-  const { servingPastries = [] } = usePastries();
-
-  const pastries: PastriesCategoryData = [
-    { title: "Pastries", pastries: servingPastries },
-  ];
+  const {pastriesByCategory} = useAllPastries();
+  const pastries: PastriesCategoryData = Object.entries(pastriesByCategory).map(
+    ([category, pastries]) => ({
+      title: formatCategoryTitle(category), // Use the utility function here
+      pastries,
+    })
+  );
 
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
 
