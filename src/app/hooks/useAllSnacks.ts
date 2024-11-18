@@ -19,29 +19,32 @@ const useAllSnacks = () => {
         const categoriesDoc = await getDoc(categoriesDocRef);
 
         if (!categoriesDoc.exists()) {
-          setError('Categories document does not exist.');
+          setError('Snacks categories document does not exist.');
           setSnacksByCategory({});
           setLoading(false);
           return;
         }
 
-        const { categories } = categoriesDoc.data() as { categories: string[] };
+        const { categories } = categoriesDoc.data() as { categories: { category: string; available: boolean }[] };
 
         if (!categories || !Array.isArray(categories)) {
-          setError('Invalid categories format.');
+          setError('Invalid snacks categories format.');
           setSnacksByCategory({});
           setLoading(false);
           return;
         }
 
-        // Step 2: Fetch snacks for each category
+        // Step 2: Filter out categories where available = false
+        const availableCategories = categories.filter((category) => category.available);
+
+        // Step 3: Fetch snacks for each available category
         const snacksData: Record<string, Snacks[]> = {};
-        for (const category of categories) {
+        for (const category of availableCategories) {
           const snacksRef = collection(db, 'snacks');
-          const snacksQuery = query(snacksRef, where('prodCategory', '==', category));
+          const snacksQuery = query(snacksRef, where('prodCategory', '==', category.category));
           const querySnapshot = await getDocs(snacksQuery);
 
-          snacksData[category] = querySnapshot.docs.map((doc) => ({
+          snacksData[category.category] = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Snacks[];
@@ -57,7 +60,7 @@ const useAllSnacks = () => {
     };
 
     fetchSnacks();
-  }, []);
+  }, []); // Empty array to run only once when component mounts
 
   return { snacksByCategory, loading, error };
 };

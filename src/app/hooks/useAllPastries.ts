@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase'; // Adjust the path as needed
-import { Pastries } from '../data';
+import { Pastries } from '../data'; // Import the Pastries type
 
 const useAllPastries = () => {
   const [pastriesByCategory, setPastriesByCategory] = useState<Record<string, Pastries[]>>({});
@@ -19,29 +19,32 @@ const useAllPastries = () => {
         const categoriesDoc = await getDoc(categoriesDocRef);
 
         if (!categoriesDoc.exists()) {
-          setError('Main course categories document does not exist.');
+          setError('Pastries categories document does not exist.');
           setPastriesByCategory({});
           setLoading(false);
           return;
         }
 
-        const { categories } = categoriesDoc.data() as { categories: string[] };
+        const { categories } = categoriesDoc.data() as { categories: { category: string; available: boolean }[] };
 
         if (!categories || !Array.isArray(categories)) {
-          setError('Invalid pasta categories format.');
+          setError('Invalid pastries categories format.');
           setPastriesByCategory({});
           setLoading(false);
           return;
         }
 
-        // Step 2: Fetch pastas for each category
-        const pastriesData: Record<string, Pastries[]> = {};
-        for (const category of categories) {
-          const pastaRef = collection(db, 'pastries');
-          const pastaQuery = query(pastaRef, where('prodCategory', '==', category));
-          const querySnapshot = await getDocs(pastaQuery);
+        // Step 2: Filter out categories where available = false
+        const availableCategories = categories.filter((category) => category.available);
 
-          pastriesData[category] = querySnapshot.docs.map((doc) => ({
+        // Step 3: Fetch pastries for each available category
+        const pastriesData: Record<string, Pastries[]> = {};
+        for (const category of availableCategories) {
+          const pastriesRef = collection(db, 'pastries');
+          const pastriesQuery = query(pastriesRef, where('prodCategory', '==', category.category));
+          const querySnapshot = await getDocs(pastriesQuery);
+
+          pastriesData[category.category] = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Pastries[];
@@ -49,15 +52,15 @@ const useAllPastries = () => {
 
         setPastriesByCategory(pastriesData);
       } catch (err) {
-        console.error('Error fetching pastas:', err);
-        setError('Failed to fetch pastas.');
+        console.error('Error fetching pastries:', err);
+        setError('Failed to fetch pastries.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchPastries();
-  }, []);
+  }, []); // Empty array to run only once when component mounts
 
   return { pastriesByCategory, loading, error };
 };

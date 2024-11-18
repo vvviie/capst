@@ -10,22 +10,19 @@ import {
     Pastries,
     Pasta,
     Snacks,
-    Sandwiches,
+    Sandwiches
 } from "../data";
 
 import { db } from "../firebase";
-import {
-    collection,
-    getDocs,
-    query,
-    where,
-    deleteDoc,
-    doc,
-    updateDoc,
-    getDoc,
-    setDoc,
-    onSnapshot,
-} from "firebase/firestore";
+import { collection, getDocs, query, where, deleteDoc, doc, updateDoc, getDoc, setDoc, onSnapshot} from 'firebase/firestore';
+import useMenuCategories from "../hooks/useMenuCategories";
+
+import useDrinksByCategory from "../hooks/useDrinksByCategory";
+import useMainCoursesByCategory from "../hooks/useMainCoursesByCategory";
+import usePastasByCategory from "../hooks/usePastasByCategory";
+import usePastriesByCategory from "../hooks/usePastriesByCategory";
+import useSnacksByCategory from "../hooks/useSnacksByCategory";
+import useSandwichesByCategory from "../hooks/useSandwichesByCategory";
 
 interface FeaturedItem {
     id: string;
@@ -34,17 +31,19 @@ interface FeaturedItem {
 }
 
 const CRUDProductPage = () => {
-    const [selectedCategory, setSelectedCategory] =
-        useState<string>("icedDrinks");
+    const [mainCategory, setMainCategory] = useState<string>("Drinks");
+    const [selectedCategory, setSelectedCategory] = useState<string>("icedDrinks");
     const [activeItem, setActiveItem] = useState<string | null>(null);
-    const [drinks, setDrinks] = useState<Drinks[]>([]);
-    const [mainCourses, setMainCourses] = useState<MainCourse[]>([]);
-    const [pastas, setPasta] = useState<Pasta[]>([]);
-    const [pastries, setPastries] = useState<Pastries[]>([]);
-    const [snacks, setSnacks] = useState<Snacks[]>([]);
-    const [sandwiches, setSandwiches] = useState<Sandwiches[]>([]);
-    const [menuCategories, setMenuCategories] = useState([]);
 
+    const drinks = useDrinksByCategory(selectedCategory);
+    const mainCourses = useMainCoursesByCategory(selectedCategory);
+    const pastas = usePastasByCategory(selectedCategory);
+    const pastries = usePastriesByCategory(selectedCategory);
+    const snacks = useSnacksByCategory(selectedCategory);
+    const sandwiches = useSandwichesByCategory(selectedCategory);
+
+    const menuCategories = useMenuCategories(mainCategory);
+    
     const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -56,262 +55,116 @@ const CRUDProductPage = () => {
         setActiveItem(null);
     };
 
-    const fetchCategoriesFromDB = async () => {
+    const handleMainCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setMainCategory(e.target.value); // Set the selected main category
+    };
+
+    // Fetch categories from the database
+    const fetchCategoriesFromDB = async (mainCategory) => {
         try {
-            // Query the 'menuCategories' collection
-            const querySnapshot = await getDocs(collection(db, "menuCategories"));
-
-            let allCategories = [];
-
-            // Loop through each document in the collection
+            // Determine the collection based on the selected main category
+            let categoriesCollection = "";
+            switch (mainCategory) {
+                case "Drinks":
+                    categoriesCollection = "drinksCategories";
+                    break;
+                case "Main Course":
+                    categoriesCollection = "mainCourseCategories";
+                    break;
+                case "Pastries":
+                    categoriesCollection = "pastriesCategories";
+                    break;
+                case "Snacks":
+                    categoriesCollection = "snacksCategories";
+                    break;
+                case "Sandwiches":
+                    categoriesCollection = "sandwichesCategories";
+                    break;
+                case "Pasta":
+                    categoriesCollection = "pastaCategories";
+                    break;
+                default:
+                    categoriesCollection = ""; // Default case, in case no main category is selected
+                    break;
+            }
+    
+            // If no category collection is selected, return early
+            if (!categoriesCollection) return;
+    
+            // Fetch categories from the selected collection
+            const querySnapshot = await getDocs(collection(db, categoriesCollection));
+    
+            let allCategories: any[] = [];
             querySnapshot.forEach((doc) => {
                 if (doc.exists()) {
                     const data = doc.data();
+                    // Assuming each category item is in the format of { category: "someCategory" }
                     if (data.categories && Array.isArray(data.categories)) {
-                        allCategories = allCategories.concat(data.categories);
+                        const categoriesFromMaps = data.categories
+                            .filter((item) => item.category) // Filter out any items without a category
+                            .map((item) => item.category); // Extract the category names
+                        allCategories = allCategories.concat(categoriesFromMaps);
                     }
                 }
             });
-
-            // Format camelCase strings to readable strings
+    
+            // Format categories for display (if needed)
             const formattedCategories = allCategories.map((category) =>
-                category
-                    .replace(/([A-Z])/g, " $1")
-                    .replace(/^./, (str) => str.toUpperCase())
+                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
             );
-
-            // Update the state with the formatted categories
+    
             setMenuCategories(formattedCategories);
+    
+            // Only set the selectedCategory if it's a valid option in the new categories list
+            if (formattedCategories.includes(selectedCategory)) {
+                // Don't reset selectedCategory if it's already a valid category
+                return;
+            }
+    
+            // If selectedCategory is not valid anymore (e.g., it was part of "Pastries" and now we're in "Drinks"), reset it to the first available category
+            if (formattedCategories.length > 0) {
+                setSelectedCategory(formattedCategories[0]); // Optionally, set the first category as the default
+            }
         } catch (error) {
             console.error("Error fetching categories from database:", error);
         }
     };
 
     useEffect(() => {
-        fetchCategoriesFromDB();
-    }, []);
-
-    // Fetch drinks based on the selected category
+        if (mainCategory) {
+            fetchCategoriesFromDB(mainCategory); // Fetch categories based on selected main category
+        }
+    }, [mainCategory]);
+    
     useEffect(() => {
-        const fetchDrinks = async () => {
-            try {
-                const drinksRef = collection(db, "drinks");
-                const q = query(
-                    drinksRef,
-                    where("prodCategory", "==", selectedCategory)
-                );
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setDrinks([]);
-                    return;
-                }
-
-                const fetchedDrinks: Drinks[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...(doc.data() as Omit<Drinks, "id">),
-                }));
-
-                setDrinks(fetchedDrinks);
-            } catch (err) {
-                console.error("Error fetching drinks:", err);
-            }
-        };
-
-        fetchDrinks();
-    }, [selectedCategory]);
-
-    // Fetch main courses based on the selected category
-    useEffect(() => {
-        const fetchMainCourses = async () => {
-            try {
-                const mainCourseRef = collection(db, "mainCourse");
-                const q = query(
-                    mainCourseRef,
-                    where("prodCategory", "==", selectedCategory)
-                );
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setMainCourses([]);
-                    return;
-                }
-
-                const fetchedMainCourses: MainCourse[] = querySnapshot.docs.map(
-                    (doc) => ({
-                        id: doc.id,
-                        ...(doc.data() as Omit<MainCourse, "id">),
-                    })
-                );
-
-                setMainCourses(fetchedMainCourses);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchMainCourses();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchPastas = async () => {
-            try {
-                const pastaRef = collection(db, "pasta");
-                const q = query(
-                    pastaRef,
-                    where("prodCategory", "==", selectedCategory)
-                );
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setPasta([]);
-                    return;
-                }
-
-                const fetchedPastas: Pasta[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...(doc.data() as Omit<Pasta, "id">),
-                }));
-
-                setPasta(fetchedPastas);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchPastas();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchPastries = async () => {
-            try {
-                const pastriesRef = collection(db, "pastries");
-                const q = query(
-                    pastriesRef,
-                    where("prodCategory", "==", selectedCategory)
-                );
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setPastries([]);
-                    return;
-                }
-
-                const fetchedPastries: Pastries[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...(doc.data() as Omit<Pastries, "id">),
-                }));
-
-                setPastries(fetchedPastries);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchPastries();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchSnacks = async () => {
-            try {
-                const snacksRef = collection(db, "snacks");
-                const q = query(
-                    snacksRef,
-                    where("prodCategory", "==", selectedCategory)
-                );
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setSnacks([]);
-                    return;
-                }
-
-                const fetchedSnacks: Snacks[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...(doc.data() as Omit<Snacks, "id">),
-                }));
-
-                setSnacks(fetchedSnacks);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchSnacks();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchSandwiches = async () => {
-            try {
-                const sandwichesRef = collection(db, "sandwiches");
-                const q = query(
-                    sandwichesRef,
-                    where("prodCategory", "==", selectedCategory)
-                );
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setSandwiches([]);
-                    return;
-                }
-
-                const fetchedSandwiches: Sandwiches[] = querySnapshot.docs.map(
-                    (doc) => ({
-                        id: doc.id,
-                        ...(doc.data() as Omit<Sandwiches, "id">),
-                    })
-                );
-
-                setSandwiches(fetchedSandwiches);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchSandwiches();
-    }, [selectedCategory]);
-
-    // Handle category change
-    const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newCategory = e.target.value;
-        setSelectedCategory(newCategory);
-        console.log(`Selected category: ${newCategory}`);
-    };
+        if (menuCategories.length > 0 && !menuCategories.includes(selectedCategory)) {
+            // If the current selectedCategory is not in the new menuCategories, reset to the first category
+            setSelectedCategory(menuCategories[0]);
+        }
+    }, [menuCategories]); // Run when menuCategories changes
 
     const filteredDrinks = useMemo(() => {
-        return drinks.filter((drink) =>
-            drink.title.toLowerCase().startsWith(searchTerm)
-        );
+        return drinks.filter((drink) => drink.title.toLowerCase().startsWith(searchTerm));
     }, [drinks, searchTerm]);
-
+    
     const filteredMainCourses = useMemo(() => {
-        return mainCourses.filter((course) =>
-            course.title.toLowerCase().startsWith(searchTerm)
-        );
+        return mainCourses.filter((course) => course.title.toLowerCase().startsWith(searchTerm));
     }, [mainCourses, searchTerm]);
-
+    
     const filteredPastas = useMemo(() => {
-        return pastas.filter((pasta) =>
-            pasta.title.toLowerCase().startsWith(searchTerm)
-        );
+        return pastas.filter((pasta) => pasta.title.toLowerCase().startsWith(searchTerm));
     }, [pastas, searchTerm]);
-
+    
     const filteredPastries = useMemo(() => {
-        return pastries.filter((pastry) =>
-            pastry.title.toLowerCase().startsWith(searchTerm)
-        );
+        return pastries.filter((pastry) => pastry.title.toLowerCase().startsWith(searchTerm));
     }, [pastries, searchTerm]);
-
+    
     const filteredSnacks = useMemo(() => {
-        return snacks.filter((snack) =>
-            snack.title.toLowerCase().startsWith(searchTerm)
-        );
+        return snacks.filter((snack) => snack.title.toLowerCase().startsWith(searchTerm));
     }, [snacks, searchTerm]);
-
+    
     const filteredSandwiches = useMemo(() => {
-        return sandwiches.filter((sandwich) =>
-            sandwich.title.toLowerCase().startsWith(searchTerm)
-        );
+        return sandwiches.filter((sandwich) => sandwich.title.toLowerCase().startsWith(searchTerm));
     }, [sandwiches, searchTerm]);
 
     // Delete function for items
@@ -326,7 +179,7 @@ const CRUDProductPage = () => {
                 snacks: "snacks",
                 sandwiches: "sandwiches",
             };
-
+            
             const collectionName = collectionMap[category];
             if (!collectionName) {
                 console.error("Invalid category");
@@ -336,48 +189,20 @@ const CRUDProductPage = () => {
             // Delete from Firestore
             await deleteDoc(doc(db, collectionName, id));
 
-            // Update local state after deletion
-            switch (category) {
-                case "drinks":
-                    setDrinks((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "mainCourses":
-                    setMainCourses((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "pastas":
-                    setPasta((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "pastries":
-                    setPastries((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "snacks":
-                    setSnacks((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "sandwiches":
-                    setSandwiches((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                default:
-                    break;
-            }
+            
         } catch (error) {
             console.error("Error deleting item:", error);
         }
     };
 
-    const handleAvailabilityChange = async (
-        e: React.ChangeEvent<HTMLSelectElement>,
-        id: string,
-        collectionName: string
-    ) => {
+    const handleAvailabilityChange = async (e: React.ChangeEvent<HTMLSelectElement>, id: string, collectionName: string) => {
         const newAvailability = e.target.value;
-
+        
         try {
             const itemRef = doc(db, collectionName, id); // Use collectionName dynamically
             await updateDoc(itemRef, { availability: newAvailability });
-            console.log(
-                `Availability for item ${id} in ${collectionName} updated to ${newAvailability}`
-            );
-
+            console.log(`Availability for item ${id} in ${collectionName} updated to ${newAvailability}`);
+    
             // Optionally, update local state directly to avoid re-fetching data
             updateLocalStateAvailability(collectionName, id, newAvailability);
         } catch (error) {
@@ -385,52 +210,36 @@ const CRUDProductPage = () => {
         }
     };
 
-    const updateLocalStateAvailability = (
-        collectionName: string,
-        id: string,
-        newAvailability: string
-    ) => {
+    const updateLocalStateAvailability = (collectionName: string, id: string, newAvailability: string) => {
         switch (collectionName) {
             case "drinks":
                 setDrinks((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, availability: newAvailability } : item
-                    )
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
                 );
                 break;
             case "mainCourse":
                 setMainCourses((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, availability: newAvailability } : item
-                    )
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
                 );
                 break;
             case "pasta":
                 setPasta((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, availability: newAvailability } : item
-                    )
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
                 );
                 break;
             case "pastries":
                 setPastries((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, availability: newAvailability } : item
-                    )
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
                 );
                 break;
             case "snacks":
                 setSnacks((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, availability: newAvailability } : item
-                    )
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
                 );
                 break;
             case "sandwiches":
                 setSandwiches((prev) =>
-                    prev.map((item) =>
-                        item.id === id ? { ...item, availability: newAvailability } : item
-                    )
+                    prev.map((item) => item.id === id ? { ...item, availability: newAvailability } : item)
                 );
                 break;
             default:
@@ -438,16 +247,13 @@ const CRUDProductPage = () => {
         }
     };
 
-    const handleToggleFeatureItem = async (
-        itemId: string,
-        collectionName: string
-    ) => {
+    const handleToggleFeatureItem = async (itemId: string, collectionName: string) => {
         try {
             const itemDocRef = doc(db, collectionName, itemId); // Original collection reference
             const featuredDocRef = doc(db, "featuredItems", itemId); // Featured collection reference
-
+    
             const featuredSnapshot = await getDoc(featuredDocRef);
-
+    
             if (featuredSnapshot.exists()) {
                 // If the item is already in featuredItems, unfeature it by deleting it
                 await deleteDoc(featuredDocRef);
@@ -455,26 +261,21 @@ const CRUDProductPage = () => {
             } else {
                 // If the item is not in featuredItems, feature it by copying the document data
                 const itemSnapshot = await getDoc(itemDocRef);
-
+    
                 if (itemSnapshot.exists()) {
                     const itemData = itemSnapshot.data();
-
+                    
                     await setDoc(featuredDocRef, {
                         ...itemData,
                         fromDB: collectionName, // Indicate the original collection
                     });
-                    console.log(
-                        `Item ${itemId} from ${collectionName} featured successfully.`
-                    );
+                    console.log(`Item ${itemId} from ${collectionName} featured successfully.`);
                 } else {
                     console.warn(`Item ${itemId} does not exist in ${collectionName}.`);
                 }
             }
         } catch (error) {
-            console.error(
-                `Error toggling feature for item ${itemId} from ${collectionName}:`,
-                error
-            );
+            console.error(`Error toggling feature for item ${itemId} from ${collectionName}:`, error);
         }
     };
 
@@ -483,38 +284,32 @@ const CRUDProductPage = () => {
             try {
                 const featuredCollection = collection(db, "featuredItems");
                 const featuredSnapshot = await getDocs(featuredCollection);
-                const featuredData: FeaturedItem[] = featuredSnapshot.docs.map(
-                    (doc) => ({
-                        id: doc.id,
-                        ...doc.data(),
-                    })
-                );
+                const featuredData: FeaturedItem[] = featuredSnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
                 setFeaturedItems(featuredData);
             } catch (error) {
                 console.error("Error fetching featured items:", error);
             }
         };
-
+    
         fetchFeaturedItems();
     }, []);
 
     useEffect(() => {
-        const unsubscribe = onSnapshot(
-            collection(db, "featuredItems"),
-            (snapshot) => {
-                const featuredData: FeaturedItem[] = snapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data(),
-                })) as FeaturedItem[];
-                setFeaturedItems(featuredData);
-            }
-        );
-
+        const unsubscribe = onSnapshot(collection(db, "featuredItems"), (snapshot) => {
+            const featuredData: FeaturedItem[] = snapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+            })) as FeaturedItem[];
+            setFeaturedItems(featuredData);
+        });
+    
         return () => unsubscribe(); // Clean up the listener on component unmount
     }, []);
 
-    const isItemFeatured = (id: string) =>
-        featuredItems.some((featuredItem) => featuredItem.id === id);
+    const isItemFeatured = (id: string) => featuredItems.some((featuredItem) => featuredItem.id === id);
 
     return (
         <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
@@ -525,51 +320,53 @@ const CRUDProductPage = () => {
                     {/* HEADER */}
                     <div className="flex justify-between items-center gap-2 w-full">
                         <h1 className="text-2xl font-bold text-orange-950">
-                            Product Listings
+                        Product Listings
                         </h1>
                         <Link
-                            href={"/fkstllmenucategories"}
-                            className="h-10 border-2 border-gray-100 shadow-md rounded-md pt-1.5
-                    bg-white font-bold text-gray-500 w-1/2 max-w-28 text-center
-                    hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                        href={"/fkstllmenucategories"}
+                        className="h-10 border-2 border-gray-100 shadow-md rounded-md pt-1.5
+                                bg-white font-bold text-gray-500 w-1/2 max-w-28 text-center
+                                hover:bg-gray-50 hover:scale-[1.02] duration-200"
                         >
-                            Categories
+                        Categories
                         </Link>
                     </div>
                     {/* CREATE AND SEARCH CONTAINER */}
                     <div className="flex justify-between items-center gap-4">
+                        {/* SELECT MAIN CATEGORY */}
+                        <select
+                            name="mainCategory"
+                            id="mainCategory"
+                            value={mainCategory}
+                            onChange={handleMainCategoryChange}
+                            className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white cursor-pointer h-9 text-center flex items-center justify-center"
+                        >
+                            <option value="Drinks">Drinks</option>
+                            <option value="Main Course">Main Course</option>
+                            <option value="Pastries">Pastries</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Sandwiches">Sandwiches</option>
+                            <option value="Pasta">Pasta</option>
+                        </select>
+
                         {/* SELECT MENU CATEGORY */}
                         <select
                             name="menuCategory"
                             id="menuCat"
-                            onChange={handleCategoryChange}
+                            value={selectedCategory || ""}
+                            onChange={(e) => setSelectedCategory(e.target.value)} // Update the selected subcategory
                             className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white cursor-pointer h-9"
                         >
-                            {menuCategory.map((cats) => (
-                                <option
-                                    value={cats.prodCat}
-                                    key={cats.id}
-                                    className="text-center"
-                                >
-                                    {cats.title}
+                            {menuCategories.map((category, index) => (
+                                <option value={category} key={index} className="text-center">
+                                    {category
+                                        .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
+                                        .replace(/^./, (str) => str.toUpperCase()) // Capitalize the first letter
+                                    }
                                 </option>
                             ))}
                         </select>
-
-                        {/* SELECT MENU CATEGORY */}
-                        <select
-                            name="menuCategory2"
-                            id="menuCat2"
-                            //onChange={handleCategoryChange}
-                            className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white cursor-pointer h-9"
-                        >
-                                        {menuCategories.map((category, index) => (
-                            <option value={category} key={index} className="text-center">
-                                {category}
-                            </option>
-                        ))}
-                        </select>
-
+                        
                         {/* SEARCH BAR */}
                         <input
                             type="text"
@@ -607,32 +404,32 @@ const CRUDProductPage = () => {
                         >
                             {/* IMAGE CONTAINER */}
                             <div className="h-4/5 w-full relative">
-                                <Image src={item.img} alt="" fill className="object-contain" />
+                                <Image
+                                    src={item.img}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
-
+                            
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
                                 {item.title}
                             </h1>
-
+                            
                             {/* AVAILABILITY INDICATOR */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available"
-                                        ? "bg-green-600"
-                                        : "bg-gray-500"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
-
+                            
                             {/* CALORIE CONTENT */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${item.calorie === "high"
-                                        ? "bg-red-500"
-                                        : item.calorie === "med"
-                                            ? "bg-orange-400"
-                                            : "bg-green-400"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                                    item.calorie === "high" ? "bg-red-500" :
+                                    item.calorie === "med" ? "bg-orange-400" : "bg-green-400"
+                                }`}
                             ></span>
-
+                            
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
                                 <div
@@ -640,7 +437,7 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button
+                                    <button 
                                         className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevents triggering parent onClick
@@ -649,29 +446,24 @@ const CRUDProductPage = () => {
                                     >
                                         {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                                     </button>
-
+                                    
                                     <select
                                         value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                                        onChange={(e) =>
-                                            handleAvailabilityChange(e, item.id, "drinks")
-                                        } // Dynamically pass the collection name
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "drinks")} // Dynamically pass the collection name
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
                                             <option
                                                 key={availability.id}
                                                 value={availability.value}
-                                                className={`${availability.value === "Available"
-                                                        ? "text-green-600"
-                                                        : "text-gray-500"
-                                                    } font-bold`}
+                                                className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
                                                 {availability.name}
                                             </option>
                                         ))}
                                     </select>
-
+                                    
                                     <Link
                                         href={`/fkstllproduct/editproduct/${item.id}`}
                                         className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -679,7 +471,7 @@ const CRUDProductPage = () => {
                                     >
                                         Edit
                                     </Link>
-
+                                    
                                     <button
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                                         onClick={(e) => {
@@ -703,7 +495,12 @@ const CRUDProductPage = () => {
                         >
                             {/* IMAGE CONTAINER */}
                             <div className="h-4/5 w-full relative">
-                                <Image src={item.img} alt="" fill className="object-contain" />
+                                <Image
+                                    src={item.img}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
@@ -711,19 +508,17 @@ const CRUDProductPage = () => {
                             </h1>
                             {/* AVAILABILITY */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available"
-                                        ? "bg-green-600"
-                                        : "bg-gray-500"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
                             {/* CALORIE CONTENT */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${item.calorie === "high"
+                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                                    item.calorie === "high"
                                         ? "bg-red-500"
                                         : item.calorie === "med"
                                             ? "bg-orange-400"
                                             : "bg-green-400"
-                                    }`}
+                                }`}
                             ></span>
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
@@ -732,7 +527,7 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button
+                                    <button 
                                         className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevents triggering parent onClick
@@ -746,19 +541,14 @@ const CRUDProductPage = () => {
                                         id=""
                                         value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                                        onChange={(e) =>
-                                            handleAvailabilityChange(e, item.id, "mainCourse")
-                                        }
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "mainCourse")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
                                             <option
                                                 key={availability.id}
                                                 value={availability.value}
-                                                className={`${availability.value === "Available"
-                                                        ? "text-green-600"
-                                                        : "text-gray-500"
-                                                    } font-bold`}
+                                                className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
                                                 {availability.name}
                                             </option>
@@ -775,7 +565,7 @@ const CRUDProductPage = () => {
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDelete(item.id, "mainCourse");
+                                            handleDelete(item.id, "mainCourses");
                                         }}
                                     >
                                         Delete
@@ -794,7 +584,12 @@ const CRUDProductPage = () => {
                         >
                             {/* IMAGE CONTAINER */}
                             <div className="h-4/5 w-full relative">
-                                <Image src={item.img} alt="" fill className="object-contain" />
+                                <Image
+                                    src={item.img}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
@@ -802,19 +597,17 @@ const CRUDProductPage = () => {
                             </h1>
                             {/* AVAILABILITY */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available"
-                                        ? "bg-green-600"
-                                        : "bg-gray-500"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
                             {/* CALORIE CONTENT */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${item.calorie === "high"
+                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                                    item.calorie === "high"
                                         ? "bg-red-500"
                                         : item.calorie === "med"
                                             ? "bg-orange-400"
                                             : "bg-green-400"
-                                    }`}
+                                }`}
                             ></span>
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
@@ -823,7 +616,7 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button
+                                    <button 
                                         className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevents triggering parent onClick
@@ -837,19 +630,14 @@ const CRUDProductPage = () => {
                                         id=""
                                         value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                                        onChange={(e) =>
-                                            handleAvailabilityChange(e, item.id, "pasta")
-                                        }
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "pasta")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
                                             <option
                                                 key={availability.id}
                                                 value={availability.value}
-                                                className={`${availability.value === "Available"
-                                                        ? "text-green-600"
-                                                        : "text-gray-500"
-                                                    } font-bold`}
+                                                className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
                                                 {availability.name}
                                             </option>
@@ -885,7 +673,12 @@ const CRUDProductPage = () => {
                         >
                             {/* IMAGE CONTAINER */}
                             <div className="h-4/5 w-full relative">
-                                <Image src={item.img} alt="" fill className="object-contain" />
+                                <Image
+                                    src={item.img}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
@@ -893,19 +686,17 @@ const CRUDProductPage = () => {
                             </h1>
                             {/* AVAILABILITY */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available"
-                                        ? "bg-green-600"
-                                        : "bg-gray-500"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
                             {/* CALORIE CONTENT */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${item.calorie === "high"
+                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                                    item.calorie === "high"
                                         ? "bg-red-500"
                                         : item.calorie === "med"
                                             ? "bg-orange-400"
                                             : "bg-green-400"
-                                    }`}
+                                }`}
                             ></span>
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
@@ -914,7 +705,7 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button
+                                    <button 
                                         className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevents triggering parent onClick
@@ -928,19 +719,14 @@ const CRUDProductPage = () => {
                                         id=""
                                         value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                                        onChange={(e) =>
-                                            handleAvailabilityChange(e, item.id, "pastries")
-                                        }
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "pastries")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
                                             <option
                                                 key={availability.id}
                                                 value={availability.value}
-                                                className={`${availability.value === "Available"
-                                                        ? "text-green-600"
-                                                        : "text-gray-500"
-                                                    } font-bold`}
+                                                className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
                                                 {availability.name}
                                             </option>
@@ -976,7 +762,12 @@ const CRUDProductPage = () => {
                         >
                             {/* IMAGE CONTAINER */}
                             <div className="h-4/5 w-full relative">
-                                <Image src={item.img} alt="" fill className="object-contain" />
+                                <Image
+                                    src={item.img}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
@@ -984,19 +775,17 @@ const CRUDProductPage = () => {
                             </h1>
                             {/* AVAILABILITY */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available"
-                                        ? "bg-green-600"
-                                        : "bg-gray-500"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
                             {/* CALORIE CONTENT */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${item.calorie === "high"
+                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                                    item.calorie === "high"
                                         ? "bg-red-500"
                                         : item.calorie === "med"
                                             ? "bg-orange-400"
                                             : "bg-green-400"
-                                    }`}
+                                }`}
                             ></span>
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
@@ -1005,7 +794,7 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button
+                                    <button 
                                         className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevents triggering parent onClick
@@ -1019,19 +808,14 @@ const CRUDProductPage = () => {
                                         id=""
                                         value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                                        onChange={(e) =>
-                                            handleAvailabilityChange(e, item.id, "snacks")
-                                        }
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "snacks")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
                                             <option
                                                 key={availability.id}
                                                 value={availability.value}
-                                                className={`${availability.value === "Available"
-                                                        ? "text-green-600"
-                                                        : "text-gray-500"
-                                                    } font-bold`}
+                                                className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
                                                 {availability.name}
                                             </option>
@@ -1067,7 +851,12 @@ const CRUDProductPage = () => {
                         >
                             {/* IMAGE CONTAINER */}
                             <div className="h-4/5 w-full relative">
-                                <Image src={item.img} alt="" fill className="object-contain" />
+                                <Image
+                                    src={item.img}
+                                    alt=""
+                                    fill
+                                    className="object-contain"
+                                />
                             </div>
                             {/* PRODUCT TITLE */}
                             <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
@@ -1075,19 +864,17 @@ const CRUDProductPage = () => {
                             </h1>
                             {/* AVAILABILITY */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available"
-                                        ? "bg-green-600"
-                                        : "bg-gray-500"
-                                    }`}
+                                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${item.availability === "available" ? "bg-green-600" : "bg-gray-500"}`}
                             ></span>
                             {/* CALORIE CONTENT */}
                             <span
-                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${item.calorie === "high"
+                                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                                    item.calorie === "high"
                                         ? "bg-red-500"
                                         : item.calorie === "med"
                                             ? "bg-orange-400"
                                             : "bg-green-400"
-                                    }`}
+                                }`}
                             ></span>
                             {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                             {activeItem === item.id && (
@@ -1096,7 +883,7 @@ const CRUDProductPage = () => {
                                     style={{ background: "rgba(0, 0, 0, 0.6)" }}
                                     onClick={handleOptionsClick}
                                 >
-                                    <button
+                                    <button 
                                         className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation(); // Prevents triggering parent onClick
@@ -1110,19 +897,14 @@ const CRUDProductPage = () => {
                                         id=""
                                         value={item.availability.toLowerCase()}
                                         className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                                        onChange={(e) =>
-                                            handleAvailabilityChange(e, item.id, "sandwiches")
-                                        }
+                                        onChange={(e) => handleAvailabilityChange(e, item.id, "sandwiches")}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         {Availability.map((availability) => (
                                             <option
                                                 key={availability.id}
                                                 value={availability.value}
-                                                className={`${availability.value === "Available"
-                                                        ? "text-green-600"
-                                                        : "text-gray-500"
-                                                    } font-bold`}
+                                                className={`${availability.value === "Available" ? "text-green-600" : "text-gray-500"} font-bold`}
                                             >
                                                 {availability.name}
                                             </option>

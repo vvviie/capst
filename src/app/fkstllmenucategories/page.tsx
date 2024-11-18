@@ -29,15 +29,6 @@ const AdminMenuCategories = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-orange-950">
             Categories
           </h1>
-
-          <Link
-            href={"/fkstllmenucategories/add"}
-            className="h-10 border-2 border-gray-100 shadow-md rounded-md pt-1.5
-                    bg-white font-bold text-gray-500 w-1/2 max-w-28 text-center
-                    hover:bg-gray-50 hover:scale-[1.02] duration-200"
-          >
-            Add
-          </Link>
         </div>
         {/* CATEGORIES CONTAINER */}
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

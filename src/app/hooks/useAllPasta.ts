@@ -25,7 +25,7 @@ const useAllPastas = () => {
           return;
         }
 
-        const { categories } = categoriesDoc.data() as { categories: string[] };
+        const { categories } = categoriesDoc.data() as { categories: { category: string; available: boolean }[] };
 
         if (!categories || !Array.isArray(categories)) {
           setError('Invalid pasta categories format.');
@@ -34,14 +34,17 @@ const useAllPastas = () => {
           return;
         }
 
-        // Step 2: Fetch pastas for each category
+        // Step 2: Filter out categories where available = false
+        const availableCategories = categories.filter((category) => category.available);
+
+        // Step 3: Fetch pastas for each available category
         const pastaData: Record<string, Pasta[]> = {};
-        for (const category of categories) {
+        for (const category of availableCategories) {
           const pastaRef = collection(db, 'pasta');
-          const pastaQuery = query(pastaRef, where('prodCategory', '==', category));
+          const pastaQuery = query(pastaRef, where('prodCategory', '==', category.category));
           const querySnapshot = await getDocs(pastaQuery);
 
-          pastaData[category] = querySnapshot.docs.map((doc) => ({
+          pastaData[category.category] = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Pasta[];
@@ -57,7 +60,7 @@ const useAllPastas = () => {
     };
 
     fetchPastas();
-  }, []);
+  }, []); // Empty array to run only once when component mounts
 
   return { pastasByCategory, loading, error };
 };

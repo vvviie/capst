@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase'; // Adjust the path as needed
-import { Sandwiches } from '../data';
+import { Sandwiches } from '../data'; // Import the Sandwiches type
 
 const useAllSandwiches = () => {
   const [sandwichesByCategory, setSandwichesByCategory] = useState<Record<string, Sandwiches[]>>({});
@@ -19,29 +19,32 @@ const useAllSandwiches = () => {
         const categoriesDoc = await getDoc(categoriesDocRef);
 
         if (!categoriesDoc.exists()) {
-          setError('Main course categories document does not exist.');
+          setError('Sandwiches categories document does not exist.');
           setSandwichesByCategory({});
           setLoading(false);
           return;
         }
 
-        const { categories } = categoriesDoc.data() as { categories: string[] };
+        const { categories } = categoriesDoc.data() as { categories: { category: string; available: boolean }[] };
 
         if (!categories || !Array.isArray(categories)) {
-          setError('Invalid pasta categories format.');
+          setError('Invalid sandwiches categories format.');
           setSandwichesByCategory({});
           setLoading(false);
           return;
         }
 
-        // Step 2: Fetch pastas for each category
-        const sandwichesData: Record<string, Sandwiches[]> = {};
-        for (const category of categories) {
-          const pastaRef = collection(db, 'sandwiches');
-          const pastaQuery = query(pastaRef, where('prodCategory', '==', category));
-          const querySnapshot = await getDocs(pastaQuery);
+        // Step 2: Filter out categories where available = false
+        const availableCategories = categories.filter((category) => category.available);
 
-          sandwichesData[category] = querySnapshot.docs.map((doc) => ({
+        // Step 3: Fetch sandwiches for each available category
+        const sandwichesData: Record<string, Sandwiches[]> = {};
+        for (const category of availableCategories) {
+          const sandwichesRef = collection(db, 'sandwiches');
+          const sandwichesQuery = query(sandwichesRef, where('prodCategory', '==', category.category));
+          const querySnapshot = await getDocs(sandwichesQuery);
+
+          sandwichesData[category.category] = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Sandwiches[];
@@ -49,15 +52,15 @@ const useAllSandwiches = () => {
 
         setSandwichesByCategory(sandwichesData);
       } catch (err) {
-        console.error('Error fetching pastas:', err);
-        setError('Failed to fetch pastas.');
+        console.error('Error fetching sandwiches:', err);
+        setError('Failed to fetch sandwiches.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchSandwiches();
-  }, []);
+  }, []); // Empty array to run only once when component mounts
 
   return { sandwichesByCategory, loading, error };
 };

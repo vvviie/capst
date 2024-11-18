@@ -94,9 +94,9 @@ const AddMenuCategoryPage = () => {
         const categoryData = categorySnap.data();
         console.log("Category Data from Firestore:", categoryData);
   
-        // Create the exact object to remove from Firestore by trimming any spaces
+        // Create the exact object to remove from Firestore by converting to camelCase
         const subCategoryToDelete = {
-          category: subCategory.category.trim(),  // Trim spaces before attempting to delete
+          category: toCamelCase(subCategory.category.trim()),  // Trim and convert to camelCase for Firestore
           available: subCategory.available // Availability status
         };
         console.log("Subcategory to delete:", subCategoryToDelete);
@@ -127,11 +127,12 @@ const AddMenuCategoryPage = () => {
     try {
       // Convert the input to Title Case for UI display
       const formattedDisplayName = toTitleCase(newSubCategory);
+      // Convert to camelCase for Firestore storage
       const formattedSubCategory = toCamelCase(newSubCategory);
   
-      // Create the new subcategory object with 'category' and 'available'
+      // Create the new subcategory object with 'category' in Title Case for display and 'available' set to true
       const newSubCategoryObject = {
-        category: formattedDisplayName,
+        category: formattedSubCategory, // Store in camelCase
         available: true
       };
   
@@ -143,8 +144,9 @@ const AddMenuCategoryPage = () => {
       // Update the local state with the new subcategory object for immediate UI display
       setSubCategories(prevState => [
         ...prevState,
-        newSubCategoryObject
+        { category: formattedDisplayName, available: true }
       ]);
+  
       setNewSubCategory(""); // Clear the input after adding
   
     } catch (error) {
@@ -156,20 +158,36 @@ const AddMenuCategoryPage = () => {
     const categoryRef = doc(db, "menuCategories", categorySlug);
   
     try {
-      // Update the availability status in Firestore for the specific subcategory
-      const updatedSubCategories = subCategories.map(sub =>
-        sub.category === subCategory.category
-          ? { ...sub, available: newStatus === 'active' }
+      // Fetch the current categories from Firestore
+      const categorySnap = await getDoc(categoryRef);
+      if (!categorySnap.exists()) {
+        console.error("Category not found in Firestore.");
+        return;
+      }
+  
+      // Get the current categories array from Firestore
+      const categoryData = categorySnap.data();
+      const categories = categoryData.categories || [];
+  
+      // Convert subcategory name to camelCase for consistency with Firestore
+      const formattedSubCategory = toCamelCase(subCategory.category);
+  
+      // Update the availability status in the categories array
+      const updatedCategories = categories.map(sub => 
+        sub.category === formattedSubCategory
+          ? { ...sub, available: newStatus === 'active' } // Update the availability
           : sub
       );
   
-      // Update the Firestore document by setting the full categories array with updated availability
+      // Set the updated categories array back to Firestore
       await updateDoc(categoryRef, {
-        categories: updatedSubCategories
+        categories: updatedCategories
       });
   
-      // Update local state to reflect the new availability
-      setSubCategories(updatedSubCategories);
+      // Update local state to reflect the new availability status
+      setSubCategories(updatedCategories);
+  
+      console.log(`Subcategory ${formattedSubCategory} status updated to ${newStatus}.`);
   
     } catch (error) {
       console.error("Error updating subcategory status:", error);
@@ -192,6 +210,9 @@ const AddMenuCategoryPage = () => {
         <form action="" className="bg-white border-2 pt-4 px-6 pb-6 border-gray-100 shadow-md rounded-md flex flex-col gap-2">
           {/* ADD SUBCATEGORIES */}
           <div className="w-full flex flex-col gap-1.5 items-center justify-center mb-4">
+            <h1 className="text-xl text-orange-950 font-bold lg:text-2xl mb-6">
+              {toTitleCase(categorySlug)} {/* Apply Title Case transformation here */}
+            </h1>
             <label className="text-orange-950 text-sm w-full text-left space-x-1" htmlFor="inputSub">
               <span>Sub Category Name</span>
             </label>
@@ -215,40 +236,42 @@ const AddMenuCategoryPage = () => {
             </div>
           </div>
           {hasSubCategories && (
-            <>
-              <label className="text-orange-950 text-sm w-full text-left space-x-1">
-                <span>Sub Categories</span>
-              </label>
-              {subCategories.map((sub) => (
-                <>
-                  <hr className="my-1" />
-                  <div className="w-full flex flex-col sm:flex-row gap-2 sm:items-center">
-                    <h1 className="text-gray-800 font-semibold sm:w-1/3">{sub.category}</h1>
-                    <div className="flex items-center justify-between gap-2 sm:w-2/3">
-                      <select
-                        name=""
-                        id=""
-                        className="h-10 border-2 border-gray-100 shadow-md rounded-md text-center w-2/3 font-bold text-gray-500 cursor-pointer"
-                        value={sub.available ? "active" : "inactive"}
-                        onChange={(e) => handleStatusChange(sub, e.target.value)}
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                      <button
-                        type="button" // Ensure it doesn't trigger form submission
-                        className="bg-red-500 rounded-md shadow-md w-1/3 h-10 text-white font-bold hover:bg-red-400 hover:scale-[1.02] duration-200"
-                        onClick={() => handleDelete(sub)} // Delete the subcategory when clicked
-                      >
-                        Delete
-                      </button>
-                    </div>
+          <>
+            <label className="text-orange-950 text-sm w-full text-left space-x-1">
+              <span>Sub Categories</span>
+            </label>
+            {subCategories.map((sub) => (
+              <div key={sub.category}>  {/* Add a unique key for each subcategory */}
+                <hr className="my-1" />
+                <div className="w-full flex flex-col sm:flex-row gap-2 sm:items-center">
+                  <h1 className="text-gray-800 font-semibold sm:w-1/3">
+                    {toTitleCase(sub.category)} {/* Apply Title Case here */}
+                  </h1>
+                  <div className="flex items-center justify-between gap-2 sm:w-2/3">
+                    <select
+                      name=""
+                      id=""
+                      className="h-10 border-2 border-gray-100 shadow-md rounded-md text-center w-2/3 font-bold text-gray-500 cursor-pointer"
+                      value={sub.available ? "active" : "inactive"}
+                      onChange={(e) => handleStatusChange(sub, e.target.value)}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="bg-red-500 rounded-md shadow-md w-1/3 h-10 text-white font-bold hover:bg-red-400 hover:scale-[1.02] duration-200"
+                      onClick={() => handleDelete(sub)} // Delete the subcategory when clicked
+                    >
+                      Delete
+                    </button>
                   </div>
-                </>
-              ))}
-              <hr className="my-1" />
-            </>
-          )}
+                </div>
+              </div>
+            ))}
+            <hr className="my-1" />
+          </>
+        )}
         </form>
       </div>
       {isPopUpVisible && <CheckoutPopup message={"Category Updated!"} />}
