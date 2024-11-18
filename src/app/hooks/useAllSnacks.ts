@@ -1,0 +1,65 @@
+import { useEffect, useState } from 'react';
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase'; // Adjust the path as needed
+import { Snacks } from '../data'; // Import the Snacks type
+
+const useAllSnacks = () => {
+  const [snacksByCategory, setSnacksByCategory] = useState<Record<string, Snacks[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSnacks = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Step 1: Fetch categories from the "menuCategories" collection
+        const categoriesDocRef = doc(db, 'menuCategories', 'snacksCategories');
+        const categoriesDoc = await getDoc(categoriesDocRef);
+
+        if (!categoriesDoc.exists()) {
+          setError('Categories document does not exist.');
+          setSnacksByCategory({});
+          setLoading(false);
+          return;
+        }
+
+        const { categories } = categoriesDoc.data() as { categories: string[] };
+
+        if (!categories || !Array.isArray(categories)) {
+          setError('Invalid categories format.');
+          setSnacksByCategory({});
+          setLoading(false);
+          return;
+        }
+
+        // Step 2: Fetch snacks for each category
+        const snacksData: Record<string, Snacks[]> = {};
+        for (const category of categories) {
+          const snacksRef = collection(db, 'snacks');
+          const snacksQuery = query(snacksRef, where('prodCategory', '==', category));
+          const querySnapshot = await getDocs(snacksQuery);
+
+          snacksData[category] = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Snacks[];
+        }
+
+        setSnacksByCategory(snacksData);
+      } catch (err) {
+        console.error('Error fetching snacks:', err);
+        setError('Failed to fetch snacks.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSnacks();
+  }, []);
+
+  return { snacksByCategory, loading, error };
+};
+
+export default useAllSnacks;
