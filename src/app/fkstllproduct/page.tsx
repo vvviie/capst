@@ -43,6 +43,7 @@ const CRUDProductPage = () => {
   const [pastries, setPastries] = useState<Pastries[]>([]);
   const [snacks, setSnacks] = useState<Snacks[]>([]);
   const [sandwiches, setSandwiches] = useState<Sandwiches[]>([]);
+  const [menuCategories, setMenuCategories] = useState([]);
 
   const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -54,6 +55,41 @@ const CRUDProductPage = () => {
   const handleOptionsClick = () => {
     setActiveItem(null);
   };
+
+  const fetchCategoriesFromDB = async () => {
+    try {
+      // Query the 'menuCategories' collection
+      const querySnapshot = await getDocs(collection(db, "menuCategories"));
+
+      let allCategories = [];
+
+      // Loop through each document in the collection
+      querySnapshot.forEach((doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          if (data.categories && Array.isArray(data.categories)) {
+            allCategories = allCategories.concat(data.categories);
+          }
+        }
+      });
+
+      // Format camelCase strings to readable strings
+      const formattedCategories = allCategories.map((category) =>
+        category
+          .replace(/([A-Z])/g, " $1")
+          .replace(/^./, (str) => str.toUpperCase())
+      );
+
+      // Update the state with the formatted categories
+      setMenuCategories(formattedCategories);
+    } catch (error) {
+      console.error("Error fetching categories from database:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCategoriesFromDB();
+  }, []);
 
   // Fetch drinks based on the selected category
   useEffect(() => {
