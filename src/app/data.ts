@@ -1354,3 +1354,55 @@ export const introduction:tnc = {
 export const conclusion = "By proceeding to sign up and use the Fikaställe by Fika Kafé website, you acknowledge and agree to abide by these terms and conditions. These terms are subject to change at the discretion of Fikaställe by Fika Kafé, and users will be notified of updates via email or website announcements.";
 export const conclusion2 = "If you have any questions or concerns regarding these terms, please contact us directly via our customer service channels."
 
+
+type menuCate = {
+  id: number;
+  title: string;
+  subcat: string[];
+  img: string;
+}
+
+type menuCates = menuCate[];
+
+export const category:menuCates = [
+  {
+    id: 1,
+    title: "Drinks",
+    subcat: ["Hot Drink", "Iced Drink", "Blended Drink", "Affogato",],
+    img: "/menugroups/drink.webp",
+  },
+  {
+    id: 2,
+    title: "Pastries",
+    subcat: ["Cookie", "Cake", "Tart"],
+    img: "/menugroups/pastry.webp",
+  },
+  {
+    id: 3,
+    title: "Pasta",
+    subcat: ["Pesto", "Non-Pesto"],
+    img: "/menugroups/pasta.webp",
+  },
+  {
+    id: 4,
+    title: "Snacks",
+    subcat: ["Nachos", "Fries", "Chicken", "Seafood"],
+    img: "/menugroups/side.webp",
+  },
+  {
+    id: 5,
+    title: "Sandwiches",
+    subcat: ["Sandwiches"],
+    img: "/menugroups/sandwich.webp",
+  },
+  {
+    id: 6,
+    title: "Main Course",
+    subcat: ["Meat", "Sea Food"],
+    img: "/menugroups/meal.webp",
+  },
+];
+
+export const subCategories = [
+  "Sub Category 1", "Sub Category 2", "Sub Category 3", 
+]
