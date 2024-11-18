@@ -3,6 +3,15 @@ import Link from "next/link";
 import React from "react";
 import { category } from "../data";
 
+const toCamelCase = (str) => {
+  return str
+    .toLowerCase()
+    .replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) =>
+      index === 0 ? word.toLowerCase() : word.toUpperCase()
+    )
+    .replace(/\s+/g, ''); // Remove spaces
+};
+
 const AdminMenuCategories = () => {
   return (
     <div
@@ -34,9 +43,9 @@ const AdminMenuCategories = () => {
         <div className="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {category.map((cat) => (
             <Link
-              href={`/fkstllmenucategories/${cat.id}`}
+              href={`/fkstllmenucategories/${toCamelCase(cat.title) + 'Categories'}`}
               className="border-2 border-gray-100 shadow-md rounded-md bg-white px-4 relative aspect-square
-            overflow-clip flex flex-col justify-end"
+                overflow-clip flex flex-col justify-end"
               key={cat.id}
             >
               {/* IMAGE CONTAINER */}
@@ -54,7 +63,7 @@ const AdminMenuCategories = () => {
                   {cat.title}
                 </h1>
                 <p className="text-xs text-gray-500 lg:text-sm">
-                  Click or tap to update or delete this category.
+                  Click or tap to update or delete the subcategories of this category.
                 </p>
               </div>
             </Link>

@@ -15,7 +15,7 @@ const useAllDrinks = () => {
         setError(null);
 
         // Step 1: Fetch categories from the "menuCategories" collection
-        const categoriesDocRef = doc(db, 'menuCategories', 'drinkCategories');
+        const categoriesDocRef = doc(db, 'menuCategories', 'drinksCategories');
         const categoriesDoc = await getDoc(categoriesDocRef);
 
         if (!categoriesDoc.exists()) {

@@ -305,7 +305,9 @@ const Navbar = () => {
     <div className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50" style={{ backgroundColor: "#30261F" }}>
       <div className="font-bold text-xl hover:text-yellow-100">
         {/* Conditionally render based on role */}
-        <Link href="/">{role === "admin" ? "fikaställe admin" : "fikaställe"}</Link>
+        <Link href={role === "admin" ? "/adminhome" : "/"}>
+          {role === "admin" ? "fikaställe admin" : "fikaställe"}
+        </Link>
       </div>
       <div className="flex items-center justify-center gap-6">
         <div className="md:hidden">
