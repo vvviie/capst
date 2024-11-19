@@ -53,7 +53,7 @@ const Navbar = () => {
     // Fetch foodCartAvailable from Firestore
     const fetchFoodCartAvailability = async () => {
       try {
-        const docRef = doc(db, 'adminControls', 'adminAccess');
+        const docRef = doc(db, "adminControls", "adminAccess");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -72,7 +72,7 @@ const Navbar = () => {
         const isStaff = authUser.email.endsWith("@fikastallestaff.com");
         const collectionName = isStaff ? "staff" : "users";
         const roleField = isStaff ? "staffRole" : "role";
-  
+
         try {
           const userDoc = await getDoc(doc(db, collectionName, authUser.email));
           if (userDoc.exists()) {
@@ -80,30 +80,33 @@ const Navbar = () => {
             setFirstName(userData.firstName);
             setRole(userData[roleField]); // Set the role from Firestore based on collection
             setUser(authUser);
-  
+
             // Real-time listener for tempOrder updates
             const tempOrdersRef = collection(db, "tempOrders");
             const q = query(tempOrdersRef, where("user", "==", authUser.email));
-  
+
             unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
               let tempOrderDocId = null;
-  
+
               querySnapshot.forEach((doc) => {
                 tempOrderDocId = doc.id;
               });
-  
+
               if (tempOrderDocId) {
                 const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(tempOrderDocRef, (doc) => {
-                  if (doc.exists()) {
-                    const tempOrderData = doc.data();
-                    setTotalItems(tempOrderData.totalItems || 0);
-                    setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                  } else {
-                    setTotalItems(0);
-                    setTotalCartPrice(0);
+                unsubscribeDocRef.current = onSnapshot(
+                  tempOrderDocRef,
+                  (doc) => {
+                    if (doc.exists()) {
+                      const tempOrderData = doc.data();
+                      setTotalItems(tempOrderData.totalItems || 0);
+                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+                    } else {
+                      setTotalItems(0);
+                      setTotalCartPrice(0);
+                    }
                   }
-                });
+                );
               } else {
                 setTotalItems(0);
                 setTotalCartPrice(0);
@@ -118,7 +121,7 @@ const Navbar = () => {
             setUser(null);
             setFirstName("");
             setRole(""); // Clear the role if user does not exist
-  
+
             // Clean up listeners
             if (unsubscribeCartRef.current) {
               unsubscribeCartRef.current();
@@ -137,7 +140,7 @@ const Navbar = () => {
         setUser(null);
         setFirstName("");
         setRole(""); // Clear the role when logged out
-  
+
         // Clean up listeners
         if (unsubscribeCartRef.current) {
           unsubscribeCartRef.current();
@@ -149,10 +152,10 @@ const Navbar = () => {
         }
       }
     });
-  
+
     // Check for cookies when the component mounts
     checkCookiesAndLogout();
-  
+
     // Cleanup
     return () => {
       unsubscribe();
@@ -213,13 +216,13 @@ const Navbar = () => {
   const fetchVoucherConfig = async () => {
     const voucherConfigRef = collection(db, "vouchers");
     const voucherSnapshot = await getDocs(voucherConfigRef);
-  
+
     const voucherConfig: Vouchers = {}; // Initialize as Vouchers type
-  
+
     voucherSnapshot.forEach((doc) => {
       const data = doc.data();
       const key = doc.id;
-  
+
       // Ensure only vouchers from the static voucherConfig are included
       voucherConfig[key] = {
         thresholdCondition: data.thresholdCondition,
@@ -234,14 +237,13 @@ const Navbar = () => {
         voucherName: data.voucherName,
       };
     });
-  
+
     setVouchers(voucherConfig); // Store the fetched voucher config in state
   };
 
-
   const checkAndAssignVouchers = async (userDoc, totalPaid) => {
     const userVouchers = userDoc.data().vouchers || {}; // Fetch existing vouchers or initialize as empty object
-  
+
     // Define the thresholds and the corresponding voucher keys
     const thresholds = [
       { threshold: 1000, voucherKey: "1000HitVoucher" },
@@ -249,7 +251,7 @@ const Navbar = () => {
       { threshold: 10000, voucherKey: "10000HitVoucher" },
       { threshold: 20000, voucherKey: "20000HitVoucher" },
     ];
-  
+
     // Loop through the thresholds to check if the user qualifies for any of the vouchers
     for (const { threshold, voucherKey } of thresholds) {
       // Check if the totalPaid exceeds the threshold and the voucher has not been assigned yet
@@ -257,12 +259,16 @@ const Navbar = () => {
         // Fetch voucher details from the database
         const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey)); // Replace "vouchers" with the correct collection name
         const voucherData = voucherDoc.data();
-  
+
         if (voucherData) {
           const now = new Date();
-          const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
-          const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  
+          const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+            now.getDate()
+          ).padStart(2, "0")}/${now.getFullYear()}`;
+          const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+            now.getMinutes()
+          ).padStart(2, "0")}`;
+
           // Assign the voucher to the user with all the properties fetched from the database
           userVouchers[voucherKey] = {
             used: false,
@@ -279,33 +285,32 @@ const Navbar = () => {
             voucherDeduction: voucherData.voucherDeduction,
             voucherDescription: voucherData.voucherDescription,
             voucherID: voucherData.voucherID,
-            voucherName: voucherData.voucherName
+            voucherName: voucherData.voucherName,
           };
         }
       }
     }
-  
+
     // Update Firestore with new voucher data
     await updateDoc(doc(db, "users", userDoc.id), { vouchers: userVouchers });
   };
-  
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         // Fetch the voucher config from Firestore
         const fetchedVoucherConfig = await fetchVoucherConfig();
-  
+
         // Set the fetched voucher config to state (you may want to store it in state)
         setVouchers(fetchedVoucherConfig);
-  
+
         const fetchUserData = async () => {
           // Use authUser.email to fetch the user document from Firestore
           const userDoc = await getDoc(doc(db, "users", authUser.email));
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const totalPaid = userData.totalPaid || 0; // Fetch totalPaid from Firestore
-  
+
             // Call the function to check and assign vouchers, passing only the required arguments
             await checkAndAssignVouchers(userDoc, totalPaid);
           }
@@ -313,17 +318,24 @@ const Navbar = () => {
         fetchUserData();
       }
     });
-  
+
     // Cleanup function to unsubscribe from the auth state listener when the component unmounts or the user changes
     return () => unsubscribe();
   }, [user]); // This will run when the `user` state changes
 
   return (
-    <div className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50" style={{ backgroundColor: "#30261F" }}>
+    <div
+      className="fixed top-0 left-0 w-full text-white flex px-10 py-4 h-14 justify-between md:px-24 md:py-4 xl:px-56 z-50"
+      style={{ backgroundColor: "#30261F" }}
+    >
       <div className="font-bold text-xl hover:text-yellow-100">
         {/* Conditionally render based on role */}
         <Link href={role === "admin" ? "/adminhome" : "/"}>
-          {role === "admin" ? "fikaställe admin" : "fikaställe"}
+          {role === "admin"
+            ? "fikadmin"
+            : role === "bar" || role === "kitchen"
+            ? "fikastaff"
+            : "fikaställe"}
         </Link>
       </div>
       <div className="flex items-center justify-center gap-6">
@@ -334,56 +346,88 @@ const Navbar = () => {
           <BurgerMenu />
         </div>
       </div>
-      <div className="hidden md:flex font-semibold">
+      <div className="hidden md:flex w-full justify-center font-semibold">
         {role === "admin" ? (
           <>
-            <div className="px-4 hover:text-yellow-100"><Link href="/adminhome">Home</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllproduct">Menu</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllhomemaintenance">Landing</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllvouchers">Vouchers/Promos</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllbookings">Bookings</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllorders">Orders</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/fkstllaccounts">Accounts</Link></div>
-          </>
-        ) : role === "bar" || role === "kitchen" ? (
-          <>
-            <div className="flex justify-start">
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/adminhome">Home</Link>
+            </div>
             <div className="px-4 hover:text-yellow-100">
               <Link href="/fkstllproduct">Menu</Link>
             </div>
             <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllhomemaintenance">Landing</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllvouchers">Incentives</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllbookings">Bookings</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
               <Link href="/fkstllorders">Orders</Link>
             </div>
-          </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/fkstllaccounts">Accounts</Link>
+            </div>
+          </>
+        ) : role === "bar" || role === "kitchen" ? (
+          <>
+            <div className="flex justify-start">
+              <div className="px-4 hover:text-yellow-100">
+                <Link href="/fkstllproduct">Menu</Link>
+              </div>
+              <div className="px-4 hover:text-yellow-100">
+                <Link href="/fkstllorders">Orders</Link>
+              </div>
+            </div>
           </>
         ) : (
           <>
-            <div className="px-4 hover:text-yellow-100"><Link href="/">Home</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/menu">Menu</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/book">Book</Link></div>
-            <div className="px-4 hover:text-yellow-100"><Link href="/orders">Orders</Link></div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/">Home</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/menu">Menu</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/book">Book</Link>
+            </div>
+            <div className="px-4 hover:text-yellow-100">
+              <Link href="/orders">Orders</Link>
+            </div>
           </>
         )}
       </div>
-  
+
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
           {/* Only show for non-admin, non-kitchen, non-bar users */}
-          {foodCartAvailable && (role !== "admin" && role !== "kitchen" && role !== "bar") && (
+          {foodCartAvailable &&
+            role !== "admin" &&
+            role !== "kitchen" &&
+            role !== "bar" && (
+              <div>
+                <Link
+                  href="/foodcart"
+                  className="relative flex gap-2 group hover:text-yellow-100 items-center"
+                >
+                  <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
+                    {totalItems}
+                  </span>
+                  <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
+                  <span>(PHP {totalCartPrice.toFixed(2)})</span>
+                </Link>
+              </div>
+            )}
+
+          {/* Only show NotificationBell for non-admin, non-kitchen, non-bar users */}
+          {role !== "admin" && role !== "kitchen" && role !== "bar" && (
             <div>
-              <Link href="/foodcart" className="relative flex gap-2 group hover:text-yellow-100 items-center">
-                <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
-                  {totalItems}
-                </span>
-                <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
-                <span>(PHP {totalCartPrice.toFixed(2)})</span>
-              </Link>
+              <NotificationBell />
             </div>
           )}
-  
-          {/* Only show NotificationBell for non-admin, non-kitchen, non-bar users */}
-          {(role !== "admin" && role !== "kitchen" && role !== "bar") && <div><NotificationBell /></div>}
-  
+
           {/* Show profile and logout for regular users */}
           {role === "user" && (
             <>
@@ -394,10 +438,16 @@ const Navbar = () => {
               </div>
             </>
           )}
-  
+
           {/* Always show Logout button for logged-in users */}
           <div>
-            <Link href="/" onClick={handleLogout} className="hover:text-yellow-100">Logout</Link>
+            <Link
+              href="/"
+              onClick={handleLogout}
+              className="hover:text-yellow-100"
+            >
+              Logout
+            </Link>
           </div>
         </div>
       ) : (
