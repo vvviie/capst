@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -12,10 +12,12 @@ import {
   BarElement,
 } from "chart.js";
 import {
-  salesExpensesToday,
-  salesExpensesWeek,
-  salesExpensesYear,
+  salesExpensesWeek, // temporary
+  salesExpensesYear, // temporary
 } from "../data";
+
+import { db } from "../firebase"; // Adjust the path as necessary
+import { doc, getDoc } from "firebase/firestore";
 
 ChartJS.register(
   CategoryScale,
@@ -26,21 +28,256 @@ ChartJS.register(
   Legend
 );
 
-type whatIsIt = string;
-
 const NetSalesExpensesGraph = ({ timeFrame }) => {
+  const [salesExpensesToday, setSalesExpensesToday] = useState(null);
   const options = {};
 
-  const data = {};
+  useEffect(() => {
+    const fetchSalesExpensesToday = async () => {
+      try {
+        const docRef = doc(db, "salesData", "salesExpensesToday");
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log(data); // Log the fetched data to the console
+          setSalesExpensesToday(data);
+        } else {
+          console.log("No such document!");
+        }
+      } catch (error) {
+        console.error("Error fetching document: ", error);
+      }
+    };
+
+    fetchSalesExpensesToday();
+  }, []);
+
+  const getLatestData = (data) => {
+    if (!data) return null;
+
+    const today = new Date().toLocaleDateString(); // Format today's date
+    const targetDate = "11/18/2024"; // Specify the target date
+    const dates = Object.keys(data.NetSales.data);
+
+    // Sort dates in descending order
+    dates.sort((a, b) => new Date(b) - new Date(a));
+
+    // Check for today's data or the target date
+    const latestNetSales =
+      data.NetSales.data[today] || data.NetSales.data[targetDate];
+    const latestExpenses =
+      data.Expenses.data[today] || data.Expenses.data[targetDate];
+
+    // If neither today's data nor the target date data exists
+    if (!latestNetSales && !latestExpenses) {
+      return {
+        labels: ["No current net sales or expenses"], // Message label
+        datasets: [], // No data to display
+      };
+    }
+
+    // Fetch colors and labels from the data
+    const netSalesColor = data.NetSales.color; // Assuming this field exists
+    const expensesColor = data.Expenses.color; // Assuming this field exists
+    const netSalesLabel = data.NetSales.labels || "Net Sales"; // Use the fetched label for Net Sales
+    const expensesLabel = data.Expenses.labels || "Expenses"; // Use the fetched label for Expenses
+
+    // Prepare the label based on whether we have data
+    const label =
+      latestNetSales && latestExpenses
+        ? `${today} - Today's Report`
+        : `${targetDate} - Today's Report`;
+
+    return {
+      labels: [label], // Use the formatted label
+      datasets: [
+        {
+          backgroundColor: netSalesColor || "#60A66F", // Fallback color if not found
+          borderColor: netSalesColor || "#60A66F", // Fallback color if not found
+          data: [latestNetSales || 0], // Use 0 if no data
+          label: netSalesLabel, // Use the fetched label for Net Sales
+        },
+        {
+          backgroundColor: expensesColor || "#F0565F", // Fallback color if not found
+          borderColor: expensesColor || "#F0565F", // Fallback color if not found
+          data: [latestExpenses || 0], // Use 0 if no data
+          label: expensesLabel, // Use the fetched label for Expenses
+        },
+      ],
+    };
+  };
+const getWeeklyData = (salesData) => {
+  const today = new Date();
+  const datesOfWeek = []; // To store the corresponding dates
+  const weeklySales = []; // Create array for sales data
+  const weeklyExpenses = []; // Create array for expenses data
+
+  // Fetch sales and expenses data from the existing document
+  const sales = salesData.NetSales.data;
+  const expenses = salesData.Expenses.data;
+
+  // Add today's data first
+  const todayFormatted = today.toLocaleDateString();
+  datesOfWeek.push(todayFormatted); // Add today's date
+  weeklySales.push(sales[todayFormatted] || 0); // Push today's sales data or 0 if no data
+  weeklyExpenses.push(expenses[todayFormatted] || 0); // Push today's expenses data or 0 if no data
+
+  // Array of day names
+  const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+  // Loop to get the last 3 days excluding today
+  for (let i = 1; i <= 6; i++) {
+    const currentDay = new Date(today);
+    currentDay.setDate(today.getDate() - i); // Move back one day for each iteration
+
+    const formattedDate = currentDay.toLocaleDateString(); // Format date for comparison
+    datesOfWeek.unshift(formattedDate); // Add the date at the beginning for ascending order
+    weeklySales.unshift(sales[formattedDate] || 0); // Push sales data or 0 if no data at the beginning
+    weeklyExpenses.unshift(expenses[formattedDate] || 0); // Push expenses data or 0 if no data at the beginning
+  }
+
+  // Get the day names for the labels with the corresponding date
+  const dayLabels = datesOfWeek.map((date) => {
+    const dayIndex = new Date(date).getDay(); // Get day index (0-6)
+    const dayName = dayNames[dayIndex]; // Map to day names
+    return `${dayName}\n(${date})`; // Format as "Day\n(MM/DD/YYYY)"
+  });
+
+  // Determine if today is Monday or Thursday
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  let additionalLabel = "";
+  if (dayOfWeek === 1) {
+    additionalLabel = "Today is Monday";
+  } else if (dayOfWeek === 4) {
+    additionalLabel = "Today is Thursday";
+  }
+
+  return {
+    labels: dayLabels, // Use the formatted day names and dates as labels
+    datasets: [
+      {
+        label: "Net Sales",
+        backgroundColor: "#60A66F",
+        borderColor: "#60A66F",
+        data: [...weeklySales], // Keep the sales data in the same order
+      },
+      {
+        label: "Expenses",
+        backgroundColor: "#F0565F",
+        borderColor: "#F0565F",
+        data: [...weeklyExpenses], // Keep the expenses data in the same order
+      },
+    ],
+    additionalLabel, // Include the additional label
+  };
+};
+
+  const getYearlyData = (salesData) => {
+    const monthlySales = new Array(12).fill(0); // Array to hold sales totals for each month
+    const monthlyExpenses = new Array(12).fill(0); // Array to hold expenses totals for each month
+    let totalSales = 0; // Initialize total sales
+    let totalExpenses = 0; // Initialize total expenses
+
+    // Loop through Net Sales data and aggregate by month
+    for (const [dateString, sales] of Object.entries(salesData.NetSales.data)) {
+      const date = new Date(dateString);
+      const month = date.getMonth(); // Get month (0-11)
+
+      if (!isNaN(month)) {
+        monthlySales[month] += sales; // Sum sales for the month
+        totalSales += sales; // Add to total sales
+      }
+    }
+
+    // Loop through Expenses data and aggregate by month
+    for (const [dateString, expenses] of Object.entries(
+      salesData.Expenses.data
+    )) {
+      const date = new Date(dateString);
+      const month = date.getMonth(); // Get month (0-11)
+
+      if (!isNaN(month)) {
+        monthlyExpenses[month] += expenses; // Sum expenses for the month
+        totalExpenses += expenses; // Add to total expenses
+      }
+    }
+
+    // Prepare the chart data
+    return {
+      labels: [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ],
+      datasets: [
+        {
+          label: "Net Sales",
+          backgroundColor: "#60A66F",
+          borderColor: "#60A66F",
+          data: monthlySales,
+        },
+        {
+          label: "Expenses",
+          backgroundColor: "#F0565F",
+          borderColor: "#F0565F",
+          data: monthlyExpenses,
+        },
+      ],
+      totalSales, // Include total sales
+      totalExpenses, // Include total expenses
+    };
+  };
+
+  const chartData =
+    timeFrame === "today" && salesExpensesToday
+      ? getLatestData(salesExpensesToday)
+      : timeFrame === "week" && salesExpensesToday
+      ? getWeeklyData(salesExpensesToday) // Use the new function to get weekly data
+      : timeFrame === "year" && salesExpensesToday
+      ? getYearlyData(salesExpensesToday)
+      : salesExpensesYear;
 
   return (
     <>
-      {timeFrame === "today" ? (
-        <Bar options={options} data={salesExpensesToday} />
-      ) : timeFrame === "week" ? (
-        <Bar options={options} data={salesExpensesWeek} />
-      ) : (
-        <Bar options={options} data={salesExpensesYear} />
+      {chartData && (
+        <>
+          {timeFrame === "year" && (
+            <div className="flex items-center">
+              <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
+              <span className="ml-2">
+                PHP {chartData.totalSales.toLocaleString()}
+              </span>
+              <span className="mx-2">|</span>
+              <span className="text-[#F0565F] font-bold">Total Expenses:</span>
+              <span className="ml-2">
+                PHP {chartData.totalExpenses.toLocaleString()}
+              </span>
+            </div>
+          )}
+
+          {timeFrame === "week" && (
+            <>
+              {chartData.additionalLabel && (
+                <div className="text-center font-bold mb-2">
+                  {chartData.additionalLabel}
+                </div>
+              )}
+              {/* No total sales or expenses displayed for week */}
+            </>
+          )}
+
+          <Bar options={options} data={chartData} />
+        </>
       )}
     </>
   );
