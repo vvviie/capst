@@ -7,8 +7,9 @@ import Link from "next/link";
 import React, { useRef, useState, useEffect } from "react";
 import { db } from "@/app/firebase";
 import { doc, setDoc } from "firebase/firestore";
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
+import useMenuCategories from "@/app/hooks/useMenuCategories";
 
 // MENU CATEGORY
 export const menuCategory = [
@@ -70,6 +71,8 @@ const AddProductPage = () => {
     const [selectedCat, setSelectedCat] = useState("drinks");
     const [extractedCategory, setExtractedCategory] = useState("drinks");
 
+    const [menuCategories, setMenuCategories] = useState<string[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     // Availability
     const [selectedAvailability, setSelectedAvailability] = useState("available");
 
@@ -81,18 +84,12 @@ const AddProductPage = () => {
     const fileInputRef = useRef(null);
 
     // For Product IDs
-    const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>("hotDrinks");
+    const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>("Iced Drinks");
 
     const drinkTypePrefixes: {
-        hotDrinks: string;
-        icedDrinks: string;
-        blendedDrinks: string;
-        affogatoDrinks: string;
+        drink: string;
     } = {
-        hotDrinks: "hd",
-        icedDrinks: "id",
-        blendedDrinks: "bd",
-        affogatoDrinks: "ad",
+        drink: "drink", // Use 'drink' as the universal prefix
     };
 
     const [newProdID, setNewProdID] = useState("");
@@ -172,45 +169,37 @@ const AddProductPage = () => {
         setExtractedCategory(category);
     }, [selectedCat]);
 
-    // Effect to reset drink type and product ID when category changes
     useEffect(() => {
-    if (selectedCat === "drinks") {
-        // Initialize to default drink type
-        console.log("Switching to drinks category.");
-        setSelectedDrinkType("hotDrinks");
-        setPassableSelectedDrinkType("hotDrinks");
-        setUpsize(true);
-    } else {
-        // Set default values for non-drink categories
-        setUpsize(false);
-        switch (selectedCat) {
-            case "pastaMenu":
-                setSelectedDrinkType("Pesto");
-                setPassableSelectedDrinkType("Pesto");
-                break;
-            case "snacksMenu":
-                setSelectedDrinkType("Fries");
-                setPassableSelectedDrinkType("Fries");
-                break;
-            case "sandwichesMenu":
-                setSelectedDrinkType("Sandwich");
-                setPassableSelectedDrinkType("Sandwich");
-                break;
-            case "pastriesMenu":
-                setSelectedDrinkType("Cake");
-                setPassableSelectedDrinkType("Cake");
-                break;
-            case "mainCourseMenu":
-                setSelectedDrinkType("Meat");
-                setPassableSelectedDrinkType("Meat");
-                break;
-            default:
-                setSelectedDrinkType(null);
-                setPassableSelectedDrinkType(null);
-                break;
+        const firstCategory = menuCategories.length > 0 ? menuCategories[0] : null;
+    
+        const categoryTypesMap: Record<string, string[]> = {
+            drinks: ["Coffee", "Non-Coffee"],
+            pastaMenu: ["Pesto", "Non-Pesto"],
+            snacksMenu: ["Fries", "Nachos", "Seafood", "Chicken"],
+            sandwichesMenu: ["Sandwich"],
+            pastriesMenu: ["Cake", "Cookie", "Tart"],
+            mainCourseMenu: ["Meat", "Seafood", "Veggie"],
+        };
+    
+        // Determine the second category based on the selected category
+        let secondCategory = null;
+        if (firstCategory && categoryTypesMap[selectedCat]) {
+            // If there's a valid firstCategory and it's in the categoryTypesMap
+            secondCategory = categoryTypesMap[selectedCat][0]; // Set to the first option in the respective category
         }
-    }
-    }, [selectedCat]);
+    
+        if (selectedCat === "drinks" || ["pastaMenu", "snacksMenu", "sandwichesMenu", "pastriesMenu", "mainCourseMenu"].includes(selectedCat)) {
+            console.log(`Switching to category: ${selectedCat}`);
+            setSelectedDrinkType(secondCategory);
+            setPassableSelectedDrinkType(firstCategory);
+            setUpsize(selectedCat === "drinks"); // Only enable upsize for drinks
+        } else {
+            // Reset to null for unhandled categories
+            setSelectedDrinkType(null);
+            setPassableSelectedDrinkType(null);
+            setUpsize(false);
+        }
+    }, [selectedCat, menuCategories]);    
 
     useEffect(() => {
         if (selectedCat !== "drinks") {
@@ -293,18 +282,19 @@ const AddProductPage = () => {
 
     // Function to generate a new product ID
     const generateNewID = (ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
-        const prefix = selectedCat === "drinks" && drinkType ? drinkTypePrefixes[drinkType] : `${extractedCategory}`;
-
+        // Use 'drink' as the prefix for drinks, regardless of the drink type
+        const prefix = selectedCat === "drinks" ? drinkTypePrefixes.drink : `${extractedCategory}`;
+    
         if (!prefix) {
             console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
             return; // Early return if no prefix is available
         }
-
+    
         // Generate the new ID
         const newID = ids.length === 0 
             ? `${prefix}1` 
             : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
-
+    
         setNewProdID(newID);
         console.log("Generated new product ID:", newID);
     };
@@ -545,7 +535,7 @@ const AddProductPage = () => {
             milkOat = 40;
             milkAlmond = 30;
     
-            if (selectedDrinkType === "icedDrinks") {
+            if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
                 addVanilla = 25;
             }
         } else if (selectedCat === "mainCourseMenu") {
@@ -574,6 +564,18 @@ const AddProductPage = () => {
             finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
         }
     
+        function toCamelCase(str) {
+            return str
+                .toLowerCase() // Convert the entire string to lowercase
+                .split(" ") // Split the string by spaces
+                .map((word, index) => 
+                    index === 0 
+                        ? word // Keep the first word lowercase
+                        : word.charAt(0).toUpperCase() + word.slice(1) // Capitalize the first letter of subsequent words
+                )
+                .join(""); // Join the words back together
+        }
+
         // Prepare data object with individual fields
         const documentData = {
             availability: selectedAvailability,
@@ -581,7 +583,7 @@ const AddProductPage = () => {
             desc: desc,
             img: finalImageUrl,
             price: itemPrice,
-            prodCategory: selectedCat === "drinks" ? passableSelectedDrinkType : selectedCat, // Logic for prodCategory
+            prodCategory: toCamelCase(passableSelectedDrinkType), // Logic for prodCategory
             prodID: newProdID,
             title: itemName,
             type: selectedDrinkType || "",
@@ -630,7 +632,88 @@ const AddProductPage = () => {
             console.error("Error writing document:", error);
         }
     };
+
+     // Fetch categories from the database based on selected main category
+    const fetchCategoriesFromDB = async (mainCategory: string) => {
+        try {
+            // Reference to the menuCategories collection
+            const menuCategoriesRef = collection(db, "menuCategories");
     
+            // Determine the document based on the selected main category
+            let categoriesDoc = null;
+            switch (mainCategory) {
+                case "drinks":
+                    categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
+                    break;
+                case "mainCourseMenu":
+                    categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
+                    break;
+                case "pastriesMenu":
+                    categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
+                    break;
+                case "snacksMenu":
+                    categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
+                    break;
+                case "sandwichesMenu":
+                    categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
+                    break;
+                case "pastaMenu":
+                    categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
+                    break;
+                default:
+                    categoriesDoc = null; // Default case, in case no main category is selected
+                    break;
+            }
+    
+            console.log("Categories document reference:", categoriesDoc);
+    
+            if (!categoriesDoc) return;
+    
+            // Get the document snapshot
+            const docSnapshot = await getDoc(categoriesDoc);
+            
+            console.log("Document snapshot:", docSnapshot);
+    
+            // If the document exists, extract the categories
+            if (docSnapshot.exists()) {
+                const data = docSnapshot.data();
+                console.log("Document data:", data);
+    
+                let allCategories: string[] = [];
+                if (data.categories && Array.isArray(data.categories)) {
+                    // Extract categories from the document
+                    allCategories = data.categories
+                        .filter((item) => item.category) // Filter out any items without a category
+                        .map((item) => item.category); // Extract the category names
+                }
+    
+                console.log("All categories:", allCategories);
+    
+                // Format categories for display: Convert category names to a human-readable format
+                const formattedCategories = allCategories.map((category) =>
+                    category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+                );
+    
+                console.log("Formatted categories:", formattedCategories);
+    
+                setMenuCategories(formattedCategories);
+    
+                // Reset selectedCategory if it's not a valid option
+                if (!formattedCategories.includes(selectedCategory)) {
+                    setSelectedCategory(formattedCategories[0] || null); // Default to first category
+                }
+            } else {
+                console.log("No such document!");
+            }
+        } catch (error) {
+            console.error("Error fetching categories from database:", error);
+        }
+    };
+    
+
+    useEffect(() => {
+        fetchCategoriesFromDB(selectedCat);
+    }, [selectedCat]);
     
     return (
         <div
@@ -866,8 +949,7 @@ const AddProductPage = () => {
                                 />
                             </div>
                             {/* PRODUCT CATEGORY - KAPAG HINDI DRINK, AUTOMATIC NA KUNG ANO ANG MENU CATEGORY NILA*/}
-                            {selectedCat === "drinks" && (
-                                // PRODUCT CATEGORY FOR DRINKS
+                            {/*EDITEDITEDIT*/}
                                 <div className="flex-1 flex flex-col gap-1 items-center justify-center">
                                     <label
                                         className="text-orange-950 text-sm w-full text-left space-x-1"
@@ -876,25 +958,27 @@ const AddProductPage = () => {
                                         <span>Item Category</span>
                                     </label>
                                     <select
-                                        name="catDrinks"
-                                        id="catDrinks"
-                                        className="rounded-md shadow-sm border-2 border-gray-100
-                                    text-lg text-gray-600 font-semibold bg-white cursor-pointer
-                                    py-[5px] w-full text-center"
-                                        value={passableSelectedDrinkType || "hotDrinks"} // Use passableSelectedDrinkType as default
-                                        onChange={(e) => {
-                                            const selectedValue = e.target.value;
-                                            setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
-                                            setSelectedDrinkType(selectedValue); // Set selectedDrinkType
-                                        }}
-                                    >
-                                        <option value="hotDrinks">Hot Drink</option>
-                                        <option value="icedDrinks">Iced Drink</option>
-                                        <option value="blendedDrinks">Blended Drink</option>
-                                        <option value="affogatoDrinks">Affogato Drink</option>
-                                    </select>
+                                    name="catDrinks"
+                                    id="catDrinks"
+                                    className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer py-[5px] w-full text-center"
+                                    value={passableSelectedDrinkType} // Use passableSelectedDrinkType as default
+                                    onChange={(e) => {
+                                        const selectedValue = e.target.value;
+                                        setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
+                                        setSelectedDrinkType(selectedValue); // Set selectedDrinkType
+                                    }}
+                                >
+                                    {menuCategories.length > 0 ? (
+                                        menuCategories.map((category, index) => (
+                                            <option key={index} value={category}>
+                                                {category}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option>No categories available</option>
+                                    )}
+                                </select>
                                 </div>
-                            )}
                         </div>
 
                         {selectedCat === "drinks" && (

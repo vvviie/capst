@@ -7,7 +7,7 @@ import AverageOrdersGraph from "../components/AverageOrdersGraph";
 import LikesDislikesChart from "../components/LikesDislikesChart";
 import Link from "next/link";
 import InputExpenses from "../components/InputExpenses";
-import { collection, query, where, getDocs, doc, getDoc, } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from "../firebase";
 
 type User = {
@@ -34,6 +34,44 @@ const AdminHomePage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [latestReviews, setLatestReviews] = useState([]);
   const [topSpendingCustomers, setTopSpendingCustomers] = useState<TopSpendingCustomer[]>([]);
+  const [isOrderingEnabled, setIsOrderingEnabled] = useState(true);
+
+  // Fetch the current foodCartAvailable value when component mounts
+  useEffect(() => {
+    const fetchFoodCartAvailability = async () => {
+      try {
+        const docRef = doc(db, 'adminControls', 'adminAccess');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsOrderingEnabled(data.foodCartAvailable);
+        } else {
+          console.error("No such document!");
+        }
+      } catch (error) {
+        console.error("Error fetching document:", error);
+      }
+    };
+
+    fetchFoodCartAvailability();
+  }, []);
+
+  // Handle button toggle click
+  const handleToggle = async () => {
+    try {
+      const docRef = doc(db, 'adminControls', 'adminAccess');
+      // Toggle the foodCartAvailable state
+      const newFoodCartAvailable = !isOrderingEnabled;
+
+      // Update Firestore with the new value
+      await setDoc(docRef, { foodCartAvailable: newFoodCartAvailable }, { merge: true });
+
+      // Update local state based on the new value
+      setIsOrderingEnabled(newFoodCartAvailable);
+    } catch (error) {
+      console.error("Error updating document:", error);
+    }
+  };
 
   const fetchTopSpendingCustomers = async () => {
     const usersCollection = collection(db, "users");
@@ -190,6 +228,15 @@ const AdminHomePage = () => {
             <option value="week">Week</option>
             <option value="year">Year</option>
           </select>
+        </div>
+        <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
+        <button
+          className="font-bold h-10 bg-[#F0565F] max-w-[170px] w-full text-white duration-200
+          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:bg-red-400 hover:scale-[1.02]"
+          onClick={handleToggle}
+        >
+          {isOrderingEnabled ? 'Disable Ordering' : 'Enable Ordering'}
+        </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* NET SALES AND EXPENSES SECTION */}

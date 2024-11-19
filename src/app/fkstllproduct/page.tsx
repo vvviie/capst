@@ -15,6 +15,14 @@ import {
 
 import { db } from "../firebase";
 import { collection, getDocs, query, where, deleteDoc, doc, updateDoc, getDoc, setDoc, onSnapshot} from 'firebase/firestore';
+import useMenuCategories from "../hooks/useMenuCategories";
+
+import useDrinksByCategory from "../hooks/useDrinksByCategory";
+import useMainCoursesByCategory from "../hooks/useMainCoursesByCategory";
+import usePastasByCategory from "../hooks/usePastasByCategory";
+import usePastriesByCategory from "../hooks/usePastriesByCategory";
+import useSnacksByCategory from "../hooks/useSnacksByCategory";
+import useSandwichesByCategory from "../hooks/useSandwichesByCategory";
 
 interface FeaturedItem {
     id: string;
@@ -23,16 +31,19 @@ interface FeaturedItem {
 }
 
 const CRUDProductPage = () => {
+    const [mainCategory, setMainCategory] = useState<string>("Drinks");
     const [selectedCategory, setSelectedCategory] = useState<string>("icedDrinks");
     const [activeItem, setActiveItem] = useState<string | null>(null);
-    const [drinks, setDrinks] = useState<Drinks[]>([]);
-    const [mainCourses, setMainCourses] = useState<MainCourse[]>([]);
-    const [pastas, setPasta] = useState<Pasta[]>([]);
-    const [pastries, setPastries] = useState<Pastries[]>([]);
-    const [snacks, setSnacks] = useState<Snacks[]>([]);
-    const [sandwiches, setSandwiches] = useState<Sandwiches[]>([]);
-    const [menuCategories, setMenuCategories] = useState([]);
 
+    const drinks = useDrinksByCategory(selectedCategory);
+    const mainCourses = useMainCoursesByCategory(selectedCategory);
+    const pastas = usePastasByCategory(selectedCategory);
+    const pastries = usePastriesByCategory(selectedCategory);
+    const snacks = useSnacksByCategory(selectedCategory);
+    const sandwiches = useSandwichesByCategory(selectedCategory);
+
+    const menuCategories = useMenuCategories(mainCategory);
+    
     const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -44,203 +55,93 @@ const CRUDProductPage = () => {
         setActiveItem(null);
     };
 
-    const fetchCategoriesFromDB = async () => {
+    const handleMainCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setMainCategory(e.target.value); // Set the selected main category
+    };
+
+    // Fetch categories from the database
+    const fetchCategoriesFromDB = async (mainCategory) => {
         try {
-            // Query the 'menuCategories' collection
-            const querySnapshot = await getDocs(collection(db, 'menuCategories'));
-            
-            let allCategories = [];
+            // Determine the collection based on the selected main category
+            let categoriesCollection = "";
+            switch (mainCategory) {
+                case "Drinks":
+                    categoriesCollection = "drinksCategories";
+                    break;
+                case "Main Course":
+                    categoriesCollection = "mainCourseCategories";
+                    break;
+                case "Pastries":
+                    categoriesCollection = "pastriesCategories";
+                    break;
+                case "Snacks":
+                    categoriesCollection = "snacksCategories";
+                    break;
+                case "Sandwiches":
+                    categoriesCollection = "sandwichesCategories";
+                    break;
+                case "Pasta":
+                    categoriesCollection = "pastaCategories";
+                    break;
+                default:
+                    categoriesCollection = ""; // Default case, in case no main category is selected
+                    break;
+            }
     
-            // Loop through each document in the collection
-            querySnapshot.forEach(doc => {
+            // If no category collection is selected, return early
+            if (!categoriesCollection) return;
+    
+            // Fetch categories from the selected collection
+            const querySnapshot = await getDocs(collection(db, categoriesCollection));
+    
+            let allCategories: any[] = [];
+            querySnapshot.forEach((doc) => {
                 if (doc.exists()) {
                     const data = doc.data();
+                    // Assuming each category item is in the format of { category: "someCategory" }
                     if (data.categories && Array.isArray(data.categories)) {
-                        allCategories = allCategories.concat(data.categories);
+                        const categoriesFromMaps = data.categories
+                            .filter((item) => item.category) // Filter out any items without a category
+                            .map((item) => item.category); // Extract the category names
+                        allCategories = allCategories.concat(categoriesFromMaps);
                     }
                 }
             });
     
-            // Format camelCase strings to readable strings
-            const formattedCategories = allCategories.map(category =>
-                category.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())
+            // Format categories for display (if needed)
+            const formattedCategories = allCategories.map((category) =>
+                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
             );
     
-            // Update the state with the formatted categories
             setMenuCategories(formattedCategories);
+    
+            // Only set the selectedCategory if it's a valid option in the new categories list
+            if (formattedCategories.includes(selectedCategory)) {
+                // Don't reset selectedCategory if it's already a valid category
+                return;
+            }
+    
+            // If selectedCategory is not valid anymore (e.g., it was part of "Pastries" and now we're in "Drinks"), reset it to the first available category
+            if (formattedCategories.length > 0) {
+                setSelectedCategory(formattedCategories[0]); // Optionally, set the first category as the default
+            }
         } catch (error) {
-            console.error('Error fetching categories from database:', error);
+            console.error("Error fetching categories from database:", error);
         }
     };
+
+    useEffect(() => {
+        if (mainCategory) {
+            fetchCategoriesFromDB(mainCategory); // Fetch categories based on selected main category
+        }
+    }, [mainCategory]);
     
     useEffect(() => {
-        fetchCategoriesFromDB();
-    }, []);
-
-    // Fetch drinks based on the selected category
-    useEffect(() => {
-        const fetchDrinks = async () => {
-            try {
-                const drinksRef = collection(db, "drinks");
-                const q = query(drinksRef, where("prodCategory", "==", selectedCategory));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setDrinks([]);
-                    return;
-                }
-
-                const fetchedDrinks: Drinks[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data() as Omit<Drinks, "id">,
-                }));
-
-                setDrinks(fetchedDrinks);
-            } catch (err) {
-                console.error("Error fetching drinks:", err);
-            }
-        };
-
-        fetchDrinks();
-    }, [selectedCategory]);
-
-    // Fetch main courses based on the selected category
-    useEffect(() => {
-        const fetchMainCourses = async () => {
-            try {
-                const mainCourseRef = collection(db, "mainCourse");
-                const q = query(mainCourseRef, where("prodCategory", "==", selectedCategory));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setMainCourses([]);
-                    return;
-                }
-
-                const fetchedMainCourses: MainCourse[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data() as Omit<MainCourse, "id">,
-                }));
-
-                setMainCourses(fetchedMainCourses);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchMainCourses();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchPastas = async () => {
-            try {
-                const pastaRef = collection(db, "pasta");
-                const q = query(pastaRef, where("prodCategory", "==", selectedCategory));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setPasta([]);
-                    return;
-                }
-
-                const fetchedPastas: Pasta[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data() as Omit<Pasta, "id">,
-                }));
-
-                setPasta(fetchedPastas);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchPastas();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchPastries = async () => {
-            try {
-                const pastriesRef = collection(db, "pastries");
-                const q = query(pastriesRef, where("prodCategory", "==", selectedCategory));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setPastries([]);
-                    return;
-                }
-
-                const fetchedPastries: Pastries[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data() as Omit<Pastries, "id">,
-                }));
-
-                setPastries(fetchedPastries);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchPastries();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchSnacks = async () => {
-            try {
-                const snacksRef = collection(db, "snacks");
-                const q = query(snacksRef, where("prodCategory", "==", selectedCategory));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setSnacks([]);
-                    return;
-                }
-
-                const fetchedSnacks: Snacks[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data() as Omit<Snacks, "id">,
-                }));
-
-                setSnacks(fetchedSnacks);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchSnacks();
-    }, [selectedCategory]);
-
-    useEffect(() => {
-        const fetchSandwiches = async () => {
-            try {
-                const sandwichesRef = collection(db, "sandwiches");
-                const q = query(sandwichesRef, where("prodCategory", "==", selectedCategory));
-                const querySnapshot = await getDocs(q);
-
-                if (querySnapshot.empty) {
-                    setSandwiches([]);
-                    return;
-                }
-
-                const fetchedSandwiches: Sandwiches[] = querySnapshot.docs.map((doc) => ({
-                    id: doc.id,
-                    ...doc.data() as Omit<Sandwiches, "id">,
-                }));
-
-                setSandwiches(fetchedSandwiches);
-            } catch (err) {
-                console.error("Error fetching main courses:", err);
-            }
-        };
-
-        fetchSandwiches();
-    }, [selectedCategory]);
-
-    // Handle category change
-    const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const newCategory = e.target.value;
-        setSelectedCategory(newCategory);
-        console.log(`Selected category: ${newCategory}`);
-    };
+        if (menuCategories.length > 0 && !menuCategories.includes(selectedCategory)) {
+            // If the current selectedCategory is not in the new menuCategories, reset to the first category
+            setSelectedCategory(menuCategories[0]);
+        }
+    }, [menuCategories]); // Run when menuCategories changes
 
     const filteredDrinks = useMemo(() => {
         return drinks.filter((drink) => drink.title.toLowerCase().startsWith(searchTerm));
@@ -288,29 +189,7 @@ const CRUDProductPage = () => {
             // Delete from Firestore
             await deleteDoc(doc(db, collectionName, id));
 
-            // Update local state after deletion
-            switch (category) {
-                case "drinks":
-                    setDrinks((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "mainCourses":
-                    setMainCourses((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "pastas":
-                    setPasta((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "pastries":
-                    setPastries((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "snacks":
-                    setSnacks((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                case "sandwiches":
-                    setSandwiches((prev) => prev.filter((item) => item.id !== id));
-                    break;
-                default:
-                    break;
-            }
+            
         } catch (error) {
             console.error("Error deleting item:", error);
         }
@@ -439,36 +318,55 @@ const CRUDProductPage = () => {
                 {/* HEADER, MENU CAT, AND SEARCH BAR CONTAINER */}
                 <div className="flex flex-col gap-4">
                     {/* HEADER */}
-                    <h1 className="text-2xl font-bold text-orange-950">Product Listings</h1>
+                    <div className="flex justify-between items-center gap-2 w-full">
+                        <h1 className="text-2xl font-bold text-orange-950">
+                        Product Listings
+                        </h1>
+                        <Link
+                        href={"/fkstllmenucategories"}
+                        className="h-10 border-2 border-gray-100 shadow-md rounded-md pt-1.5
+                                bg-white font-bold text-gray-500 w-1/2 max-w-28 text-center
+                                hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                        >
+                        Categories
+                        </Link>
+                    </div>
                     {/* CREATE AND SEARCH CONTAINER */}
                     <div className="flex justify-between items-center gap-4">
-                        {/* SELECT MENU CATEGORY */}
+                        {/* SELECT MAIN CATEGORY */}
                         <select
-                            name="menuCategory"
-                            id="menuCat"
-                            onChange={handleCategoryChange}
-                            className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white cursor-pointer h-9"
+                            name="mainCategory"
+                            id="mainCategory"
+                            value={mainCategory}
+                            onChange={handleMainCategoryChange}
+                            className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white cursor-pointer h-9 text-center flex items-center justify-center"
                         >
-                            {menuCategory.map((cats) => (
-                                <option value={cats.prodCat} key={cats.id} className="text-center">
-                                    {cats.title}
-                                </option>
-                            ))}
+                            <option value="Drinks">Drinks</option>
+                            <option value="Main Course">Main Course</option>
+                            <option value="Pastries">Pastries</option>
+                            <option value="Snacks">Snacks</option>
+                            <option value="Sandwiches">Sandwiches</option>
+                            <option value="Pasta">Pasta</option>
                         </select>
 
                         {/* SELECT MENU CATEGORY */}
                         <select
-                            name="menuCategory2"
-                            id="menuCat2"
-                            //onChange={handleCategoryChange}
+                            name="menuCategory"
+                            id="menuCat"
+                            value={selectedCategory || ""}
+                            onChange={(e) => setSelectedCategory(e.target.value)} // Update the selected subcategory
                             className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white cursor-pointer h-9"
                         >
-                                        {menuCategories.map((category, index) => (
-                            <option value={category} key={index} className="text-center">
-                                {category}
-                            </option>
-                        ))}
+                            {menuCategories.map((category, index) => (
+                                <option value={category} key={index} className="text-center">
+                                    {category
+                                        .replace(/([A-Z])/g, ' $1') // Add space before uppercase letters
+                                        .replace(/^./, (str) => str.toUpperCase()) // Capitalize the first letter
+                                    }
+                                </option>
+                            ))}
                         </select>
+                        
                         {/* SEARCH BAR */}
                         <input
                             type="text"
@@ -667,7 +565,7 @@ const CRUDProductPage = () => {
                                         className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDelete(item.id, "mainCourse");
+                                            handleDelete(item.id, "mainCourses");
                                         }}
                                     >
                                         Delete

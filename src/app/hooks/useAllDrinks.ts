@@ -15,7 +15,7 @@ const useAllDrinks = () => {
         setError(null);
 
         // Step 1: Fetch categories from the "menuCategories" collection
-        const categoriesDocRef = doc(db, 'menuCategories', 'drinkCategories');
+        const categoriesDocRef = doc(db, 'menuCategories', 'drinksCategories');
         const categoriesDoc = await getDoc(categoriesDocRef);
 
         if (!categoriesDoc.exists()) {
@@ -25,7 +25,7 @@ const useAllDrinks = () => {
           return;
         }
 
-        const { categories } = categoriesDoc.data() as { categories: string[] };
+        const { categories } = categoriesDoc.data() as { categories: { category: string; available: boolean }[] };
 
         if (!categories || !Array.isArray(categories)) {
           setError('Invalid categories format.');
@@ -34,14 +34,17 @@ const useAllDrinks = () => {
           return;
         }
 
-        // Step 2: Fetch drinks for each category
+        // Step 2: Filter out categories where available = false
+        const availableCategories = categories.filter((category) => category.available);
+
+        // Step 3: Fetch drinks for each available category
         const drinksData: Record<string, Drinks[]> = {};
-        for (const category of categories) {
+        for (const category of availableCategories) {
           const drinksRef = collection(db, 'drinks');
-          const drinksQuery = query(drinksRef, where('prodCategory', '==', category));
+          const drinksQuery = query(drinksRef, where('prodCategory', '==', category.category));
           const querySnapshot = await getDocs(drinksQuery);
 
-          drinksData[category] = querySnapshot.docs.map((doc) => ({
+          drinksData[category.category] = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           })) as Drinks[];
@@ -57,7 +60,7 @@ const useAllDrinks = () => {
     };
 
     fetchDrinks();
-  }, []);
+  }, []); // Empty array to run only once when component mounts
 
   return { drinksByCategory, loading, error };
 };

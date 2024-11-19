@@ -140,17 +140,17 @@ const LoginPage = () => {
   
         // Now use the role to redirect the user
         if (role === "admin") {
-          Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
-          router.push("/adminhome"); // Redirect to the homepage
+          Cookies.set("admin", user.refreshToken);
+          router.push("/adminhome");
         } else if (role === "bar") {
-          Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
+          Cookies.set("bar", user.refreshToken);
           router.push("/fkstllorders");
         } else if (role === "kitchen") {
-          Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
+          Cookies.set("kitchen", user.refreshToken);
           router.push("/fkstllorders");
         } else {
-          Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
-          router.push("/"); // Redirect to the homepage for general users
+          Cookies.set("user", user.refreshToken);
+          router.push("/");
         }
       } else {
         // Handle case where role is undefined or not fetched
