@@ -31,7 +31,7 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  items: { title: string; price: number; tags: string[] }[];
+  items: { title: string; price: number; qty: number; tags: string[] }[];
   id: string;
   pwdSenior: boolean;
   idPic?: string;
@@ -137,6 +137,7 @@ const AdminAndStaffOrdersPage = () => {
             return {
               title: item.productTitle,
               price: discountedPrice,
+              qty: item.itemQty,
               tags:
                 item.slug === "drinks"
                   ? [item.selectedDrinkSize, item.note]
@@ -972,7 +973,7 @@ const AdminAndStaffOrdersPage = () => {
                               {/* ITEM TITLE AND PRICE CONTAINER */}
                               <div className="font-bold text-sm flex justify-between items-center">
                                 <span className="font-semibold">
-                                  {item.title}
+                                  {`${item.qty}x - ${item.title}`}
                                   {isHighestPriced && // Only show discounted label for the highest-priced item
                                     ((order.status === "TO PAY" &&
                                       applySrPWD[order.id]) ||
@@ -1359,7 +1360,7 @@ const AdminAndStaffOrdersPage = () => {
                                 {/* ITEM TITLE AND PRICE CONTAINER */}
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
-                                    {item.title}
+                                    {`${item.qty}x - ${item.title}`}
                                     {isHighestPriced && // Only show discounted label for the highest-priced item
                                       ((order.status === "TO PAY" &&
                                         applySrPWD[order.id]) ||
@@ -1718,7 +1719,7 @@ const AdminAndStaffOrdersPage = () => {
                                 {/* ITEM TITLE AND PRICE CONTAINER */}
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
-                                    {item.title}
+                                    {`${item.qty}x - ${item.title}`}
                                     {isHighestPriced && // Only show discounted label for the highest-priced item
                                       ((order.status === "TO PAY" &&
                                         applySrPWD[order.id]) ||
