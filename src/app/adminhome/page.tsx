@@ -7,7 +7,15 @@ import AverageOrdersGraph from "../components/AverageOrdersGraph";
 import LikesDislikesChart from "../components/LikesDislikesChart";
 import Link from "next/link";
 import InputExpenses from "../components/InputExpenses";
-import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 type User = {
@@ -33,14 +41,16 @@ const AdminHomePage = () => {
   const [timeFrame, setTimeFrame] = useState("today");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [latestReviews, setLatestReviews] = useState([]);
-  const [topSpendingCustomers, setTopSpendingCustomers] = useState<TopSpendingCustomer[]>([]);
+  const [topSpendingCustomers, setTopSpendingCustomers] = useState<
+    TopSpendingCustomer[]
+  >([]);
   const [isOrderingEnabled, setIsOrderingEnabled] = useState(true);
 
   // Fetch the current foodCartAvailable value when component mounts
   useEffect(() => {
     const fetchFoodCartAvailability = async () => {
       try {
-        const docRef = doc(db, 'adminControls', 'adminAccess');
+        const docRef = doc(db, "adminControls", "adminAccess");
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
@@ -59,12 +69,16 @@ const AdminHomePage = () => {
   // Handle button toggle click
   const handleToggle = async () => {
     try {
-      const docRef = doc(db, 'adminControls', 'adminAccess');
+      const docRef = doc(db, "adminControls", "adminAccess");
       // Toggle the foodCartAvailable state
       const newFoodCartAvailable = !isOrderingEnabled;
 
       // Update Firestore with the new value
-      await setDoc(docRef, { foodCartAvailable: newFoodCartAvailable }, { merge: true });
+      await setDoc(
+        docRef,
+        { foodCartAvailable: newFoodCartAvailable },
+        { merge: true }
+      );
 
       // Update local state based on the new value
       setIsOrderingEnabled(newFoodCartAvailable);
@@ -76,16 +90,16 @@ const AdminHomePage = () => {
   const fetchTopSpendingCustomers = async () => {
     const usersCollection = collection(db, "users");
     const querySnapshot = await getDocs(usersCollection);
-  
+
     const customers: TopSpendingCustomer[] = querySnapshot.docs
       .map((doc) => {
         const data = doc.data() as User;
-  
+
         // Filter out users whose role is not "user"
         if (data.role !== "user") {
           return null; // Skip users who do not have the "user" role
         }
-  
+
         // Determine membership tier based on totalPaid
         const membership =
           data.totalPaid < 1000
@@ -97,7 +111,7 @@ const AdminHomePage = () => {
             : data.totalPaid < 20000
             ? "GOLD"
             : "DIAMOND";
-  
+
         return {
           username: data.username,
           firstName: data.firstName,
@@ -107,13 +121,13 @@ const AdminHomePage = () => {
         };
       })
       .filter((cus) => cus !== null); // Remove null values from the array
-  
+
     // Sort customers by amount in descending order
     customers.sort((a, b) => b.amount - a.amount);
-  
+
     setTopSpendingCustomers(customers);
   };
-  
+
   // Fetch data on component mount
   useEffect(() => {
     fetchTopSpendingCustomers();
@@ -132,56 +146,62 @@ const AdminHomePage = () => {
     const fetchReviews = async () => {
       try {
         // Step 1: Fetch reviews from customerFeedbacks collection
-        const reviewsSnapshot = await getDocs(collection(db, "customerFeedbacks"));
+        const reviewsSnapshot = await getDocs(
+          collection(db, "customerFeedbacks")
+        );
         const reviewsData = [];
-  
+
         // Step 2: Fetch user info for each review
         for (const reviewDoc of reviewsSnapshot.docs) {
           const review = reviewDoc.data();
           const userEmail = review.userEmail;
-  
+
           // Ensure the userEmail exists and is valid
           if (userEmail) {
             try {
               // Fetch user details from the 'users' collection using userEmail as the doc ID
               const userDocRef = doc(db, "users", userEmail);
               const userDoc = await getDoc(userDocRef);
-              const user = userDoc.exists() ? userDoc.data() : { firstName: 'Unknown', lastName: 'User' };
-  
+              const user = userDoc.exists()
+                ? userDoc.data()
+                : { firstName: "Unknown", lastName: "User" };
+
               // Combine review data with user info
               const combinedReview = {
                 ...review,
                 name: `${user.firstName} ${user.lastName}`, // Combine first and last name
               };
-  
+
               reviewsData.push(combinedReview);
             } catch (userError) {
-              console.error(`Error fetching user info for ${userEmail}:`, userError);
+              console.error(
+                `Error fetching user info for ${userEmail}:`,
+                userError
+              );
               reviewsData.push({
                 ...review,
-                name: 'Unknown User', // Fallback in case of error fetching user data
+                name: "Unknown User", // Fallback in case of error fetching user data
               });
             }
           } else {
             console.warn("Missing or invalid userEmail in review:", review);
           }
         }
-  
+
         // Step 3: Sort reviews by date and time in descending order
         const sortedReviews = reviewsData.sort((a, b) => {
           const dateA = new Date(`${a.dateAdded} ${a.timeAdded}`);
           const dateB = new Date(`${b.dateAdded} ${b.timeAdded}`);
           return dateB - dateA; // Sort in descending order
         });
-  
+
         // Step 4: Get the latest 5 reviews
         setLatestReviews(sortedReviews.slice(0, 5));
-  
       } catch (error) {
         console.error("Error fetching reviews or user info:", error);
       }
     };
-  
+
     fetchReviews();
   }, []);
 
@@ -210,10 +230,10 @@ const AdminHomePage = () => {
           <button
             className="font-bold h-10 bg-[#F0565F] max-w-[170px] w-full text-white duration-200
           rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:bg-red-400 hover:scale-[1.02]"
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsFormOpen((prev) => !prev); // Toggle state directly
-          }}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFormOpen((prev) => !prev); // Toggle state directly
+            }}
           >
             Input Expenses
           </button>
@@ -228,15 +248,6 @@ const AdminHomePage = () => {
             <option value="week">Week</option>
             <option value="year">Year</option>
           </select>
-        </div>
-        <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
-        <button
-          className="font-bold h-10 bg-[#F0565F] max-w-[170px] w-full text-white duration-200
-          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:bg-red-400 hover:scale-[1.02]"
-          onClick={handleToggle}
-        >
-          {isOrderingEnabled ? 'Disable Ordering' : 'Enable Ordering'}
-        </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* NET SALES AND EXPENSES SECTION */}
@@ -287,72 +298,72 @@ const AdminHomePage = () => {
               </Link>
             </div>
             <div className="flex flex-col gap-2 justify-center">
-            {topSpendingCustomers
-            .sort((a, b) => b.amount - a.amount) // Sort in descending order
-            .slice(0, 5) // Limit to top 5
-            .map((cus, index) => (
-              <div
-                key={cus.username} // Add a unique key for each item
-                className="w-full border-gray-100 border-2 shadow-md rounded-md pt-2 pb-4 px-4 bg-white flex flex-col gap-0"
-              >
-                <div className="flex justify-between items-start gap-4">
-                  <div className="flex items-start gap-2 w-2/3">
-                    {/* CROWNS FOR TOP SPENDERS */}
-                    {index === 0 && (
-                      <i
-                        className="fa fa-crown text-yellow-500 text-md"
-                        aria-hidden="true"
-                      ></i> // Gold Crown
-                    )}
-                    {index === 1 && (
-                      <i
-                        className="fa fa-crown text-gray-400 text-md"
-                        aria-hidden="true"
-                      ></i> // Silver Crown
-                    )}
-                    {index === 2 && (
-                      <i
-                        className="fa fa-crown text-orange-700 text-md"
-                        aria-hidden="true"
-                      ></i> // Bronze Crown
-                    )}
-                    {index >= 3 && (
-                      <i
-                        className="fa fa-crown text-orange-100 text-md"
-                        aria-hidden="true"
-                      ></i> // Gray Crown
-                    )}
-                    <h1 className="text-sm font-semibold text-gray-900">
-                      {cus.firstName} {cus.lastName}
-                    </h1>
-                  </div>
-                  <h1 className="text-sm w-1/3 text-right font-semibold text-gray-900">
-                    PHP {cus.amount.toFixed(2)}
-                  </h1>
-                </div>
-
-                <div className="flex justify-between items-center gap-3">
-                  <h1 className="text-xs text-gray-400 font-light">
-                    {cus.username}
-                  </h1>
-                  <h1
-                    className={`text-xs uppercase font-semibold ${
-                      cus.membership === "REGULAR"
-                        ? "text-neutral-500"
-                        : cus.membership === "BRONZE"
-                        ? "text-orange-800"
-                        : cus.membership === "SILVER"
-                        ? "text-gray-300"
-                        : cus.membership === "GOLD"
-                        ? "text-yellow-500"
-                        : "text-emerald-400"
-                    }`}
+              {topSpendingCustomers
+                .sort((a, b) => b.amount - a.amount) // Sort in descending order
+                .slice(0, 10) // Limit to top 10
+                .map((cus, index) => (
+                  <div
+                    key={cus.username} // Add a unique key for each item
+                    className="w-full border-gray-100 border-2 shadow-md rounded-md pt-2 pb-4 px-4 bg-white flex flex-col gap-0"
                   >
-                    {cus.membership}
-                  </h1>
-                </div>
-              </div>
-            ))}
+                    <div className="flex justify-between items-start gap-4">
+                      <div className="flex items-start gap-2 w-2/3">
+                        {/* CROWNS FOR TOP SPENDERS */}
+                        {index === 0 && (
+                          <i
+                            className="fa fa-crown text-yellow-500 text-md"
+                            aria-hidden="true"
+                          ></i> // Gold Crown
+                        )}
+                        {index === 1 && (
+                          <i
+                            className="fa fa-crown text-gray-400 text-md"
+                            aria-hidden="true"
+                          ></i> // Silver Crown
+                        )}
+                        {index === 2 && (
+                          <i
+                            className="fa fa-crown text-orange-700 text-md"
+                            aria-hidden="true"
+                          ></i> // Bronze Crown
+                        )}
+                        {index >= 3 && (
+                          <i
+                            className="fa fa-crown text-orange-100 text-md"
+                            aria-hidden="true"
+                          ></i> // Gray Crown
+                        )}
+                        <h1 className="text-sm font-semibold text-gray-900">
+                          {cus.firstName} {cus.lastName}
+                        </h1>
+                      </div>
+                      <h1 className="text-[13px] pt-[2px] w-1/3 text-right font-semibold text-gray-900">
+                        PHP {cus.amount.toFixed(2)}
+                      </h1>
+                    </div>
+
+                    <div className="flex justify-between items-center gap-3">
+                      <h1 className="text-xs text-gray-400 font-light">
+                        {cus.username}
+                      </h1>
+                      <h1
+                        className={`text-xs uppercase font-semibold ${
+                          cus.membership === "REGULAR"
+                            ? "text-neutral-500"
+                            : cus.membership === "BRONZE"
+                            ? "text-orange-800"
+                            : cus.membership === "SILVER"
+                            ? "text-gray-300"
+                            : cus.membership === "GOLD"
+                            ? "text-yellow-500"
+                            : "text-emerald-400"
+                        }`}
+                      >
+                        {cus.membership}
+                      </h1>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
           <div className="flex flex-col justify-center gap-2">
@@ -386,7 +397,11 @@ const AdminHomePage = () => {
                 >
                   <div className="w-full flex items-center gap-2">
                     <i
-                      className={`fa fa-thumbs-${rev.positiveFeedback ? "up text-[#60A66F]" : "down text-[#F0565F]"} text-lg`}
+                      className={`fa fa-thumbs-${
+                        rev.positiveFeedback
+                          ? "up text-[#60A66F]"
+                          : "down text-[#F0565F]"
+                      } text-lg`}
                       aria-hidden="true"
                     ></i>
                     <span className="text-md font-semibold text-gray-900">
@@ -397,12 +412,53 @@ const AdminHomePage = () => {
                     <span>{rev.userEmail} - </span> {/* Updated email */}
                     <span>
                       {rev.dateAdded} - {rev.timeAdded}
-                    </span> {/* Updated date and time */}
+                    </span>{" "}
+                    {/* Updated date and time */}
                   </div>
-                  <p className="text-gray-700 text-sm italic">"{rev.comments}"</p> {/* Updated review content */}
+                  <p className="text-gray-700 text-sm italic">
+                    "{rev.comments}"
+                  </p>{" "}
+                  {/* Updated review content */}
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        <hr className="mt-10 mb-4" />
+        <div className="w-full justify-center flex">
+          <div
+            className="flex flex-col w-full items-center mb-4 max-w-[300px] bg-white border-2
+        border-gray-100 shadow-md rounded-md px-6 py-4 gap-2"
+          >
+            <h1 className="font-bold text-base text-orange-950 text-center">
+              Customer Orders -{" "}
+              <span
+                className={
+                  isOrderingEnabled ? "text-[#60A66F]" : "text-[#F0565F]"
+                }
+              >
+                {isOrderingEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </h1>
+            <p className="font-light text-gray-500 text-sm text-center mt-[-5px]">
+              Click or tap to{" "}
+              <span className={`font-normal text-gray-700`}>
+                {isOrderingEnabled ? "disable" : "enable"}
+              </span>{" "}
+              ordering for customers.
+            </p>
+            <button
+              className={`font-bold h-10 ${
+                isOrderingEnabled
+                  ? "bg-[#F0565F] hover:bg-red-400"
+                  : "bg-[#60A66F] hover:bg-green-400"
+              } max-w-60 w-full text-white duration-200
+          rounded-md shadow-md text-sm hover:scale-[1.02]`}
+              onClick={handleToggle}
+            >
+              {isOrderingEnabled ? "Disable Ordering" : "Enable Ordering"}
+            </button>
           </div>
         </div>
       </div>
