@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { Bar, Line } from "react-chartjs-2";
+import React, { useEffect, useState } from "react";
+import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,7 +12,22 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import { ordersAveragePerDay } from "../data";
+import { db } from "../firebase"; // Adjust the path as necessary
+import { collection, getDocs } from "firebase/firestore";
+
+// Define the types for chart data
+interface ChartDataset {
+  label: string;
+  data: number[];
+  fill: boolean;
+  backgroundColor: string;
+  borderColor: string;
+}
+
+interface ChartData {
+  labels: string[];
+  datasets: ChartDataset[];
+}
 
 ChartJS.register(
   CategoryScale,
@@ -24,16 +39,82 @@ ChartJS.register(
   Legend
 );
 
-type whatIsIt = string;
-
 const AverageOrdersGraph = () => {
-  const options = {};
+  const [chartData, setChartData] = useState<ChartData>({ labels: [], datasets: [] });
 
-  const data = {};
+  useEffect(() => {
+    const fetchAverageOrders = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "dataAverageOrders"));
+        const ordersData: { [key: string]: { date: string; totalOrders: number } } = {};
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          ordersData[doc.id] = data; // Store the data using the document ID as the key
+        });
+
+        // Get the current date
+        const currentDate = new Date();
+        const todayString = currentDate.toLocaleDateString();
+
+        // Prepare data for the chart, filtering out future dates
+        const filteredOrdersData = Object.keys(ordersData)
+          .map(date => ({
+            ...ordersData[date],
+            date: new Date(ordersData[date].date) // Convert to Date object for comparison
+          }))
+          .filter(order => order.date <= currentDate); // Keep only orders with dates up to the current date
+
+        // Check if there's data for today
+        const hasTodayData = filteredOrdersData.some(order => order.date.toLocaleDateString() === todayString);
+
+        // If there's no data for today, add a placeholder
+        if (!hasTodayData) {
+          filteredOrdersData.push({
+            date: currentDate,
+            totalOrders: 0,
+          });
+        }
+
+        const labels = filteredOrdersData.map(order => order.date.toLocaleDateString());
+        const totalOrders = filteredOrdersData.map(order => order.totalOrders);
+
+        setChartData({
+          labels: labels,
+          datasets: [
+            {
+              label: "Total Orders",
+              data: totalOrders,
+              fill: false,
+              backgroundColor: "#60A66F",
+              borderColor: "#60A66F",
+            },
+          ],
+        });
+      } catch (error) {
+        console.error("Error fetching documents: ", error);
+      }
+    };
+
+    fetchAverageOrders();
+  }, []);
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top',
+      },
+      title: {
+        display: true,
+        text: 'Average Orders Per Day',
+      },
+    },
+  };
 
   return (
     <>
-      <Line options={options} data={ordersAveragePerDay} />
+      <Line options={options} data={chartData} />
     </>
   );
 };
