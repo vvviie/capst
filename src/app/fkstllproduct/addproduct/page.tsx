@@ -535,7 +535,7 @@ const AddProductPage = () => {
             milkOat = 40;
             milkAlmond = 30;
     
-            if (selectedDrinkType === "icedDrinks") {
+            if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
                 addVanilla = 25;
             }
         } else if (selectedCat === "mainCourseMenu") {
