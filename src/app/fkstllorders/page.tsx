@@ -38,6 +38,7 @@ type Order = {
   sampleDiscountDeduction?: number;
   slug: string;
   subtotal: number;
+  cardIdImg?: string;
 };
 // #endregion
 
@@ -63,6 +64,7 @@ const AdminAndStaffOrdersPage = () => {
 
   const [isCancelVisible, setIsCancelVisible] = useState(false);
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
+  const [isRejectedVisible, setIsRejectedVisible] = useState(false);
 
   // Fetch orders on component mount and when `orderStatCat` changes
   useEffect(() => {
@@ -167,6 +169,7 @@ const AdminAndStaffOrdersPage = () => {
             promo: data.promoDiscounted,
             slug: data.slug,
             subtotal: data.subtotal || totalPrice,
+            cardIdImg: data.cardIdImg,
           };
 
           // Add only if status matches selected category or if "ALL"
@@ -232,7 +235,9 @@ const AdminAndStaffOrdersPage = () => {
         ? "READY"
         : value === "done"
         ? "DONE"
-        : "CANCELLED"
+        : value === "cancelled"
+        ? "CANCELLED"
+        : "REJECTED"
     );
   };
 
@@ -376,6 +381,21 @@ const AdminAndStaffOrdersPage = () => {
       }, 750);
     } catch (error) {
       console.error("Error updating status to 'CANCELLED':", error);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "completedOrders", id), {
+        status: "REJECTED",
+      });
+
+      setIsRejectedVisible(true);
+      setTimeout(() => {
+        setIsRejectedVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error("Error updating status to 'REJECTED':", error);
     }
   };
 
@@ -605,6 +625,7 @@ const AdminAndStaffOrdersPage = () => {
                 <option value="ready">Ready</option>
                 <option value="done">Done</option>
                 <option value="cancelled">Cancelled</option>
+                <option value="rejected">Rejected</option>
               </select>
             </div>
             {/* ORDERS LIST CONTAINER */}
@@ -690,6 +711,55 @@ const AdminAndStaffOrdersPage = () => {
                           <span className="font-semibold">Payment method</span>
                           <span>{order.payment}</span>
                         </div>
+                        {/* CARD */}
+                        {order.payment === "Card" && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">Card Payment Receipt</span>
+                          </div>
+                        )}
+                        {order.payment === "Card" && order.cardIdImg && (
+                        <>
+                          <div className="w-full flex flex-col gap-1 justify-center items-center">
+                            <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
+                              <Image
+                                src={order.cardIdImg}
+                                alt="idpic"
+                                layout="fill"
+                                className="object-cover"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEnlargePicture(true);
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-400">Click the picture to enlarge.</p>
+                          </div>
+                          {enlargePicture && (
+                            // ENLARGED IMAGE
+                            <div
+                              className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                              style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                            >
+                              <div className="w-full max-w-[620px] aspect-square relative">
+                                <div
+                                  className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                  onClick={() => setEnlargePicture(false)}
+                                >
+                                  <span className="font-bold">X</span>
+                                </div>
+                                <Image
+                                  src={order.cardIdImg}
+                                  alt="idpic"
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                         {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                         <div className="font-bold text-sm flex justify-between items-center">
                           <span className="font-semibold">
@@ -762,7 +832,7 @@ const AdminAndStaffOrdersPage = () => {
                         )}
 
                         {/* Apply Sr/PWD Discount Button */}
-                        {order.status === "TO PAY" && (
+                        {order.status === "TO PAY" && order.pwdSenior === true && (
                           <div className="w-full flex justify-end">
                             <button
                               className={`h-10 ${
@@ -911,17 +981,21 @@ const AdminAndStaffOrdersPage = () => {
                               : "Hide"}
                           </button>
                           <button
-                            className={`${
-                              order.status !== "TO PAY" && "hidden"
-                            } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                            hover:scale-[1.02] duration-200 hover:bg-red-400`}
-                            onClick={() => {
-                              handleCancel(order.id);
-                            }}
-                          >
-                            Cancel
-                          </button>
-                          {order.status === "CANCELLED" && (
+                          className={`${
+                            order.status !== "TO PAY" && "hidden"
+                          } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                          hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                          onClick={() => {
+                            if (order.payment === "Card") {
+                              handleReject(order.id); // Handle rejection for card payment
+                            } else {
+                              handleCancel(order.id); // Handle cancellation for other payments
+                            }
+                          }}
+                        >
+                          {order.payment === "Card" ? "Reject" : "Cancel"}
+                        </button>
+                          {order.status === "CANCELLED" || order.status === "REJECTED" && (
                             <button
                               className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
                                       hover:scale-[1.02] duration-200 hover:bg-red-400"
@@ -1079,6 +1153,55 @@ const AdminAndStaffOrdersPage = () => {
                             </span>
                             <span>{order.payment}</span>
                           </div>
+                          {/* CARD */}
+                        {order.payment === "Card" && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">Card Payment Receipt</span>
+                          </div>
+                        )}
+                        {order.payment === "Card" && order.cardIdImg && (
+                        <>
+                          <div className="w-full flex flex-col gap-1 justify-center items-center">
+                            <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
+                              <Image
+                                src={order.cardIdImg}
+                                alt="idpic"
+                                layout="fill"
+                                className="object-cover"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEnlargePicture(true);
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-400">Click the picture to enlarge.</p>
+                          </div>
+                          {enlargePicture && (
+                            // ENLARGED IMAGE
+                            <div
+                              className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                              style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                            >
+                              <div className="w-full max-w-[620px] aspect-square relative">
+                                <div
+                                  className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                  onClick={() => setEnlargePicture(false)}
+                                >
+                                  <span className="font-bold">X</span>
+                                </div>
+                                <Image
+                                  src={order.cardIdImg}
+                                  alt="idpic"
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
@@ -1149,7 +1272,7 @@ const AdminAndStaffOrdersPage = () => {
                           )}
 
                           {/* Apply Sr/PWD Discount Button */}
-                          {order.status === "TO PAY" && (
+                          {order.status === "TO PAY" && order.pwdSenior === true && (
                             <div className="w-full flex justify-end">
                               <button
                                 className={`h-10 ${
@@ -1438,6 +1561,55 @@ const AdminAndStaffOrdersPage = () => {
                             </span>
                             <span>{order.payment}</span>
                           </div>
+                          {/* CARD */}
+                        {order.payment === "Card" && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">Card Payment Receipt</span>
+                          </div>
+                        )}
+                        {order.payment === "Card" && order.cardIdImg && (
+                        <>
+                          <div className="w-full flex flex-col gap-1 justify-center items-center">
+                            <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
+                              <Image
+                                src={order.cardIdImg}
+                                alt="idpic"
+                                layout="fill"
+                                className="object-cover"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEnlargePicture(true);
+                                }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-400">Click the picture to enlarge.</p>
+                          </div>
+                          {enlargePicture && (
+                            // ENLARGED IMAGE
+                            <div
+                              className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                              style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                            >
+                              <div className="w-full max-w-[620px] aspect-square relative">
+                                <div
+                                  className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                  onClick={() => setEnlargePicture(false)}
+                                >
+                                  <span className="font-bold">X</span>
+                                </div>
+                                <Image
+                                  src={order.cardIdImg}
+                                  alt="idpic"
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
@@ -1508,7 +1680,7 @@ const AdminAndStaffOrdersPage = () => {
                           )}
 
                           {/* Apply Sr/PWD Discount Button */}
-                          {order.status === "TO PAY" && (
+                          {order.status === "TO PAY" && order.pwdSenior === true && (
                             <div className="w-full flex justify-end">
                               <button
                                 className={`h-10 ${
@@ -1771,6 +1943,9 @@ const AdminAndStaffOrdersPage = () => {
 
         {/* DELETE POP UP */}
         {isDeleteVisible && <CheckoutPopup message="Order Deleted!" />}
+
+        {/* DELETE POP UP */}
+        {isRejectedVisible && <CheckoutPopup message="Order Rejected!" />}
       </div>
     </div>
   );

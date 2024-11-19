@@ -25,6 +25,7 @@ const Filters = {
 };
 
 const FilterCalories = [
+  { name: "caloriecount", id: "radioAll", onChange: "all", title: "All" },
   { name: "caloriecount", id: "radioLow", onChange: "low", title: "Low" },
   { name: "caloriecount", id: "radioMedium", onChange: "med", title: "Medium" },
   { name: "caloriecount", id: "radioHigh", onChange: "high", title: "High" },
@@ -36,8 +37,8 @@ const DrinksFilter: React.FC<{
   onAllergyChange: (selectedAllergies: string[]) => void; // New prop for allergy changes
 }> = ({ onFilterChange, onCalorieChange, onAllergyChange }) => {
   const [open, setOpen] = useState(false);
-  const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>(null);
-  const [selectedCalorie, setSelectedCalorie] = useState<string | null>(null);
+  const [selectedDrinkType, setSelectedDrinkType] = useState<string>("all");
+  const [selectedCalorie, setSelectedCalorie] = useState<string>("all");
   const formRef = useRef<HTMLFormElement | null>(null);
   const pathname = usePathname();
   const slug = pathname.split("/").pop()?.toLowerCase() || "";
@@ -83,6 +84,15 @@ const DrinksFilter: React.FC<{
   const handleCalorieFilterChange = (calorie: string) => {
     setSelectedCalorie(calorie);
     onCalorieChange(calorie);
+  
+    if (calorie === "all") {
+      // Reset to show all products if "All" is selected
+      setFilteredProducts(products);
+    } else {
+      // Filter products by calorie count if a specific filter is selected
+      const filtered = products.filter((product) => product.caloriecount === calorie);
+      setFilteredProducts(filtered);
+    }
   };
 
   // CLOSE FORM WHEN CLICK OUTSIDE

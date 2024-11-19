@@ -1,17 +1,137 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import NetSalesExpensesGraph from "../components/NetSalesExpensesGraph";
 import FoodDrinksGraph from "../components/FoodDrinksGraph";
 import AverageOrdersGraph from "../components/AverageOrdersGraph";
 import LikesDislikesChart from "../components/LikesDislikesChart";
-import { customerReviewList, topSpendingCustomers } from "../data";
 import Link from "next/link";
 import InputExpenses from "../components/InputExpenses";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  setDoc,
+} from "firebase/firestore";
+import { db } from "../firebase";
+
+type User = {
+  uid: string;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  address: string;
+  role: string;
+  totalPaid: number;
+};
+
+type TopSpendingCustomer = {
+  username: string;
+  firstName: string;
+  lastName: string;
+  membership: string;
+  amount: number;
+};
 
 const AdminHomePage = () => {
   const [timeFrame, setTimeFrame] = useState("today");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [latestReviews, setLatestReviews] = useState([]);
+  const [topSpendingCustomers, setTopSpendingCustomers] = useState<
+    TopSpendingCustomer[]
+  >([]);
+  const [isOrderingEnabled, setIsOrderingEnabled] = useState(true);
+
+  // Fetch the current foodCartAvailable value when component mounts
+  useEffect(() => {
+    const fetchFoodCartAvailability = async () => {
+      try {
+        const docRef = doc(db, "adminControls", "adminAccess");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setIsOrderingEnabled(data.foodCartAvailable);
+        } else {
+          console.error("No such document!");
+        }
+      } catch (error) {
+        console.error("Error fetching document:", error);
+      }
+    };
+
+    fetchFoodCartAvailability();
+  }, []);
+
+  // Handle button toggle click
+  const handleToggle = async () => {
+    try {
+      const docRef = doc(db, "adminControls", "adminAccess");
+      // Toggle the foodCartAvailable state
+      const newFoodCartAvailable = !isOrderingEnabled;
+
+      // Update Firestore with the new value
+      await setDoc(
+        docRef,
+        { foodCartAvailable: newFoodCartAvailable },
+        { merge: true }
+      );
+
+      // Update local state based on the new value
+      setIsOrderingEnabled(newFoodCartAvailable);
+    } catch (error) {
+      console.error("Error updating document:", error);
+    }
+  };
+
+  const fetchTopSpendingCustomers = async () => {
+    const usersCollection = collection(db, "users");
+    const querySnapshot = await getDocs(usersCollection);
+
+    const customers: TopSpendingCustomer[] = querySnapshot.docs
+      .map((doc) => {
+        const data = doc.data() as User;
+
+        // Filter out users whose role is not "user"
+        if (data.role !== "user") {
+          return null; // Skip users who do not have the "user" role
+        }
+
+        // Determine membership tier based on totalPaid
+        const membership =
+          data.totalPaid < 1000
+            ? "REGULAR"
+            : data.totalPaid < 5000
+            ? "BRONZE"
+            : data.totalPaid < 10000
+            ? "SILVER"
+            : data.totalPaid < 20000
+            ? "GOLD"
+            : "DIAMOND";
+
+        return {
+          username: data.username,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          membership,
+          amount: data.totalPaid,
+        };
+      })
+      .filter((cus) => cus !== null); // Remove null values from the array
+
+    // Sort customers by amount in descending order
+    customers.sort((a, b) => b.amount - a.amount);
+
+    setTopSpendingCustomers(customers);
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchTopSpendingCustomers();
+  }, []);
 
   const toggleForm = () => {
     setIsFormOpen((prev) => !prev);
@@ -22,13 +142,68 @@ const AdminHomePage = () => {
   };
 
   // GETS THE FIVE LATEST REVIEWS TO DISPLAY
-  const latestReviews = customerReviewList
-    .sort((a, b) => {
-      const dateA = new Date(`${a.date} ${a.time}`);
-      const dateB = new Date(`${b.date} ${b.time}`);
-      return dateB - dateA; // Sort in descending order
-    })
-    .slice(0, 5);
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        // Step 1: Fetch reviews from customerFeedbacks collection
+        const reviewsSnapshot = await getDocs(
+          collection(db, "customerFeedbacks")
+        );
+        const reviewsData = [];
+
+        // Step 2: Fetch user info for each review
+        for (const reviewDoc of reviewsSnapshot.docs) {
+          const review = reviewDoc.data();
+          const userEmail = review.userEmail;
+
+          // Ensure the userEmail exists and is valid
+          if (userEmail) {
+            try {
+              // Fetch user details from the 'users' collection using userEmail as the doc ID
+              const userDocRef = doc(db, "users", userEmail);
+              const userDoc = await getDoc(userDocRef);
+              const user = userDoc.exists()
+                ? userDoc.data()
+                : { firstName: "Unknown", lastName: "User" };
+
+              // Combine review data with user info
+              const combinedReview = {
+                ...review,
+                name: `${user.firstName} ${user.lastName}`, // Combine first and last name
+              };
+
+              reviewsData.push(combinedReview);
+            } catch (userError) {
+              console.error(
+                `Error fetching user info for ${userEmail}:`,
+                userError
+              );
+              reviewsData.push({
+                ...review,
+                name: "Unknown User", // Fallback in case of error fetching user data
+              });
+            }
+          } else {
+            console.warn("Missing or invalid userEmail in review:", review);
+          }
+        }
+
+        // Step 3: Sort reviews by date and time in descending order
+        const sortedReviews = reviewsData.sort((a, b) => {
+          const dateA = new Date(`${a.dateAdded} ${a.timeAdded}`);
+          const dateB = new Date(`${b.dateAdded} ${b.timeAdded}`);
+          return dateB - dateA; // Sort in descending order
+        });
+
+        // Step 4: Get the latest 5 reviews
+        setLatestReviews(sortedReviews.slice(0, 5));
+      } catch (error) {
+        console.error("Error fetching reviews or user info:", error);
+      }
+    };
+
+    fetchReviews();
+  }, []);
 
   return (
     <div className="mt-14 min-h-[calc(100vh-56px)] w-full px-10 md:px-24 2xl:px-56">
@@ -55,10 +230,9 @@ const AdminHomePage = () => {
           <button
             className="font-bold h-10 bg-[#F0565F] max-w-[170px] w-full text-white duration-200
           rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:bg-red-400 hover:scale-[1.02]"
-            onClick={() => {
-              setIsFormOpen(true);
+            onClick={(e) => {
               e.stopPropagation();
-              toggleForm();
+              setIsFormOpen((prev) => !prev); // Toggle state directly
             }}
           >
             Input Expenses
@@ -126,6 +300,7 @@ const AdminHomePage = () => {
             <div className="flex flex-col gap-2 justify-center">
               {topSpendingCustomers
                 .sort((a, b) => b.amount - a.amount) // Sort in descending order
+                .slice(0, 10) // Limit to top 10
                 .map((cus, index) => (
                   <div
                     key={cus.username} // Add a unique key for each item
@@ -162,8 +337,8 @@ const AdminHomePage = () => {
                           {cus.firstName} {cus.lastName}
                         </h1>
                       </div>
-                      <h1 className="text-sm w-1/3 text-right font-semibold text-gray-900">
-                        PHP {cus.amount}
+                      <h1 className="text-[13px] pt-[2px] w-1/3 text-right font-semibold text-gray-900">
+                        PHP {cus.amount.toFixed(2)}
                       </h1>
                     </div>
 
@@ -217,14 +392,15 @@ const AdminHomePage = () => {
             <div className="flex flex-col gap-1 pb-2 justify-center overflow-y-auto">
               {latestReviews.map((rev) => (
                 <div
-                  className="w-full border-gray-100 border-2 shadow-md rounded-md pt-2 pb-4 px-4
-        bg-white flex flex-col gap-1"
+                  className="w-full border-gray-100 border-2 shadow-md rounded-md pt-2 pb-4 px-4 bg-white flex flex-col gap-1"
                   key={rev.id}
                 >
                   <div className="w-full flex items-center gap-2">
                     <i
                       className={`fa fa-thumbs-${
-                        rev.like ? "up text-[#60A66F]" : "down text-[#F0565F]"
+                        rev.positiveFeedback
+                          ? "up text-[#60A66F]"
+                          : "down text-[#F0565F]"
                       } text-lg`}
                       aria-hidden="true"
                     ></i>
@@ -233,15 +409,56 @@ const AdminHomePage = () => {
                     </span>
                   </div>
                   <div className="flex items-center text-xs text-gray-500">
-                    <span>{rev.email} - </span>
+                    <span>{rev.userEmail} - </span> {/* Updated email */}
                     <span>
-                      {rev.date} - {rev.time}
-                    </span>
+                      {rev.dateAdded} - {rev.timeAdded}
+                    </span>{" "}
+                    {/* Updated date and time */}
                   </div>
-                  <p className="text-gray-700 text-sm italic">"{rev.review}"</p>
+                  <p className="text-gray-700 text-sm italic">
+                    "{rev.comments}"
+                  </p>{" "}
+                  {/* Updated review content */}
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+
+        <hr className="mt-10 mb-4" />
+        <div className="w-full justify-center flex">
+          <div
+            className="flex flex-col w-full items-center mb-4 max-w-[300px] bg-white border-2
+        border-gray-100 shadow-md rounded-md px-6 py-4 gap-2"
+          >
+            <h1 className="font-bold text-base text-orange-950 text-center">
+              Customer Orders -{" "}
+              <span
+                className={
+                  isOrderingEnabled ? "text-[#60A66F]" : "text-[#F0565F]"
+                }
+              >
+                {isOrderingEnabled ? "Enabled" : "Disabled"}
+              </span>
+            </h1>
+            <p className="font-light text-gray-500 text-sm text-center mt-[-5px]">
+              Click or tap to{" "}
+              <span className={`font-normal text-gray-700`}>
+                {isOrderingEnabled ? "disable" : "enable"}
+              </span>{" "}
+              ordering for customers.
+            </p>
+            <button
+              className={`font-bold h-10 ${
+                isOrderingEnabled
+                  ? "bg-[#F0565F] hover:bg-red-400"
+                  : "bg-[#60A66F] hover:bg-green-400"
+              } max-w-60 w-full text-white duration-200
+          rounded-md shadow-md text-sm hover:scale-[1.02]`}
+              onClick={handleToggle}
+            >
+              {isOrderingEnabled ? "Disable Ordering" : "Enable Ordering"}
+            </button>
           </div>
         </div>
       </div>

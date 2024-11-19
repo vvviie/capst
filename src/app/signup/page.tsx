@@ -14,6 +14,7 @@ import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
+import TermsAndConditions from "../components/TermsAndConditions";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -38,6 +39,15 @@ const SignupPage: React.FC = () => {
   const [isEyeOpen, setIsEyeOpen] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+
+  const handleTermsClick = () => {
+    setShowTerms(true);
+  };
+
+  const handleCloseTerms = () => {
+    setShowTerms(false);
+  };
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
@@ -448,6 +458,19 @@ const SignupPage: React.FC = () => {
                   onChange={handleChange}
                 />
               </div>
+              <div className="w-fulltext-gray-500 font-light text-sm my-2 text-center">
+                <span className="">
+                  By signing up, I accept the{" "}
+                  <span
+                    className="text-blue-500 font-semibold underline underline-offset-2
+                    cursor-pointer hover:text-blue-400"
+                    onClick={handleTermsClick}
+                  >
+                    terms and conditions
+                  </span>{" "}
+                  of using this service.
+                </span>
+              </div>
               <div className="flex gap-4 w-full">
                 <button
                   type="button"
@@ -468,6 +491,18 @@ const SignupPage: React.FC = () => {
             </>
           )}
         </div>
+        {showTerms && (
+          <div
+            className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] z-20 flex justify-center items-center
+      px-10 md:px-24 xl:px-56"
+            style={{ background: "rgba(0, 0, 0, 0.85" }}
+            onClick={handleCloseTerms}
+          >
+            <div onClick={(e) => e.stopPropagation()}>
+              <TermsAndConditions onClose={handleCloseTerms} />
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

@@ -1,20 +1,77 @@
 "use client";
-import { customerReviewList } from "@/app/data";
+import { useEffect, useState } from "react";
+import { db } from "@/app/firebase";
+import { collection, getDocs, query, where, doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
-import React, { useState } from "react";
 
 const CustomerReviewsPage = () => {
   const [review, setReview] = useState("all");
+  const [reviews, setReviews] = useState([]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      const feedbackCollection = collection(db, "customerFeedbacks");
+      const usersCollection = collection(db, "users");
+  
+      // Fetch feedback documents
+      const feedbackSnapshot = await getDocs(feedbackCollection);
+      const feedbackData = feedbackSnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+  
+      // Fetch user documents and map emails to names
+      const userSnapshot = await getDocs(usersCollection);
+      const userData = userSnapshot.docs.reduce((acc, doc) => {
+        const { email, firstName, lastName } = doc.data();
+        acc[email] = `${firstName} ${lastName}`;
+        return acc;
+      }, {});
+  
+      // Combine feedback with user data, dynamically fetch names if needed
+      const reviewsWithNames = await Promise.all(
+        feedbackData.map(async (item) => {
+          let fullName = userData[item.userEmail] || "Unknown User";
+  
+          // Dynamically fetch user if not found in preloaded user data
+          if (fullName === "Unknown User") {
+            const userDocRef = doc(db, "users", item.userEmail); // Use email as document ID
+            const userDoc = await getDoc(userDocRef);
+  
+            if (userDoc.exists()) {
+              const userDocData = userDoc.data();
+              fullName = `${userDocData.firstName} ${userDocData.lastName}`;
+            }
+          }
+  
+          return {
+            id: item.orderId,
+            like: item.positiveFeedback === true, // Ensure truthy check
+            name: fullName,
+            email: item.userEmail,
+            date: item.dateAdded,
+            time: item.timeAdded,
+            review: item.comments,
+          };
+        })
+      );
+  
+      // Update state with reviews
+      setReviews(reviewsWithNames);
+    };
+  
+    fetchReviews();
+  }, []);
 
   const handleReviewChange = (event) => {
     setReview(event.target.value);
   };
 
-  // Sort customer reviews by date in descending order
-  const sortedReviews = [...customerReviewList].sort((a, b) => {
+  // Sort reviews by date in descending order
+  const sortedReviews = [...reviews].sort((a, b) => {
     const dateA = new Date(a.date);
     const dateB = new Date(b.date);
-    return dateB - dateA; // Descending order
+    return dateB - dateA;
   });
 
   return (
@@ -22,14 +79,11 @@ const CustomerReviewsPage = () => {
       className="w-full mt-14 min-h-[calc(100vh-56px)] px-10 md:px-24 xl:px-56 py-4
     flex items-start justify-center"
     >
-      {/* BACKGROUND IMAGE CONTAINER */}
       <div
         className="fixed hidden top-0 left-0 h-[100vh] w-full lg:block z-[-1]
       lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
       ></div>
-      {/* MAIN CONTAINER */}
       <div className="w-full max-w-[1200px]">
-        {/* HEADER CONTAINER */}
         <div className="flex items-center justify-between gap-2 mb-4">
           <div className="flex items-center gap-1 justify-start">
             <Link
@@ -45,8 +99,6 @@ const CustomerReviewsPage = () => {
             </h1>
           </div>
           <select
-            name=""
-            id=""
             className="text-center w-32 font-bold text-gray-500 h-10 border-2
             border-gray-100 shadow-md rounded-md"
             onChange={handleReviewChange}
@@ -56,18 +108,17 @@ const CustomerReviewsPage = () => {
             <option value="dislike">Dislike</option>
           </select>
         </div>
-        {/* REVIEWS CONTAINER */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {sortedReviews.map((rev) => (
             <div
               className={`w-full border-gray-100 border-2 shadow-md rounded-md pt-2 pb-4 px-4
-      bg-white flex flex-col gap-1 ${
-        review === "dislike" && rev.like
-          ? "hidden"
-          : review === "like" && !rev.like
-          ? "hidden"
-          : "visible"
-      }`}
+              bg-white flex flex-col gap-1 ${
+                review === "dislike" && rev.like
+                  ? "hidden"
+                  : review === "like" && !rev.like
+                  ? "hidden"
+                  : "visible"
+              }`}
               key={rev.id}
             >
               <div className="w-full flex items-center gap-2">

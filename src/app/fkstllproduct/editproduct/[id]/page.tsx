@@ -60,7 +60,7 @@ const EditProductPage = () => {
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [category, setCategory] = useState("drinks"); // Default category Collection
-
+  const [aaa, setAaa] = useState("");
   //#region variables
 
   const handleUpdateClick = () => {
@@ -122,9 +122,7 @@ const EditProductPage = () => {
   // For DRINKS ONLY - Drink's Category
   /*const [passableSelectedDrinkType, setPassableSelectedDrinkType] =
     useState("hotDrinks");*/
-  const [passableSelectedDrinkType, setPassableSelectedDrinkType] = useState<
-    string | null
-  >(null);
+    const [passableSelectedDrinkType, setPassableSelectedDrinkType] = useState<string>("");
 
   // For DRINKS ONLY - Drink's Size
   const [drinkSize, setDrinkSize] = useState<string | null>(null);
@@ -162,6 +160,8 @@ const EditProductPage = () => {
 
   const [selectedDrinkType, setSelectedDrinkType] = useState("hotDrinks");
 
+  const [menuCategories, setMenuCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   // SET ALLERGIES
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]); //
 
@@ -195,8 +195,14 @@ const EditProductPage = () => {
   useEffect(() => {
     const drinkType =
       selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
+    console.log("useEffect triggered");
+    console.log("drinkType:", drinkType);
+    console.log("selectedCat:", selectedCat);
+    console.log("selectedDrinkType:", selectedDrinkType);
+    console.log("passableSelectedDrinkType:", passableSelectedDrinkType);
+  
     if (drinkType) {
-      //fetchExistingIDs(extractedCategory, drinkType);
+      // fetchExistingIDs(extractedCategory, drinkType);
     }
   }, [
     extractedCategory,
@@ -300,10 +306,6 @@ const EditProductPage = () => {
     const newValue = event.target.value;
     setItemName(newValue); // Update the state
   };
-
-  useEffect(() => {
-    //console.log("Selected Drink Type:", passableSelectedDrinkType);
-  }, [passableSelectedDrinkType]); // Runs when passableSelectedDrinkType changes
 
   const handleUploadClick = () => {
     // Trigger the file input click
@@ -518,32 +520,30 @@ const EditProductPage = () => {
       const docRef = doc(db, collectionRef, id);
       console.log(`Document ID: ${id}`);
       console.log(`Document Reference: ${docRef.path}`);
-
+  
       try {
         const docSnap = await getDoc(docRef);
         console.log(
           "Document Snapshot:",
           docSnap.exists() ? "Exists" : "Does not exist"
         );
-
+  
         if (docSnap.exists()) {
           const data = docSnap.data();
-
+          console.log("Document Data:", data); // Log entire document data for inspection
+  
           // Extract allergens and ensure it's an array
-          const fetchedAllergens = Array.isArray(data.contains)
-            ? data.contains
-            : [];
-
-          console.log("Product Data:", data);
-
+          const fetchedAllergens = Array.isArray(data.contains) ? data.contains : [];
+          console.log("Fetched Allergens:", fetchedAllergens);
+  
           // Extract the size and convert it to a number
           const sizeWithUnit = data.currSize || "0oz"; // Fallback to '0oz' if undefined
           const sizeValue = parseFloat(sizeWithUnit); // Extract numeric part
           const upsizeWithUnit = data.upsizeSize || "0oz"; // Fallback to '0oz' if undefined
           const upsizeValue = parseFloat(upsizeWithUnit); // Extract numeric part for display
-
+  
           // Ensure the data matches the ProductType structure
-          const fetchedProduct: ProductType = {
+          const fetchedProduct = {
             name: data.title,
             category: data.prodCategory,
             availability: data.availability,
@@ -560,15 +560,32 @@ const EditProductPage = () => {
             type: data.type,
             allergens: fetchedAllergens,
           };
-
-          // Extract the filename from the imageUrl
-          const imageUrl = fetchedProduct.imageUrl;
-          const imageFilename = imageUrl.split("/").pop().split("?")[0];
-
-          // Set the state with the fetched product data
+  
+          console.log("Fetched Product Object:", fetchedProduct); // Log the entire product object
+  
+          // Determine selected category based on itemId
+          let determinedCategory = "drinks"; // Default category
+          if (fetchedProduct.itemId.includes("drink")) {
+            determinedCategory = "drinks";
+          } else if (fetchedProduct.itemId.includes("mainCourse")) {
+            determinedCategory = "mainCourseMenu";
+          } else if (fetchedProduct.itemId.includes("pastries")) {
+            determinedCategory = "pastriesMenu";
+          } else if (fetchedProduct.itemId.includes("pasta")) {
+            determinedCategory = "pastaMenu";
+          } else if (fetchedProduct.itemId.includes("snacks")) {
+            determinedCategory = "snacksMenu";
+          } else if (fetchedProduct.itemId.includes("sandwiches")) {
+            determinedCategory = "sandwichesMenu";
+          }
+  
+          console.log("Determined Category:", determinedCategory);
+  
+          // Set state with fetched product data
+          setAaa(fetchedProduct.itemCategory);
           setProduct(fetchedProduct);
           setImageUrl(fetchedProduct.imageUrl);
-          setFileName(imageFilename);
+          setFileName(fetchedProduct.imageUrl.split("/").pop().split("?")[0]);
           setSelectedAvailability(fetchedProduct.availability);
           setProdID(fetchedProduct.itemId);
           setItemName(fetchedProduct.name);
@@ -577,24 +594,14 @@ const EditProductPage = () => {
           setPassableSelectedDrinkType(fetchedProduct.itemCategory);
           setDrinkSize(`${fetchedProduct.size}oz`);
           setUpsize(fetchedProduct.isUpsize);
-          console.log(fetchedProduct.isUpsize);
           setUpsizeSize(`${fetchedProduct.upsizeSize}oz`);
           setUpsizePrice(fetchedProduct.upsizePrice);
           setSelectedDrinkType(fetchedProduct.type);
-          setSelectedAllergens(
-            fetchedAllergens.filter((allergen) => allergen !== "")
-          );
+          setSelectedAllergens(fetchedAllergens.filter((allergen) => allergen !== ""));
           setDesc(fetchedProduct.itemDescription);
-
-          // Set the selected category based on fetched product data
-          //setSelectedCat(fetchedProduct.category); // Set the selected category here
-          // Validate the fetched category against valid categories
-          const validCategories = menuCategory.map((cat) => cat.prodCat); // Assuming menuCategory is an array of valid categories
-          if (validCategories.includes(fetchedProduct.category)) {
-            setSelectedCat(fetchedProduct.category); // Set the selected category here
-          } else {
-            setSelectedCat("drinks"); // Default to "drinks" if the fetched category is invalid
-          }
+  
+          // Use the determined category directly
+          setSelectedCat(determinedCategory);
         } else {
           console.error("No such document!");
         }
@@ -607,7 +614,17 @@ const EditProductPage = () => {
       console.error("Invalid document ID");
       setLoading(false);
     }
-  };
+  };  
+  
+  // useEffect to log `aaa` after it changes
+  useEffect(() => {
+    console.log("Updated aaa:", aaa);
+  }, [aaa]);  // This will run every time `aaa` changes
+  
+    // useEffect to log `aaa` after it changes
+    useEffect(() => {
+      console.log("Updated bbb:", passableSelectedDrinkType);
+    }, [aaa]);  // This will run every time `aaa` changes
 
   // Fetching all collections
   useEffect(() => {
@@ -667,9 +684,10 @@ const EditProductPage = () => {
       milkAlmond = 30;
 
       const currentDrinkType = passableSelectedDrinkTypeRef.current;
-      if (currentDrinkType === "icedDrinks") {
+      if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
         addVanilla = 25;
       }
+
     } else if (selectedCat === "mainCourseMenu") {
       serveMashedPotato = false;
       serveRice = false;
@@ -711,9 +729,20 @@ const EditProductPage = () => {
       }
     }
 
+    function toCamelCase(str) {
+      return str
+          .toLowerCase() // Convert the entire string to lowercase
+          .split(" ") // Split the string by spaces
+          .map((word, index) => 
+              index === 0 
+                  ? word // Keep the first word lowercase
+                  : word.charAt(0).toUpperCase() + word.slice(1) // Capitalize the first letter of subsequent words
+          )
+          .join(""); // Join the words back together
+  }
+
     const documentData = {
-      prodCategory:
-        selectedCat === "drinks" ? passableSelectedDrinkType : selectedCat,
+      prodCategory: passableSelectedDrinkType,
       img: finalImageUrl,
       availability: selectedAvailability,
       calorie: calorie,
@@ -796,6 +825,99 @@ const EditProductPage = () => {
       console.error("Error updating document:", error);
     }
   };
+
+  const toCamelCase = (str) => {
+    if (!str) return ""; // Return an empty string if str is null or undefined
+    return str
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase());
+  };
+
+  const toReadable = (str) => {
+    if (!str) return ""; // Return an empty string if str is null or undefined
+    return str.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (char) => char.toUpperCase());
+  };
+
+   // Fetch categories from the database based on selected main category
+  const fetchCategoriesFromDB = async (mainCategory: string) => {
+    try {
+        // Reference to the menuCategories collection
+        const menuCategoriesRef = collection(db, "menuCategories");
+
+        // Determine the document based on the selected main category
+        let categoriesDoc = null;
+        switch (mainCategory) {
+            case "drinks":
+                categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
+                break;
+            case "mainCourseMenu":
+                categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
+                break;
+            case "pastriesMenu":
+                categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
+                break;
+            case "snacksMenu":
+                categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
+                break;
+            case "sandwichesMenu":
+                categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
+                break;
+            case "pastaMenu":
+                categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
+                break;
+            default:
+                categoriesDoc = null; // Default case, in case no main category is selected
+                break;
+        }
+
+        console.log("Categories document reference:", categoriesDoc);
+
+        if (!categoriesDoc) return;
+
+        // Get the document snapshot
+        const docSnapshot = await getDoc(categoriesDoc);
+        
+        console.log("Document snapshot:", docSnapshot);
+
+        // If the document exists, extract the categories
+        if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("Document data:", data);
+
+            let allCategories: string[] = [];
+            if (data.categories && Array.isArray(data.categories)) {
+                // Extract categories from the document
+                allCategories = data.categories
+                    .filter((item) => item.category) // Filter out any items without a category
+                    .map((item) => item.category); // Extract the category names
+            }
+
+            console.log("All categories:", allCategories);
+
+            // Format categories for display: Convert category names to a human-readable format
+            const formattedCategories = allCategories.map((category) =>
+                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+            );
+
+            console.log("Formatted categories:", formattedCategories);
+
+            setMenuCategories(formattedCategories);
+
+            // Reset selectedCategory if it's not a valid option
+            if (!formattedCategories.includes(selectedCategory)) {
+                setSelectedCategory(formattedCategories[0] || null); // Default to first category
+            }
+        } else {
+            console.log("No such document!");
+        }
+    } catch (error) {
+        console.error("Error fetching categories from database:", error);
+    }
+};
+
+useEffect(() => {
+    fetchCategoriesFromDB(selectedCat);
+}, [selectedCat]);
 
   if (loading) return <p>Loading...</p>;
 
@@ -1029,35 +1151,34 @@ const EditProductPage = () => {
                 />
               </div>
               {/* PRODUCT CATEGORY - KAPAG HINDI DRINK, AUTOMATIC NA KUNG ANO ANG MENU CATEGORY NILA*/}
-              {selectedCat === "drinks" && (
-                //PRODUCT CATEGORY FOR DRINKS
-                <div className="flex-1 flex flex-col gap-1 items-center justify-center">
-                  <label
-                    className="text-orange-950 text-sm w-full text-left space-x-1"
-                    htmlFor="catDrinks"
-                  >
-                    <span>Item Category</span>
-                  </label>
-                  <select
-                    name="catDrinks"
-                    id="catDrinks"
-                    className="rounded-md shadow-sm border-2 border-gray-100
-                                    text-lg text-gray-600 font-semibold bg-white cursor-pointer
-                                    py-[5px] w-full text-center"
-                    value={passableSelectedDrinkType || "hotDrinks"} // Use passableSelectedDrinkType as default
-                    onChange={(e) => {
-                      const selectedValue = e.target.value;
-                      setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
-                      setSelectedDrinkType(selectedValue); // Set selectedDrinkType
-                    }}
-                  >
-                    <option value="hotDrinks">Hot Drink</option>
-                    <option value="icedDrinks">Iced Drink</option>
-                    <option value="blendedDrinks">Blended Drink</option>
-                    <option value="affogatoDrinks">Affogato Drink</option>
-                  </select>
-                </div>
-              )}
+              <div className="flex-1 flex flex-col gap-1 items-center justify-center">
+                <label
+                  className="text-orange-950 text-sm w-full text-left space-x-1"
+                  htmlFor="catDrinks"
+                >
+                  <span>Item Category</span>
+                </label>
+                <select
+                  name="catDrinks"
+                  id="catDrinks"
+                  className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer py-[5px] w-full text-center"
+                  value={toReadable(passableSelectedDrinkType)} // Convert stored value to readable format
+                  onChange={(e) => {
+                    const selectedValue = toCamelCase(e.target.value); // Convert selected value to camelCase
+                    setPassableSelectedDrinkType(selectedValue); // Set camelCase value
+                  }}
+                >
+                  {menuCategories.length > 0 ? (
+                    menuCategories.map((category, index) => (
+                      <option key={index} value={category}>
+                        {category}
+                      </option>
+                    ))
+                  ) : (
+                    <option>No categories available</option>
+                  )}
+                </select>
+              </div>
             </div>
 
             {selectedCat === "drinks" && (
@@ -1169,7 +1290,7 @@ const EditProductPage = () => {
                   name="menuItemType"
                   id="menuItemType"
                   className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer h-10 w-full"
-                  value={selectedDrinkType || ""}
+                  value={selectedDrinkType ? selectedDrinkType : ""}
                   onChange={handleDrinkTypeChange}
                   ref={selectRef}
                 >

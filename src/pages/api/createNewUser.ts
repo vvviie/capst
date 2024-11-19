@@ -1,10 +1,14 @@
 import admin from 'firebase-admin';
+import { ServiceAccount } from 'firebase-admin';
 
-// Initialize Firebase Admin SDK if not already initialized
+// Import and cast adminsettings.json as ServiceAccount
+import adminsettings from '../../app/adminsettings/adminsettings.json';
+const serviceAccount = adminsettings as ServiceAccount;
+
+// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId: "testingcapstonejg",
+        credential: admin.credential.cert(serviceAccount),
         databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
     });
 }

@@ -58,28 +58,30 @@ const LoginPage = () => {
       const isStaff = email.endsWith("@fikastallestaff.com");
       const collectionName = isStaff ? "staff" : "users";
       const roleField = isStaff ? "staffRole" : "role";
-  
-      console.log(`Fetching from collection: ${collectionName} with email: ${email}`);
-  
+
+      console.log(
+        `Fetching from collection: ${collectionName} with email: ${email}`
+      );
+
       const userRef = doc(firestore, collectionName, email);
       const userDoc = await getDoc(userRef);
-  
+
       if (userDoc.exists()) {
         console.log("Document exists in Firestore.");
-  
+
         const userData = userDoc.data();
         const role = userData[roleField];
         const isVerified = userData.verified;
-  
+
         console.log(`Fetched role: ${role}, verified: ${isVerified}`);
-  
+
         if (!role) {
           setMessage({
             text: `Role field '${roleField}' not found in document.`,
             type: "error",
           });
         }
-  
+
         // Return role and verified status
         return { role, isVerified };
       } else {
@@ -92,30 +94,37 @@ const LoginPage = () => {
       }
     } catch (error) {
       console.error("Error fetching user details:", error);
-      setMessage({ text: `Error fetching user details: ${error.message}`, type: "error" });
+      setMessage({
+        text: `Error fetching user details: ${error.message}`,
+        type: "error",
+      });
       return null;
     }
   };
-  
+
   const handleLogin = async (event) => {
     event.preventDefault();
     const email = event.target.email.value;
     const password = event.target.password.value;
-  
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
-  
+
       // Determine if the email belongs to staff
       const isStaff = email.endsWith("@fikastallestaff.com");
-  
+
       // If the user is not staff, check if the user has been verified either through email or Firestore
       if (!isStaff) {
         const userDetails = await fetchUserDetails(email);
-  
+
         if (userDetails) {
           const { role, isVerified } = userDetails;
-  
+
           // If verified field is true, allow login
           if (isVerified) {
             console.log("User is verified via Firestore.");
@@ -131,26 +140,26 @@ const LoginPage = () => {
           return;
         }
       }
-  
+
       // Fetch user role from Firestore (using destructuring from the above check)
       const userDetails = await fetchUserDetails(email);
-      
+
       if (userDetails) {
         const { role } = userDetails;
-  
+
         // Now use the role to redirect the user
         if (role === "admin") {
-          Cookies.set("admin", user.refreshToken, { expires: 1 / 24 });
-          router.push("/"); // Redirect to the homepage
+          Cookies.set("admin", user.refreshToken);
+          router.push("/adminhome");
         } else if (role === "bar") {
-          Cookies.set("bar", user.refreshToken, { expires: 1 / 24 });
+          Cookies.set("bar", user.refreshToken);
           router.push("/fkstllorders");
         } else if (role === "kitchen") {
-          Cookies.set("kitchen", user.refreshToken, { expires: 1 / 24 });
+          Cookies.set("kitchen", user.refreshToken);
           router.push("/fkstllorders");
         } else {
-          Cookies.set("user", user.refreshToken, { expires: 1 / 24 });
-          router.push("/"); // Redirect to the homepage for general users
+          Cookies.set("user", user.refreshToken);
+          router.push("/");
         }
       } else {
         // Handle case where role is undefined or not fetched
@@ -159,7 +168,7 @@ const LoginPage = () => {
     } catch (error) {
       setMessage({ text: `Invalid username or password.`, type: "error" });
     }
-  
+
     // Clear message after 3 seconds
     setTimeout(() => setMessage(null), 3000);
   };
@@ -208,34 +217,36 @@ const LoginPage = () => {
           </div>
 
           <div className="w-full flex flex-col gap-1 items-center justify-center">
-          <label
-            className="text-orange-950 text-sm w-full text-left space-x-1"
-            htmlFor="inputPassword"
-          >
-            <i className="fa-solid fa-lock text-gray-700"></i>
-            <span>Password</span>
-          </label>
-          
-          {/* Parent div for input and icon */}
-          <div className="relative w-full"> {/* Make this relative for positioning */}
-          <input
-              className="border-2 border-solid border-orange-900 w-full h-10 pl-4 pr-12 rounded-md bg-orange-50"
-              name="password"
-              id="inputPassword"
-              type={showPassword ? "text" : "password"} // Correctly handle password visibility
-              placeholder="●●●●●●●●●●"
-              required
-              autoComplete="off"
-            />
-            {/* Custom Eye Icon */}
-            <i
-              className={`absolute right-3 top-2.5 fa-solid ${
-                showPassword ? "fa-eye-slash" : "fa-eye"
-              } text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
-              onClick={togglePasswordVisibility}
-            ></i>
+            <label
+              className="text-orange-950 text-sm w-full text-left space-x-1"
+              htmlFor="inputPassword"
+            >
+              <i className="fa-solid fa-lock text-gray-700"></i>
+              <span>Password</span>
+            </label>
+
+            {/* Parent div for input and icon */}
+            <div className="relative w-full">
+              {" "}
+              {/* Make this relative for positioning */}
+              <input
+                className="border-2 border-solid border-orange-900 w-full h-10 pl-4 pr-12 rounded-md bg-orange-50"
+                name="password"
+                id="inputPassword"
+                type={showPassword ? "text" : "password"} // Correctly handle password visibility
+                placeholder="●●●●●●●●●●"
+                required
+                autoComplete="off"
+              />
+              {/* Custom Eye Icon */}
+              <i
+                className={`absolute right-3 top-3 fa-solid ${
+                  showPassword ? "fa-eye-slash" : "fa-eye"
+                } text-gray-300 cursor-pointer hover:text-gray-500 hover:duration-100`}
+                onClick={togglePasswordVisibility}
+              ></i>
+            </div>
           </div>
-        </div>
           <p
             className="text-sm font-semibold text-gray-600 underline-offset-2 underline
           hover:text-gray-400 cursor-pointer duration-300 hover:scale-[1.02]"
