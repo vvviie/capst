@@ -44,15 +44,15 @@ interface FeaturedItem {
 const CRUDProductPage = () => {
   const [mainCategory, setMainCategory] = useState<string>("Drinks");
   const [selectedCategory, setSelectedCategory] =
-    useState<string>("icedDrinks");
+    useState<string>("All");
   const [activeItem, setActiveItem] = useState<string | null>(null);
 
-  const drinks = useDrinksByCategory(selectedCategory);
-  const mainCourses = useMainCoursesByCategory(selectedCategory);
-  const pastas = usePastasByCategory(selectedCategory);
-  const pastries = usePastriesByCategory(selectedCategory);
-  const snacks = useSnacksByCategory(selectedCategory);
-  const sandwiches = useSandwichesByCategory(selectedCategory);
+  const drinks = useDrinksByCategory(mainCategory, selectedCategory);
+  const mainCourses = useMainCoursesByCategory(mainCategory, selectedCategory);
+  const pastas = usePastasByCategory(mainCategory, selectedCategory);
+  const pastries = usePastriesByCategory(mainCategory, selectedCategory);
+  const snacks = useSnacksByCategory(mainCategory, selectedCategory);
+  const sandwiches = useSandwichesByCategory(mainCategory, selectedCategory);
 
   const menuCategories = useMenuCategories(mainCategory);
 
