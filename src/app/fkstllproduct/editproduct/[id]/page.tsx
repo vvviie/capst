@@ -585,7 +585,7 @@ const EditProductPage = () => {
           setAaa(fetchedProduct.itemCategory);
           setProduct(fetchedProduct);
           setImageUrl(fetchedProduct.imageUrl);
-          setFileName(fetchedProduct.imageUrl.split("/").pop().split("?")[0]);
+          setFileName(decodeURIComponent(fetchedProduct.imageUrl.split("/").pop().split("?")[0]).split('/').pop());
           setSelectedAvailability(fetchedProduct.availability);
           setProdID(fetchedProduct.itemId);
           setItemName(fetchedProduct.name);
