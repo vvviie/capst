@@ -877,7 +877,7 @@ const OrdersPage = () => {
                             {/* ITEM TITLE AND PRICE CONTAINER */}
                             <div className="font-bold text-sm flex justify-between items-center">
                               <span className="font-semibold">
-                                {item.title}
+                                {`${item.qty || 1}x - ${item.title}`}
                                 {isHighestPriced && ( // Only show discounted label for the highest-priced item
                                   ((order.status === "TO PAY" && applySrPWD[order.id]) || 
                                   (order.status !== "TO PAY" && order.pwdSenior)) && ( // Apply condition to show discount label
