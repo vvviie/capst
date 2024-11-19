@@ -16,6 +16,7 @@ import {
   doc,
   getDoc,
   onSnapshot,
+  setDoc,
 } from "firebase/firestore";
 import jsPDF from "jspdf";
 
@@ -38,7 +39,6 @@ type Order = {
   sampleDiscountDeduction?: number;
   slug: string;
   subtotal: number;
-  cardIdImg?: string;
 };
 // #endregion
 
@@ -64,7 +64,6 @@ const AdminAndStaffOrdersPage = () => {
 
   const [isCancelVisible, setIsCancelVisible] = useState(false);
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
-  const [isRejectedVisible, setIsRejectedVisible] = useState(false);
 
   // Fetch orders on component mount and when `orderStatCat` changes
   useEffect(() => {
@@ -169,7 +168,6 @@ const AdminAndStaffOrdersPage = () => {
             promo: data.promoDiscounted,
             slug: data.slug,
             subtotal: data.subtotal || totalPrice,
-            cardIdImg: data.cardIdImg,
           };
 
           // Add only if status matches selected category or if "ALL"
@@ -235,9 +233,7 @@ const AdminAndStaffOrdersPage = () => {
         ? "READY"
         : value === "done"
         ? "DONE"
-        : value === "cancelled"
-        ? "CANCELLED"
-        : "REJECTED"
+        : "CANCELLED"
     );
   };
 
@@ -255,7 +251,7 @@ const AdminAndStaffOrdersPage = () => {
       const userId = orderData.user; // Retrieve the user associated with the order
 
       if (!userId) {
-        console.error("User ID not found in the order data");
+        console.error("User  ID not found in the order data");
         return;
       }
 
@@ -285,8 +281,81 @@ const AdminAndStaffOrdersPage = () => {
         console.log("Discounted Amount:", sampleDiscountDeduction);
         console.log("New Total Price:", totalPrice);
       }
+      //***********************************************************************
 
-      // Update the order document with new status and totals
+      // Count total items in each category
+      let totalFoods = 0;
+      let totalDrinks = 0;
+
+      orderData.items.forEach((item: any) => {
+        // Log the current item for debugging
+        console.log("Item:", item);
+
+        // Check which category the item belongs to
+        if (
+          item.slug === "maincourse" || // Use the correct casing
+          item.slug === "pasta" ||
+          item.slug === "pastries" ||
+          item.slug === "sandwiches" ||
+          item.slug === "snacks"
+        ) {
+          totalFoods += item.itemQty; // Assuming itemQty holds the quantity of the item
+        } else if (item.slug === "drinks") {
+          totalDrinks += item.itemQty; // Assuming itemQty holds the quantity of the item
+        }
+      });
+
+      // Log the total counts to the console
+      console.log(`Total Foods: ${totalFoods}`);
+      console.log(`Total Drinks: ${totalDrinks}`);
+
+      // Update total foods and drinks sold in salesData collection
+      const foodDrinkDocumentId = "foodDrinkSold";
+      const foodDrinkDataRef = doc(db, "salesData", foodDrinkDocumentId);
+
+      // Prepare the update data
+      const now = new Date();
+      const formattedDate = `${
+        now.getMonth() + 1
+      }/${now.getDate()}/${now.getFullYear()}`; // Format date as MM/DD/YYYY
+
+      // Fetch existing food and drink data
+      const foodDrinkDoc = await getDoc(foodDrinkDataRef);
+      let existingFoodData = {};
+      let existingDrinkData = {};
+
+      if (foodDrinkDoc.exists()) {
+        const foodDrinkData = foodDrinkDoc.data();
+        existingFoodData = foodDrinkData.Foods?.data || {};
+        existingDrinkData = foodDrinkData.Drinks?.data || {};
+      }
+
+      // Increment food count for today
+      existingFoodData[formattedDate] =
+        (existingFoodData[formattedDate] || 0) + totalFoods;
+
+      // Increment drink count for today
+      existingDrinkData[formattedDate] =
+        (existingDrinkData[formattedDate] || 0) + totalDrinks;
+
+      // Prepare the updated food and drink data
+      const updatedFoodDrinkData = {
+        Foods: {
+          data: existingFoodData,
+        },
+        Drinks: {
+          data: existingDrinkData,
+        },
+      };
+
+      // Merge the new food and drink data with the existing document
+      try {
+        await setDoc(foodDrinkDataRef, updatedFoodDrinkData, { merge: true }); // Use merge to avoid overwriting other fields
+      } catch (error) {
+        console.error("Error updating food and drink data: ", error);
+      }
+
+      //***********************************************************************      // Update the order document with new status and totals
       await updateDoc(orderRef, {
         status: "PAID",
         subtotal: totalPrice,
@@ -307,7 +376,77 @@ const AdminAndStaffOrdersPage = () => {
           totalPaid: newTotalPaid,
         });
       } else {
-        console.error("User document not found");
+        console.error("User  document not found");
+      }
+
+      // Update Net Sales in salesData collection
+      const salesDocumentId = "salesExpensesToday";
+      const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+      // Prepare the update data
+      //const now = new Date();
+      const formattedDates = `${
+        now.getMonth() + 1
+      }/${now.getDate()}/${now.getFullYear()}`; // Format date as MM/DD/YYYY
+
+      // Fetch existing Net Sales data
+      const salesDoc = await getDoc(salesDataRef);
+      let existingNetSales = 0;
+
+      if (salesDoc.exists()) {
+        const salesData = salesDoc.data();
+        existingNetSales = salesData.NetSales?.data[formattedDates] || 0; // Get existing sales or default to 0
+      }
+
+      // Calculate the new total sales for today
+      const updatedNetSales = existingNetSales + totalPrice;
+
+      // Prepare the updated sales data
+      const salesDataUpdate = {
+        NetSales: {
+          data: {
+            [formattedDate]: updatedNetSales, // Set the updated total sales for today
+          },
+        },
+      };
+
+      // Merge the new sales data with the existing document
+      try {
+        await setDoc(salesDataRef, salesDataUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+      } catch (error) {
+        console.error("Error updating sales data: ", error);
+      }
+
+      // Update dataAverageOrders collection
+      const averageOrdersRef = doc(
+        db,
+        "dataAverageOrders",
+        `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}`
+      ); // Document name as MM-DD-YYYY
+
+      // Fetch existing average orders data
+      const averageOrdersDoc = await getDoc(averageOrdersRef);
+      let totalOrdersToday = 0;
+
+      if (averageOrdersDoc.exists()) {
+        const averageOrdersData = averageOrdersDoc.data();
+        totalOrdersToday = averageOrdersData.totalOrders || 0; // Get existing total orders or default to 0
+      }
+
+      // Increment the total Orders for today
+      totalOrdersToday += 1;
+
+      // Prepare the updated average orders data
+      const averageOrdersUpdate = {
+        date: `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}`, // Format date as MM/DD/YYYY
+        totalOrders: totalOrdersToday, // Set the updated total orders for today
+      };
+
+      // Merge the new average orders data with the existing document
+      try {
+        await setDoc(averageOrdersRef, averageOrdersUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+      } catch (error) {
+        console.error("Error updating average orders data: ", error);
       }
 
       // Show confirmation of payment
@@ -381,21 +520,6 @@ const AdminAndStaffOrdersPage = () => {
       }, 750);
     } catch (error) {
       console.error("Error updating status to 'CANCELLED':", error);
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    try {
-      await updateDoc(doc(db, "completedOrders", id), {
-        status: "REJECTED",
-      });
-
-      setIsRejectedVisible(true);
-      setTimeout(() => {
-        setIsRejectedVisible(false);
-      }, 750);
-    } catch (error) {
-      console.error("Error updating status to 'REJECTED':", error);
     }
   };
 
@@ -625,7 +749,6 @@ const AdminAndStaffOrdersPage = () => {
                 <option value="ready">Ready</option>
                 <option value="done">Done</option>
                 <option value="cancelled">Cancelled</option>
-                <option value="rejected">Rejected</option>
               </select>
             </div>
             {/* ORDERS LIST CONTAINER */}
@@ -711,55 +834,6 @@ const AdminAndStaffOrdersPage = () => {
                           <span className="font-semibold">Payment method</span>
                           <span>{order.payment}</span>
                         </div>
-                        {/* CARD */}
-                        {order.payment === "Card" && (
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">Card Payment Receipt</span>
-                          </div>
-                        )}
-                        {order.payment === "Card" && order.cardIdImg && (
-                        <>
-                          <div className="w-full flex flex-col gap-1 justify-center items-center">
-                            <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                              <Image
-                                src={order.cardIdImg}
-                                alt="idpic"
-                                layout="fill"
-                                className="object-cover"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEnlargePicture(true);
-                                }}
-                              />
-                            </div>
-                            <p className="text-xs text-gray-400">Click the picture to enlarge.</p>
-                          </div>
-                          {enlargePicture && (
-                            // ENLARGED IMAGE
-                            <div
-                              className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                              style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                            >
-                              <div className="w-full max-w-[620px] aspect-square relative">
-                                <div
-                                  className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                  onClick={() => setEnlargePicture(false)}
-                                >
-                                  <span className="font-bold">X</span>
-                                </div>
-                                <Image
-                                  src={order.cardIdImg}
-                                  alt="idpic"
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
                         {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                         <div className="font-bold text-sm flex justify-between items-center">
                           <span className="font-semibold">
@@ -832,7 +906,7 @@ const AdminAndStaffOrdersPage = () => {
                         )}
 
                         {/* Apply Sr/PWD Discount Button */}
-                        {order.status === "TO PAY" && order.pwdSenior === true && (
+                        {order.status === "TO PAY" && (
                           <div className="w-full flex justify-end">
                             <button
                               className={`h-10 ${
@@ -981,21 +1055,17 @@ const AdminAndStaffOrdersPage = () => {
                               : "Hide"}
                           </button>
                           <button
-                          className={`${
-                            order.status !== "TO PAY" && "hidden"
-                          } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                          hover:scale-[1.02] duration-200 hover:bg-red-400`}
-                          onClick={() => {
-                            if (order.payment === "Card") {
-                              handleReject(order.id); // Handle rejection for card payment
-                            } else {
-                              handleCancel(order.id); // Handle cancellation for other payments
-                            }
-                          }}
-                        >
-                          {order.payment === "Card" ? "Reject" : "Cancel"}
-                        </button>
-                          {order.status === "CANCELLED" || order.status === "REJECTED" && (
+                            className={`${
+                              order.status !== "TO PAY" && "hidden"
+                            } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                            hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                            onClick={() => {
+                              handleCancel(order.id);
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          {order.status === "CANCELLED" && (
                             <button
                               className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
                                       hover:scale-[1.02] duration-200 hover:bg-red-400"
@@ -1153,55 +1223,6 @@ const AdminAndStaffOrdersPage = () => {
                             </span>
                             <span>{order.payment}</span>
                           </div>
-                          {/* CARD */}
-                        {order.payment === "Card" && (
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">Card Payment Receipt</span>
-                          </div>
-                        )}
-                        {order.payment === "Card" && order.cardIdImg && (
-                        <>
-                          <div className="w-full flex flex-col gap-1 justify-center items-center">
-                            <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                              <Image
-                                src={order.cardIdImg}
-                                alt="idpic"
-                                layout="fill"
-                                className="object-cover"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEnlargePicture(true);
-                                }}
-                              />
-                            </div>
-                            <p className="text-xs text-gray-400">Click the picture to enlarge.</p>
-                          </div>
-                          {enlargePicture && (
-                            // ENLARGED IMAGE
-                            <div
-                              className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                              style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                            >
-                              <div className="w-full max-w-[620px] aspect-square relative">
-                                <div
-                                  className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                  onClick={() => setEnlargePicture(false)}
-                                >
-                                  <span className="font-bold">X</span>
-                                </div>
-                                <Image
-                                  src={order.cardIdImg}
-                                  alt="idpic"
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
@@ -1272,7 +1293,7 @@ const AdminAndStaffOrdersPage = () => {
                           )}
 
                           {/* Apply Sr/PWD Discount Button */}
-                          {order.status === "TO PAY" && order.pwdSenior === true && (
+                          {order.status === "TO PAY" && (
                             <div className="w-full flex justify-end">
                               <button
                                 className={`h-10 ${
@@ -1561,55 +1582,6 @@ const AdminAndStaffOrdersPage = () => {
                             </span>
                             <span>{order.payment}</span>
                           </div>
-                          {/* CARD */}
-                        {order.payment === "Card" && (
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">Card Payment Receipt</span>
-                          </div>
-                        )}
-                        {order.payment === "Card" && order.cardIdImg && (
-                        <>
-                          <div className="w-full flex flex-col gap-1 justify-center items-center">
-                            <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                              <Image
-                                src={order.cardIdImg}
-                                alt="idpic"
-                                layout="fill"
-                                className="object-cover"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEnlargePicture(true);
-                                }}
-                              />
-                            </div>
-                            <p className="text-xs text-gray-400">Click the picture to enlarge.</p>
-                          </div>
-                          {enlargePicture && (
-                            // ENLARGED IMAGE
-                            <div
-                              className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                              style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                            >
-                              <div className="w-full max-w-[620px] aspect-square relative">
-                                <div
-                                  className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                  onClick={() => setEnlargePicture(false)}
-                                >
-                                  <span className="font-bold">X</span>
-                                </div>
-                                <Image
-                                  src={order.cardIdImg}
-                                  alt="idpic"
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                            </div>
-                          )}
-                        </>
-                      )}
                           {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
@@ -1680,7 +1652,7 @@ const AdminAndStaffOrdersPage = () => {
                           )}
 
                           {/* Apply Sr/PWD Discount Button */}
-                          {order.status === "TO PAY" && order.pwdSenior === true && (
+                          {order.status === "TO PAY" && (
                             <div className="w-full flex justify-end">
                               <button
                                 className={`h-10 ${
@@ -1943,9 +1915,6 @@ const AdminAndStaffOrdersPage = () => {
 
         {/* DELETE POP UP */}
         {isDeleteVisible && <CheckoutPopup message="Order Deleted!" />}
-
-        {/* DELETE POP UP */}
-        {isRejectedVisible && <CheckoutPopup message="Order Rejected!" />}
       </div>
     </div>
   );
