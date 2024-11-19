@@ -41,6 +41,7 @@ const Navbar = () => {
   const [role, setRole] = useState(""); // New state for role
   const [totalItems, setTotalItems] = useState(0);
   const [totalCartPrice, setTotalCartPrice] = useState(0);
+  const [foodCartAvailable, setFoodCartAvailable] = useState(false);
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Vouchers>({});
 
@@ -49,6 +50,22 @@ const Navbar = () => {
   const unsubscribeDocRef = useRef(null);
 
   useEffect(() => {
+    // Fetch foodCartAvailable from Firestore
+    const fetchFoodCartAvailability = async () => {
+      try {
+        const docRef = doc(db, 'adminControls', 'adminAccess');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFoodCartAvailable(data.foodCartAvailable || false); // Default to false if not found
+        }
+      } catch (error) {
+        console.error("Error fetching foodCart availability:", error);
+      }
+    };
+
+    fetchFoodCartAvailability(); // Fetch availability on mount
+
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         // Check if the email belongs to a staff member
@@ -148,7 +165,7 @@ const Navbar = () => {
         unsubscribeDocRef.current = null;
       }
     };
-  }, []);
+  }, []); // Only run once, when the component mounts
 
   const cleanUpListeners = () => {
     if (unsubscribeCartRef.current) {
@@ -352,10 +369,12 @@ const Navbar = () => {
       {user ? (
         <div className="hidden md:flex md:justify-between font-semibold space-x-6">
           {/* Only show for non-admin, non-kitchen, non-bar users */}
-          {(role !== "admin" && role !== "kitchen" && role !== "bar") && (
+          {foodCartAvailable && (role !== "admin" && role !== "kitchen" && role !== "bar") && (
             <div>
               <Link href="/foodcart" className="relative flex gap-2 group hover:text-yellow-100 items-center">
-                <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">{totalItems}</span>
+                <span className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]">
+                  {totalItems}
+                </span>
                 <i className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"></i>
                 <span>(PHP {totalCartPrice.toFixed(2)})</span>
               </Link>
