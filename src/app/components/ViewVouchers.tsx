@@ -12,6 +12,8 @@ type Vouch = {
   desc: string;
   deduction?: number;
   type?: string;
+  thresholdUse?: boolean;
+  thresholdCondition?: number;
 };
 
 // SAMPLE VOUCHERS TYPE
@@ -51,7 +53,7 @@ const ViewVouchers = () => {
             setVouchers([]); // Clear vouchers if there are none
           }
         } else {
-          setVouchers([]); // Clear vouchers if document does not exist
+          setVouchers([]); // Clear vouchers if document does not eyxist
         }
       });
     }
