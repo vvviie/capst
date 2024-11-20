@@ -3,35 +3,63 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase"; // Adjust path as needed
 import { Pasta } from "../data"; // Adjust path as needed
 
-const usePastasByCategory = (selectedCategory: string | null) => {
-    const [pasta, setPasta] = useState<Pasta[]>([]);
+const usePastasByCategory = (mainCategory: string, selectedCategory: string | null) => {
+  const [pastas, setPastas] = useState<Pasta[]>([]);
 
-    useEffect(() => {
-        if (!selectedCategory) {
-            setPasta([]); // Clear pasta if no category is selected
-            return;
+  useEffect(() => {
+    // If the mainCategory is "Pasta" and selectedCategory is "All", fetch all pasta items
+    if (mainCategory === "Pasta" && selectedCategory === "All") {
+      const pastaRef = collection(db, "pasta");
+      const pastaQuery = query(pastaRef); // No filtering by category
+
+      const unsubscribe = onSnapshot(
+        pastaQuery,
+        (querySnapshot) => {
+          const fetchedPastas: Pasta[] = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Pasta, "id">),
+          }));
+
+          setPastas(fetchedPastas);
+        },
+        (err) => {
+          console.error("Error fetching pastas:", err);
         }
+      );
 
-        // Create a real-time listener with onSnapshot
-        const pastaRef = collection(db, "pasta");
-        const pastaQuery = query(pastaRef, where("prodCategory", "==", selectedCategory));
+      // Cleanup listener on unmount or when mainCategory/selectedCategory changes
+      return () => unsubscribe();
+    }
 
-        const unsubscribe = onSnapshot(pastaQuery, (querySnapshot) => {
-            const fetchedPastas: Pasta[] = querySnapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...(doc.data() as Omit<Pasta, "id">),
-            }));
+    // If a specific category is selected, filter by that category
+    if (selectedCategory) {
+      const pastaRef = collection(db, "pasta");
+      const pastaQuery = query(pastaRef, where("prodCategory", "==", selectedCategory));
 
-            setPasta(fetchedPastas);
-        }, (err) => {
-            console.error("Error fetching pasta:", err);
-        });
+      const unsubscribe = onSnapshot(
+        pastaQuery,
+        (querySnapshot) => {
+          const fetchedPastas: Pasta[] = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...(doc.data() as Omit<Pasta, "id">),
+          }));
 
-        // Cleanup listener on unmount or when selectedCategory changes
-        return () => unsubscribe();
-    }, [selectedCategory]);
+          setPastas(fetchedPastas);
+        },
+        (err) => {
+          console.error("Error fetching pastas:", err);
+        }
+      );
 
-    return pasta;
+      // Cleanup listener on unmount or when mainCategory/selectedCategory changes
+      return () => unsubscribe();
+    }
+
+    // If no category is selected, clear the pasta state
+    setPastas([]);
+  }, [mainCategory, selectedCategory]); // Dependency array ensures updates on changes
+
+  return pastas;
 };
 
 export default usePastasByCategory;

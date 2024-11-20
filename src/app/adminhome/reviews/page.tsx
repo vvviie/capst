@@ -12,14 +12,17 @@ const CustomerReviewsPage = () => {
     const fetchReviews = async () => {
       const feedbackCollection = collection(db, "customerFeedbacks");
       const usersCollection = collection(db, "users");
-  
+    
       // Fetch feedback documents
       const feedbackSnapshot = await getDocs(feedbackCollection);
-      const feedbackData = feedbackSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-  
+      const feedbackData = feedbackSnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        // Filter out feedback documents with the ID 'feedbackRating'
+        .filter((item) => item.id !== "feedbackRating");
+    
       // Fetch user documents and map emails to names
       const userSnapshot = await getDocs(usersCollection);
       const userData = userSnapshot.docs.reduce((acc, doc) => {
@@ -27,23 +30,23 @@ const CustomerReviewsPage = () => {
         acc[email] = `${firstName} ${lastName}`;
         return acc;
       }, {});
-  
+    
       // Combine feedback with user data, dynamically fetch names if needed
       const reviewsWithNames = await Promise.all(
         feedbackData.map(async (item) => {
           let fullName = userData[item.userEmail] || "Unknown User";
-  
+    
           // Dynamically fetch user if not found in preloaded user data
           if (fullName === "Unknown User") {
             const userDocRef = doc(db, "users", item.userEmail); // Use email as document ID
             const userDoc = await getDoc(userDocRef);
-  
+    
             if (userDoc.exists()) {
               const userDocData = userDoc.data();
               fullName = `${userDocData.firstName} ${userDocData.lastName}`;
             }
           }
-  
+    
           return {
             id: item.orderId,
             like: item.positiveFeedback === true, // Ensure truthy check
@@ -55,7 +58,7 @@ const CustomerReviewsPage = () => {
           };
         })
       );
-  
+    
       // Update state with reviews
       setReviews(reviewsWithNames);
     };

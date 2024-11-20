@@ -1,71 +1,89 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc } from "firebase/firestore"; // Use getDoc for documents
+import { doc, onSnapshot } from "firebase/firestore"; // Use onSnapshot for real-time updates
 import { db } from "../firebase"; // Adjust path as needed
 
 const useMenuCategories = (mainCategory: string) => {
-    const [menuCategories, setMenuCategories] = useState<string[]>([]);
+  const [menuCategories, setMenuCategories] = useState<string[]>([]);
 
-    const fetchCategoriesFromDB = async () => {
-      let categoryDoc = ""; // Initialize to an empty string
-  
-      // Choose the document name based on the selected mainCategory
-      switch (mainCategory) {
-          case "Drinks":
-              categoryDoc = "drinksCategories"; // Document name under menuCategories
-              break;
-          case "Main Course":
-              categoryDoc = "mainCourseCategories";
-              break;
-          case "Pastries":
-              categoryDoc = "pastriesCategories";
-              break;
-          case "Snacks":
-              categoryDoc = "snacksCategories";
-              break;
-          case "Sandwiches":
-              categoryDoc = "sandwichesCategories";
-              break;
-          case "Pasta":
-              categoryDoc = "pastaCategories";
-              break;
-          default:
-              categoryDoc = ""; // If no valid category is selected, do nothing
-              break;
-      }
-  
-      // If no valid category is selected, return
-      if (!categoryDoc) return;
-  
-      // Fetch the document based on the selected category
-      const docRef = doc(db, "menuCategories", categoryDoc); // Target the document
-      const docSnap = await getDoc(docRef);
-  
-      if (docSnap.exists()) {
+  const fetchCategoriesFromDB = () => {
+    let categoryDoc = ""; // Initialize to an empty string
+
+    // Choose the document name based on the selected mainCategory
+    switch (mainCategory) {
+      case "Drinks":
+        categoryDoc = "drinksCategories"; // Document name under menuCategories
+        break;
+      case "Main Course":
+        categoryDoc = "mainCourseCategories";
+        break;
+      case "Pastries":
+        categoryDoc = "pastriesCategories";
+        break;
+      case "Snacks":
+        categoryDoc = "snacksCategories";
+        break;
+      case "Sandwiches":
+        categoryDoc = "sandwichesCategories";
+        break;
+      case "Pasta":
+        categoryDoc = "pastaCategories";
+        break;
+      default:
+        categoryDoc = ""; // If no valid category is selected, do nothing
+        break;
+    }
+
+    // If no valid category is selected, return
+    if (!categoryDoc) {
+      setMenuCategories([]); // Clear categories if mainCategory is invalid
+      return;
+    }
+
+    // Fetch the document based on the selected category with real-time updates
+    const docRef = doc(db, "menuCategories", categoryDoc); // Target the document
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
           const data = docSnap.data();
           let allCategories: string[] = [];
-  
+
           if (data && data.categories && Array.isArray(data.categories)) {
-              // Filter the categories for available ones and map to the category names
-              allCategories = data.categories
-                  .filter((item: any) => item.available) // Only available categories
-                  .map((item: any) => item.category); // Use the category name
+            // Filter only available categories and map them
+            allCategories = data.categories
+              .filter((item: any) => item.available) // Only available categories
+              .map((item: any) => item.category); // Use the category name
+
+            // Add the "All" option to the categories if it's not already there
+            if (!allCategories.includes("All")) {
+              allCategories.unshift("All"); // "All" option as the first item in the list
+            }
           }
-  
+
           setMenuCategories(allCategories); // Set the filtered categories
-      } else {
+        } else {
           console.log("No such document!");
-      }
-  };
-  
-
-    // Fetch categories whenever mainCategory changes
-    useEffect(() => {
-        if (mainCategory) {
-            fetchCategoriesFromDB(); // Trigger fetching based on mainCategory
+          setMenuCategories([]); // Clear categories if the document is missing
         }
-    }, [mainCategory]); // Dependency array ensures fetch is triggered when mainCategory changes
+      },
+      (error) => {
+        console.error("Error fetching categories:", error);
+        setMenuCategories([]); // Clear categories on error
+      }
+    );
 
-    return menuCategories; // Return the filtered menu categories
+    // Cleanup listener on component unmount or category change
+    return () => unsubscribe();
+  };
+
+  // Fetch categories whenever mainCategory changes
+  useEffect(() => {
+    if (mainCategory) {
+      return fetchCategoriesFromDB(); // Trigger fetching based on mainCategory
+    }
+  }, [mainCategory]); // Dependency array ensures fetch is triggered when mainCategory changes
+
+  return menuCategories; // Return the filtered menu categories
 };
 
 export default useMenuCategories;
