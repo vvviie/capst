@@ -77,9 +77,13 @@ const ProfilePage = () => {
     i++;
     goal = goals[i];
   }
-  const percentage = goal === undefined ? 100 : calculatePercentage(current, goal);
+  const percentage =
+    goal === undefined ? 100 : calculatePercentage(current, goal);
 
-  const handleProfileUpdate = (updatedFirstName: string, updatedLastName: string) => {
+  const handleProfileUpdate = (
+    updatedFirstName: string,
+    updatedLastName: string
+  ) => {
     setFirstName(updatedFirstName);
     setLastName(updatedLastName);
   };
@@ -87,7 +91,7 @@ const ProfilePage = () => {
   const handleNavClick = (index: number) => setActiveIndex(index);
 
   return (
-    <div className="min-h-[68.155vh] mt-14 bg-white px-10 py-8 md:px-24 xl:px-56 lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center">
+    <div className="min-h-[75vh] mt-14 bg-white px-10 py-8 md:px-24 xl:px-56 lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center">
       <div className="flex flex-col gap-6 lg:flex-row lg:justify-center">
         <div className="bg-white rounded-md shadow-md border-t-2 border-gray-50 flex flex-col gap-2 pt-2 overflow-clip lg:self-start">
           <div className="flex justify-start items-center gap-4 px-4 py-2">
@@ -199,7 +203,9 @@ const ProfilePage = () => {
 
         <div className="p-4 bg-white rounded-md shadow-md border-gray-100 border-2 flex-1 lg:max-w-[600px]">
           {activeIndex === 0 && <ViewVouchers />}
-          {activeIndex === 1 && <EditProfile onProfileUpdate={handleProfileUpdate} />}
+          {activeIndex === 1 && (
+            <EditProfile onProfileUpdate={handleProfileUpdate} />
+          )}
           {activeIndex === 2 && <ChangePassword />}
         </div>
       </div>

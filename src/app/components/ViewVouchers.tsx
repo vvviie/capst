@@ -30,7 +30,7 @@ const ViewVouchers = () => {
   // Fetch vouchers from Firestore based on userEmail
   useEffect(() => {
     let unsubscribe: () => void; // Declare unsubscribe function
-  
+
     if (userEmail) {
       const userDocRef = doc(db, "users", userEmail);
       // Use onSnapshot for real-time updates
@@ -38,7 +38,7 @@ const ViewVouchers = () => {
         if (userDoc.exists()) {
           const userData = userDoc.data();
           const userVouchers = userData.vouchers;
-  
+
           if (userVouchers && typeof userVouchers === "object") {
             const formattedVouchers: Vouch[] = Object.entries(userVouchers)
               .filter(([key, value]: any) => value.used === false) // Filter out used vouchers
@@ -51,9 +51,9 @@ const ViewVouchers = () => {
                 thresholdCondition: value.thresholdCondition,
                 thresholdUse: value.thresholdUse,
                 validityType: value.validityType,
-                validityDate: value.validityDate
+                validityDate: value.validityDate,
               }));
-  
+
             setVouchers(formattedVouchers);
           } else {
             setVouchers([]); // Clear vouchers if there are none
@@ -63,7 +63,7 @@ const ViewVouchers = () => {
         }
       });
     }
-  
+
     // Cleanup subscription on unmount
     return () => {
       if (unsubscribe) {
@@ -100,58 +100,68 @@ const ViewVouchers = () => {
       </h1>
       {/* VOUCHER INFO DISPLAY CONTAINER */}
       <div className="flex flex-col items-center">
-      {/* ICON */}
-      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
+        {/* ICON */}
+        <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
 
-      {/* Render threshold message if thresholdUse is true */}
-      {selectedVoucher?.thresholdUse && (
-        <p className="text-sm text-red-500 font-bold">
-          Minimum spend required: PHP {selectedVoucher.thresholdCondition ?? "N/A"}
-        </p>
-      )}
+        {selectedVoucher ? (
+          <>
+            {/* VOUCHER TITLE */}
+            <h1 className="font-bold text-orange-950 text-xl">
+              {selectedVoucher.title}
+            </h1>
+            {/* VOUCHER DESCRIPTION */}
+            <p className="text-sm">{selectedVoucher.desc}</p>
 
-      {selectedVoucher?.validityType === "expiration" && (
-        <p className="text-sm text-red-500 font-bold">
-          {(() => {
-            // Get current date
-            const today = new Date();
-            const formattedToday = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
-            
-            // Check expiration
-            const isExpired = new Date(selectedVoucher?.validityDate) < today;
+            {/* Render threshold message if thresholdUse is true */}
+            {selectedVoucher?.thresholdUse && (
+              <p className="text-xs text-gray-700 font-semibold">
+                Minimum spend of PHP{" "}
+                {selectedVoucher.thresholdCondition?.toFixed(2) ?? "N/A"}
+              </p>
+            )}
 
-            if (isExpired) {
-              return "Voucher has expired.";
-            } else {
-              return `Expires on: ${selectedVoucher?.validityDate ?? "N/A"}`;
-            }
-          })()}
-        </p>
-      )}
+            {selectedVoucher?.validityType === "expiration" && (
+              <p className="text-xs text-red-500 font-semibold">
+                {(() => {
+                  // Get current date
+                  const today = new Date();
+                  const formattedToday = `${String(
+                    today.getMonth() + 1
+                  ).padStart(2, "0")}/${String(today.getDate()).padStart(
+                    2,
+                    "0"
+                  )}/${today.getFullYear()}`;
 
-      {selectedVoucher ? (
-        <>
-          {/* VOUCHER TITLE */}
-          <h1 className="font-bold text-orange-950 text-xl">
-            {selectedVoucher.title}
-          </h1>
-          {/* VOUCHER DESCRIPTION */}
-          <p className="text-sm">{selectedVoucher.desc}</p>
-          {/* LINK TO MENU BUTTON */}
-          <Link
-            href="/menu"
-            className="flex items-center justify-center space-x-2 px-6 h-10 rounded-md shadow-md text-white bg-orange-950
+                  // Check expiration
+                  const isExpired =
+                    new Date(selectedVoucher?.validityDate) < today;
+
+                  if (isExpired) {
+                    return "Voucher has expired.";
+                  } else {
+                    return `Use before ${
+                      selectedVoucher?.validityDate ?? "N/A"
+                    }`;
+                  }
+                })()}
+              </p>
+            )}
+
+            {/* LINK TO MENU BUTTON */}
+            <Link
+              href="/menu"
+              className="flex items-center justify-center space-x-2 px-6 h-10 rounded-md shadow-md text-white bg-orange-950
                           hover:bg-orange-900 duration-100 mt-2"
-          >
-            <span className="font-bold text-md">Order Now</span>
-          </Link>
-        </>
-      ) : (
-        <p className="text-sm mt-8">
-          {vouchers.length > 0 ? "" : "No available vouchers to display."}
-        </p>
-      )}
-    </div>
+            >
+              <span className="font-bold text-md">Order Now</span>
+            </Link>
+          </>
+        ) : (
+          <p className="text-sm mt-8">
+            {vouchers.length > 0 ? "" : "No available vouchers to display."}
+          </p>
+        )}
+      </div>
 
       {/* Conditionally display the "Select a Voucher" section only if there are vouchers */}
       {vouchers.length > 0 && (

@@ -101,7 +101,7 @@ const CartPage = () => {
   // For Firebase Image URL
   const [firebaseImageUrl, setFirebaseImageUrl] = useState("");
   const [cardImageUrl, setCardImageUrl] = useState("");
-  
+
   const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
   const [isVoucherApplied, setIsVoucherApplied] = useState(false);
   const [isPromoCodeApplied, setIsPromoCodeApplied] = useState(false);
@@ -615,15 +615,15 @@ const CartPage = () => {
             .filter(([key, value]: any) => value.used === false) // Filter out the used vouchers
             .map(([key, value]: any) => ({
               id: value.voucherID,
-                title: value.voucherID,
-                desc: value.voucherDescription,
-                deduction: value.voucherDeduction,
-                type: value.deductionType,
-                thresholdCondition: value.thresholdCondition,
-                thresholdUse: value.thresholdUse,
-                validityType: value.validityType,
-                validityDate: value.validityDate,
-                usageLimitType: value.usageLimitType,
+              title: value.voucherID,
+              desc: value.voucherDescription,
+              deduction: value.voucherDeduction,
+              type: value.deductionType,
+              thresholdCondition: value.thresholdCondition,
+              thresholdUse: value.thresholdUse,
+              validityType: value.validityType,
+              validityDate: value.validityDate,
+              usageLimitType: value.usageLimitType,
             }));
 
           setVouchers(formattedVouchers);
@@ -1698,139 +1698,150 @@ const CartPage = () => {
             )}
             {/* VOUCHER FORM */}
             {voucherForm && (
-            <div
-              className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
-              onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
-            >
-              {/* PROMO CONTAINER */}
-              <form
-                className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
-                onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-                ref={modalRef}
+              <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
               >
-                <div className="flex flex-col mb-6">
-                  {/* ICON - Keep this always visible */}
-                  <div className="flex flex-col items-center">
-                    <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
-                  </div>
-
-                  {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
-                  {selectedVoucher && (
-                    <>
-                      {/* VOUCHER INFO DISPLAY HEADER */}
-                      <h1 className="text-lg font-bold text-orange-900 text-center">
-                        Selected Voucher
-                      </h1>
-                      {/* VOUCHER INFO DISPLAY CONTAINER */}
-                      <div className="flex flex-col items-center">
-                        {/* VOUCHER TITLE */}
-                        <h1 className="font-bold text-orange-950 text-xl">
-                          {selectedVoucher?.title}
-                        </h1>
-                        {/* VOUCHER DESCRIPTION */}
-                        <p className="text-sm">{selectedVoucher?.desc}</p>
-
-                        {/* Render threshold message if thresholdUse is true */}
-                        {selectedVoucher?.thresholdUse && (
-                          <p className="text-sm text-red-500 font-bold">
-                            Minimum spend required: PHP {selectedVoucher.thresholdCondition ?? "N/A"}
-                          </p>
-                        )}
-
-                        {selectedVoucher?.validityType === "expiration" && (
-                                <p className="text-sm text-red-500 font-bold">
-                                  {(() => {
-                                    // Get current date
-                                    const today = new Date();
-                                    const formattedToday = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
-                                    
-                                    // Check expiration
-                                    const isExpired = new Date(selectedVoucher?.validityDate) < today;
-
-                                    if (isExpired) {
-                                      return "Voucher has expired.";
-                                    } else {
-                                      return `Expires on: ${selectedVoucher?.validityDate ?? "N/A"}`;
-                                    }
-                                  })()}
-                                </p>
-                        )}
-
-                      </div>
-                      <hr className="my-4" />
-                    </>
-                  )}
-
-                  {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
-                  <div className="flex items-center justify-center h-12">
-                    {" "}
-                    {/* Set a fixed height */}
-                    <h1 className="text-lg font-bold text-orange-900 text-center">
-                      {vouchers.length > 0
-                        ? "Select a voucher"
-                        : "No vouchers available"}
-                    </h1>
-                  </div>
-
-                  {/* VOUCHERS CONTAINER */}
-                  {vouchers.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
-                      {vouchers.map((vouch) => (
-                        // VOUCHERS
-                        <span
-                          key={vouch.id}
-                          onClick={() => setSelectedVoucher(vouch)}
-                          className={`${
-                            selectedVoucher?.id === vouch.id
-                              ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
-                              : "bg-white text-gray-700 hover:bg-gray-50"
-                          } font-bold text-center text-xs
-                            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
-                        >
-                          {vouch.title}
-                        </span>
-                      ))}
+                {/* PROMO CONTAINER */}
+                <form
+                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                  ref={modalRef}
+                >
+                  <div className="flex flex-col mb-6">
+                    {/* ICON - Keep this always visible */}
+                    <div className="flex flex-col items-center">
+                      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
                     </div>
-                  )}
-                </div>
-                <hr className="mb-6" />
-                <div className="flex justify-center items-center gap-4">
-                  {/* Apply Voucher button should only be shown if there are vouchers available */}
-                  {/* Apply Voucher button should only be shown if there are vouchers available */}
-                  {vouchers.length > 0 && (
-                    <button
-                      type="button"
-                      className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+
+                    {/* Conditionally render the "Selected Voucher" section if a voucher has been selected */}
+                    {selectedVoucher && (
+                      <>
+                        {/* VOUCHER INFO DISPLAY HEADER */}
+                        <h1 className="text-lg font-bold text-orange-900 text-center">
+                          Selected Voucher
+                        </h1>
+                        {/* VOUCHER INFO DISPLAY CONTAINER */}
+                        <div className="flex flex-col items-center">
+                          {/* VOUCHER TITLE */}
+                          <h1 className="font-bold text-orange-950 text-xl">
+                            {selectedVoucher?.title}
+                          </h1>
+                          {/* VOUCHER DESCRIPTION */}
+                          <p className="text-sm">{selectedVoucher?.desc}</p>
+
+                          {/* Render threshold message if thresholdUse is true */}
+                          {selectedVoucher?.thresholdUse && (
+                            <p className="text-xs text-gray-700 font-semibold mt-2">
+                              Minimum spend of PHP{" "}
+                              {selectedVoucher.thresholdCondition?.toFixed(2) ??
+                                "N/A"}
+                            </p>
+                          )}
+
+                          {selectedVoucher?.validityType === "expiration" && (
+                            <p className="text-xs text-red-500 font-semibold mt-4">
+                              {(() => {
+                                // Get current date
+                                const today = new Date();
+                                const formattedToday = `${String(
+                                  today.getMonth() + 1
+                                ).padStart(2, "0")}/${String(
+                                  today.getDate()
+                                ).padStart(2, "0")}/${today.getFullYear()}`;
+
+                                // Check expiration
+                                const isExpired =
+                                  new Date(selectedVoucher?.validityDate) <
+                                  today;
+
+                                if (isExpired) {
+                                  return "Voucher has expired.";
+                                } else {
+                                  return `Use before: ${
+                                    selectedVoucher?.validityDate ?? "N/A"
+                                  }`;
+                                }
+                              })()}
+                            </p>
+                          )}
+                        </div>
+                        <hr className="my-4" />
+                      </>
+                    )}
+
+                    {/* Conditionally render the "Select a voucher" or "No vouchers available" based on voucher count */}
+                    <div className="flex items-center justify-center h-12">
+                      {" "}
+                      {/* Set a fixed height */}
+                      <h1 className="text-lg font-bold text-orange-900 text-center">
+                        {vouchers.length > 0
+                          ? "Select a voucher"
+                          : "No vouchers available"}
+                      </h1>
+                    </div>
+
+                    {/* VOUCHERS CONTAINER */}
+                    {vouchers.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
+                        {vouchers.map((vouch) => (
+                          // VOUCHERS
+                          <span
+                            key={vouch.id}
+                            onClick={() => setSelectedVoucher(vouch)}
+                            className={`${
+                              selectedVoucher?.id === vouch.id
+                                ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
+                                : "bg-white text-gray-700 hover:bg-gray-50"
+                            } font-bold text-center text-xs
+                            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                          >
+                            {vouch.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <hr className="mb-6" />
+                  <div className="flex justify-center items-center gap-4">
+                    {/* Apply Voucher button should only be shown if there are vouchers available */}
+                    {/* Apply Voucher button should only be shown if there are vouchers available */}
+                    {vouchers.length > 0 && (
+                      <button
+                        type="button"
+                        className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
                         hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300 ${
                           (selectedVoucher?.thresholdUse &&
                             selectedVoucher.thresholdCondition > subtotal) ||
                           (selectedVoucher?.validityType === "expiration" &&
-                            new Date(selectedVoucher?.validityDate) < new Date())
+                            new Date(selectedVoucher?.validityDate) <
+                              new Date())
                             ? "opacity-50 cursor-not-allowed"
                             : ""
                         }`}
-                      onClick={handleVoucherSubmit}
-                      disabled={
-                        (selectedVoucher?.thresholdUse &&
-                          selectedVoucher.thresholdCondition > subtotal) ||
-                        (selectedVoucher?.validityType === "expiration" &&
-                          new Date(selectedVoucher?.validityDate) < new Date())
-                      }
-                    >
-                      Apply Voucher
-                    </button>
-                  )}
-                  <button
-                    className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+                        onClick={handleVoucherSubmit}
+                        disabled={
+                          (selectedVoucher?.thresholdUse &&
+                            selectedVoucher.thresholdCondition > subtotal) ||
+                          (selectedVoucher?.validityType === "expiration" &&
+                            new Date(selectedVoucher?.validityDate) <
+                              new Date())
+                        }
+                      >
+                        Apply Voucher
+                      </button>
+                    )}
+                    <button
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
                       hover:bg-gray-50 hover:scale-[1.1] duration-300"
-                    onClick={closeVoucherForm}
-                  >
-                    Close
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
+                      onClick={closeVoucherForm}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {!(voucherApplied || isPromoCodeApplied) && (
               <button
@@ -1936,15 +1947,15 @@ const CartPage = () => {
                   </span>
 
                   {cardUrl && (
-                  <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
-                    <Image
-                      src={cardUrl}
-                      alt="ID"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
+                    <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
+                      <Image
+                        src={cardUrl}
+                        alt="ID"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
 
                   <div className="w-full flex gap-2 items-center">
                     <div className="w-full flex flex-col gap-1 items-center justify-center">

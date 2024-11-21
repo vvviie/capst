@@ -53,7 +53,7 @@ const Navbar = () => {
     let unsubscribeAuth;
     let unsubscribeCartListener;
     let unsubscribeTempOrderDoc;
-  
+
     // Real-time listener for foodCartAvailable
     const unsubscribeFoodCart = onSnapshot(
       doc(db, "adminControls", "adminAccess"),
@@ -70,7 +70,7 @@ const Navbar = () => {
         console.error("Error listening to foodCart availability:", error);
       }
     );
-  
+
     // Authentication state listener
     unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
@@ -78,7 +78,7 @@ const Navbar = () => {
         const isStaff = authUser.email.endsWith("@fikastallestaff.com");
         const collectionName = isStaff ? "staff" : "users";
         const roleField = isStaff ? "staffRole" : "role";
-  
+
         // Real-time listener for user details
         const unsubscribeUser = onSnapshot(
           doc(db, collectionName, authUser.email),
@@ -88,21 +88,24 @@ const Navbar = () => {
               setFirstName(userData.firstName);
               setRole(userData[roleField]); // Set the role from Firestore based on collection
               setUser(authUser);
-  
+
               // Real-time listener for tempOrders
               const tempOrdersRef = collection(db, "tempOrders");
-              const q = query(tempOrdersRef, where("user", "==", authUser.email));
-  
+              const q = query(
+                tempOrdersRef,
+                where("user", "==", authUser.email)
+              );
+
               unsubscribeCartListener = onSnapshot(q, (querySnapshot) => {
                 let tempOrderDocId = null;
-  
+
                 querySnapshot.forEach((doc) => {
                   tempOrderDocId = doc.id;
                 });
-  
+
                 if (tempOrderDocId) {
                   const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-  
+
                   // Real-time listener for specific tempOrder document
                   unsubscribeTempOrderDoc = onSnapshot(
                     tempOrderDocRef,
@@ -123,7 +126,7 @@ const Navbar = () => {
                 } else {
                   setTotalItems(0);
                   setTotalCartPrice(0);
-  
+
                   if (unsubscribeTempOrderDoc) {
                     unsubscribeTempOrderDoc();
                     unsubscribeTempOrderDoc = null;
@@ -135,7 +138,7 @@ const Navbar = () => {
               setUser(null);
               setFirstName("");
               setRole(""); // Clear the role if user does not exist
-  
+
               // Clean up listeners
               if (unsubscribeCartListener) {
                 unsubscribeCartListener();
@@ -156,7 +159,7 @@ const Navbar = () => {
         setUser(null);
         setFirstName("");
         setRole(""); // Clear the role when logged out
-  
+
         // Clean up listeners
         if (unsubscribeCartListener) {
           unsubscribeCartListener();
@@ -168,10 +171,10 @@ const Navbar = () => {
         }
       }
     });
-  
+
     // Check for cookies when the component mounts
     checkCookiesAndLogout();
-  
+
     // Cleanup
     return () => {
       unsubscribeFoodCart();
@@ -180,7 +183,6 @@ const Navbar = () => {
       if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
     };
   }, []); // Only run once, when the component mounts
-  
 
   const cleanUpListeners = () => {
     if (unsubscribeCartRef.current) {
@@ -351,14 +353,26 @@ const Navbar = () => {
         </Link>
       </div>
       <div className="flex items-center justify-center gap-6">
-        <div className="md:hidden">
+        <div
+          className={`${
+            ["admin", "bar", "kitchen"].includes(role) ? "hidden" : ""
+          } lg:hidden`}
+        >
           <NotificationBell />
         </div>
-        <div className="md:hidden hover:text-yellow-100">
+        <div className="lg:hidden hover:text-yellow-100">
           <BurgerMenu />
         </div>
       </div>
-      <div className="hidden md:flex w-full justify-center font-semibold">
+      <div
+        className={`hidden lg:flex w-full justify-center font-semibold
+        ${
+          role !== "admin" &&
+          role !== "bar" &&
+          role !== "kitchen" &&
+          "max-w-[320px]"
+        }`}
+      >
         {role === "admin" ? (
           <>
             <div className="px-4 hover:text-yellow-100">
@@ -413,7 +427,7 @@ const Navbar = () => {
       </div>
 
       {user ? (
-        <div className="hidden md:flex md:justify-between font-semibold space-x-6">
+        <div className="hidden lg:flex lg:justify-between font-semibold space-x-6">
           {/* Only show for non-admin, non-kitchen, non-bar users */}
           {foodCartAvailable &&
             role !== "admin" &&
