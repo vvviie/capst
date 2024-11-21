@@ -219,6 +219,7 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
             thresholdUse: voucherData.thresholdUse,
             usageLimitType: voucherData.usageLimitType,
             validityType: voucherData.validityType,
+            validityDate: voucherData.validityDate,
             voucherDeduction: voucherData.voucherDeduction,
             voucherDescription: voucherData.voucherDescription,
             voucherID: voucherData.voucherID,
