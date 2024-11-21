@@ -52,6 +52,7 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
     if (!data) return null;
 
     const today = new Date().toLocaleDateString();
+    const targetDate = "10/26/2024"; // Specify the target date
     const foodDates = Object.keys(data.Foods.data);
     const drinkDates = Object.keys(data.Drinks.data);
 
@@ -59,9 +60,19 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
     foodDates.sort((a, b) => new Date(b) - new Date(a));
     drinkDates.sort((a, b) => new Date(b) - new Date(a));
 
-    // Check for today's data
-    const latestFoodSales = data.Foods.data[today] || 0; // Default to 0 if no data for today
-    const latestDrinkSales = data.Drinks.data[today] || 0; // Default to 0 if no data for today
+    // Check for today's data or the target date
+    const latestFoodSales =
+      data.Foods.data[today] || data.Foods.data[targetDate];
+    const latestDrinkSales =
+      data.Drinks.data[today] || data.Drinks.data[targetDate];
+
+    // If neither today's data nor the target date data exists
+    if (!latestFoodSales && !latestDrinkSales) {
+      return {
+        labels: ["No current food or drink sales"], // Message label
+        datasets: [], // No data to display
+      };
+    }
 
     // Prepare the chart data
     return {
@@ -70,13 +81,13 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
         {
           backgroundColor: "#60A66F",
           borderColor: "#60A66F",
-          data: [latestFoodSales],
+          data: [latestFoodSales || 0],
           label: "Food Sales",
         },
         {
           backgroundColor: "#F0565F",
           borderColor: "#F0565F",
-          data: [latestDrinkSales],
+          data: [latestDrinkSales || 0],
           label: "Drink Sales",
         },
       ],
@@ -225,7 +236,9 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
         <>
           {timeFrame === "year" && (
             <div className="flex items-center">
-              <span className="text-[#60A66F] font-bold">Total Food Sold:</span>
+              <span className="text-[#60A66F] font-bold">
+                Total Food Sold:
+              </span>
               <span className="ml-2">
                 PHP {chartData.totalFoodSales.toLocaleString()}
               </span>
