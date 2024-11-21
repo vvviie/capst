@@ -182,11 +182,9 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
           const userDocRef = doc(db, "users", recipient);
           const userDoc = await getDoc(userDocRef); // Fetch the user document
           const userData = userDoc.data();
+          const userVouchers = userData.vouchers || {}; // Fetch existing vouchers or initialize as empty object
 
-          console.log("User Document Data:", userData);
-
-          const userVouchers = Array.isArray(userData.vouchers) ? userData.vouchers : [];
-          const voucherKey = selectedVoucher.id;
+          const voucherKey = selectedVoucher.id; // Use the existing id as the key
 
           // Log the selected voucher to check its properties
           console.log("Selected Voucher Key:", voucherKey);
@@ -221,19 +219,18 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
             thresholdUse: voucherData.thresholdUse,
             usageLimitType: voucherData.usageLimitType,
             validityType: voucherData.validityType,
-            validityDate: voucherData.validityDate || null,
             voucherDeduction: voucherData.voucherDeduction,
             voucherDescription: voucherData.voucherDescription,
             voucherID: voucherData.voucherID,
             voucherName: voucherData.voucherName,
-            numberOfUses: voucherData.numberOfUses || null,
           };
 
-          // Check if the voucher already exists in the user's vouchers
-          if (!userVouchers.some((voucher) => voucher.voucherID === voucherKey)) {
-            userVouchers.push(voucherToAssign);
+          // Check if the voucher has already been assigned to the user
+          if (!userVouchers[voucherKey]) {
+            // Assign the voucher to the user
+            userVouchers[voucherKey] = voucherToAssign;
 
-            // Update the user document
+            // Update Firestore with the new voucher data for the user
             await updateDoc(userDocRef, { vouchers: userVouchers });
             console.log(`Voucher assigned to ${recipient}`);
           } else {
@@ -327,15 +324,6 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
                 continue;
               }
 
-              // Get the current date and time
-              const now = new Date();
-            
-              // Format date as MM/DD/YYYY
-              const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
-            
-              // Format time as HH:MM (without seconds and milliseconds)
-              const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
               const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey));
               const voucherData = voucherDoc.data();
 
@@ -348,8 +336,8 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
                 used: false,
                 isRead: false,
                 isNotifDeleted: false,
-                dateCreated: date,
-                timeCreated: time,
+                dateCreated: new Date().toLocaleDateString(),
+                timeCreated: new Date().toLocaleTimeString(),
                 available: voucherData.available,
                 deductionType: voucherData.deductionType,
                 thresholdCondition: voucherData.thresholdCondition || null,
@@ -360,7 +348,6 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
                 voucherDescription: voucherData.voucherDescription,
                 voucherID: voucherData.voucherID,
                 voucherName: voucherData.voucherName,
-                numberOfUses: voucherData.numberOfUses || null,
               };
 
               if (!userVouchers[voucherKey]) {
@@ -534,6 +521,15 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
           hover:bg-orange-900 hover:scale-[1.02] duration-200 mb-1"
           type="button"
           onClick={sendVoucherToRecipients}
+          /*onClick={() => {
+            setIsPopUpVisible(true);
+            sendVoucherToRecipients();  // Call this function immediately
+          
+            setTimeout(() => {
+              setIsPopUpVisible(false);
+              toggleForm();
+            }, 750);
+          }}*/
         >
           Send Voucher
         </button>
