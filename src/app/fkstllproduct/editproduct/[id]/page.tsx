@@ -684,7 +684,7 @@ const EditProductPage = () => {
       milkAlmond = 30;
 
       const currentDrinkType = passableSelectedDrinkTypeRef.current;
-      if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
+      if (passableSelectedDrinkType === "icedDrinks") {
         addVanilla = 25;
       }
 
@@ -741,45 +741,46 @@ const EditProductPage = () => {
           .join(""); // Join the words back together
   }
 
-    const documentData = {
-      prodCategory: passableSelectedDrinkType,
-      img: finalImageUrl,
-      availability: selectedAvailability,
-      calorie: calorie,
-      title: itemName,
-      prodID: prodID,
-      price: itemPrice,
-      upsize,
-      type: selectedDrinkType,
-      contains: selectedAllergens,
-      desc: itemDescription,
-
-      // Optional drink fields
-      ...(selectedCat === "drinks" && {
-        addEspresso,
-        addSyrup,
-        milkOat,
-        milkAlmond,
-        addVanilla,
-        currSize: drinkSize || "",
-        ...(upsize && {
-          upsizePrice: upsizePrice || 10,
-          upsizeSize: upsizeSize || "12oz",
-        }),
-      }),
-
-      // Optional main course fields
-      ...(selectedCat === "mainCourseMenu" && {
-        serveMashedPotato,
-        serveRice,
-      }),
-
-      // Optional upsize fields, only if upsizable
+  const documentData = {
+    prodCategory: passableSelectedDrinkType,
+    img: finalImageUrl,
+    availability: selectedAvailability,
+    calorie: calorie,
+    title: itemName,
+    prodID: prodID,
+    price: itemPrice,
+    upsize,
+    type: selectedDrinkType,
+    contains: selectedAllergens,
+    desc: itemDescription,
+    upsizable: upsize || false, // Explicitly set upsizable to false if not provided
+  
+    // Optional drink fields
+    ...(selectedCat === "drinks" && {
+      addEspresso,
+      addSyrup,
+      milkOat,
+      milkAlmond,
+      addVanilla,
+      currSize: drinkSize || "",
       ...(upsize && {
         upsizePrice: upsizePrice || 10,
         upsizeSize: upsizeSize || "12oz",
       }),
-    };
+    }),
+  
+    // Optional main course fields
+    ...(selectedCat === "mainCourseMenu" && {
+      serveMashedPotato,
+      serveRice,
+    }),
+  
+    // Optional upsize fields, only if upsizable
+    ...(upsize && {
+      upsizePrice: upsizePrice || 10,
+      upsizeSize: upsizeSize || "12oz",
+    }),
+  };
 
     // Show popup only after validation passes
     setIsPopupVisible(true);

@@ -31,8 +31,14 @@ type Vouch = {
   id: string;
   title: string;
   desc: string;
-  deduction: number;
-  type: string;
+  deduction?: number;
+  type?: string;
+  thresholdUse?: boolean;
+  thresholdCondition?: number;
+  validityType: string;
+  validityDate?: string;
+  usageLimitType: string;
+  numberOfUses?: number;
 };
 //#endregion
 
@@ -95,7 +101,7 @@ const CartPage = () => {
   // For Firebase Image URL
   const [firebaseImageUrl, setFirebaseImageUrl] = useState("");
   const [cardImageUrl, setCardImageUrl] = useState("");
-  
+
   const [openSeniorPWD, setOpenSeniorPWD] = useState(false);
   const [isVoucherApplied, setIsVoucherApplied] = useState(false);
   const [isPromoCodeApplied, setIsPromoCodeApplied] = useState(false);
@@ -612,7 +618,12 @@ const CartPage = () => {
               title: value.voucherID,
               desc: value.voucherDescription,
               deduction: value.voucherDeduction,
-              type: value.voucherType,
+              type: value.deductionType,
+              thresholdCondition: value.thresholdCondition,
+              thresholdUse: value.thresholdUse,
+              validityType: value.validityType,
+              validityDate: value.validityDate,
+              usageLimitType: value.usageLimitType,
             }));
 
           setVouchers(formattedVouchers);
@@ -1718,6 +1729,42 @@ const CartPage = () => {
                           </h1>
                           {/* VOUCHER DESCRIPTION */}
                           <p className="text-sm">{selectedVoucher?.desc}</p>
+
+                          {/* Render threshold message if thresholdUse is true */}
+                          {selectedVoucher?.thresholdUse && (
+                            <p className="text-xs text-gray-700 font-semibold mt-2">
+                              Minimum spend of PHP{" "}
+                              {selectedVoucher.thresholdCondition?.toFixed(2) ??
+                                "N/A"}
+                            </p>
+                          )}
+
+                          {selectedVoucher?.validityType === "expiration" && (
+                            <p className="text-xs text-red-500 font-semibold mt-4">
+                              {(() => {
+                                // Get current date
+                                const today = new Date();
+                                const formattedToday = `${String(
+                                  today.getMonth() + 1
+                                ).padStart(2, "0")}/${String(
+                                  today.getDate()
+                                ).padStart(2, "0")}/${today.getFullYear()}`;
+
+                                // Check expiration
+                                const isExpired =
+                                  new Date(selectedVoucher?.validityDate) <
+                                  today;
+
+                                if (isExpired) {
+                                  return "Voucher has expired.";
+                                } else {
+                                  return `Use before: ${
+                                    selectedVoucher?.validityDate ?? "N/A"
+                                  }`;
+                                }
+                              })()}
+                            </p>
+                          )}
                         </div>
                         <hr className="my-4" />
                       </>
@@ -1747,7 +1794,7 @@ const CartPage = () => {
                                 ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
                                 : "bg-white text-gray-700 hover:bg-gray-50"
                             } font-bold text-center text-xs
-                              rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                            rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
                           >
                             {vouch.title}
                           </span>
@@ -1758,19 +1805,35 @@ const CartPage = () => {
                   <hr className="mb-6" />
                   <div className="flex justify-center items-center gap-4">
                     {/* Apply Voucher button should only be shown if there are vouchers available */}
+                    {/* Apply Voucher button should only be shown if there are vouchers available */}
                     {vouchers.length > 0 && (
                       <button
                         type="button"
-                        className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-                          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+                        className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                        hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300 ${
+                          (selectedVoucher?.thresholdUse &&
+                            selectedVoucher.thresholdCondition > subtotal) ||
+                          (selectedVoucher?.validityType === "expiration" &&
+                            new Date(selectedVoucher?.validityDate) <
+                              new Date())
+                            ? "opacity-50 cursor-not-allowed"
+                            : ""
+                        }`}
                         onClick={handleVoucherSubmit}
+                        disabled={
+                          (selectedVoucher?.thresholdUse &&
+                            selectedVoucher.thresholdCondition > subtotal) ||
+                          (selectedVoucher?.validityType === "expiration" &&
+                            new Date(selectedVoucher?.validityDate) <
+                              new Date())
+                        }
                       >
                         Apply Voucher
                       </button>
                     )}
                     <button
                       className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
-                        hover:bg-gray-50 hover:scale-[1.1] duration-300"
+                      hover:bg-gray-50 hover:scale-[1.1] duration-300"
                       onClick={closeVoucherForm}
                     >
                       Close
@@ -1884,15 +1947,15 @@ const CartPage = () => {
                   </span>
 
                   {cardUrl && (
-                  <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
-                    <Image
-                      src={cardUrl}
-                      alt="ID"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                )}
+                    <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
+                      <Image
+                        src={cardUrl}
+                        alt="ID"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
 
                   <div className="w-full flex gap-2 items-center">
                     <div className="w-full flex flex-col gap-1 items-center justify-center">

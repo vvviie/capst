@@ -50,91 +50,110 @@ const Navbar = () => {
   const unsubscribeDocRef = useRef(null);
 
   useEffect(() => {
-    // Fetch foodCartAvailable from Firestore
-    const fetchFoodCartAvailability = async () => {
-      try {
-        const docRef = doc(db, "adminControls", "adminAccess");
-        const docSnap = await getDoc(docRef);
+    let unsubscribeAuth;
+    let unsubscribeCartListener;
+    let unsubscribeTempOrderDoc;
+
+    // Real-time listener for foodCartAvailable
+    const unsubscribeFoodCart = onSnapshot(
+      doc(db, "adminControls", "adminAccess"),
+      (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFoodCartAvailable(data.foodCartAvailable || false); // Default to false if not found
+        } else {
+          console.warn("Document for foodCartAvailable does not exist!");
+          setFoodCartAvailable(false); // Default to false if document is missing
         }
-      } catch (error) {
-        console.error("Error fetching foodCart availability:", error);
+      },
+      (error) => {
+        console.error("Error listening to foodCart availability:", error);
       }
-    };
+    );
 
-    fetchFoodCartAvailability(); // Fetch availability on mount
-
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+    // Authentication state listener
+    unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
       if (authUser) {
         // Check if the email belongs to a staff member
         const isStaff = authUser.email.endsWith("@fikastallestaff.com");
         const collectionName = isStaff ? "staff" : "users";
         const roleField = isStaff ? "staffRole" : "role";
 
-        try {
-          const userDoc = await getDoc(doc(db, collectionName, authUser.email));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            setFirstName(userData.firstName);
-            setRole(userData[roleField]); // Set the role from Firestore based on collection
-            setUser(authUser);
+        // Real-time listener for user details
+        const unsubscribeUser = onSnapshot(
+          doc(db, collectionName, authUser.email),
+          (userDoc) => {
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              setFirstName(userData.firstName);
+              setRole(userData[roleField]); // Set the role from Firestore based on collection
+              setUser(authUser);
 
-            // Real-time listener for tempOrder updates
-            const tempOrdersRef = collection(db, "tempOrders");
-            const q = query(tempOrdersRef, where("user", "==", authUser.email));
+              // Real-time listener for tempOrders
+              const tempOrdersRef = collection(db, "tempOrders");
+              const q = query(
+                tempOrdersRef,
+                where("user", "==", authUser.email)
+              );
 
-            unsubscribeCartRef.current = onSnapshot(q, (querySnapshot) => {
-              let tempOrderDocId = null;
+              unsubscribeCartListener = onSnapshot(q, (querySnapshot) => {
+                let tempOrderDocId = null;
 
-              querySnapshot.forEach((doc) => {
-                tempOrderDocId = doc.id;
-              });
+                querySnapshot.forEach((doc) => {
+                  tempOrderDocId = doc.id;
+                });
 
-              if (tempOrderDocId) {
-                const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
-                unsubscribeDocRef.current = onSnapshot(
-                  tempOrderDocRef,
-                  (doc) => {
-                    if (doc.exists()) {
-                      const tempOrderData = doc.data();
-                      setTotalItems(tempOrderData.totalItems || 0);
-                      setTotalCartPrice(tempOrderData.totalCartPrice || 0);
-                    } else {
-                      setTotalItems(0);
-                      setTotalCartPrice(0);
+                if (tempOrderDocId) {
+                  const tempOrderDocRef = doc(db, "tempOrders", tempOrderDocId);
+
+                  // Real-time listener for specific tempOrder document
+                  unsubscribeTempOrderDoc = onSnapshot(
+                    tempOrderDocRef,
+                    (docSnap) => {
+                      if (docSnap.exists()) {
+                        const tempOrderData = docSnap.data();
+                        setTotalItems(tempOrderData.totalItems || 0);
+                        setTotalCartPrice(tempOrderData.totalCartPrice || 0);
+                      } else {
+                        setTotalItems(0);
+                        setTotalCartPrice(0);
+                      }
+                    },
+                    (error) => {
+                      console.error("Error listening to tempOrder doc:", error);
                     }
-                  }
-                );
-              } else {
-                setTotalItems(0);
-                setTotalCartPrice(0);
-                if (unsubscribeDocRef.current) {
-                  unsubscribeDocRef.current();
-                  unsubscribeDocRef.current = null;
-                }
-              }
-            });
-          } else {
-            // User document does not exist in Firestore
-            setUser(null);
-            setFirstName("");
-            setRole(""); // Clear the role if user does not exist
+                  );
+                } else {
+                  setTotalItems(0);
+                  setTotalCartPrice(0);
 
-            // Clean up listeners
-            if (unsubscribeCartRef.current) {
-              unsubscribeCartRef.current();
-              unsubscribeCartRef.current = null;
+                  if (unsubscribeTempOrderDoc) {
+                    unsubscribeTempOrderDoc();
+                    unsubscribeTempOrderDoc = null;
+                  }
+                }
+              });
+            } else {
+              // User document does not exist in Firestore
+              setUser(null);
+              setFirstName("");
+              setRole(""); // Clear the role if user does not exist
+
+              // Clean up listeners
+              if (unsubscribeCartListener) {
+                unsubscribeCartListener();
+                unsubscribeCartListener = null;
+              }
+              if (unsubscribeTempOrderDoc) {
+                unsubscribeTempOrderDoc();
+                unsubscribeTempOrderDoc = null;
+              }
             }
-            if (unsubscribeDocRef.current) {
-              unsubscribeDocRef.current();
-              unsubscribeDocRef.current = null;
-            }
+          },
+          (error) => {
+            console.error("Error listening to user document:", error);
           }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-        }
+        );
       } else {
         // User is logged out
         setUser(null);
@@ -142,13 +161,13 @@ const Navbar = () => {
         setRole(""); // Clear the role when logged out
 
         // Clean up listeners
-        if (unsubscribeCartRef.current) {
-          unsubscribeCartRef.current();
-          unsubscribeCartRef.current = null;
+        if (unsubscribeCartListener) {
+          unsubscribeCartListener();
+          unsubscribeCartListener = null;
         }
-        if (unsubscribeDocRef.current) {
-          unsubscribeDocRef.current();
-          unsubscribeDocRef.current = null;
+        if (unsubscribeTempOrderDoc) {
+          unsubscribeTempOrderDoc();
+          unsubscribeTempOrderDoc = null;
         }
       }
     });
@@ -158,15 +177,10 @@ const Navbar = () => {
 
     // Cleanup
     return () => {
-      unsubscribe();
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
+      unsubscribeFoodCart();
+      if (unsubscribeAuth) unsubscribeAuth();
+      if (unsubscribeCartListener) unsubscribeCartListener();
+      if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
     };
   }, []); // Only run once, when the component mounts
 
@@ -339,14 +353,26 @@ const Navbar = () => {
         </Link>
       </div>
       <div className="flex items-center justify-center gap-6">
-        <div className="md:hidden">
+        <div
+          className={`${
+            ["admin", "bar", "kitchen"].includes(role) ? "hidden" : ""
+          } lg:hidden`}
+        >
           <NotificationBell />
         </div>
-        <div className="md:hidden hover:text-yellow-100">
+        <div className="lg:hidden hover:text-yellow-100">
           <BurgerMenu />
         </div>
       </div>
-      <div className="hidden md:flex w-full justify-center font-semibold">
+      <div
+        className={`hidden lg:flex w-full justify-center font-semibold
+        ${
+          role !== "admin" &&
+          role !== "bar" &&
+          role !== "kitchen" &&
+          "max-w-[320px]"
+        }`}
+      >
         {role === "admin" ? (
           <>
             <div className="px-4 hover:text-yellow-100">
@@ -401,7 +427,7 @@ const Navbar = () => {
       </div>
 
       {user ? (
-        <div className="hidden md:flex md:justify-between font-semibold space-x-6">
+        <div className="hidden lg:flex lg:justify-between font-semibold space-x-6">
           {/* Only show for non-admin, non-kitchen, non-bar users */}
           {foodCartAvailable &&
             role !== "admin" &&
