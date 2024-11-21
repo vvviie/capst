@@ -11,7 +11,15 @@ import { auth, db } from "@/app/firebase";
 import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, doc, setDoc, addDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  addDoc,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 
 const ReservationPage = () => {
   //#region Global Variables
@@ -52,7 +60,7 @@ const ReservationPage = () => {
   //#endregion
 
   //#region Global EffectHooks
-  
+
   useEffect(() => {
     if (slug === "table") {
       // Calculate the date 5 days from today for the table reservation
@@ -224,7 +232,9 @@ const ReservationPage = () => {
       "0"
     )}/${dateToBeReserved.getFullYear()}`;
 
-    const timeToBeReserved = `${hourInput > 9 ? hourInput : hourInput % 12}:${String(minuteInput).padStart(2, "0")}PM`;
+    const timeToBeReserved = `${
+      hourInput > 9 ? hourInput : hourInput % 12
+    }:${String(minuteInput).padStart(2, "0")}PM`;
 
     // Log the reservation details
     console.log("Submitting reservation with the following details:");
@@ -344,7 +354,9 @@ const ReservationPage = () => {
 
   // Check for the "user" cookie when the component mounts
   useEffect(() => {
-    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+    const userCookie = document.cookie
+      .split(";")
+      .find((cookie) => cookie.trim().startsWith("user="));
 
     if (userCookie) {
       // If user cookie is found, set isLoggedIn to true
@@ -365,7 +377,6 @@ const ReservationPage = () => {
 
     // Cleanup Firebase listener when component unmounts
     return () => unsubscribeAuth();
-
   }, []); // Empty dependency array to run once when the component mounts
 
   useEffect(() => {
@@ -380,12 +391,30 @@ const ReservationPage = () => {
 
     if (showLoginModal) {
       document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [showLoginModal]);
 
   const handleFinalize = (chosenItemsArray) => {
     setChosenItems(chosenItemsArray);
+  };
+
+  // Function to check if a reservation already exists
+  const checkExistingReservation = async (
+    date: string,
+    time: string,
+    numberOfPersons: number
+  ) => {
+    const q = query(
+      collection(db, "tableReservations"),
+      where("dateToBeReserved", "==", date),
+      where("timeToBeReserved", "==", time),
+      where("numberOfPersons", "==", numberOfPersons)
+    );
+
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty; // Return true if a reservation exists
   };
 
   const handleReserve = async () => {
@@ -535,6 +564,17 @@ const ReservationPage = () => {
     }/${now.getDate()}/${now.getFullYear()}`;
     const timeReserved = `${now.getHours()}:${now.getMinutes()}`;
 
+    const reservationExists = await checkExistingReservation(
+      formattedDateToBeReserved,
+      formattedTime,
+      numberOfPersonsEvent
+    );
+    if (reservationExists) {
+      setError(true);
+      setErrorMessage("You have already booked this date and time.");
+      setTimeout(() => setError(false), 5000);
+      return;
+    }
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
@@ -938,7 +978,9 @@ const ReservationPage = () => {
             ref={modalRef}
           >
             <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
-            <p className="mb-4">Please sign in to book your reservations with us.</p>
+            <p className="mb-4">
+              Please sign in to book your reservations with us.
+            </p>
             <div className="flex justify-center items-center gap-4">
               <Link
                 href="/login"
