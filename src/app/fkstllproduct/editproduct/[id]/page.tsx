@@ -684,7 +684,7 @@ const EditProductPage = () => {
       milkAlmond = 30;
 
       const currentDrinkType = passableSelectedDrinkTypeRef.current;
-      if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
+      if (passableSelectedDrinkType === "icedDrinks") {
         addVanilla = 25;
       }
 
