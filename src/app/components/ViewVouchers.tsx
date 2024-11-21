@@ -12,6 +12,10 @@ type Vouch = {
   desc: string;
   deduction?: number;
   type?: string;
+  thresholdUse?: boolean;
+  thresholdCondition?: number;
+  validityType: string;
+  validityDate?: string;
 };
 
 // SAMPLE VOUCHERS TYPE
@@ -44,6 +48,10 @@ const ViewVouchers = () => {
                 desc: value.voucherDescription,
                 deduction: value.voucherDeduction,
                 type: value.voucherType,
+                thresholdCondition: value.thresholdCondition,
+                thresholdUse: value.thresholdUse,
+                validityType: value.validityType,
+                validityDate: value.validityDate
               }));
   
             setVouchers(formattedVouchers);
@@ -51,7 +59,7 @@ const ViewVouchers = () => {
             setVouchers([]); // Clear vouchers if there are none
           }
         } else {
-          setVouchers([]); // Clear vouchers if document does not exist
+          setVouchers([]); // Clear vouchers if document does not eyxist
         }
       });
     }
@@ -92,32 +100,58 @@ const ViewVouchers = () => {
       </h1>
       {/* VOUCHER INFO DISPLAY CONTAINER */}
       <div className="flex flex-col items-center">
-        {/* ICON */}
-        <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
+      {/* ICON */}
+      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
 
-        {selectedVoucher ? (
-          <>
-            {/* VOUCHER TITLE */}
-            <h1 className="font-bold text-orange-950 text-xl">
-              {selectedVoucher.title}
-            </h1>
-            {/* VOUCHER DESCRIPTION */}
-            <p className="text-sm">{selectedVoucher.desc}</p>
-            {/* LINK TO MENU BUTTON */}
-            <Link
-              href="/menu"
-              className="flex items-center justify-center space-x-2 px-6 h-10 rounded-md shadow-md text-white bg-orange-950
-                            hover:bg-orange-900 duration-100 mt-2"
-            >
-              <span className="font-bold text-md">Order Now</span>
-            </Link>
-          </>
-        ) : (
-          <p className="text-sm mt-8">
-            {vouchers.length > 0 ? "" : "No available vouchers to display."}
-          </p>
-        )}
-      </div>
+      {/* Render threshold message if thresholdUse is true */}
+      {selectedVoucher?.thresholdUse && (
+        <p className="text-sm text-red-500 font-bold">
+          Minimum spend required: PHP {selectedVoucher.thresholdCondition ?? "N/A"}
+        </p>
+      )}
+
+      {selectedVoucher?.validityType === "expiration" && (
+        <p className="text-sm text-red-500 font-bold">
+          {(() => {
+            // Get current date
+            const today = new Date();
+            const formattedToday = `${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}/${today.getFullYear()}`;
+            
+            // Check expiration
+            const isExpired = new Date(selectedVoucher?.validityDate) < today;
+
+            if (isExpired) {
+              return "Voucher has expired.";
+            } else {
+              return `Expires on: ${selectedVoucher?.validityDate ?? "N/A"}`;
+            }
+          })()}
+        </p>
+      )}
+
+      {selectedVoucher ? (
+        <>
+          {/* VOUCHER TITLE */}
+          <h1 className="font-bold text-orange-950 text-xl">
+            {selectedVoucher.title}
+          </h1>
+          {/* VOUCHER DESCRIPTION */}
+          <p className="text-sm">{selectedVoucher.desc}</p>
+          {/* LINK TO MENU BUTTON */}
+          <Link
+            href="/menu"
+            className="flex items-center justify-center space-x-2 px-6 h-10 rounded-md shadow-md text-white bg-orange-950
+                          hover:bg-orange-900 duration-100 mt-2"
+          >
+            <span className="font-bold text-md">Order Now</span>
+          </Link>
+        </>
+      ) : (
+        <p className="text-sm mt-8">
+          {vouchers.length > 0 ? "" : "No available vouchers to display."}
+        </p>
+      )}
+    </div>
 
       {/* Conditionally display the "Select a Voucher" section only if there are vouchers */}
       {vouchers.length > 0 && (
