@@ -13,6 +13,7 @@ import {
   onSnapshot,
   deleteDoc,
   getDoc,
+  setDoc,
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
 import jsPDF from "jspdf";
@@ -90,21 +91,62 @@ const AdminCheckReservationsPage = () => {
     }
   };
 
-    const handlePaid = async (id: string) => {
-      try {
-        await updateDoc(doc(db, "tableReservations", id), {
-          status: "PAID",
-        });
+  const handlePaid = async (id: string, totalPrice: number) => {
+    // Log the totalPrice to check if it's being passed correctly
+    console.log("Total Price:", totalPrice);
 
-        setIsPaidVisible(true);
-        setTimeout(() => {
-          setIsPaidVisible(false);
-        }, 750);
-      } catch (error) {
-        console.error("Error updating status to 'PAID':", error);
+    try {
+      // Update the status of the table reservation to "PAID"
+      await updateDoc(doc(db, "tableReservations", id), {
+        status: "PAID",
+      });
+
+      // Update Net Sales in salesData collection
+      const salesDocumentId = "salesExpensesToday";
+      const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+      // Get the current date
+      const now = new Date();
+      const formattedDate = `${
+        now.getMonth() + 1
+      }/${now.getDate()}/${now.getFullYear()}`; // Format date as MM/DD/YYYY
+
+      // Fetch existing Net Sales data
+      const salesDoc = await getDoc(salesDataRef);
+      let existingNetSales = 0;
+
+      if (salesDoc.exists()) {
+        const salesData = salesDoc.data();
+        existingNetSales = salesData.NetSales?.data[formattedDate] || 0; // Get existing sales or default to 0
       }
-    };
 
+      // Calculate the new total sales for today
+      const updatedNetSales = existingNetSales + totalPrice;
+
+      // Prepare the updated sales data
+      const salesDataUpdate = {
+        NetSales: {
+          data: {
+            [formattedDate]: updatedNetSales, // Increment the total sales for today
+          },
+        },
+      };
+
+      // Merge the new sales data with the existing document
+      await setDoc(salesDataRef, salesDataUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+
+      // Show the paid confirmation
+      setIsPaidVisible(true);
+      setTimeout(() => {
+        setIsPaidVisible(false);
+      }, 750);
+    } catch (error) {
+      console.error(
+        "Error updating status to 'PAID' or updating sales data:",
+        error
+      );
+    }
+  };
   const handleMarkAsPending = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
@@ -139,7 +181,7 @@ const AdminCheckReservationsPage = () => {
     try {
       // Delete the document that matches the provided ID
       await deleteDoc(doc(db, "tableReservations", id));
-  
+
       setIsDeleteVisible(true);
       setTimeout(() => {
         setIsDeleteVisible(false);
@@ -209,7 +251,6 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
-  
 
   const handleCategoryChange = (
     event: React.ChangeEvent<HTMLSelectElement>
@@ -228,14 +269,16 @@ const AdminCheckReservationsPage = () => {
 
   const formatDate = (date: string) => {
     const parsedDate = new Date(date);
-    return `${String(parsedDate.getMonth() + 1).padStart(2, "0")}/${String(parsedDate.getDate()).padStart(2, "0")}/${parsedDate.getFullYear()}`;
+    return `${String(parsedDate.getMonth() + 1).padStart(2, "0")}/${String(
+      parsedDate.getDate()
+    ).padStart(2, "0")}/${parsedDate.getFullYear()}`;
   };
 
   // Filter button click handler
   const handleFilterClick = () => {
     // Log the date in MM/DD/YYYY format when the filter button is clicked
     console.log("Filter Date (MM/DD/YYYY):", formatDate(selectedFilterDate));
-  
+
     setFilterDate(selectedFilterDate); // Now set the filterDate when the filter button is clicked
     setIsFilterClicked(true); // Trigger the filter action (which will be used in useEffect)
   };
@@ -243,7 +286,7 @@ const AdminCheckReservationsPage = () => {
   const handleDateChange = (e) => {
     const selectedDate = e.target.value;
     console.log("Selected date:", selectedDate); // Log the selected date
-  
+
     // Update the state with the selected date
     setSelectedFilterDate(selectedDate);
   };
@@ -256,62 +299,79 @@ const AdminCheckReservationsPage = () => {
           id: doc.id,
           ...doc.data(),
         })) as res[];
-  
+
         const parseDateTime = (date: string, time: string) => {
           const startTime = time.split(" to ")[0];
           return new Date(`${date} ${convertTo24Hour(startTime)}`);
         };
-  
+
         const convertTo24Hour = (time: string) => {
           const [timePart, modifier] = time.split(/(AM|PM)/i);
           let [hours, minutes] = timePart.split(":").map(Number);
           if (!minutes) minutes = 0;
           if (modifier.toUpperCase() === "PM" && hours < 12) hours += 12;
           if (modifier.toUpperCase() === "AM" && hours === 12) hours = 0;
-          return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+          return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(
+            2,
+            "0"
+          )}`;
         };
-  
+
         // Convert filterDate to Date object for comparison
         const formattedFilterDate = filterDate ? new Date(filterDate) : null;
-  
+
         // Apply selected status and date filters
-        const filteredReservations = fetchedReservations.filter((reservation) => {
-          const matchesStatus =
-            selectedStatus === "all" || reservation.status === selectedStatus;
-  
-          // Compare the dates correctly by converting both to Date objects
-          const reservationDate = new Date(reservation.dateToBeReserved);
-          const matchesDate =
-            !formattedFilterDate ||
-            reservationDate.toDateString() === formattedFilterDate.toDateString();
-  
-          return matchesStatus && matchesDate;
-        });
-  
-        const sortedAndFilteredReservations = filteredReservations.sort((a, b) => {
-          if (a.status < b.status) return -1;
-          if (a.status > b.status) return 1;
-  
-          const dateA =
-            a.dateToBeReserved && a.timeToBeReserved
-              ? parseDateTime(a.dateToBeReserved, a.timeToBeReserved).getTime()
-              : 0;
-          const dateB =
-            b.dateToBeReserved && b.timeToBeReserved
-              ? parseDateTime(b.dateToBeReserved, b.timeToBeReserved).getTime()
-              : 0;
-  
-          return dateB - dateA; // Descending order
-        });
-  
-        console.log("Sorted and Filtered Reservations:", sortedAndFilteredReservations);
+        const filteredReservations = fetchedReservations.filter(
+          (reservation) => {
+            const matchesStatus =
+              selectedStatus === "all" || reservation.status === selectedStatus;
+
+            // Compare the dates correctly by converting both to Date objects
+            const reservationDate = new Date(reservation.dateToBeReserved);
+            const matchesDate =
+              !formattedFilterDate ||
+              reservationDate.toDateString() ===
+                formattedFilterDate.toDateString();
+
+            return matchesStatus && matchesDate;
+          }
+        );
+
+        const sortedAndFilteredReservations = filteredReservations.sort(
+          (a, b) => {
+            if (a.status < b.status) return -1;
+            if (a.status > b.status) return 1;
+
+            const dateA =
+              a.dateToBeReserved && a.timeToBeReserved
+                ? parseDateTime(
+                    a.dateToBeReserved,
+                    a.timeToBeReserved
+                  ).getTime()
+                : 0;
+            const dateB =
+              b.dateToBeReserved && b.timeToBeReserved
+                ? parseDateTime(
+                    b.dateToBeReserved,
+                    b.timeToBeReserved
+                  ).getTime()
+                : 0;
+
+            return dateB - dateA; // Descending order
+          }
+        );
+
+        console.log(
+          "Sorted and Filtered Reservations:",
+          sortedAndFilteredReservations
+        );
         setReservations(sortedAndFilteredReservations);
       },
       (error) => {
         console.error("Error fetching reservations:", error);
       }
     );
-  
+
     return () => unsubscribe();
   }, [selectedStatus, filterDate, isFilterClicked]);
 
@@ -330,9 +390,7 @@ const AdminCheckReservationsPage = () => {
     lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
     >
       {/* MAIN CONTAINER */}
-      <div
-        className="w-full flex flex-col gap-10 md:flex-row md:items-start md:justify-center md:min-h-[67vh]"
-      >
+      <div className="w-full flex flex-col gap-10 md:flex-row md:items-start md:justify-center md:min-h-[67vh]">
         {/* REQUESTS CONTAINER */}
         <div className="w-full flex flex-col gap-2 max-w-[580px] max-h-[720px] overflow-auto pb-3">
           {/* HEADER AND BUTTON FOR SWITCHING RESERVATIONS */}
@@ -408,12 +466,20 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   : "0.00"
                               }`}</span>
                             ) : resType === "table" ? (
-                              <span>{`${res.numberOfPersons} PAX - PHP ${res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"}`}</span>
+                              <span>{`${res.numberOfPersons} PAX - PHP ${
+                                res.totalPrice
+                                  ? res.totalPrice.toFixed(2)
+                                  : "0.00"
+                              }`}</span>
                             ) : null}
                           </p>
                           <p
                             className={`text-sm font-semibold text-${
-                              res.status === "PENDING" || res.status === "CANCELLED" || res.status === "REJECTED" ? "red-500" : "blue-500"
+                              res.status === "PENDING" ||
+                              res.status === "CANCELLED" ||
+                              res.status === "REJECTED"
+                                ? "red-500"
+                                : "blue-500"
                             } flex gap-1 items-center select-none`}
                           >
                             {res.status}
@@ -501,16 +567,18 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 className="w-full h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-red-400 hover:scale-[1.02] duration-200"
                                 onClick={() => handleDelete(res.id)}
-                              >  
-                              Delete
+                              >
+                                Delete
                               </button>
-                            </div>          
-                          ): res.status !== "REJECTED" ? (
+                            </div>
+                          ) : res.status !== "REJECTED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
-                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePaid(res.id)}
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
+            border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() =>
+                                  handlePaid(res.id, res.totalPrice)
+                                } // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -575,22 +643,23 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           </p>
                           {/* STATUS */}
                           <p
-                          className={`text-sm font-semibold flex gap-1 items-center select-none ${
-                            res.status === "PENDING" || res.status === "CANCELLED"
-                              ? "text-red-500"
-                              : res.status === "REQUESTED"
-                              ? "text-orange-500"
-                              : res.status === "TO PAY"
-                              ? "text-yellow-500"
-                              : res.status === "PAID"
-                              ? "text-blue-500"
-                              : res.status === "DONE"
-                              ? "text-green-500"
-                              : "text-gray-500" // Default color if no status matches
-                          }`}
-                        >
-                          {res.status}
-                        </p>
+                            className={`text-sm font-semibold flex gap-1 items-center select-none ${
+                              res.status === "PENDING" ||
+                              res.status === "CANCELLED"
+                                ? "text-red-500"
+                                : res.status === "REQUESTED"
+                                ? "text-orange-500"
+                                : res.status === "TO PAY"
+                                ? "text-yellow-500"
+                                : res.status === "PAID"
+                                ? "text-blue-500"
+                                : res.status === "DONE"
+                                ? "text-green-500"
+                                : "text-gray-500" // Default color if no status matches
+                            }`}
+                          >
+                            {res.status}
+                          </p>
                         </div>
 
                         {/* ARROW */}
@@ -715,7 +784,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 onClick={() => handleDelete(res.id)}
                               >
                                 Delete
-                                </button>
+                              </button>
                             </div>
                           ) : res.status === "REJECTED" ? (
                             <div className="flex items-center w-full mt-1">
@@ -723,16 +792,18 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 className="w-full h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-red-400 hover:scale-[1.02] duration-200"
                                 onClick={() => handleDelete(res.id)}
-                              >  
-                              Delete
+                              >
+                                Delete
                               </button>
-                            </div>          
+                            </div>
                           ) : res.status !== "REJECTED" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
-                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1
-                                          border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePaid(res.id)}
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
+            border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() =>
+                                  handlePaid(res.id, res.totalPrice)
+                                } // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -765,15 +836,15 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
             </h1>
             {/* DATE SEARCH/FILTER BAR */}
             <div className="w-full flex justify-end items-center gap-1">
-            <input
-              type="date"
-              name="dateFilter"
-              id="inputDateFilter"
-              value={selectedFilterDate}
-              onChange={handleDateChange}
-              className="border-2 border-solid border-gray-200 text-sm sm:text-base w-2/3 max-w-40 text-center
+              <input
+                type="date"
+                name="dateFilter"
+                id="inputDateFilter"
+                value={selectedFilterDate}
+                onChange={handleDateChange}
+                className="border-2 border-solid border-gray-200 text-sm sm:text-base w-2/3 max-w-40 text-center
                         text-gray-600 md:text-lg h-10 pl-2 rounded-md bg-gray-50 md:w-full font-semibold pr-2"
-            />
+              />
               <button
                 className="bg-orange-950 rounded-md shadow-md text-white
                     font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200"
