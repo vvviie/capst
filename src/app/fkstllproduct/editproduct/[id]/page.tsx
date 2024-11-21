@@ -749,11 +749,11 @@ const EditProductPage = () => {
       title: itemName,
       prodID: prodID,
       price: itemPrice,
-      upsize,
+      upsize:
       type: selectedDrinkType,
       contains: selectedAllergens,
       desc: itemDescription,
-
+      upsizable: 
       // Optional drink fields
       ...(selectedCat === "drinks" && {
         addEspresso,

@@ -378,7 +378,7 @@ const AddProductPage = () => {
     const handleFileChange = async (e) => {
         const file = e.target.files[0]; // Get the uploaded file
         if (file) {
-            const validTypes = ['image/jpeg', 'image/png'];
+            const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
             if (!validTypes.includes(file.type)) {
                 console.error("Invalid file type. Please upload a PNG or JPEG.");
                 return;
@@ -538,6 +538,251 @@ const AddProductPage = () => {
             if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
                 addVanilla = 25;
             }
+            ```jsx
+// ...
+
+// Fetch categories from the database based on selected main category
+const fetchCategoriesFromDB = async (mainCategory: string) => {
+    try {
+        // Reference to the menuCategories collection
+        const menuCategoriesRef = collection(db, "menuCategories");
+
+        // Determine the document based on the selected main category
+        let categoriesDoc = null;
+        switch (mainCategory) {
+            case "drinks":
+                categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
+                break;
+            case "mainCourseMenu":
+                categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
+                break;
+            case "pastriesMenu":
+                categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
+                break;
+            case "snacksMenu":
+                categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
+                break;
+            case "sandwichesMenu":
+                categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
+                break;
+            case "pastaMenu":
+                categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
+                break;
+            default:
+                categoriesDoc = null; // Default case, in case no main category is selected
+                break;
+        }
+
+        console.log("Categories document reference:", categoriesDoc);
+
+        if (!categoriesDoc) return;
+
+        // Get the document snapshot
+        const docSnapshot = await getDoc(categoriesDoc);
+
+        console.log("Document snapshot:", docSnapshot);
+
+        // If the document exists, extract the categories
+        if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("Document data:", data);
+
+            let allCategories: string[] = [];
+            if (data.categories && Array.isArray(data.categories)) {
+                // Extract categories from the document
+                allCategories = data.categories
+                    .filter((item) => item.category) // Filter out any items without a category
+                    .map((item) => item.category); // Extract the category names
+            }
+
+            console.log("All categories:", allCategories);
+
+            // Format categories for display: Convert category names to a human-readable format
+            const formattedCategories = allCategories.map((category) =>
+                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+            );
+
+            console.log("Formatted categories:", formattedCategories);
+
+            setMenuCategories(formattedCategories);
+
+            // Reset selectedCategory if it's not a valid option
+            if (!formattedCategories.includes(selectedCategory)) {
+                setSelectedCategory(formattedCategories[0] || null); // Default to first category
+            }
+        } else {
+            console.log("No such document!");
+        }
+    } catch (error) {
+        console.error("Error fetching categories from database:", error);
+    }
+};
+
+// ...
+
+// Use a more efficient way to handle the menu categories
+const menuCategoriesMap = {
+    drinks: "drinksCategories",
+    mainCourseMenu: "mainCourseCategories",
+    pastriesMenu: "pastriesCategories",
+    snacksMenu: "snacksCategories",
+    sandwichesMenu: "sandwichesCategories",
+    pastaMenu: "pastaCategories",
+};
+
+// ...
+
+// Fetch categories from the database based on selected main category
+const fetchCategoriesFromDB = async (mainCategory: string) => {
+    try {
+        // Reference to the menuCategories collection
+        const menuCategoriesRef = collection(db, "menuCategories");
+
+        // Determine the document based on the selected main category
+        const categoriesDoc = doc(menuCategoriesRef, menuCategoriesMap[mainCategory]);
+
+        console.log("Categories document reference:", categoriesDoc);
+
+        if (!categoriesDoc) return;
+
+        // Get the document snapshot
+        const docSnapshot = await getDoc(categoriesDoc);
+
+        console.log("Document snapshot:", docSnapshot);
+
+        // If the document exists, extract the categories
+        if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("Document data:", data);
+
+            let allCategories: string[] = [];
+            if (data.categories && Array.isArray(data.categories)) {
+                // Extract categories from the document
+                allCategories = data.categories
+                    .filter((item) => item.category) // Filter out any items without a category
+                    .map((item) => item.category); // Extract the category names
+            }
+
+            console.log("All categories:", allCategories);
+
+            // Format categories for display: Convert category names to a human-readable format
+            const formattedCategories = allCategories.map((category) =>
+                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+            );
+
+            console.log("Formatted categories:", formattedCategories);
+
+            setMenuCategories(formattedCategories);
+
+            // Reset selectedCategory if it's not a valid option
+            if (!formattedCategories.includes(selectedCategory)) {
+                setSelectedCategory(formattedCategories[0] || null); // Default to first category
+            }
+        } else {
+            console.log("No such document!");
+        }
+    } catch (error) {
+        console.error("Error fetching categories from database:", error);
+    }
+};
+
+// ...
+
+// Use a more efficient way to handle the menu categories
+const menuCategoriesMap = {
+    drinks: "drinksCategories",
+    mainCourseMenu: "mainCourseCategories",
+    pastriesMenu: "pastriesCategories",
+    snacksMenu: "snacksCategories",
+    sandwichesMenu: "sandwichesCategories",
+    pastaMenu: "pastaCategories",
+};
+
+// ...
+
+// Fetch categories from the database based on selected main category
+const fetchCategoriesFromDB = async (mainCategory: string) => {
+    try {
+        // Reference to the menuCategories collection
+        const menuCategoriesRef = collection(db, "menuCategories");
+
+        // Determine the document based on the selected main category
+        const categoriesDoc = doc(menuCategoriesRef, menuCategoriesMap[mainCategory]);
+
+        console.log("Categories document reference:", categoriesDoc);
+
+        if (!categoriesDoc) return;
+
+        // Get the document snapshot
+        const docSnapshot = await getDoc(categoriesDoc);
+
+        console.log("Document snapshot:", docSnapshot);
+
+        // If the document exists, extract the categories
+        if (docSnapshot.exists()) {
+            const data = docSnapshot.data();
+            console.log("Document data:", data);
+
+            let allCategories: string[] = [];
+            if (data.categories && Array.isArray(data.categories)) {
+                // Extract categories from the document
+                allCategories = data.categories
+                    .filter((item) => item.category) // Filter out any items without a category
+                    .map((item) => item.category); // Extract the category names
+            }
+
+            console.log("All categories:", allCategories);
+
+            // Format categories for display: Convert category names to a human-readable format
+            const formattedCategories = allCategories.map((category) =>
+                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+            );
+
+            console.log("Formatted categories:", formattedCategories);
+
+            setMenuCategories(formattedCategories);
+
+            // Reset selectedCategory if it's not a valid option
+            if (!formattedCategories.includes(selectedCategory)) {
+                setSelectedCategory(formattedCategories[0] || null); // Default to first category
+            }
+        } else {
+            console.log("No such document!");
+        }
+    } catch (error) {
+        console.error("Error fetching categories from database:", error);
+    }
+};
+
+// ...
+
+// Use a more efficient way to handle the menu categories
+const menuCategoriesMap = {
+    drinks: "drinksCategories",
+    mainCourseMenu: "mainCourseCategories",
+    pastriesMenu: "pastriesCategories",
+    snacksMenu: "snacksCategories",
+    sandwichesMenu: "sandwichesCategories",
+    pastaMenu: "pastaCategories",
+};
+
+// ...
+
+// Fetch categories from the database based on selected main category
+const fetchCategoriesFromDB = async (mainCategory: string) => {
+    try {
+        // Reference to the menuCategories collection
+        const menuCategoriesRef = collection(db, "menuCategories");
+
+        // Determine the document based on the selected main category
+        const categoriesDoc = doc(menuCategoriesRef, menuCategoriesMap[mainCategory]);
+
+        console.log("Categories document reference:", categoriesDoc);
+
+        if (!categoriesDoc) return;
+
+        // Get the document snapshot
+
         } else if (selectedCat === "mainCourseMenu") {
             serveMashedPotato = false;
             serveRice = false;
