@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "../firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import styled, { keyframes } from "styled-components";
 
 interface Item {
@@ -36,16 +36,22 @@ const FeaturedItems = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    const fetchFeaturedItems = async () => {
-      const querySnapshot = await getDocs(collection(db, "featuredItems"));
-      const itemsData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      })) as Item[];
-      setItems(itemsData);
-    };
+    const unsubscribe = onSnapshot(
+      collection(db, "featuredItems"),
+      (snapshot) => {
+        const itemsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Item[];
+        setItems(itemsData);
+      },
+      (error) => {
+        console.error("Error fetching featured items:", error);
+      }
+    );
 
-    fetchFeaturedItems();
+    // Cleanup the subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {

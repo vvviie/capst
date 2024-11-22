@@ -783,7 +783,7 @@ const OrdersPage = () => {
                       <span>
                             PHP {order.status !== "TO PAY" 
                               ? (order.pwdSenior ? (order.price - order.sampleDiscountDeduction) : order.price)
-                              : order.subtotal}
+                              : order.subtotal}.00
                           </span>
                     </div>
                     {/* SUBHEADER CONTAINER */}
