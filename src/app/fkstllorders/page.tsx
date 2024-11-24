@@ -1260,7 +1260,7 @@ const AdminAndStaffOrdersPage = () => {
                 Switch Position
               </button>
             </div>
-            )};
+            )}
             {/* ORDERS LIST CONTAINER */}
             <div
               className={`w-full flex ${
