@@ -12,7 +12,7 @@ import {
   Snacks,
   Sandwiches,
 } from "../data";
-
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { db } from "../firebase";
 import {
   collection,
@@ -58,6 +58,67 @@ const CRUDProductPage = () => {
 
   const [featuredItems, setFeaturedItems] = useState<FeaturedItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const [email, setEmail] = useState(null); // State to store the email
+  const auth = getAuth(); // Get Firebase Auth instance
+
+  const [staffStatus, setStaffStatus] = useState<'activated' | 'deactivated' | null>(null);
+  const [staffRole, setStaffRole] = useState(null);  // Initially set to null
+  
+  useEffect(() => {
+    console.log('useEffect triggered'); // Log when the useEffect runs
+  
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userEmail = user.email;
+        console.log('User logged in:', userEmail);
+        setEmail(email); // Set the email state
+  
+        if (userEmail) {
+          // Fetch the staff document from Firestore
+          const staffDocRef = doc(db, 'staff', userEmail); // Document ID is the email
+          const staffDocSnap = await getDoc(staffDocRef);
+  
+          if (staffDocSnap.exists()) {
+            const data = staffDocSnap.data();
+            console.log('Staff document data:', data);
+  
+            // Check and update the staffStatus
+            if (data.staffStatus === 'activated') {
+              setStaffStatus('activated');
+              console.log('Staff status set to: activated');
+            } else if (data.staffStatus === 'deactivated') {
+              setStaffStatus('deactivated');
+              console.log('Staff status set to: deactivated');
+            }
+  
+            // Log the staffRole if it exists
+            if (data.staffRole) {
+              console.log('Staff role:', data.staffRole);
+              setStaffRole(data.staffRole);  // Set the correct staffRole value here
+              console.log('Updated staffRole:', data.staffRole);  // Log immediately after setting
+            } else {
+              console.log('No staffRole found in the document.');
+            }
+            
+          } else {
+            console.log('No staff document found for this user.');
+            setStaffStatus(null); // Reset if no document exists
+          }
+        }
+      } else {
+        console.log('No user logged in');
+        setEmail(null);
+        setStaffStatus(null); // Reset states if user is logged out
+      }
+    });
+  
+    // Clean up the listener on component unmount
+    return () => {
+      console.log('Cleaning up listener');
+      unsubscribe();
+    };
+  }, [auth, db]); // Dependencies  
 
   const handleItemClick = (id: string) => {
     setActiveItem(activeItem === id ? null : id);
@@ -379,11 +440,12 @@ const CRUDProductPage = () => {
   return (
     <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
       {/* MAIN CONTAINER */}
+      { staffStatus === "activated" ? (
       <div className="w-full max-w-[1480px]">
         {/* HEADER, MENU CAT, AND SEARCH BAR CONTAINER */}
         <div className="flex flex-col gap-4">
           {/* HEADER */}
-          <div className="flex justify-between items-center gap-2 w-full">
+          <div className="flex justify-between items-center gap-2 w-full">    
             <h1 className="text-2xl font-bold text-orange-950">
               Product Listings
             </h1>
@@ -509,6 +571,7 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                     onClick={(e) => {
@@ -518,6 +581,7 @@ const CRUDProductPage = () => {
                   >
                     {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                   </button>
+                  )}
 
                   <select
                     value={item.availability.toLowerCase()}
@@ -542,6 +606,7 @@ const CRUDProductPage = () => {
                     ))}
                   </select>
 
+                  {staffRole && staffRole === "admin" && (
                   <Link
                     href={`/fkstllproduct/editproduct/${item.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -549,7 +614,9 @@ const CRUDProductPage = () => {
                   >
                     Edit
                   </Link>
+                  )}
 
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                     onClick={(e) => {
@@ -559,6 +626,7 @@ const CRUDProductPage = () => {
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               )}
             </div>
@@ -604,6 +672,7 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                     onClick={(e) => {
@@ -613,6 +682,8 @@ const CRUDProductPage = () => {
                   >
                     {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                   </button>
+                  )}
+                  
                   <select
                     name=""
                     id=""
@@ -637,6 +708,8 @@ const CRUDProductPage = () => {
                       </option>
                     ))}
                   </select>
+
+                  {staffRole && staffRole === "admin" && (
                   <Link
                     href={`/fkstllproduct/editproduct/${item.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -644,6 +717,9 @@ const CRUDProductPage = () => {
                   >
                     Edit
                   </Link>
+                  )}
+                  
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                     onClick={(e) => {
@@ -653,6 +729,7 @@ const CRUDProductPage = () => {
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               )}
             </div>
@@ -698,6 +775,8 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                     onClick={(e) => {
@@ -707,6 +786,9 @@ const CRUDProductPage = () => {
                   >
                     {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                   </button>
+                  )}
+
+
                   <select
                     name=""
                     id=""
@@ -731,6 +813,8 @@ const CRUDProductPage = () => {
                       </option>
                     ))}
                   </select>
+
+                  {staffRole && staffRole === "admin" && (
                   <Link
                     href={`/fkstllproduct/editproduct/${item.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -738,6 +822,9 @@ const CRUDProductPage = () => {
                   >
                     Edit
                   </Link>
+                  )}
+
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                     onClick={(e) => {
@@ -747,6 +834,7 @@ const CRUDProductPage = () => {
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               )}
             </div>
@@ -792,6 +880,7 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                     onClick={(e) => {
@@ -801,6 +890,7 @@ const CRUDProductPage = () => {
                   >
                     {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                   </button>
+                  )}
                   <select
                     name=""
                     id=""
@@ -825,6 +915,8 @@ const CRUDProductPage = () => {
                       </option>
                     ))}
                   </select>
+
+                  {staffRole && staffRole === "admin" && (
                   <Link
                     href={`/fkstllproduct/editproduct/${item.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -832,6 +924,9 @@ const CRUDProductPage = () => {
                   >
                     Edit
                   </Link>
+                  )}
+
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                     onClick={(e) => {
@@ -841,6 +936,7 @@ const CRUDProductPage = () => {
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               )}
             </div>
@@ -886,6 +982,7 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                     onClick={(e) => {
@@ -895,6 +992,8 @@ const CRUDProductPage = () => {
                   >
                     {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                   </button>
+                  )}
+
                   <select
                     name=""
                     id=""
@@ -919,6 +1018,8 @@ const CRUDProductPage = () => {
                       </option>
                     ))}
                   </select>
+
+                  {staffRole && staffRole === "admin" && (
                   <Link
                     href={`/fkstllproduct/editproduct/${item.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -926,6 +1027,9 @@ const CRUDProductPage = () => {
                   >
                     Edit
                   </Link>
+                  )}
+
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                     onClick={(e) => {
@@ -935,6 +1039,7 @@ const CRUDProductPage = () => {
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               )}
             </div>
@@ -980,6 +1085,7 @@ const CRUDProductPage = () => {
                   style={{ background: "rgba(0, 0, 0, 0.6)" }}
                   onClick={handleOptionsClick}
                 >
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
                     onClick={(e) => {
@@ -989,6 +1095,8 @@ const CRUDProductPage = () => {
                   >
                     {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
                   </button>
+                  )}
+
                   <select
                     name=""
                     id=""
@@ -1013,6 +1121,8 @@ const CRUDProductPage = () => {
                       </option>
                     ))}
                   </select>
+
+                  {staffRole && staffRole === "admin" && (
                   <Link
                     href={`/fkstllproduct/editproduct/${item.id}`}
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
@@ -1020,6 +1130,9 @@ const CRUDProductPage = () => {
                   >
                     Edit
                   </Link>
+                  )}
+
+                  {staffRole && staffRole === "admin" && (
                   <button
                     className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
                     onClick={(e) => {
@@ -1029,12 +1142,20 @@ const CRUDProductPage = () => {
                   >
                     Delete
                   </button>
+                  )}
                 </div>
               )}
             </div>
           ))}
         </div>
       </div>
+      ) : (
+      <div className="flex justify-center items-center h-screen w-full">
+        <span className="text-4xl font-bold text-center text-gray-500" style={{ top: '-100px', position: 'relative' }}>
+          Your account is deactivated!
+        </span>
+      </div>  
+      )}
     </div>
   );
 };

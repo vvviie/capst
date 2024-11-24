@@ -24,6 +24,10 @@ const EditStaffAccountPage = () => {
     const pathname = usePathname();
     const email = pathname.split("/").pop(); // Extract the email from the pathname
     const [errorMessage, setErrorMessage] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [status, setStatus] = useState("");
+    const [role, setRole] = useState("");
 
     const [staffData, setStaffData] = useState({
         email: '',
@@ -62,7 +66,7 @@ const EditStaffAccountPage = () => {
         const { value } = e.target;
         setStaffData((prevData) => ({
             ...prevData,
-            firstName: value,
+            firstName: value, // Update firstName in staffData state
         }));
     };
 
