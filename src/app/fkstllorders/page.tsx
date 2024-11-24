@@ -583,30 +583,82 @@ const AdminAndStaffOrdersPage = () => {
     }
   };
 
-  const onReserveClick = (id: string) => {
-    const orderDate = "10/25/2024"; // Replace with the actual date you want to log
-    handleRefund(id, orderDate);
+  const onReserveClick = (id: string, orderDate: string, price: number) => {
+    handleRefund(id, orderDate, price);
   };
-  const handleRefund = async (id: string, orderDate: string) => {
+  
+  const handleRefund = async (id: string, orderDate: string, price: number) => {
     try {
-      // Log the order date
+      // Log the order date and price for debugging
       console.log("Order Date:", orderDate);
-  
-      // Update the order status to 'REFUNDED'
-      await updateDoc(doc(db, "completedOrders", id), {
-        status: "REFUNDED",
-        hasRated: false,
-      });
-  
-      setIsMarkAsDoneVisible(true);
-      setTimeout(() => {
-        setIsMarkAsDoneVisible(false);
-      }, 750);
+      console.log("Price:", price);
+
+      // Fetch existing Net Sales data
+      const salesDocumentId = "salesExpensesToday";
+      const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+      const salesDoc = await getDoc(salesDataRef);
+
+      if (!salesDoc.exists()) {
+        console.error("Sales data not found");
+        return;
+      }
+
+      const salesData = salesDoc.data();
+      const netSalesData = salesData.NetSales.data; // Access the NetSales data map
+
+      // Normalize the orderDate to ensure it matches the sales date format
+      const normalizedOrderDate = new Date(orderDate).toLocaleDateString(
+        "en-US"
+      ); // Adjust as necessary
+
+      console.log("Available Sales Dates:", Object.keys(netSalesData)); // Log available dates in sales data
+
+      // Check if the normalized order date exists in the sales data
+      if (netSalesData[normalizedOrderDate]) {
+        const existingNetSales = netSalesData[normalizedOrderDate]; // Get existing sales for that date
+        const updatedNetSales = existingNetSales - price; // Subtract the refund amount
+
+        // Prepare the updated sales data
+        const updatedSalesData = {
+          ...salesData.NetSales,
+          data: {
+            ...netSalesData,
+            [normalizedOrderDate]: updatedNetSales, // Update the specific date
+          },
+        };
+
+        // Update the sales data in Firestore
+        try {
+          await setDoc(
+            salesDataRef,
+            {
+              ...salesData,
+              NetSales: updatedSalesData, // Update NetSales with the modified data
+            },
+            { merge: true }
+          );
+        } catch (error) {
+          console.error("Error updating sales data: ", error);
+        }
+
+        // Update the order status to 'REFUNDED'
+        await updateDoc(doc(db, "completedOrders", id), {
+          status: "REFUNDED",
+          hasRated: false,
+        });
+
+        setIsMarkAsDoneVisible(true);
+        setTimeout(() => {
+          setIsMarkAsDoneVisible(false);
+        }, 750);
+      } else {
+        console.error("Order date not found in sales data");
+      }
     } catch (error) {
-      console.error("Error updating status to 'REFUNDED':", error);
+      console.error("Error processing refund:", error);
     }
   };
-
   const handleCancel = async (id: string) => {
     try {
       await updateDoc(doc(db, "completedOrders", id), {
@@ -1220,7 +1272,7 @@ const AdminAndStaffOrdersPage = () => {
                             <button
                               className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
           hover:scale-[1.02] duration-200 hover:bg-red-400"
-                              onClick={() => handleRefund(order.id, order.date)} // Call handleRefund here
+                              onClick={() => handleRefund(order.id, order.date, order.price)} // Call handleRefund here
                             >
                               Refund
                             </button>
