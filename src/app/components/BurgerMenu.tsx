@@ -256,21 +256,15 @@ const BurgerMenu = () => {
   return (
     <div className="cursor-pointer">
       {!open ? (
-        <Image
-          src="/burgermenu.svg"
-          alt="Menu"
-          width={20}
-          height={20}
+        <i
+          className="fa-solid fa-bars text-white text-xl pt-0.5 select-none"
           onClick={() => setOpen(true)}
-        />
+        ></i>
       ) : (
-        <Image
-          src="/burgermenu-selected.svg"
-          alt="Close Menu"
-          width={20}
-          height={20}
+        <i
+          className="fa fa-close text-white text-xl pt-0.5 select-none"
           onClick={() => setOpen(false)}
-        />
+        ></i>
       )}
       {open && (
         <div
