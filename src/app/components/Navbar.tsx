@@ -51,6 +51,28 @@ const Navbar = () => {
   const unsubscribeDocRef = useRef(null);
 
   useEffect(() => {
+    const unsubscribeFoodCart = onSnapshot(
+      doc(db, "adminControls", "adminAccess"),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setFoodCartAvailable(data.foodCartAvailable || false); // Update state
+        } else {
+          console.warn("Document for foodCartAvailable does not exist!");
+          setFoodCartAvailable(false);
+        }
+      },
+      (error) => {
+        console.error("Error listening to foodCart availability:", error);
+      }
+    );
+
+    return () => {
+      unsubscribeFoodCart();
+    };
+  }, []);
+
+  useEffect(() => {
     let unsubscribeAuth;
     let unsubscribeCartListener;
     let unsubscribeTempOrderDoc;
@@ -369,7 +391,7 @@ const Navbar = () => {
             ["admin", "bar", "kitchen"].includes(role) ? "hidden" : ""
           } lg:hidden`}
         >
-          <NotificationBell />
+          <NotificationBell foodCartAvailable={foodCartAvailable} />
         </div>
         </>
         )}
@@ -463,7 +485,7 @@ const Navbar = () => {
           {/* Only show NotificationBell for non-admin, non-kitchen, non-bar users */}
           {role !== "admin" && role !== "kitchen" && role !== "bar" && (
             <div>
-              <NotificationBell />
+              <NotificationBell foodCartAvailable={foodCartAvailable} />
             </div>
           )}
 

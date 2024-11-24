@@ -19,6 +19,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import jsPDF from "jspdf";
+import { getAuth, onAuthStateChanged } from 'firebase/auth';
 
 // #region Sample Data
 type Order = {
@@ -66,6 +67,56 @@ const AdminAndStaffOrdersPage = () => {
 
   const [isCancelVisible, setIsCancelVisible] = useState(false);
   const [isDeleteVisible, setIsDeleteVisible] = useState(false);
+
+  const [email, setEmail] = useState(null); // State to store the email
+  const auth = getAuth(); // Get Firebase Auth instance
+
+  const [staffStatus, setStaffStatus] = useState<'activated' | 'deactivated' | null>(null);
+
+  useEffect(() => {
+    console.log('useEffect triggered'); // Log when the useEffect runs
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userEmail = user.email;
+        console.log('User logged in:', userEmail);
+        setEmail(email); // Set the email state
+
+        if (userEmail) {
+          // Fetch the staff document from Firestore
+          const staffDocRef = doc(db, 'staff', userEmail); // Document ID is the email
+          const staffDocSnap = await getDoc(staffDocRef);
+
+          if (staffDocSnap.exists()) {
+            const data = staffDocSnap.data();
+            console.log('Staff document data:', data);
+
+            // Check and update the staffStatus
+            if (data.staffStatus === 'activated') {
+              setStaffStatus('activated');
+              console.log('Staff status set to: activated');
+            } else if (data.staffStatus === 'deactivated') {
+              setStaffStatus('deactivated');
+              console.log('Staff status set to: deactivated');
+            }
+          } else {
+            console.log('No staff document found for this user.');
+            setStaffStatus(null); // Reset if no document exists
+          }
+        }
+      } else {
+        console.log('No user logged in');
+        setEmail(null);
+        setStaffStatus(null); // Reset states if user is logged out
+      }
+    });
+
+    // Clean up the listener on component unmount
+    return () => {
+      console.log('Cleaning up listener');
+      unsubscribe();
+    };
+  }, [auth, db]); // Dependencies
 
   // Fetch orders on component mount and when `orderStatCat` changes
   useEffect(() => {
@@ -1190,6 +1241,7 @@ const AdminAndStaffOrdersPage = () => {
         ) : (
           <>
             {/* HEADER */}
+            { staffStatus === "activated" && (
             <div className="w-full flex items-center gap-2 justify-between">
               <span className="text-xl sm:text-2xl font-bold text-orange-950">
                 Orders
@@ -1208,6 +1260,7 @@ const AdminAndStaffOrdersPage = () => {
                 Switch Position
               </button>
             </div>
+            )}
             {/* ORDERS LIST CONTAINER */}
             <div
               className={`w-full flex ${
@@ -1216,6 +1269,14 @@ const AdminAndStaffOrdersPage = () => {
                   : "flex-col md:flex-row"
               } gap-2 md:items-start`}
             >
+              {staffStatus === "deactivated" ? (
+              <div className="flex justify-center items-center h-screen w-full">
+                <span className="text-4xl font-bold text-center text-gray-500" style={{ top: '-100px', position: 'relative' }}>
+                  Your account is deactivated!
+                </span>
+              </div>         
+              ) : (
+              <>
               <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
                 <h1
                   className={`uppercase font-bold text-${
@@ -1574,6 +1635,7 @@ const AdminAndStaffOrdersPage = () => {
                     <span>No orders to display yet.</span>
                   </div>
                 )}
+              
               </div>
               <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
                 <h1
@@ -1982,6 +2044,8 @@ const AdminAndStaffOrdersPage = () => {
                   </div>
                 )}
               </div>
+              </>
+              )}
             </div>
           </>
         )}
