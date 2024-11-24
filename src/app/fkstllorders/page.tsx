@@ -586,7 +586,7 @@ const AdminAndStaffOrdersPage = () => {
   const onReserveClick = (id: string, orderDate: string, price: number) => {
     handleRefund(id, orderDate, price);
   };
-  
+
   const handleRefund = async (id: string, orderDate: string, price: number) => {
     try {
       // Log the order date and price for debugging
@@ -648,6 +648,40 @@ const AdminAndStaffOrdersPage = () => {
           hasRated: false,
         });
 
+        // Update dataAverageOrders collection using the provided orderDate
+      const averageOrdersRef = doc(
+        db,
+        "dataAverageOrders",
+        `${new Date(orderDate).getMonth() + 1}-${new Date(orderDate).getDate()}-${new Date(orderDate).getFullYear()}`
+      ); // Document name as MM-DD-YYYY
+
+      // Fetch existing average orders data
+      const averageOrdersDoc = await getDoc(averageOrdersRef);
+      
+      // Check if the document exists
+      if (averageOrdersDoc.exists()) {
+        const averageOrdersData = averageOrdersDoc.data();
+        let totalOrdersToday = averageOrdersData.totalOrders || 0; // Get existing total orders or default to 0
+
+        // Subtract 1 from the total Orders for the specific date since this is a refund
+        totalOrdersToday = Math.max(totalOrdersToday - 1, 0); // Ensure it does not go below 0
+
+        // Prepare the updated average orders data
+        const averageOrdersUpdate = {
+          date: `${new Date(orderDate).getMonth() + 1}/${new Date(orderDate).getDate()}/${new Date(orderDate).getFullYear()}`, // Format date as MM/DD/YYYY
+          totalOrders: totalOrdersToday, // Set the updated total orders for the specific date
+        };
+
+        // Merge the new average orders data with the existing document
+        try {
+          await setDoc(averageOrdersRef, averageOrdersUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+        } catch (error) {
+          console.error("Error updating average orders data: ", error);
+        }
+      } else {
+        console.error("Average orders document not found for the specified date.");
+      }
+
         setIsMarkAsDoneVisible(true);
         setTimeout(() => {
           setIsMarkAsDoneVisible(false);
@@ -659,6 +693,7 @@ const AdminAndStaffOrdersPage = () => {
       console.error("Error processing refund:", error);
     }
   };
+
   const handleCancel = async (id: string) => {
     try {
       await updateDoc(doc(db, "completedOrders", id), {
