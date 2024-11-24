@@ -589,6 +589,17 @@ const AdminAndStaffOrdersPage = () => {
 
   const handleRefund = async (id: string, orderDate: string, price: number) => {
     try {
+      // Fetch the order document to get orderData
+      const orderRef = doc(db, "completedOrders", id);
+      const orderDoc = await getDoc(orderRef);
+
+      if (!orderDoc.exists()) {
+        console.error("Order not found");
+        return;
+      }
+
+      const orderData = orderDoc.data(); // Get the order data from the document
+
       // Log the order date and price for debugging
       console.log("Order Date:", orderDate);
       console.log("Price:", price);
@@ -647,45 +658,122 @@ const AdminAndStaffOrdersPage = () => {
           status: "REFUNDED",
           hasRated: false,
         });
+        ///////////////
+        // Count total items in each category for subtraction
+        let totalFoods = 0;
+        let totalDrinks = 0;
 
-        // Update dataAverageOrders collection using the provided orderDate
-      const averageOrdersRef = doc(
-        db,
-        "dataAverageOrders",
-        `${new Date(orderDate).getMonth() + 1}-${new Date(orderDate).getDate()}-${new Date(orderDate).getFullYear()}`
-      ); // Document name as MM-DD-YYYY
+        orderData.items.forEach((item: any) => {
+          // Log the current item for debugging
+          console.log("Item:", item);
 
-      // Fetch existing average orders data
-      const averageOrdersDoc = await getDoc(averageOrdersRef);
-      
-      // Check if the document exists
-      if (averageOrdersDoc.exists()) {
-        const averageOrdersData = averageOrdersDoc.data();
-        let totalOrdersToday = averageOrdersData.totalOrders || 0; // Get existing total orders or default to 0
+          // Check which category the item belongs to
+          if (
+            item.slug === "maincourse" ||
+            item.slug === "pasta" ||
+            item.slug === "pastries" ||
+            item.slug === "sandwiches" ||
+            item.slug === "snacks"
+          ) {
+            totalFoods += item.itemQty; // Assuming itemQty holds the quantity of the item
+          } else if (item.slug === "drinks") {
+            totalDrinks += item.itemQty; // Assuming itemQty holds the quantity of the item
+          }
+        });
 
-        // Subtract 1 from the total Orders for the specific date since this is a refund
-        totalOrdersToday = Math.max(totalOrdersToday - 1, 0); // Ensure it does not go below 0
+        // Log the total counts to the console
+        console.log(`Total Foods to subtract: ${totalFoods}`);
+        console.log(`Total Drinks to subtract: ${totalDrinks}`);
 
-        // Prepare the updated average orders data
-        const averageOrdersUpdate = {
-          date: `${new Date(orderDate).getMonth() + 1}/${new Date(orderDate).getDate()}/${new Date(orderDate).getFullYear()}`, // Format date as MM/DD/YYYY
-          totalOrders: totalOrdersToday, // Set the updated total orders for the specific date
+        // Update total foods and drinks sold in salesData collection
+        const foodDrinkDocumentId = "foodDrinkSold";
+        const foodDrinkDataRef = doc(db, "salesData", foodDrinkDocumentId);
+
+        // Prepare the update data using the provided orderDate
+        const formattedDate = `${new Date(orderDate).getMonth() + 1}/${new Date(
+          orderDate
+        ).getDate()}/${new Date(orderDate).getFullYear()}`; // Format date as MM/DD/YYYY
+
+        // Fetch existing food and drink data
+        const foodDrinkDoc = await getDoc(foodDrinkDataRef);
+        let existingFoodData = {};
+        let existingDrinkData = {};
+
+        if (foodDrinkDoc.exists()) {
+          const foodDrinkData = foodDrinkDoc.data();
+          existingFoodData = foodDrinkData.Foods?.data || {};
+          existingDrinkData = foodDrinkData.Drinks?.data || {};
+        }
+
+        // Decrement food count for the specified date
+        existingFoodData[formattedDate] =
+          (existingFoodData[formattedDate] || 0) - totalFoods;
+
+        // Decrement drink count for the specified date
+        existingDrinkData[formattedDate] =
+          (existingDrinkData[formattedDate] || 0) - totalDrinks;
+
+        // Prepare the updated food and drink data
+        const updatedFoodDrinkData = {
+          Foods: {
+            data: existingFoodData,
+          },
+          Drinks: {
+            data: existingDrinkData,
+          },
         };
 
-        // Merge the new average orders data with the existing document
+        // Merge the new food and drink data with the existing document
         try {
-          await setDoc(averageOrdersRef, averageOrdersUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+          await setDoc(foodDrinkDataRef, updatedFoodDrinkData, { merge: true }); // Use merge to avoid overwriting other fields
         } catch (error) {
-          console.error("Error updating average orders data: ", error);
+          console.error("Error updating food and drink data: ", error);
         }
-      } else {
-        console.error("Average orders document not found for the specified date.");
-      }
 
-        setIsMarkAsDoneVisible(true);
-        setTimeout(() => {
-          setIsMarkAsDoneVisible(false);
-        }, 750);
+        //....
+        // Update dataAverageOrders collection using the provided orderDate
+        const averageOrdersRef = doc(
+          db,
+          "dataAverageOrders",
+          `${new Date(orderDate).getMonth() + 1}-${new Date(
+            orderDate
+          ).getDate()}-${new Date(orderDate).getFullYear()}`
+        ); // Document name as MM-DD-YYYY
+
+        // Fetch existing average orders data
+        const averageOrdersDoc = await getDoc(averageOrdersRef);
+
+        // Check if the document exists
+        if (averageOrdersDoc.exists()) {
+          const averageOrdersData = averageOrdersDoc.data();
+          let totalOrdersToday = averageOrdersData.totalOrders || 0; // Get existing total orders or default to 0
+
+          // Subtract 1 from the total Orders for the specific date since this is a refund
+          totalOrdersToday = Math.max(totalOrdersToday - 1, 0); // Ensure it does not go below 0
+
+          // Prepare the updated average orders data
+          const averageOrdersUpdate = {
+            date: `${new Date(orderDate).getMonth() + 1}/${new Date(
+              orderDate
+            ).getDate()}/${new Date(orderDate).getFullYear()}`, // Format date as MM/DD/YYYY
+            totalOrders: totalOrdersToday, // Set the updated total orders for the specific date
+          };
+
+          // Merge the new average orders data with the existing document
+          try {
+            await setDoc(averageOrdersRef, averageOrdersUpdate, {
+              merge: true,
+            }); // Use merge to avoid overwriting other fields
+          } catch (error) {
+            console.error("Error updating average orders data: ", error);
+          }
+        } else {
+          console.error(
+            "Average orders document not found for the specified date."
+          );
+        }
+        // Show confirmation of refund
+        console.log("Refund processed successfully.");
       } else {
         console.error("Order date not found in sales data");
       }
@@ -1307,7 +1395,9 @@ const AdminAndStaffOrdersPage = () => {
                             <button
                               className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
           hover:scale-[1.02] duration-200 hover:bg-red-400"
-                              onClick={() => handleRefund(order.id, order.date, order.price)} // Call handleRefund here
+                              onClick={() =>
+                                handleRefund(order.id, order.date, order.price)
+                              } // Call handleRefund here
                             >
                               Refund
                             </button>
