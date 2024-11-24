@@ -599,7 +599,24 @@ const AdminAndStaffOrdersPage = () => {
       }
 
       const orderData = orderDoc.data(); // Get the order data from the document
+      const userId = orderData.user; // Retrieve the user associated with the order 
 
+      // Deduct from the user's totalPaid field
+      const userRef = doc(db, "users", userId); // Reference to the user's document
+      const userDoc = await getDoc(userRef); 
+
+      if (userDoc.exists()) { 
+        const userData = userDoc.data(); 
+        const currentTotalPaid = userData.totalPaid || 0; 
+        const newTotalPaid = Math.max(currentTotalPaid - price, 0); // Ensure totalPaid doesn't go negative
+
+        await updateDoc(userRef, { 
+          totalPaid: newTotalPaid, 
+        }); 
+      } else { 
+        console.error("User  document not found"); 
+      } 
+      
       // Log the order date and price for debugging
       console.log("Order Date:", orderDate);
       console.log("Price:", price);
