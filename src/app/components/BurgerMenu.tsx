@@ -257,7 +257,7 @@ const BurgerMenu = () => {
     <div className="cursor-pointer">
       {!open ? (
         <Image
-          src="/burgermenu.png"
+          src="/burgermenu.svg"
           alt="Menu"
           width={20}
           height={20}
@@ -265,7 +265,7 @@ const BurgerMenu = () => {
         />
       ) : (
         <Image
-          src="/burgermenu-selected.png"
+          src="/burgermenu-selected.svg"
           alt="Close Menu"
           width={20}
           height={20}

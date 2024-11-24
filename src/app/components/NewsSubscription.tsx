@@ -4,7 +4,7 @@ import Link from "next/link";
 
 const NewsSubscription = () => {
   return (
-    <div className="bg-orange-50 relative flex flex-col lg:min-h-[69vh] lg:flex-row lg:px-24 xl:px-56 xl:gap-10">
+    <div className="bg-white relative flex flex-col lg:min-h-[69vh] lg:flex-row lg:px-24 xl:px-56 xl:gap-10">
       {/* FORM CONTAINER */}
       <div className="flex-1 px-10 flex flex-col py-16 gap-8 justify-center items-center md:px-20 lg:px-0 xl:max-w-[600px] xl:flex-none">
         <h1 className="text-4xl text-orange-950 font-bold text-center md:text-5xl">

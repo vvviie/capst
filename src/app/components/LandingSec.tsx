@@ -12,7 +12,8 @@ const data = [
   },
   {
     id: 2,
-    title: "Experience culinary delights and warm ambiance at our charming eatery.",
+    title:
+      "Experience culinary delights and warm ambiance at our charming eatery.",
     desc: "Experience culinary delights and warm ambiance at our charming eatery.",
     img: "/cwfood.jpg",
   },
@@ -62,7 +63,7 @@ export const LandingSec = () => {
       {/* IMAGE CONTAINER */}
       <div className="w-full relative flex-1 flex justify-center items-center">
         <Image
-          src={data[0].img}
+          src={data[currentSlide].img}
           alt=""
           fill
           priority

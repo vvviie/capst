@@ -9,18 +9,53 @@ import { db } from "../firebase";
 const Filters = {
   drinks: [
     { name: "drinktype", id: "radioAllDrinks", onChange: "all", title: "All" },
-    { name: "drinktype", id: "radioCoffee", onChange: "Coffee", title: "Coffee" },
-    { name: "drinktype", id: "radioNonCoffee", onChange: "Non-Coffee", title: "Non-Coffee" },
+    {
+      name: "drinktype",
+      id: "radioCoffee",
+      onChange: "Coffee",
+      title: "Coffee",
+    },
+    {
+      name: "drinktype",
+      id: "radioNonCoffee",
+      onChange: "Non-Coffee",
+      title: "Non-Coffee",
+    },
   ],
   pasta: [
-    { name: "pastatype", id: "radioAllPasta", onChange: "all", title: "All Pasta" },
+    {
+      name: "pastatype",
+      id: "radioAllPasta",
+      onChange: "all",
+      title: "All Pasta",
+    },
     { name: "pastatype", id: "radioPesto", onChange: "Pesto", title: "Pesto" },
-    { name: "pastatype", id: "radioNonPesto", onChange: "Non-Pesto", title: "Non-Pesto" },
+    {
+      name: "pastatype",
+      id: "radioNonPesto",
+      onChange: "Non-Pesto",
+      title: "Non-Pesto",
+    },
   ],
   maincourse: [
-    { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", title: "All" },
-    { name: "maincoursetype", id: "radioMeat", onChange: "Meat", title: "Meat" },
-    { name: "maincoursetype", id: "radioSeaFood", onChange: "Sea Food", title: "Sea Food" },
+    {
+      name: "maincoursetype",
+      id: "radioAllMainCourse",
+      onChange: "all",
+      title: "All",
+    },
+    {
+      name: "maincoursetype",
+      id: "radioMeat",
+      onChange: "Meat",
+      title: "Meat",
+    },
+    {
+      name: "maincoursetype",
+      id: "radioSeaFood",
+      onChange: "Sea Food",
+      title: "Sea Food",
+    },
   ],
 };
 
@@ -64,8 +99,10 @@ const DrinksFilter: React.FC<{
   useEffect(() => {
     if (selectedAllergies.length > 0) {
       // Filter out products that contain any selected allergy
-      const updatedProducts = products.filter(product => {
-        const containsAllergy = selectedAllergies.some(allergy => product.allergens.includes(allergy));
+      const updatedProducts = products.filter((product) => {
+        const containsAllergy = selectedAllergies.some((allergy) =>
+          product.allergens.includes(allergy)
+        );
         return !containsAllergy; // Keep products that do not contain selected allergies
       });
       setFilteredProducts(updatedProducts);
@@ -84,13 +121,15 @@ const DrinksFilter: React.FC<{
   const handleCalorieFilterChange = (calorie: string) => {
     setSelectedCalorie(calorie);
     onCalorieChange(calorie);
-  
+
     if (calorie === "all") {
       // Reset to show all products if "All" is selected
       setFilteredProducts(products);
     } else {
       // Filter products by calorie count if a specific filter is selected
-      const filtered = products.filter((product) => product.caloriecount === calorie);
+      const filtered = products.filter(
+        (product) => product.caloriecount === calorie
+      );
       setFilteredProducts(filtered);
     }
   };
@@ -123,35 +162,41 @@ const DrinksFilter: React.FC<{
         // Query the collection to find allergies
         const allergyQuery = query(
           collection(db, slug),
-          where("contains", "array-contains-any", ["Soy", "Wheat", "Milk", "Eggs", "Tree Nuts", "Peanuts"])
+          where("contains", "array-contains-any", [
+            "Soy",
+            "Wheat",
+            "Milk",
+            "Eggs",
+            "Tree Nuts",
+            "Peanuts",
+          ])
         );
         const querySnapshot = await getDocs(allergyQuery);
-  
+
         const fetchedAllergies: string[] = [];
         const fetchedProducts: any[] = []; // Array to store fetched products
-  
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-  
+
           if (data.contains) {
             fetchedAllergies.push(...data.contains);
           }
-  
+
           // Ensure data.products exists and is an array before spreading
           if (Array.isArray(data.products)) {
             fetchedProducts.push(...data.products);
           }
         });
-  
+
         setAllergies(fetchedAllergies);
         setProducts(fetchedProducts); // Set the products state
         setFilteredProducts(fetchedProducts); // Initialize filtered products with all products
-  
       } catch (error) {
         console.error("Error fetching allergies from Firestore:", error);
       }
     };
-  
+
     fetchAllergies();
   }, [slug]);
 
@@ -168,7 +213,7 @@ const DrinksFilter: React.FC<{
       />
       {open && (
         <div
-          className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-center justify-center"
+          className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-center justify-center z-20"
           style={{ background: "rgba(0, 0, 0, 0.5)" }}
         >
           <form
@@ -188,10 +233,13 @@ const DrinksFilter: React.FC<{
                 <hr className="mb-4" />
               </>
             )}
-  
+
             <div className="flex gap-2 justify-around flex-wrap">
               {currentFilters.map((filter) => (
-                <div className="flex items-center justify-start space-x-2" key={filter.id}>
+                <div
+                  className="flex items-center justify-start space-x-2"
+                  key={filter.id}
+                >
                   <input
                     type="radio"
                     name="drinktype"
@@ -205,11 +253,16 @@ const DrinksFilter: React.FC<{
               ))}
             </div>
             <hr className="mt-4" />
-            <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">Calories</h1>
+            <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">
+              Calories
+            </h1>
             <hr />
             <div className="flex justify-around items-center">
               {FilterCalories.map((filter) => (
-                <div className="flex items-center justify-start space-x-2 mx-1 my-3" key={filter.id}>
+                <div
+                  className="flex items-center justify-start space-x-2 mx-1 my-3"
+                  key={filter.id}
+                >
                   <input
                     type="radio"
                     name={filter.name}
