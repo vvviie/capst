@@ -290,28 +290,30 @@ const BurgerMenu = () => {
                 <span>{firstName}</span>
               </Link>
 
-              <Link
-                href="/foodcart"
-                className="relative flex gap-2 group hover:text-yellow-100 items-center"
-                onClick={() => setOpen(false)}
-              >
-                {/* NUMBER OF ITEMS */}
-                <span
-                  key="cart-item-count"
-                  className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]"
+              {foodCartAvailable && (
+                <Link
+                  href="/foodcart"
+                  className="relative flex gap-2 group hover:text-yellow-100 items-center"
+                  onClick={() => setOpen(false)}
                 >
-                  {totalItems}
-                </span>
-                {/* CART ICON */}
-                <i
-                  key="cart-icon"
-                  className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"
-                ></i>
-                {/* PRICE OF THE ITEMS */}
-                <span key="cart-total-price" className="text-sm">
-                  (P{totalCartPrice.toFixed(2)})
-                </span>
-              </Link>
+                  {/* NUMBER OF ITEMS */}
+                  <span
+                    key="cart-item-count"
+                    className="w-6 h-6 text-center rounded-full bg-red-500 text-white text-xs pt-1 mr-[-6px]"
+                  >
+                    {totalItems}
+                  </span>
+                  {/* CART ICON */}
+                  <i
+                    key="cart-icon"
+                    className="fa-solid fa-cart-shopping text-white text-md group-hover:text-yellow-100"
+                  ></i>
+                  {/* PRICE OF THE ITEMS */}
+                  <span key="cart-total-price" className="text-sm">
+                    (P{totalCartPrice.toFixed(2)})
+                  </span>
+                </Link>
+              )}
             </>
           )}
           <div className="flex gap-2 items-center justify-around text-gray-300 my-4">
