@@ -205,7 +205,7 @@ const BurgerMenu = () => {
 
     // Cleanup
     return () => {
-      unsubscribeFoodCart();
+      if (unsubscribeFoodCart) unsubscribeFoodCart();
       if (unsubscribeAuth) unsubscribeAuth();
       if (unsubscribeCartListener) unsubscribeCartListener();
       if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
