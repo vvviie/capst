@@ -583,13 +583,21 @@ const AdminAndStaffOrdersPage = () => {
     }
   };
 
-  const handleRefund = async (id: string) => {
+  const onReserveClick = (id: string) => {
+    const orderDate = "10/25/2024"; // Replace with the actual date you want to log
+    handleRefund(id, orderDate);
+  };
+  const handleRefund = async (id: string, orderDate: string) => {
     try {
+      // Log the order date
+      console.log("Order Date:", orderDate);
+  
+      // Update the order status to 'REFUNDED'
       await updateDoc(doc(db, "completedOrders", id), {
         status: "REFUNDED",
         hasRated: false,
       });
-
+  
       setIsMarkAsDoneVisible(true);
       setTimeout(() => {
         setIsMarkAsDoneVisible(false);
@@ -1207,11 +1215,12 @@ const AdminAndStaffOrdersPage = () => {
                               ? "Mark as Done"
                               : "Hide"}
                           </button>
+
                           {order.status === "PAID" && (
                             <button
                               className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
           hover:scale-[1.02] duration-200 hover:bg-red-400"
-                              onClick={() => handleRefund(order.id)} // Call handleRefund here
+                              onClick={() => handleRefund(order.id, order.date)} // Call handleRefund here
                             >
                               Refund
                             </button>
@@ -1634,6 +1643,7 @@ const AdminAndStaffOrdersPage = () => {
                                     ? "Mark as Done"
                                     : "Hide"}
                                 </button>
+
                                 <button
                                   className={`${
                                     order.status !== "TO PAY" && "hidden"
@@ -2062,6 +2072,17 @@ const AdminAndStaffOrdersPage = () => {
                                     ? "Mark as Done"
                                     : "Hide"}
                                 </button>
+
+                                {/* {order.status === "PAID" && (
+                            <button
+                              className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+          hover:scale-[1.02] duration-200 hover:bg-red-400"
+                              onClick={() => handleRefund(order.id)} // Call handleRefund here
+                            >
+                              Refund
+                            </button>
+                          )}
+                           */}
                                 <button
                                   className={`${
                                     order.status !== "TO PAY" && "hidden"
