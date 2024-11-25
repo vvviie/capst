@@ -820,9 +820,14 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Payment Type: ${res.paymentType}`}</p>
 
-                          {/* Conditional rendering for Downpayment Amount */}
+                          {/* Conditional rendering for Downpayment Amount or Balance label */}
                           {res.paymentType !== "fullpayment" && (
-                            <p className="text-xs select-none text-gray-400">{`Downpayment Amount: ${res.downpayment}`}</p>
+                            <p className="text-xs select-none text-gray-400">
+                              {res.status === "DOWNPAYMENT PAID"
+                                ? "Balance:"
+                                : "Downpayment Amount:"}{" "}
+                              {res.downpayment}
+                            </p>
                           )}
 
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
