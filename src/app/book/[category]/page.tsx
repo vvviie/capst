@@ -57,6 +57,7 @@ const ReservationPage = () => {
   const [chosenItems, setChosenItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
+  const [paymentType, setPaymentType] = useState("downpayment"); // Default to downpayment
   //#endregion
 
   //#region Global EffectHooks
@@ -575,6 +576,15 @@ const ReservationPage = () => {
       setTimeout(() => setError(false), 5000);
       return;
     }
+
+    // Calculate the downpayment and balance
+    const downpaymentAmount =
+      paymentType === "downpayment" ? totalPrice / 2 : 0;
+
+    // Define totalPrice to be submitted, depending on paymentType
+    const amountToSubmit =
+      paymentType === "fullpayment" ? totalPrice : downpaymentAmount;
+
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
@@ -584,7 +594,9 @@ const ReservationPage = () => {
         packageOffer,
         buffetChosen,
         numberOfPersons: numberOfPersonsEvent,
-        totalPrice: totalPrice,
+        downpayment: paymentType === "downpayment" ? downpaymentAmount : null, // Store downpayment amount only if applicable
+        totalPrice: totalPrice, // Always store the original totalPrice
+        paymentType: paymentType,
         status: "REQUESTED",
         type: "Event",
         reservedBy: userEmail,
@@ -592,7 +604,7 @@ const ReservationPage = () => {
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false); // Hide after a few seconds if desired
-        //router.push("/book/reservations"); // Redirect to /book
+        router.push("/book/reservations"); // Redirect to /book
       }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
@@ -919,7 +931,6 @@ const ReservationPage = () => {
             </>
             //#endregion
           )}
-          {/* RESERVE BUTTON */}
           <div className="flex flex-col items-center">
             {/* Total Price Label */}
             <span className="font-bold text-lg mb-2 text-brown-500">
@@ -939,37 +950,36 @@ const ReservationPage = () => {
                   Payment Type:
                 </span>
 
-                <label className="flex items-center mr-4 bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300">
-                  {" "}
-                  {/* Added px-4 and kept py-2 */}
+                <label className="flex items-center mr-4 bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300 w-1/2">
                   <input
                     type="radio"
                     name="paymentType"
                     value="downpayment"
-                    defaultChecked
+                    checked={paymentType === "downpayment"}
+                    onChange={() => setPaymentType("downpayment")}
                     className="mr-2"
                   />
                   <span className="text-sm">
                     Downpayment
-                    <br /> {/* Added line break here */}
+                    <br />
                     <span className="font-bold text-orange-700">
                       PHP {(totalPrice / 2).toFixed(2)}
                     </span>
                   </span>
                 </label>
 
-                <label className="flex items-center bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300">
-                  {" "}
-                  {/* Added px-4 and kept py-2 */}
+                <label className="flex items-center bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300 w-1/2">
                   <input
                     type="radio"
                     name="paymentType"
                     value="fullpayment"
+                    checked={paymentType === "fullpayment"}
+                    onChange={() => setPaymentType("fullpayment")}
                     className="mr-2"
                   />
                   <span className="text-sm">
                     Full Payment
-                    <br /> {/* Added line break here */}
+                    <br />
                     <span className="font-bold text-orange-700">
                       PHP {totalPrice}
                     </span>
