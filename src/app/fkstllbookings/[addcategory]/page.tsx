@@ -52,6 +52,7 @@ const AdminReservationPage = () => {
   const [chosenItems, setChosenItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
+  const [paymentType, setPaymentType] = useState("downpayment"); // Default to downpayment
   //#endregion
 
   //#region Global EffectHooks
@@ -192,7 +193,7 @@ const AdminReservationPage = () => {
       return;
     }
     e.preventDefault();
-  
+
     const dateInput = (document.getElementById("inputDate") as HTMLInputElement)
       ?.value;
     const hourInput = parseInt(
@@ -204,27 +205,27 @@ const AdminReservationPage = () => {
       10
     );
     const num = numberOfPersonsTable;
-  
+
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
       setError("Please fill in all required fields."); // Show error message
       setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
       return;
     }
-  
+
     // Check for hour input of 0 specifically
     if (hourInput === 0) {
       setError("Please enter a valid hour."); // Show error message for invalid hour
       setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
       return;
     }
-  
+
     // Validate date
     if (!validateDate(dateInput)) {
       setTimeout(() => setDateError(""), 3000); // Clear the date error after 3 seconds
       return;
     }
-  
+
     // Check if the number of persons is less than 30 or greater than 50
     if (numberOfPersonsTable > 20) {
       setError("Number of persons must be below 20.");
@@ -233,21 +234,21 @@ const AdminReservationPage = () => {
       }, 5000); // Clear the error after 5 seconds
       return;
     }
-  
+
     if (reservedByUser) {
       const userDocRef = doc(db, "users", reservedByUser);
       const userDoc = await getDoc(userDocRef);
-  
+
       if (!userDoc.exists()) {
-        setError("Email given was invalid."); 
+        setError("Email given was invalid.");
         setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
         return;
       }
-  }
-  
+    }
+
     const orderId = generateOrderId();
     const now = new Date();
-  
+
     const dateReserved = `${String(now.getMonth() + 1).padStart(
       2,
       "0"
@@ -255,7 +256,7 @@ const AdminReservationPage = () => {
     const timeReserved = `${String(now.getHours()).padStart(2, "0")}:${String(
       now.getMinutes()
     ).padStart(2, "0")}`;
-  
+
     // Format date and time to be reserved
     const dateToBeReserved = new Date(dateInput);
     const formattedDateToBeReserved = `${String(
@@ -264,25 +265,25 @@ const AdminReservationPage = () => {
       2,
       "0"
     )}/${dateToBeReserved.getFullYear()}`;
-  
+
     const timeToBeReserved = `${
       hourInput > 9 ? hourInput : hourInput % 12
     }:${String(minuteInput).padStart(2, "0")}PM`;
-  
+
     // Log the reservation details
     //console.log("Submitting reservation with the following details:");
     //console.log({
-      //orderId,
-      //dateReserved,
-      //timeReserved,
-      //numberOfPersons: num,
-      //reservedBy: reservedByUser,
-      //status: "PENDING",
-      //dateToBeReserved: formattedDateToBeReserved,
-      //timeToBeReserved,
-      //type: "Table",
+    //orderId,
+    //dateReserved,
+    //timeReserved,
+    //numberOfPersons: num,
+    //reservedBy: reservedByUser,
+    //status: "PENDING",
+    //dateToBeReserved: formattedDateToBeReserved,
+    //timeToBeReserved,
+    //type: "Table",
     //});
-  
+
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
@@ -295,10 +296,13 @@ const AdminReservationPage = () => {
         totalPrice: totalPriceT,
         type: "Table",
       });
-  
+
       console.log("Reservation successfully saved.");
-      setIsPopupVisible(true); // Show success popup
-      setTimeout(() => setIsPopupVisible(false), 750);
+      setIsPopupVisible(true);
+      setTimeout(() => {
+        setIsPopupVisible(false); // Hide after a few seconds if desired
+        router.push("/fkstllbookings"); // Redirect to /book
+      }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");
@@ -488,16 +492,16 @@ const AdminReservationPage = () => {
     if (reservedByUser) {
       const userDocRef = doc(db, "users", reservedByUser);
       const userDoc = await getDoc(userDocRef);
-  
+
       if (!userDoc.exists()) {
         setError(true);
-      setErrorMessage('Email must be valid.');
-      setTimeout(() => {
-        setError(false);
-      }, 5000);
-      return;
+        setErrorMessage("Email must be valid.");
+        setTimeout(() => {
+          setError(false);
+        }, 5000);
+        return;
       }
-  }
+    }
 
     if (chosenItems.length === 0) {
       setError(true);
@@ -550,6 +554,14 @@ const AdminReservationPage = () => {
     }/${now.getDate()}/${now.getFullYear()}`;
     const timeReserved = `${now.getHours()}:${now.getMinutes()}`;
 
+    // Calculate the downpayment and balance
+    const downpaymentAmount =
+      paymentType === "downpayment" ? totalPrice / 2 : 0;
+
+    // Define totalPrice to be submitted, depending on paymentType
+    const amountToSubmit =
+      paymentType === "fullpayment" ? totalPrice : downpaymentAmount;
+
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
@@ -559,15 +571,17 @@ const AdminReservationPage = () => {
         packageOffer,
         buffetChosen,
         numberOfPersons: numberOfPersonsEvent,
-        totalPrice: totalPrice,
+        downpayment: paymentType === "downpayment" ? downpaymentAmount : null, // Store downpayment amount only if applicable
+        totalPrice: totalPrice, // Always store the original totalPrice
+        paymentType: paymentType,
         status: "REQUESTED",
         type: "Event",
-        reservedBy: reservedByUser,
+        reservedBy: userEmail,
       });
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false); // Hide after a few seconds if desired
-        //router.push("/book/reservations"); // Redirect to /book
+        router.push("/fkstllbookings"); // Redirect to /book
       }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
@@ -588,7 +602,6 @@ const AdminReservationPage = () => {
     console.log("Selected Date (MM/DD/YYYY):", formattedDate); // Log the formatted date
     setReservedDate(formattedDate);
   };
-
 
   return (
     <div
@@ -692,7 +705,7 @@ const AdminReservationPage = () => {
                   <span>Time</span>
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
-                <input
+                  <input
                     className="border-2 border-solid border-orange-900 w-2/5 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeHour"
                     id="inputTimeHour"
@@ -798,7 +811,7 @@ const AdminReservationPage = () => {
                   <span>Time</span>
                 </span>
                 <div className="w-full flex gap-2 justify-start items-center">
-                <input
+                  <input
                     className="border-2 border-solid border-orange-900 w-1/4 h-10 px-3 rounded-md bg-orange-50 inline-block"
                     name="timeStartingHour"
                     id="inputTimeStartingHour"
@@ -940,24 +953,81 @@ const AdminReservationPage = () => {
             </>
             //#endregion
           )}
-          {/* RESERVE BUTTON */}
-          <button
-            type="button" // Change type to "button" to prevent default form submission
-            className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
-  hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
-    slug === "mobilecafe" ? "hidden" : ""
-  }`}
-            onClick={slug === "event" ? handleReserve : handleSubmit} // Call the appropriate function directly
-          >
-            <i className="fa fa-book text-sm" aria-hidden="true"></i>
-            <span className="font-bold text-md">
+          <div className="flex flex-col items-center">
+            {/* Total Price Label */}
+            <span className="font-bold text-lg mb-2 text-brown-500">
+              {" "}
+              {/* Added text-brown-500 */}
               {slug === "table"
-                ? "Reserve Table (PHP " + totalPriceT + ")"
+                ? "Total Cost: PHP " + totalPriceT + ".00"
                 : slug === "event"
-                ? "Reserve Place (PHP " + totalPrice + ")"
-                : "Book Mobile Café"}{" "}
+                ? "Estimated Cost: PHP " + totalPrice + ".00"
+                : ""}
             </span>
-          </button>
+
+            {/* Payment Type Selection - Only for 'event' slug */}
+            {slug === "event" && (
+              <div className="flex items-center mb-4">
+                <span className="text-sm text-gray-700 mr-2">
+                  Payment Type:
+                </span>
+
+                <label className="flex items-center mr-4 bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300 w-1/2">
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="downpayment"
+                    checked={paymentType === "downpayment"}
+                    onChange={() => setPaymentType("downpayment")}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">
+                    Downpayment
+                    <br />
+                    <span className="font-bold text-orange-700">
+                      PHP {(totalPrice / 2).toFixed(2)}
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex items-center bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300 w-1/2">
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="fullpayment"
+                    checked={paymentType === "fullpayment"}
+                    onChange={() => setPaymentType("fullpayment")}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">
+                    Full Payment
+                    <br />
+                    <span className="font-bold text-orange-700">
+                      PHP {totalPrice}
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
+            {/* RESERVE BUTTON */}
+            <button
+              type="button" // Change type to "button" to prevent default form submission
+              className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
+    hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
+      slug === "mobilecafe" ? "hidden" : ""
+    }`}
+              onClick={slug === "event" ? handleReserve : handleSubmit} // Call the appropriate function directly
+            >
+              <i className="fa fa-book text-sm" aria-hidden="true"></i>
+              <span className="font-bold text-md">
+                {slug === "table"
+                  ? "Reserve Table"
+                  : slug === "event"
+                  ? "Reserve Place"
+                  : "Book Mobile Café"}{" "}
+              </span>
+            </button>
+          </div>
           <p
             className={`${
               slug === "event" ? "" : "hidden"
