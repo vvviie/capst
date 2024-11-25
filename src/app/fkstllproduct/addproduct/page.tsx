@@ -122,7 +122,7 @@ const AddProductPage = () => {
     const drinkTypes = ["Coffee", "Non-Coffee"];
     const pastaTypes = ["Pesto", "Non-Pesto"];
     const snackTypes = ["Fries", "Nachos", "Seafood", "Chicken"];
-    const sandwichTypes = ["Sandwich"];
+    const sandwichTypes = ["Meat", "Fish", "Veggie"];
     const mainCourseTypes = ["Meat", "Seafood", "Veggie"];
     const pastryTypes = ["Cake", "Cookie", "Tart"];
 
