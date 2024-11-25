@@ -93,16 +93,52 @@ const AdminCheckReservationsPage = () => {
     }
   };
 
-  const handlePaid = async (id: string, totalPrice: number) => {
-    // Log the totalPrice to check if it's being passed correctly
+  const handlePayment = (res) => {
+    if (res.paymentType === "downpayment") {
+      handlePaid(res.id, res.totalPrice, res.downpayment); // Pass downpayment
+    } else if (res.paymentType === "fullpayment") {
+      handlePaid(res.id, res.totalPrice); // No downpayment to pass
+    }
+  };
+
+  const handlePaid = async (
+    id: string,
+    totalPrice: number,
+    downpayment?: number
+  ) => {
+    // Log the totalPrice and downpayment to check if they're being passed correctly
     console.log("Total Price:", totalPrice);
+    console.log("Downpayment:", downpayment);
 
     try {
-      // Update the status of the table reservation to "PAID"
+      // Fetch the current reservation document to check its status
+      const reservationDoc = await getDoc(doc(db, "tableReservations", id));
+      let currentStatus = reservationDoc.exists()
+        ? reservationDoc.data().status
+        : null;
+
+      // Determine the amount to use based on paymentType
+      const amountToUse = downpayment ? downpayment : totalPrice;
+      let paymentStatus;
+      let balance;
+
+      if (currentStatus === "DOWNPAYMENT PAID") {
+        // If the current status is "DOWNPAYMENT PAID", set the next payment status to "PAID"
+        paymentStatus = "PAID";
+        balance = 0; // Set balance to 0 when fully paid
+      } else {
+        // Otherwise, set the status based on whether downpayment is made
+        paymentStatus = downpayment ? "DOWNPAYMENT PAID" : "PAID";
+        balance = downpayment ? totalPrice * 0.5 : 0; // Calculate balance for downpayment
+      }
+
+      // Update the status of the table reservation
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "PAID",
+        status: paymentStatus,
+        balance: balance, // Set the calculated balance
       });
 
+      //#region Submit to salesData
       // Update Net Sales in salesData collection
       const salesDocumentId = "salesExpensesToday";
       const salesDataRef = doc(db, "salesData", salesDocumentId);
@@ -136,6 +172,7 @@ const AdminCheckReservationsPage = () => {
 
       // Merge the new sales data with the existing document
       await setDoc(salesDataRef, salesDataUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+      //#endregion
 
       // Show the paid confirmation
       setIsPaidVisible(true);
@@ -676,7 +713,8 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
             border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() =>
-                                  handlePaid(res.id, res.totalPrice)
+                                  //handlePaid(res.id, res.totalPrice)
+                                  handlePayment(res)
                                 } // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
@@ -908,7 +946,8 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
             border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() =>
-                                  handlePaid(res.id, res.totalPrice)
+                                  //handlePaid(res.id, res.totalPrice)
+                                  handlePayment(res)
                                 } // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
