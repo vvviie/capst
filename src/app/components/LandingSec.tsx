@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+
 // Data for the changing text for the landing page, as well as 'yung picture link.
 const data = [
   {
@@ -12,7 +12,8 @@ const data = [
   },
   {
     id: 2,
-    title: "Experience culinary delights and warm ambiance at our charming eatery.",
+    title:
+      "Experience culinary delights and warm ambiance at our charming eatery.",
     desc: "Experience culinary delights and warm ambiance at our charming eatery.",
     img: "/cwfood.jpg",
   },
@@ -55,17 +56,14 @@ export const LandingSec = () => {
         <button
           className="bg-amber-950 text-white py-2 px-4 text-xl lg:px-6 lg:py-3 rounded-lg hover:bg-amber-900
         lg:hover:scale-105 duration-[0.3s] font-bold"
-
         >
-          <Link href="/menu">
           Order Now
-          </Link>
         </button>
       </div>
       {/* IMAGE CONTAINER */}
       <div className="w-full relative flex-1 flex justify-center items-center">
         <Image
-          src={data[0].img}
+          src={data[currentSlide].img}
           alt=""
           fill
           priority

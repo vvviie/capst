@@ -80,9 +80,7 @@ const AboutUs = () => {
       <div className="flex flex-col gap-4 py-4 lg:px-2 lg:flex-1 2xl:gap-8 md:justify-center md:items-center md:h-1/2">
         {/* ABOUT US TEXT */}
         <div className="flex flex-col gap-1 justify-center items-center">
-          <h1 className="text-2xl text-orange-950 font-bold lg:text-3xl">
-            {about.title}
-          </h1>
+        <h1 className="text-2xl text-orange-950 font-bold">{about.title}</h1>
           <p className="text-justify px-4">{about.desc}</p>
         </div>
         {/* OTHER DETAILS TEXT DYNAMIC CONTAINER */}
@@ -91,9 +89,7 @@ const AboutUs = () => {
             key={item.id}
             className="flex flex-col gap-1 justify-center items-center"
           >
-            <h1 className="text-xl font-bold text-orange-950 lg:text-2xl">
-              {item.title}
-            </h1>
+            <h1 className="text-xl font-bold text-orange-950">{item.title}</h1>
             <p>{item.desc}</p>
           </div>
         ))}

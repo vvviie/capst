@@ -112,21 +112,21 @@ const MenuCategoryPage: React.FC = () => {
 
   const { sandwichesByCategory } = useAllSandwiches();
 
-  const sandwiches: SandwichesCategoryData = Object.entries(sandwichesByCategory).map(
-    ([category, sandwiches]) => ({
-      title: formatCategoryTitle(category), // Use the utility function here
-      sandwiches,
-    })
-  );
+  const sandwiches: SandwichesCategoryData = Object.entries(
+    sandwichesByCategory
+  ).map(([category, sandwiches]) => ({
+    title: formatCategoryTitle(category), // Use the utility function here
+    sandwiches,
+  }));
 
-  const { mainCoursesByCategory} = useAllMainCourses();
+  const { mainCoursesByCategory } = useAllMainCourses();
 
-  const mainCourses: MainCourseCategoryData = Object.entries(mainCoursesByCategory).map(
-    ([category, mainCourses]) => ({
-      title: formatCategoryTitle(category), // Use the utility function here
-      mainCourses,
-    })
-  );
+  const mainCourses: MainCourseCategoryData = Object.entries(
+    mainCoursesByCategory
+  ).map(([category, mainCourses]) => ({
+    title: formatCategoryTitle(category), // Use the utility function here
+    mainCourses,
+  }));
 
   const { snacksByCategory } = useAllSnacks();
   const snacks: SnacksCategoryData = Object.entries(snacksByCategory).map(
@@ -136,7 +136,7 @@ const MenuCategoryPage: React.FC = () => {
     })
   );
 
-  const {pastriesByCategory} = useAllPastries();
+  const { pastriesByCategory } = useAllPastries();
   const pastries: PastriesCategoryData = Object.entries(pastriesByCategory).map(
     ([category, pastries]) => ({
       title: formatCategoryTitle(category), // Use the utility function here
@@ -208,7 +208,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = pasta.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(pasta.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  pasta.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -219,7 +231,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, selectedCalorie, searchText, pastas]
+    [selectedFilter, selectedCalorie, searchText, pastas, selectedAllergies]
   );
 
   const filteredSandwiches = useMemo(
@@ -235,7 +247,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = sandwich.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(sandwich.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  sandwich.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -246,7 +270,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, selectedCalorie, sandwiches]
+    [selectedFilter, selectedCalorie, searchText, sandwiches, selectedAllergies]
   );
 
   const filteredMainCourses = useMemo(
@@ -263,7 +287,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = mainCourse.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(mainCourse.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  mainCourse.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -274,7 +310,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, selectedCalorie, mainCourses]
+    [selectedFilter, selectedCalorie, searchText, mainCourses, selectedAllergies]
   );
 
   const filteredSnacks = useMemo(
@@ -290,7 +326,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = snack.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(snack.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  snack.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -301,7 +349,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, selectedCalorie, snacks]
+    [selectedFilter, selectedCalorie, searchText, snacks, selectedAllergies]
   );
 
   const filteredPastries = useMemo(
@@ -349,16 +397,15 @@ const MenuCategoryPage: React.FC = () => {
 
   return (
     <div className="relative min-h-[calc(100vh-56px)] flex flex-col gap-2 py-4 mt-14">
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center pr-10 py-4 px-10 md:flex-row md:gap-0 md:px-24 xl:px-56">
+      <div className="flex flex-col sm:flex-row gap-4 justify-between items-start md:items-center pr-10 py-2 mb-2 px-10 md:flex-row md:gap-0 md:px-24 xl:px-56">
         <Link
           href={"/menu"}
-          className="flex items-center space-x-2 font-bold text-orange-950 text-2xl text-left w-full
-      max-w-[1000px] lg:min-w-[800px] hover:text-orange-800 cursor-pointer mb-2"
+          className="flex items-center space-x-2 font-bold text-orange-950 text-xl text-left hover:text-orange-800 cursor-pointer"
         >
           <i className="fa fa-angle-left mr-[-4px]" aria-hidden="true"></i>
           <span>Menu</span>
         </Link>
-        <div className="flex w-full md:w-2/3 justify-between items-center gap-4 z-10 sm:justify-end">
+        <div className="flex w-full md:w-2/3 justify-between items-center gap-4 sm:justify-end">
           <input
             type="text"
             className="border-2 border-solid border-gray-200 w-56 sm:w-60 text-md md:w-64 md:text-lg pl-2 rounded-md bg-gray-50"
@@ -380,25 +427,29 @@ const MenuCategoryPage: React.FC = () => {
           (category, index) =>
             category.drinks.length > 0 && (
               <div key={index} className="mb-8">
-                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
-                  {category.title}
-                </h1>
+                <div className="flex gap-4 items-center px-10 md:px-24 xl:px-56 mb-4">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    {category.title}
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
+                <p className="font-light text-xs text-center text-gray-500 mt-[-10px] mb-4">
+                  Click or tap an item to view details or order.
+                </p>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.drinks.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
-                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                      className="relative p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
-                      <div className="relative w-full h-48 mb-4">
-                        <Image
-                          src={item.img}
-                          alt={item.title}
-                          fill
-                          className="object-contain"
-                        />
-                        <div className="absolute top-0 left-0 flex flex-col gap-2">
-                          <div className="relative w-6 h-6">
+                      <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="availability picture"
                               src={
@@ -410,7 +461,24 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
-                          <div className="relative w-6 h-6">
+                          <span
+                            className={`text-xs font-semibold
+                              ${
+                                item.availability === "available"
+                                  ? "text-green-500"
+                                  : "text-gray-700"
+                              }`}
+                          >
+                            {item.availability === "available"
+                              ? "Available"
+                              : "Unavailable"}
+                          </span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="calorie count picture"
                               src={
@@ -424,12 +492,36 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
+                          <span
+                            className={`text-xs font-semibold text-center
+                              ${
+                                item.calorie === "low"
+                                  ? "text-yellow-600"
+                                  : item.calorie === "med"
+                                  ? "text-orange-600"
+                                  : "text-red-800"
+                              }`}
+                          >
+                            {item.calorie === "low"
+                              ? "Low Cal."
+                              : item.calorie === "med"
+                              ? "Med Cal."
+                              : "High Cal."}
+                          </span>
                         </div>
                       </div>
-                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                      <div className="relative w-full h-2/3 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <h2 className="text-lg rounded-full font-bold text-gray-800 text-center">
                         {item.title}
                       </h2>
-                      <p className="font-bold text-lg text-gray-700 text-center">
+                      <p className="font-bold bg-orange-300 text-xs py-1 mt-[-5px] px-4 rounded-full text-white text-center">
                         PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
@@ -444,25 +536,29 @@ const MenuCategoryPage: React.FC = () => {
           (category, index) =>
             category.pastas.length > 0 && (
               <div key={index} className="mb-8">
-                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
-                  {category.title}
-                </h1>
+                <div className="flex gap-4 items-center px-10 md:px-24 xl:px-56 mb-4">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    {category.title}
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
+                <p className="font-light text-xs text-center text-gray-500 mt-[-10px] mb-4">
+                  Click or tap an item to view details or order.
+                </p>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.pastas.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
-                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                      className="relative p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
-                      <div className="relative w-full h-48 mb-4">
-                        <Image
-                          src={item.img}
-                          alt={item.title}
-                          fill
-                          className="object-contain"
-                        />
-                        <div className="absolute top-0 left-0 flex flex-col gap-2">
-                          <div className="relative w-6 h-6">
+                      <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="availability picture"
                               src={
@@ -474,7 +570,24 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
-                          <div className="relative w-6 h-6">
+                          <span
+                            className={`text-xs font-semibold
+                              ${
+                                item.availability === "available"
+                                  ? "text-green-500"
+                                  : "text-gray-700"
+                              }`}
+                          >
+                            {item.availability === "available"
+                              ? "Available"
+                              : "Unavailable"}
+                          </span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="calorie count picture"
                               src={
@@ -488,12 +601,36 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
+                          <span
+                            className={`text-xs font-semibold text-center
+                              ${
+                                item.calorie === "low"
+                                  ? "text-yellow-600"
+                                  : item.calorie === "med"
+                                  ? "text-orange-600"
+                                  : "text-red-800"
+                              }`}
+                          >
+                            {item.calorie === "low"
+                              ? "Low Cal."
+                              : item.calorie === "med"
+                              ? "Med Cal."
+                              : "High Cal."}
+                          </span>
                         </div>
                       </div>
-                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <h2 className="text-sm bg-orange-900 rounded-full py-1 px-4 font-bold text-white text-center">
                         {item.title}
                       </h2>
-                      <p className="font-bold text-lg text-gray-700 text-center">
+                      <p className="font-bold bg-orange-300 text-xs py-1 mt-[-5px] px-4 rounded-full text-white text-center">
                         PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
@@ -508,25 +645,29 @@ const MenuCategoryPage: React.FC = () => {
           (category, index) =>
             category.sandwiches.length > 0 && (
               <div key={index} className="mb-8">
-                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
-                  {category.title}
-                </h1>
+                <div className="flex gap-4 items-center px-10 md:px-24 xl:px-56 mb-4">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    {category.title}
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
+                <p className="font-light text-xs text-center text-gray-500 mt-[-10px] mb-4">
+                  Click or tap an item to view details or order.
+                </p>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.sandwiches.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
-                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                      className="relative p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
-                      <div className="relative w-full h-48 mb-4">
-                        <Image
-                          src={item.img}
-                          alt={item.title}
-                          fill
-                          className="object-contain"
-                        />
-                        <div className="absolute top-0 left-0 flex flex-col gap-2">
-                          <div className="relative w-6 h-6">
+                      <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="availability picture"
                               src={
@@ -538,7 +679,24 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
-                          <div className="relative w-6 h-6">
+                          <span
+                            className={`text-xs font-semibold
+                              ${
+                                item.availability === "available"
+                                  ? "text-green-500"
+                                  : "text-gray-700"
+                              }`}
+                          >
+                            {item.availability === "available"
+                              ? "Available"
+                              : "Unavailable"}
+                          </span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="calorie count picture"
                               src={
@@ -552,12 +710,36 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
+                          <span
+                            className={`text-xs font-semibold text-center
+                              ${
+                                item.calorie === "low"
+                                  ? "text-yellow-600"
+                                  : item.calorie === "med"
+                                  ? "text-orange-600"
+                                  : "text-red-800"
+                              }`}
+                          >
+                            {item.calorie === "low"
+                              ? "Low Cal."
+                              : item.calorie === "med"
+                              ? "Med Cal."
+                              : "High Cal."}
+                          </span>
                         </div>
                       </div>
-                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <h2 className="text-sm bg-orange-900 rounded-full py-1 px-4 font-bold text-white text-center">
                         {item.title}
                       </h2>
-                      <p className="font-bold text-lg text-gray-700 text-center">
+                      <p className="font-bold bg-orange-300 text-xs py-1 mt-[-5px] px-4 rounded-full text-white text-center">
                         PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
@@ -572,25 +754,29 @@ const MenuCategoryPage: React.FC = () => {
           (category, index) =>
             category.mainCourses.length > 0 && (
               <div key={index} className="mb-8">
-                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
-                  {category.title}
-                </h1>
+                <div className="flex gap-4 items-center px-10 md:px-24 xl:px-56 mb-4">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    {category.title}
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
+                <p className="font-light text-xs text-center text-gray-500 mt-[-10px] mb-4">
+                  Click or tap an item to view details or order.
+                </p>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.mainCourses.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
-                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                      className="relative p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
-                      <div className="relative w-full h-48 mb-4">
-                        <Image
-                          src={item.img}
-                          alt={item.title}
-                          fill
-                          className="object-contain"
-                        />
-                        <div className="absolute top-0 left-0 flex flex-col gap-2">
-                          <div className="relative w-6 h-6">
+                      <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="availability picture"
                               src={
@@ -602,7 +788,24 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
-                          <div className="relative w-6 h-6">
+                          <span
+                            className={`text-xs font-semibold
+                              ${
+                                item.availability === "available"
+                                  ? "text-green-500"
+                                  : "text-gray-700"
+                              }`}
+                          >
+                            {item.availability === "available"
+                              ? "Available"
+                              : "Unavailable"}
+                          </span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="calorie count picture"
                               src={
@@ -616,12 +819,36 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
+                          <span
+                            className={`text-xs font-semibold text-center
+                              ${
+                                item.calorie === "low"
+                                  ? "text-yellow-600"
+                                  : item.calorie === "med"
+                                  ? "text-orange-600"
+                                  : "text-red-800"
+                              }`}
+                          >
+                            {item.calorie === "low"
+                              ? "Low Cal."
+                              : item.calorie === "med"
+                              ? "Med Cal."
+                              : "High Cal."}
+                          </span>
                         </div>
                       </div>
-                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <h2 className="text-sm bg-orange-900 rounded-full py-1 px-4 font-bold text-white text-center">
                         {item.title}
                       </h2>
-                      <p className="font-bold text-lg text-gray-700 text-center">
+                      <p className="font-bold bg-orange-300 text-xs py-1 mt-[-5px] px-4 rounded-full text-white text-center">
                         PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
@@ -636,25 +863,29 @@ const MenuCategoryPage: React.FC = () => {
           (category, index) =>
             category.snacks.length > 0 && (
               <div key={index} className="mb-8">
-                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
-                  {category.title}
-                </h1>
+                <div className="flex gap-4 items-center px-10 md:px-24 xl:px-56 mb-4">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    {category.title}
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
+                <p className="font-light text-xs text-center text-gray-500 mt-[-10px] mb-4">
+                  Click or tap an item to view details or order.
+                </p>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.snacks.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
-                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                      className="relative p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
-                      <div className="relative w-full h-48 mb-4">
-                        <Image
-                          src={item.img}
-                          alt={item.title}
-                          fill
-                          className="object-contain"
-                        />
-                        <div className="absolute top-0 left-0 flex flex-col gap-2">
-                          <div className="relative w-6 h-6">
+                      <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="availability picture"
                               src={
@@ -666,7 +897,24 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
-                          <div className="relative w-6 h-6">
+                          <span
+                            className={`text-xs font-semibold
+                              ${
+                                item.availability === "available"
+                                  ? "text-green-500"
+                                  : "text-gray-700"
+                              }`}
+                          >
+                            {item.availability === "available"
+                              ? "Available"
+                              : "Unavailable"}
+                          </span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="calorie count picture"
                               src={
@@ -680,12 +928,36 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
+                          <span
+                            className={`text-xs font-semibold text-center
+                              ${
+                                item.calorie === "low"
+                                  ? "text-yellow-600"
+                                  : item.calorie === "med"
+                                  ? "text-orange-600"
+                                  : "text-red-800"
+                              }`}
+                          >
+                            {item.calorie === "low"
+                              ? "Low Cal."
+                              : item.calorie === "med"
+                              ? "Med Cal."
+                              : "High Cal."}
+                          </span>
                         </div>
                       </div>
-                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <h2 className="text-sm bg-orange-900 rounded-full py-1 px-4 font-bold text-white text-center">
                         {item.title}
                       </h2>
-                      <p className="font-bold text-lg text-gray-700 text-center">
+                      <p className="font-bold bg-orange-300 text-xs py-1 mt-[-5px] px-4 rounded-full text-white text-center">
                         PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
@@ -700,25 +972,29 @@ const MenuCategoryPage: React.FC = () => {
           (category, index) =>
             category.pastries.length > 0 && (
               <div key={index} className="mb-8">
-                <h1 className="text-3xl text-center font-bold mb-4 text-orange-950 px-10 md:px-24 xl:px-56">
-                  {category.title}
-                </h1>
+                <div className="flex gap-4 items-center px-10 md:px-24 xl:px-56 mb-4">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    {category.title}
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
+                <p className="font-light text-xs text-center text-gray-500 mt-[-10px] mb-4">
+                  Click or tap an item to view details or order.
+                </p>
                 <div className="grid grid-cols-1 px-10 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:px-24 xl:px-56">
                   {category.pastries.map((item) => (
                     <Link
                       href={`/product/${slug}/${item.id}?p=${item.price}`}
                       key={item.id}
-                      className="p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
+                      className="relative p-4 border rounded-lg shadow-lg bg-white aspect-square flex flex-col items-center justify-center gap-2 md:min-w-[200px]"
                     >
-                      <div className="relative w-full h-48 mb-4">
-                        <Image
-                          src={item.img}
-                          alt={item.title}
-                          fill
-                          className="object-contain"
-                        />
-                        <div className="absolute top-0 left-0 flex flex-col gap-2">
-                          <div className="relative w-6 h-6">
+                      <div className="absolute top-2 left-2 flex flex-col gap-2 z-10">
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="availability picture"
                               src={
@@ -730,7 +1006,24 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
-                          <div className="relative w-6 h-6">
+                          <span
+                            className={`text-xs font-semibold
+                              ${
+                                item.availability === "available"
+                                  ? "text-green-500"
+                                  : "text-gray-700"
+                              }`}
+                          >
+                            {item.availability === "available"
+                              ? "Available"
+                              : "Unavailable"}
+                          </span>
+                        </div>
+                        <div
+                          className="flex items-center gap-2 bg-white px-2 py-1 rounded-full
+                          border-2 border-gray-100 shadow-md w-28"
+                        >
+                          <div className="relative w-4 h-4">
                             <Image
                               alt="calorie count picture"
                               src={
@@ -744,12 +1037,36 @@ const MenuCategoryPage: React.FC = () => {
                               className="object-contain"
                             />
                           </div>
+                          <span
+                            className={`text-xs font-semibold text-center
+                              ${
+                                item.calorie === "low"
+                                  ? "text-yellow-600"
+                                  : item.calorie === "med"
+                                  ? "text-orange-600"
+                                  : "text-red-800"
+                              }`}
+                          >
+                            {item.calorie === "low"
+                              ? "Low Cal."
+                              : item.calorie === "med"
+                              ? "Med Cal."
+                              : "High Cal."}
+                          </span>
                         </div>
                       </div>
-                      <h2 className="text-xl font-bold text-orange-950 text-center mb-[-10px]">
+                      <div className="relative w-full h-48 mb-4">
+                        <Image
+                          src={item.img}
+                          alt={item.title}
+                          fill
+                          className="object-contain"
+                        />
+                      </div>
+                      <h2 className="text-sm bg-orange-900 rounded-full py-1 px-4 font-bold text-white text-center">
                         {item.title}
                       </h2>
-                      <p className="font-bold text-lg text-gray-700 text-center">
+                      <p className="font-bold bg-orange-300 text-xs py-1 mt-[-5px] px-4 rounded-full text-white text-center">
                         PHP {item.price.toFixed(2)}
                       </p>
                     </Link>
