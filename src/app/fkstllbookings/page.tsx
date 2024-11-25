@@ -37,6 +37,8 @@ type res = {
   packageOffer?: string;
   status: string;
   totalPrice?: number;
+  paymentType: string;
+  downpayment: number;
 };
 
 type resList = res[];
@@ -294,81 +296,90 @@ const AdminCheckReservationsPage = () => {
   const handlePrintEventDetails = async (id: string) => {
     try {
       const docSnap = await getDoc(doc(db, "tableReservations", id));
-  
+
       if (docSnap.exists()) {
         const reservation = docSnap.data();
-  
+
         const doc = new jsPDF();
-  
+
         // Set font for title, address, and details to 16px, bold, centered
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-  
+
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
-  
+        doc.text(
+          "Brgy. Iba, Silang, Cavite, 4118",
+          105,
+          30,
+          null,
+          null,
+          "center"
+        );
+
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
-  
+
         // Set font for general content text to 14px, normal, left-aligned
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
-  
+
         // First part of the booking details text
         const initialText = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.`;
         doc.text(initialText, 20, 60, { maxWidth: 170, align: "left" });
-  
+
         // Bold text for the total bill information
         const boldText = `Upon reviewing, your total bill to be settled would amount to PHP ${reservation.totalPrice}.`;
         doc.setFont("helvetica", "bold");
         doc.text(boldText, 20, 90, { maxWidth: 170, align: "left" });
-  
+
         // Reset font to normal for the remaining content
         doc.setFont("helvetica", "normal");
         const closingText = `Just present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
         doc.text(closingText, 20, 105, { maxWidth: 170, align: "left" });
-  
+
         doc.setFont("helvetica", "normal");
         const confirText = `Here is the breakdown of your chosen items for ${reservation.packageOffer}:`;
         doc.text(confirText, 20, 125, { maxWidth: 170, align: "left" });
-  
+
         // Add Buffet Chosen details if available
         if (reservation.buffetChosen) {
           let buffetYPosition = 135; // Start position for the buffet section
-  
+
           doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
           doc.text("Buffet Chosen:", 20, buffetYPosition); // Buffet section title
           buffetYPosition += 10;
-  
+
           // Iterate over buffet categories and their items
-          Object.entries(reservation.buffetChosen).forEach(([category, items], index) => {
-            // Ensure items is a string and split it into an array if needed
-            let itemsArray = [];
-            if (typeof items === 'string') {
-              itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
-            } else if (Array.isArray(items)) {
-              itemsArray = items; // If it's already an array, use it directly
-            }
-  
-            // Add category title
-            doc.setFont("helvetica", "bold");
-            doc.text(category, 20, buffetYPosition);
-            buffetYPosition += 8;
-  
-            // Add items under the category
-            doc.setFont("helvetica", "normal");
-            itemsArray.forEach((item, itemIndex) => {
-              doc.text(`- ${item}`, 30, buffetYPosition);
+          Object.entries(reservation.buffetChosen).forEach(
+            ([category, items], index) => {
+              // Ensure items is a string and split it into an array if needed
+              let itemsArray = [];
+              if (typeof items === "string") {
+                itemsArray = items.split(",").map((item) => item.trim()); // Split by commas and trim extra spaces
+              } else if (Array.isArray(items)) {
+                itemsArray = items; // If it's already an array, use it directly
+              }
+
+              // Add category title
+              doc.setFont("helvetica", "bold");
+              doc.text(category, 20, buffetYPosition);
+              buffetYPosition += 8;
+
+              // Add items under the category
+              doc.setFont("helvetica", "normal");
+              itemsArray.forEach((item, itemIndex) => {
+                doc.text(`- ${item}`, 30, buffetYPosition);
+                buffetYPosition += 6;
+              });
+
+              // Add spacing after each category
               buffetYPosition += 6;
-            });
-  
-            // Add spacing after each category
-            buffetYPosition += 6;
-          });
+            }
+          );
         }
-  
+
         doc.autoPrint();
         doc.output("dataurlnewwindow");
       } else {
@@ -378,7 +389,7 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
-  
+
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "tableReservations"),
@@ -471,7 +482,6 @@ const AdminCheckReservationsPage = () => {
     }
   }, [selectedFilterDate]); // Trigger useEffect when selectedFilterDate changes
 
-
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -513,7 +523,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
           {/* BOOKING REQUESTS */}
           <div className="w-full flex flex-col gap-2 max-h-[720px]">
             {
-              // #region Requests - Table
+              //#region Requests - Table
               resType === "table"
                 ? reservations.map((res) => (
                     <div
@@ -770,6 +780,13 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Payment Type: ${res.paymentType}`}</p>
+
+                          {/* Conditional rendering for Downpayment Amount */}
+                          {res.paymentType !== "fullpayment" && (
+                            <p className="text-xs select-none text-gray-400">{`Downpayment Amount: ${res.downpayment}`}</p>
+                          )}
+
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
