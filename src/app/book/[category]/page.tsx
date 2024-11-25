@@ -920,23 +920,35 @@ const ReservationPage = () => {
             //#endregion
           )}
           {/* RESERVE BUTTON */}
-          <button
-            type="button" // Change type to "button" to prevent default form submission
-            className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
-  hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
-    slug === "mobilecafe" ? "hidden" : ""
-  }`}
-            onClick={slug === "event" ? handleReserve : handleSubmit} // Call the appropriate function directly
-          >
-            <i className="fa fa-book text-sm" aria-hidden="true"></i>
-            <span className="font-bold text-md">
+          <div className="flex flex-col items-center">
+            {/* Total Price Label */}
+            <span className="font-bold text-lg mb-2">
               {slug === "table"
-                ? "Reserve Table (PHP " + totalPriceT + ")"
+                ? "Total Cost: PHP " + totalPriceT + ".00"
                 : slug === "event"
-                ? "Reserve Place (PHP " + totalPrice + ")"
-                : "Book Mobile Café"}{" "}
+                ? "Total Cost: PHP " + totalPrice + ".00"
+                : ""}
             </span>
-          </button>
+
+            {/* Button */}
+            <button
+              type="button" // Change type to "button" to prevent default form submission
+              className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
+    hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
+      slug === "mobilecafe" ? "hidden" : ""
+    }`}
+              onClick={slug === "event" ? handleReserve : handleSubmit} // Call the appropriate function directly
+            >
+              <i className="fa fa-book text-sm" aria-hidden="true"></i>
+              <span className="font-bold text-md">
+                {slug === "table"
+                  ? "Reserve Table"
+                  : slug === "event"
+                  ? "Reserve Place"
+                  : "Book Mobile Café"}{" "}
+              </span>
+            </button>
+          </div>
           <p
             className={`${
               slug === "event" ? "" : slug === "table" ? "" : "hidden"
