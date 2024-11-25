@@ -258,21 +258,15 @@ const BurgerMenu = () => {
   return (
     <div className="cursor-pointer">
       {!open ? (
-        <Image
-          src="/burgermenu.png"
-          alt="Menu"
-          width={20}
-          height={20}
-          onClick={() => setOpen(true)}
-        />
-      ) : (
-        <Image
-          src="/burgermenu-selected.png"
-          alt="Close Menu"
-          width={20}
-          height={20}
-          onClick={() => setOpen(false)}
-        />
+        <i
+        className="fa-solid fa-bars text-white text-xl pt-0.5 select-none"
+        onClick={() => setOpen(true)}
+      ></i>
+    ) : (
+      <i
+        className="fa fa-close text-white text-xl pt-0.5 select-none"
+        onClick={() => setOpen(false)}
+      ></i>
       )}
       {open && (
         <div

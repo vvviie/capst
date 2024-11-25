@@ -20,7 +20,27 @@ const Filters = {
   maincourse: [
     { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", title: "All" },
     { name: "maincoursetype", id: "radioMeat", onChange: "Meat", title: "Meat" },
-    { name: "maincoursetype", id: "radioSeaFood", onChange: "Sea Food", title: "Sea Food" },
+    { name: "maincoursetype", id: "radioSeaFood", onChange: "Seafood", title: "Sea Food" },
+    { name: "maincoursetype", id: "radioVegetables", onChange: "Veggies", title: "Vegetables" },
+  ],
+  snacks: [
+    { name: "snacktype", id: "radioAllSnacks", onChange: "all", title: "All" },
+    { name: "snacktype", id: "radioFries", onChange: "Fries", title: "Fries" },
+    { name: "snacktype", id: "radioChicken", onChange: "Chicken", title: "Chicken" },
+    { name: "snacktype", id: "radioNachos", onChange: "Nachos", title: "Nachos" },
+    { name: "snacktype", id: "radioSeafood", onChange: "Seafood", title: "Sea Food" },
+  ],
+  pastries: [
+    { name: "pastrytype", id: "radioAllPastries", onChange: "all", title: "All" },
+    { name: "pastrytype", id: "radioCake", onChange: "Cake", title: "Cake" },
+    { name: "pastrytype", id: "radioCookie", onChange: "Cookie", title: "Cookie" },
+    { name: "pastrytype", id: "radioTart", onChange: "Tart", title: "Tart" },
+  ],
+  sandwiches: [
+    { name: "sandwichtype", id: "radioAllSandwiches", onChange: "all", title: "All" },
+    { name: "sandwichtype", id: "radioMeat", onChange: "Meat", title: "Meat" },
+    { name: "sandwichtype", id: "radioFish", onChange: "Fish", title: "Fish" },
+    { name: "sandwichtype", id: "radioVeggie", onChange: "Veggie", title: "Veggie" },
   ],
 };
 
@@ -168,7 +188,7 @@ const DrinksFilter: React.FC<{
       />
       {open && (
         <div
-          className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-center justify-center"
+          className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-center justify-center z-20"
           style={{ background: "rgba(0, 0, 0, 0.5)" }}
         >
           <form
@@ -176,14 +196,21 @@ const DrinksFilter: React.FC<{
             id="drinksFilter"
             className="bg-white rounded-md shadow-xl p-6 flex flex-col gap-2 min-w-96 mx-10"
           >
-            {["drinks", "pasta", "maincourse"].includes(slug) && (
+            {["drinks", "pasta", "maincourse", "snacks", "pastries", "sandwiches"].includes(slug) && (
               <>
                 <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">
                   {slug === "drinks"
                     ? "Drink Type"
                     : slug === "pasta"
                     ? "Pasta Type"
-                    : "Main Course Type"}
+                    : slug === "maincourse"
+                    ? "Main Course Type"
+                    : slug === "snacks"
+                    ? "Snacks Type"
+                    : slug === "pastries"
+                    ? "Pastries Type"
+                    : "Sandwiches Type"
+                  }
                 </h1>
                 <hr className="mb-4" />
               </>
