@@ -125,23 +125,20 @@ const ViewVouchers = () => {
                 {(() => {
                   // Get current date
                   const today = new Date();
-                  const formattedToday = `${String(
-                    today.getMonth() + 1
-                  ).padStart(2, "0")}/${String(today.getDate()).padStart(
-                    2,
-                    "0"
-                  )}/${today.getFullYear()}`;
+                  const formattedToday = `${String(today.getMonth() + 1).padStart(2, "0")}/${String(today.getDate()).padStart(2, "0")}/${today.getFullYear()}`;
 
-                  // Check expiration
-                  const isExpired =
-                    new Date(selectedVoucher?.validityDate) < today;
+                  // Set time to 00:00:00 for a date-only comparison
+                  today.setHours(0, 0, 0, 0);
+                  const validityDate = new Date(selectedVoucher?.validityDate);
+                  validityDate.setHours(0, 0, 0, 0);
 
-                  if (isExpired) {
+                  // Check expiration (excluding today's date)
+                  if (validityDate < today) {
                     return "Voucher has expired.";
+                  } else if (validityDate.getTime() === today.getTime()) {
+                    return `Voucher valid today: ${formattedToday}`;
                   } else {
-                    return `Use before ${
-                      selectedVoucher?.validityDate ?? "N/A"
-                    }`;
+                    return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
                   }
                 })()}
               </p>

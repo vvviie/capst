@@ -242,6 +242,57 @@ const CartPage = () => {
         const discount = promoData?.promoDeduction || 0;
         const available = promoData?.available || false;
         const promoType = promoData?.deductionType; // Set the promo type
+        const validityType = promoData?.validityType; // Check promo validity type
+        const validityDate = promoData?.validityDate; // Retrieve validity date
+        const thresholdUse = promoData?.thresholdUse;
+        const thresholdCondition = promoData?.thresholdCondition || 0;
+        const usageLimitType = promoData?.usageLimitType;
+        const numberOfUses = promoData?.numberOfUses || 0;
+
+        if (validityType === "expiration" && validityDate) {
+          const today = new Date();
+          const promoValidityDate = new Date(validityDate);
+        
+          // Reset hours, minutes, and seconds to only compare dates
+          today.setHours(0, 0, 0, 0);
+          promoValidityDate.setHours(0, 0, 0, 0);
+        
+          // Check if the promo code has expired (today is still valid)
+          if (promoValidityDate < today) {
+            setShowError(true);
+            setErrorMessage("Promo code has expired!");
+            setPromoCodeInput("");
+            setTimeout(() => {
+              setShowError(false);
+            }, 3000);
+            return;
+          }
+        }
+
+        // Check if the subtotal meets the threshold condition
+      if (thresholdUse && subtotal < thresholdCondition) {
+        setShowError(true);
+        setErrorMessage(
+          `Your total must be at least worth PHP ${thresholdCondition.toFixed(
+            2
+          )}`
+        );
+        setPromoCodeInput("");
+        setTimeout(() => {
+          setShowError(false);
+        }, 3000);
+        return;
+      }
+
+      if (usageLimitType === "limited" && numberOfUses <= 0) {
+        setShowError(true);
+        setErrorMessage("Maximum uses of this promo were reached.");
+        setPromoCodeInput("");
+        setTimeout(() => {
+          setShowError(false);
+        }, 3000);
+        return;
+      }
 
         // Add more console logs to help debug
         console.log("Promo Data:", promoData); // Log the whole promo data
@@ -1019,9 +1070,24 @@ const CartPage = () => {
         const promoDocRef = doc(db, "promoCodes", promoDoc.id);
         const promoData = promoDoc.data();
 
-        await updateDoc(promoDocRef, {
-          timesUsed: (promoData?.timesUsed || 0) + 1,
-        });
+        if (promoData?.usageLimitType === "limited") {
+          // Check if the promo code still has remaining uses
+          if (promoData?.numberOfUses > 0) {
+            await updateDoc(promoDocRef, {
+              numberOfUses: promoData.numberOfUses - 1, // Decrement numberOfUses by 1
+            });
+            console.log(`Promo code ${appliedPromoCode} usage decremented. Remaining uses: ${promoData.numberOfUses - 1}`);
+          } else {
+            console.error(`Promo code ${appliedPromoCode} has no remaining uses.`);
+            showErrorPopup("The selected promo code has been fully utilized.");
+            return; // Exit to prevent completing the order with an expired promo code
+          }
+        } else {
+          console.log(`Promo code ${appliedPromoCode} is not usage-limited.`);
+          await updateDoc(promoDocRef, {
+            timesUsed: (promoData?.timesUsed || 0) + 1, // Increment timesUsed for non-limited promo codes
+          });
+        }
       }
 
       //console.log("Order successfully added to completedOrders with custom ID:", customOrderId);
@@ -1064,10 +1130,13 @@ const CartPage = () => {
               }
             }
 
-            //console.log("Voucher applied:", selectedVoucher.title);
+            // Log the voucher that is being applied
+            console.log("Voucher applied:", selectedVoucher.title);
+
+            // Reference to the user's document in Firestore
             const userDocRef = doc(db, "users", userEmail);
 
-            // Fetch the current vouchers from Firestore
+            // Fetch the user's document from Firestore
             const userDoc = await getDoc(userDocRef);
 
             if (userDoc.exists()) {
@@ -1080,18 +1149,23 @@ const CartPage = () => {
               );
 
               if (voucherIndex) {
-                // If the voucher is found, update its 'used' status
-                //console.log(`Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`);
+                // If the voucher is found, update its 'used' status to true
+                console.log(`Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`);
+                
                 await updateDoc(userDocRef, {
-                  [`vouchers.${voucherIndex}.used`]: true, // Use the index to update the 'used' field
+                  [`vouchers.${voucherIndex}.used`]: true, // Update only the 'used' field
                 });
-                //console.log(`Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`);
+
+                console.log(`Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`);
               } else {
-                //console.log("Selected voucher not found in user's vouchers.");
+                // If the voucher is not found in the user's vouchers, log an error
+                console.error("Selected voucher not found in user's vouchers.");
               }
             } else {
-              //console.error("User document does not exist.");
+              // If the user's document does not exist, log an error
+              console.error("User document does not exist.");
             }
+
           }
         } else {
           //console.error("User document does not exist.");
@@ -1754,18 +1828,21 @@ const CartPage = () => {
               {selectedVoucher?.validityType === "expiration" && (
                 <p className="text-xs text-red-500 font-semibold mt-4">
                   {(() => {
-                    const today = new Date();
-                    const validityDate = new Date(selectedVoucher?.validityDate);
-                    const isExpired = validityDate < today;
+                  const today = new Date();
+                  const validityDate = new Date(selectedVoucher?.validityDate);
 
-                    if (isExpired) {
-                      return "Voucher has expired.";
-                    } else {
-                      return `Use before: ${
-                        selectedVoucher?.validityDate ?? "N/A"
-                      }`;
-                    }
-                  })()}
+                  // Reset hours, minutes, and seconds for date-only comparison
+                  today.setHours(0, 0, 0, 0);
+                  validityDate.setHours(0, 0, 0, 0);
+
+                  const isExpired = validityDate < today;
+
+                  if (isExpired) {
+                    return "Voucher has expired.";
+                  } else {
+                    return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
+                  }
+                })()}
                 </p>
               )}
 
@@ -1833,26 +1910,38 @@ const CartPage = () => {
       <div className="flex justify-center items-center gap-4">
         {vouchers.length > 0 && (
           <button
-            type="button"
-            className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
-            hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300 ${
-              (selectedVoucher?.thresholdUse &&
-                selectedVoucher.thresholdCondition > subtotal) ||
-              (selectedVoucher?.validityType === "expiration" &&
-                new Date(selectedVoucher?.validityDate) < new Date()) ||
-              (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
-            onClick={handleVoucherSubmit}
-            disabled={
-              (selectedVoucher?.thresholdUse &&
-                selectedVoucher.thresholdCondition > subtotal) ||
-              (selectedVoucher?.validityType === "expiration" &&
-                new Date(selectedVoucher?.validityDate) < new Date()) ||
-              (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
-            }
-          >
+          type="button"
+          className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300 ${
+            (selectedVoucher?.thresholdUse &&
+              selectedVoucher.thresholdCondition > subtotal) ||
+            (selectedVoucher?.validityType === "expiration" &&
+              (() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const validityDate = new Date(selectedVoucher?.validityDate);
+                validityDate.setHours(0, 0, 0, 0);
+                return validityDate < today;
+              })()) ||
+            (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
+              ? "opacity-50 cursor-not-allowed"
+              : ""
+          }`}
+          onClick={handleVoucherSubmit}
+          disabled={
+            (selectedVoucher?.thresholdUse &&
+              selectedVoucher.thresholdCondition > subtotal) ||
+            (selectedVoucher?.validityType === "expiration" &&
+              (() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const validityDate = new Date(selectedVoucher?.validityDate);
+                validityDate.setHours(0, 0, 0, 0);
+                return validityDate < today;
+              })()) ||
+            (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
+          }
+        >        
             Apply Voucher
           </button>
         )}
