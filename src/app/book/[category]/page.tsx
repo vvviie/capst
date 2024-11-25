@@ -265,8 +265,11 @@ const ReservationPage = () => {
       });
 
       console.log("Reservation successfully saved.");
-      setIsPopupVisible(true); // Show success popup
-      setTimeout(() => setIsPopupVisible(false), 750);
+      setIsPopupVisible(true);
+      setTimeout(() => {
+        setIsPopupVisible(false); // Hide after a few seconds if desired
+        router.push("/book/reservations"); // Redirect to /book
+      }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");

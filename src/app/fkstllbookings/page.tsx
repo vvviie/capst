@@ -711,11 +711,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
-            border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() =>
-                                  //handlePaid(res.id, res.totalPrice)
-                                  handlePayment(res)
-                                } // Pass the totalPrice from the reservation
+    border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => {
+                                  handlePaid(res.id, res.totalPrice);
+                                  handlePayment(res);
+                                }} // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -950,10 +950,10 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
             border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() =>
-                                  //handlePaid(res.id, res.totalPrice)
-                                  handlePayment(res)
-                                } // Pass the totalPrice from the reservation
+                                onClick={() => {
+                                  handlePaid(res.id, res.totalPrice);
+                                  handlePayment(res);
+                                }} // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
