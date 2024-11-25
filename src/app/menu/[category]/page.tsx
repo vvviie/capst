@@ -208,7 +208,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = pasta.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(pasta.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  pasta.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -219,7 +231,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, selectedCalorie, searchText, pastas]
+    [selectedFilter, selectedCalorie, searchText, pastas, selectedAllergies]
   );
 
   const filteredSandwiches = useMemo(
@@ -235,7 +247,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = sandwich.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(sandwich.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  sandwich.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -246,7 +270,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, selectedCalorie, sandwiches]
+    [selectedFilter, selectedCalorie, searchText, sandwiches, selectedAllergies]
   );
 
   const filteredMainCourses = useMemo(
@@ -263,7 +287,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = mainCourse.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(mainCourse.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  mainCourse.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -274,7 +310,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, selectedCalorie, mainCourses]
+    [selectedFilter, selectedCalorie, searchText, mainCourses, selectedAllergies]
   );
 
   const filteredSnacks = useMemo(
@@ -290,7 +326,19 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = snack.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-            return matchesFilter && matchesCalorie && matchesSearch;
+              const matchesAllergies =
+              selectedAllergies.length === 0 ||
+              (Array.isArray(snack.contains) &&
+                !selectedAllergies.some((allergy) =>
+                  snack.contains.includes(allergy)
+                ));
+
+            return (
+              matchesFilter &&
+              matchesCalorie &&
+              matchesSearch &&
+              matchesAllergies
+            );
           })
           .sort((a, b) => {
             const typeA = a.type || "";
@@ -301,7 +349,7 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, searchText, selectedCalorie, snacks]
+    [selectedFilter, selectedCalorie, searchText, snacks, selectedAllergies]
   );
 
   const filteredPastries = useMemo(
