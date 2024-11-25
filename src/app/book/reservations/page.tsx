@@ -475,7 +475,7 @@ const ReservationsPage = () => {
                     {/* CONDITIONAL BUTTON RENDERING */}
                     {res.status === "REJECTED" ||
                     res.status === "CANCELLED" ||
-                    res.status === "PAID" ? null : res.status === "DONE" ? (
+                    res.status === "PAID" || res.status === "DOWNPAYMENT PAID" ? null : res.status === "DONE" ? (
                       res.type === "Table" ? (
                         <button
                           className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
