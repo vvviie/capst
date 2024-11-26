@@ -16,6 +16,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
+import DynamicPackageOffers from "../components/DyanmicPackageOffers";
 import jsPDF from "jspdf";
 
 //#region Sample Data
@@ -637,6 +638,14 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
               >
                 Add
               </Link>
+              {/* Conditionally render DynamicPackageOffers if resType is "event" */}
+              {resType === "event" && (
+                <div className="flex items-center mt-4">
+                  {" "}
+                  {/* Add margin-top to push it down */}
+                  <DynamicPackageOffers />
+                </div>
+              )}
               <div className="flex items-center gap-2 flex-1 justify-end">
                 <select
                   className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
@@ -734,6 +743,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
 
                             {/* BUTTON CONTAINER */}
                             {res.status === "PENDING" ? (
@@ -928,6 +938,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           )}
 
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
@@ -1235,6 +1246,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                            <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                                 {/* BUTTON CONTAINER */}
                                 <div className="flex gap-2 items-center w-full mt-1">
                                   <button
@@ -1328,6 +1340,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                             <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                             <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                             <div className="flex flex-col gap-4">
@@ -1432,4 +1445,4 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
   );
 };
 
-export default AdminCheckReservationsPage;  
+export default AdminCheckReservationsPage;

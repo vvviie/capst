@@ -11,7 +11,16 @@ import { auth, db } from "@/app/firebase";
 import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { collection, doc, setDoc, addDoc, getDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  getDoc,
+} from "firebase/firestore";
 
 const AdminReservationPage = () => {
   //#region Global Variables
@@ -42,17 +51,25 @@ const AdminReservationPage = () => {
 
   //#region "event" Variables
   const [date, setDate] = useState("");
-  const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
+
   const [startTime, setStartTime] = useState(12); // Default start time 12 PM
   const [endTime, setEndTime] = useState(1);
   const [totalHours, setTotalHours] = useState(0);
-  const packagePricePerPerson = 550; // Price per person
+
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalPriceT, setTotalPriceT] = useState(0);
-  const [chosenItems, setChosenItems] = useState([]);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
   const [paymentType, setPaymentType] = useState("downpayment"); // Default to downpayment
+
+  const packagePricePerPerson = 550; // Price per person
+  const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
+  const [chosenItems, setChosenItems] = useState([]);
+  const [packageChoices, setPackageChoices] = useState([]);
+  const [limits, setLimits] = useState({}); // To store limits for each category
+
+  const [remarks, setRemarks] = useState("");
   //#endregion
 
   //#region Global EffectHooks
@@ -228,7 +245,8 @@ const AdminReservationPage = () => {
 
     // Check if the number of persons is less than 30 or greater than 50
     if (numberOfPersonsTable > 20) {
-      setError("Number of persons must be below 20.");
+      setError(true); // Trigger error state
+      setErrorMessage("Number of persons must be below 20.");
       setTimeout(() => {
         setError(false);
       }, 5000); // Clear the error after 5 seconds
@@ -312,10 +330,84 @@ const AdminReservationPage = () => {
 
   //#region "events" EffectHooks
 
+  // useEffect(() => {
+  //   const fetchPackageChoices = async () => {
+  //     try {
+  //       const packageChoicesCollection = collection(db, 'packageOffers');
+  //       const packageChoicesSnapshot = await getDocs(packageChoicesCollection);
+  //       const choices = packageChoicesSnapshot.docs.map(doc => ({
+  //         id: doc.id,
+  //         ...doc.data()
+  //       }));
+
+  //       console.log("Fetched Package Choices:", choices); // Debugging log
+  //       setPackageChoices(choices);
+  //     } catch (error) {
+  //       console.error("Error fetching package choices:", error);
+  //     }
+  //   };
+
+  //   fetchPackageChoices();
+  // }, []);
+
+  useEffect(() => {
+    const fetchPackageChoices = async () => {
+      const packageDocRef = doc(db, "packageOffers", "PackageChoices"); // Reference the specific document
+      const packageDoc = await getDoc(packageDocRef);
+
+      if (packageDoc.exists()) {
+        const data = packageDoc.data();
+        // Convert the data to an array
+        const choices = Object.entries(data).map(([key, value]) => ({
+          id: key,
+          label: value.label,
+          price: value.price,
+        }));
+
+        // Sort choices alphabetically by label
+        choices.sort((a, b) => a.id.localeCompare(b.id));
+
+        setPackageChoices(choices);
+      } else {
+        console.log("No such document!");
+      }
+    };
+
+    fetchPackageChoices();
+  }, []);
+
+  useEffect(() => {
+    const fetchLimits = async () => {
+      try {
+        const limitsCollection = collection(db, "packageOffers"); // Assuming limits are in the same collection
+        const limitsSnapshot = await getDocs(limitsCollection);
+        const limitsMap = {};
+
+        limitsSnapshot.docs.forEach((doc) => {
+          const data = doc.data();
+          if (data.limits) {
+            limitsMap[data.title] = data.limits; // Store limits by document title
+          }
+        });
+
+        console.log("Fetched Limits:", limitsMap); // Debugging log
+        setLimits(limitsMap);
+      } catch (error) {
+        console.error("Error fetching limits:", error);
+      }
+    };
+
+    fetchLimits();
+  }, []);
+
   const handlePackageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedPackage(e.target.value);
     clearSelectedItems(); // Call the callback function
   };
+
+  useEffect(() => {
+    setChosenItems([]); // Clear chosen items when package changes
+  }, [selectedPackage]);
 
   const clearSelectedItems = () => {
     setChosenItems([]); // Clear chosen items when package changes
@@ -344,14 +436,6 @@ const AdminReservationPage = () => {
     // Update the state with the current input value
     setNumberOfPersonsEvent(value === "" ? 0 : parseInt(value, 10)); // Set to 0 if empty
   };
-
-  useEffect(() => {
-    setChosenItems([]); // Clear chosen items when package changes
-  }, [selectedPackage]);
-
-  const getPastaCount = () => (selectedPackage === "C" ? 2 : 1);
-  const getMainsCount = () => (selectedPackage === "A" ? 2 : 3);
-  const getDessertCount = () => (selectedPackage === "C" ? 2 : 1);
 
   // Handle manual time change and validate
   const handleManualTimeChange = (
@@ -391,6 +475,23 @@ const AdminReservationPage = () => {
 
   const handleFinalize = (chosenItemsArray) => {
     setChosenItems(chosenItemsArray);
+  };
+
+  // Function to check if a reservation already exists
+  const checkExistingReservation = async (
+    date: string,
+    time: string,
+    numberOfPersons: number
+  ) => {
+    const q = query(
+      collection(db, "tableReservations"),
+      where("dateToBeReserved", "==", date),
+      where("timeToBeReserved", "==", time),
+      where("numberOfPersons", "==", numberOfPersons)
+    );
+
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty; // Return true if a reservation exists
   };
 
   const handleReserve = async () => {
@@ -577,6 +678,7 @@ const AdminReservationPage = () => {
         status: "REQUESTED",
         type: "Event",
         reservedBy: userEmail,
+        remarks: remarks || "None",
       });
       setIsPopupVisible(true);
       setTimeout(() => {
@@ -795,6 +897,7 @@ const AdminReservationPage = () => {
                   name="date"
                   id="inputDate"
                   type="date"
+                  value={date}//
                   min={minDate}
                   onChange={(e) => setDate(e.target.value)}
                   required
@@ -867,9 +970,11 @@ const AdminReservationPage = () => {
                     value={selectedPackage}
                     onChange={handlePackageChange}
                   >
-                    <option value="A">A - PHP 550 per person</option>
-                    <option value="B">B - PHP 600 per person</option>
-                    <option value="C">C - PHP 700 per person</option>
+                    {packageChoices.map((choice) => (
+                      <option key={choice.id} value={choice.id}>
+                        {choice.label} - PHP {choice.price} per person
+                      </option>
+                    ))}
                   </select>
                   <PackageOffers
                     selectedPackage={selectedPackage}
@@ -878,16 +983,22 @@ const AdminReservationPage = () => {
                   />
                 </div>
                 <p className="text-xs text-orange-900 pl-2 mt-1">
-                  Buffet: 1 Rice, 1 Veggie, {getPastaCount()} Pasta,{" "}
-                  {getMainsCount()} Mains, {getDessertCount()} Dessert
+                  Available buffet items to select:
+                  {Object.keys(limits).map((title) => (
+                    <span key={title}>
+                      {` ${limits[title]?.[selectedPackage] || 0} ${title}, `}
+                    </span>
+                  ))}
                 </p>
               </div>
 
-              {/*BUFFET AND SERVICES CONTENTS */}
+              {/* BUFFET AND SERVICES CONTENTS */}
               <div className="flex flex-col gap-0.5">
-                <span className="text-sm text-gray-700 flex items-center space-x-1 font-semibold">
-                  You've chosen:
-                </span>
+                {chosenItems.length > 0 && ( // Check if there are chosen items
+                  <span className="text-sm text-gray-700 flex items-center space-x-1 font-semibold">
+                    You've chosen:
+                  </span>
+                )}
                 <div className="text-sm">
                   {chosenItems.map((item) => (
                     <div className="space-x-2" key={item.title}>
@@ -905,18 +1016,23 @@ const AdminReservationPage = () => {
                       )}
                     </div>
                   ))}
-                  <div className="space-x-2">
-                    <span className="font-semibold text-orange-700">
-                      Inclusions -
-                    </span>
-                    <span className="text-orange-600">
-                      1 Rice, Unlimited Ice Tea or Cucumber Lemonade, 20% off of
-                      Café Drinks
-                    </span>
-                  </div>
                 </div>
               </div>
 
+              {/* REMARKS */}
+              <div className="flex flex-col gap-0.5">
+                <span className="text-sm text-gray-500 flex items-center space-x-1">
+                  <i className="fa-solid fa-pencil"></i>
+                  <span>Remarks</span>
+                </span>
+                <input
+                  className="border-2 border-solid border-orange-900 w-full h-10 px-3 rounded-md bg-orange-50"
+                  placeholder="Add any special requests or remarks here"
+                  value={remarks} // Bind the input value to the state
+                  onChange={(e) => setRemarks(e.target.value)} // Update state on change
+                  required
+                />
+              </div>
               {/* PAX */}
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm text-gray-500 flex items-center space-x-1">
@@ -1030,10 +1146,14 @@ const AdminReservationPage = () => {
           </div>
           <p
             className={`${
-              slug === "event" ? "" : "hidden"
+              slug === "event" ? "" : slug === "table" ? "" : "hidden"
             } text-xs text-orange-900 text-center mt-[-10px]`}
           >
-            There must be a 50% downpayment upon reservation.
+            {slug === "event"
+              ? "There must be a 50% downpayment upon reservation."
+              : slug === "table"
+              ? "The reservation fee would be deductable to the total bill upon ordering."
+              : ""}
           </p>
         </form>
         {/* IMAGE CONTAINER */}
@@ -1065,11 +1185,13 @@ const AdminReservationPage = () => {
             ref={modalRef}
           >
             <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
-            <p className="mb-4">Please sign in to book a reservation.</p>
+            <p className="mb-4">
+              Please sign in to book your reservations with us.
+            </p>
             <div className="flex justify-center items-center gap-4">
               <Link
                 href="/login"
-                className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
+                className="bg-orange-950 text-white w-full py-2 rounded-md font-bold shadow-md border-2 border-orange-950"
               >
                 Sign in
               </Link>
