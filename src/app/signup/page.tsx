@@ -236,10 +236,14 @@ const SignupPage: React.FC = () => {
         className="w-full flex flex-1 items-center justify-center"
         onSubmit={handleSubmit}
       >
-        <div className="flex flex-col items-center justify-center gap-4">
-          <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
-            Fikaställe Membership Sign-up
-          </h1>
+        <div className="w-full max-w-[500px] flex flex-col items-center justify-center gap-4">
+          <div className="w-full flex gap-4 items-center">
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+            <span className="text-2xl text-center font-bold text-orange-900">
+              Sign Up
+            </span>
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          </div>
 
           {/* ERROR/SUCCESS MESSAGE */}
           {message && (

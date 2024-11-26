@@ -9,38 +9,113 @@ import { db } from "../firebase";
 const Filters = {
   drinks: [
     { name: "drinktype", id: "radioAllDrinks", onChange: "all", title: "All" },
-    { name: "drinktype", id: "radioCoffee", onChange: "Coffee", title: "Coffee" },
-    { name: "drinktype", id: "radioNonCoffee", onChange: "Non-Coffee", title: "Non-Coffee" },
+    {
+      name: "drinktype",
+      id: "radioCoffee",
+      onChange: "Coffee",
+      title: "Coffee",
+    },
+    {
+      name: "drinktype",
+      id: "radioNonCoffee",
+      onChange: "Non-Coffee",
+      title: "Non-Coffee",
+    },
   ],
   pasta: [
-    { name: "pastatype", id: "radioAllPasta", onChange: "all", title: "All Pasta" },
+    {
+      name: "pastatype",
+      id: "radioAllPasta",
+      onChange: "all",
+      title: "All Pasta",
+    },
     { name: "pastatype", id: "radioPesto", onChange: "Pesto", title: "Pesto" },
-    { name: "pastatype", id: "radioNonPesto", onChange: "Non-Pesto", title: "Non-Pesto" },
+    {
+      name: "pastatype",
+      id: "radioNonPesto",
+      onChange: "Non-Pesto",
+      title: "Non-Pesto",
+    },
   ],
   maincourse: [
-    { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", title: "All" },
-    { name: "maincoursetype", id: "radioMeat", onChange: "Meat", title: "Meat" },
-    { name: "maincoursetype", id: "radioSeaFood", onChange: "Seafood", title: "Sea Food" },
-    { name: "maincoursetype", id: "radioVegetables", onChange: "Veggies", title: "Vegetables" },
+    {
+      name: "maincoursetype",
+      id: "radioAllMainCourse",
+      onChange: "all",
+      title: "All",
+    },
+    {
+      name: "maincoursetype",
+      id: "radioMeat",
+      onChange: "Meat",
+      title: "Meat",
+    },
+    {
+      name: "maincoursetype",
+      id: "radioSeaFood",
+      onChange: "Seafood",
+      title: "Sea Food",
+    },
+    {
+      name: "maincoursetype",
+      id: "radioVegetables",
+      onChange: "Veggies",
+      title: "Vegetables",
+    },
   ],
   snacks: [
     { name: "snacktype", id: "radioAllSnacks", onChange: "all", title: "All" },
     { name: "snacktype", id: "radioFries", onChange: "Fries", title: "Fries" },
-    { name: "snacktype", id: "radioChicken", onChange: "Chicken", title: "Chicken" },
-    { name: "snacktype", id: "radioNachos", onChange: "Nachos", title: "Nachos" },
-    { name: "snacktype", id: "radioSeafood", onChange: "Seafood", title: "Sea Food" },
+    {
+      name: "snacktype",
+      id: "radioChicken",
+      onChange: "Chicken",
+      title: "Chicken",
+    },
+    {
+      name: "snacktype",
+      id: "radioNachos",
+      onChange: "Nachos",
+      title: "Nachos",
+    },
+    {
+      name: "snacktype",
+      id: "radioSeafood",
+      onChange: "Seafood",
+      title: "Sea Food",
+    },
   ],
   pastries: [
-    { name: "pastrytype", id: "radioAllPastries", onChange: "all", title: "All" },
+    {
+      name: "pastrytype",
+      id: "radioAllPastries",
+      onChange: "all",
+      title: "All",
+    },
     { name: "pastrytype", id: "radioCake", onChange: "Cake", title: "Cake" },
-    { name: "pastrytype", id: "radioCookie", onChange: "Cookie", title: "Cookie" },
+    {
+      name: "pastrytype",
+      id: "radioCookie",
+      onChange: "Cookie",
+      title: "Cookie",
+    },
     { name: "pastrytype", id: "radioTart", onChange: "Tart", title: "Tart" },
   ],
   sandwiches: [
-    { name: "sandwichtype", id: "radioAllSandwiches", onChange: "all", title: "All" },
+    {
+      name: "sandwichtype",
+      id: "radioAllSandwiches",
+      onChange: "all",
+      title: "All",
+    },
     { name: "sandwichtype", id: "radioMeat", onChange: "Meat", title: "Meat" },
     { name: "sandwichtype", id: "radioFish", onChange: "Fish", title: "Fish" },
-    { name: "sandwichtype", id: "radioVeggie", onChange: "Veggie", title: "Veggie" },
+    {
+      name: "sandwichtype",
+      id: "radioVeggie",
+      onChange: "Veggie",
+      title: "Veggie",
+    },
   ],
 };
 
@@ -84,8 +159,10 @@ const DrinksFilter: React.FC<{
   useEffect(() => {
     if (selectedAllergies.length > 0) {
       // Filter out products that contain any selected allergy
-      const updatedProducts = products.filter(product => {
-        const containsAllergy = selectedAllergies.some(allergy => product.allergens.includes(allergy));
+      const updatedProducts = products.filter((product) => {
+        const containsAllergy = selectedAllergies.some((allergy) =>
+          product.allergens.includes(allergy)
+        );
         return !containsAllergy; // Keep products that do not contain selected allergies
       });
       setFilteredProducts(updatedProducts);
@@ -104,13 +181,15 @@ const DrinksFilter: React.FC<{
   const handleCalorieFilterChange = (calorie: string) => {
     setSelectedCalorie(calorie);
     onCalorieChange(calorie);
-  
+
     if (calorie === "all") {
       // Reset to show all products if "All" is selected
       setFilteredProducts(products);
     } else {
       // Filter products by calorie count if a specific filter is selected
-      const filtered = products.filter((product) => product.caloriecount === calorie);
+      const filtered = products.filter(
+        (product) => product.caloriecount === calorie
+      );
       setFilteredProducts(filtered);
     }
   };
@@ -143,35 +222,41 @@ const DrinksFilter: React.FC<{
         // Query the collection to find allergies
         const allergyQuery = query(
           collection(db, slug),
-          where("contains", "array-contains-any", ["Soy", "Wheat", "Milk", "Eggs", "Tree Nuts", "Peanuts"])
+          where("contains", "array-contains-any", [
+            "Soy",
+            "Wheat",
+            "Milk",
+            "Eggs",
+            "Tree Nuts",
+            "Peanuts",
+          ])
         );
         const querySnapshot = await getDocs(allergyQuery);
-  
+
         const fetchedAllergies: string[] = [];
         const fetchedProducts: any[] = []; // Array to store fetched products
-  
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-  
+
           if (data.contains) {
             fetchedAllergies.push(...data.contains);
           }
-  
+
           // Ensure data.products exists and is an array before spreading
           if (Array.isArray(data.products)) {
             fetchedProducts.push(...data.products);
           }
         });
-  
+
         setAllergies(fetchedAllergies);
         setProducts(fetchedProducts); // Set the products state
         setFilteredProducts(fetchedProducts); // Initialize filtered products with all products
-  
       } catch (error) {
         console.error("Error fetching allergies from Firestore:", error);
       }
     };
-  
+
     fetchAllergies();
   }, [slug]);
 
@@ -196,7 +281,14 @@ const DrinksFilter: React.FC<{
             id="drinksFilter"
             className="bg-white rounded-md shadow-xl p-6 flex flex-col gap-2 min-w-96 mx-10"
           >
-            {["drinks", "pasta", "maincourse", "snacks", "pastries", "sandwiches"].includes(slug) && (
+            {[
+              "drinks",
+              "pasta",
+              "maincourse",
+              "snacks",
+              "pastries",
+              "sandwiches",
+            ].includes(slug) && (
               <>
                 <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">
                   {slug === "drinks"
@@ -209,16 +301,18 @@ const DrinksFilter: React.FC<{
                     ? "Snacks Type"
                     : slug === "pastries"
                     ? "Pastries Type"
-                    : "Sandwiches Type"
-                  }
+                    : "Sandwiches Type"}
                 </h1>
                 <hr className="mb-4" />
               </>
             )}
-  
+
             <div className="flex gap-2 justify-around flex-wrap">
               {currentFilters.map((filter) => (
-                <div className="flex items-center justify-start space-x-2" key={filter.id}>
+                <div
+                  className="flex items-center justify-start space-x-2"
+                  key={filter.id}
+                >
                   <input
                     type="radio"
                     name="drinktype"
@@ -232,11 +326,16 @@ const DrinksFilter: React.FC<{
               ))}
             </div>
             <hr className="mt-4" />
-            <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">Calories</h1>
+            <h1 className="text-2xl text-center font-semibold text-orange-950 mt-0">
+              Calories
+            </h1>
             <hr />
             <div className="flex justify-around items-center">
               {FilterCalories.map((filter) => (
-                <div className="flex items-center justify-start space-x-2 mx-1 my-3" key={filter.id}>
+                <div
+                  className="flex items-center justify-start space-x-2 mx-1 my-3"
+                  key={filter.id}
+                >
                   <input
                     type="radio"
                     name={filter.name}

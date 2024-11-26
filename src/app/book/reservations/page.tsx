@@ -121,7 +121,7 @@ const ReservationsPage = () => {
             price: data.totalPrice || 0,
             paymentType: data.paymentType,
             downpayment: data.downpayment,
-            balance: data.balance
+            balance: data.balance,
           };
         });
 
@@ -315,6 +315,61 @@ const ReservationsPage = () => {
     }
   };
 
+  //#region PAGES CODE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const itemsPerPage = 5;
+  const pagesToShow = 5;
+
+  // Calculate total pages
+  const totalPages = Math.ceil(reservations.length / itemsPerPage);
+
+  // Get current page orders
+  const currentRes = reservations.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const visiblePages = Array.from(
+    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
+    (_, index) => pageWindowStart + index
+  );
+
+  // Handle page change
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+
+    // Adjust the visible page numbers if necessary
+    if (pageNumber >= pageWindowStart + pagesToShow) {
+      setPageWindowStart(pageWindowStart + 1);
+    } else if (pageNumber < pageWindowStart) {
+      setPageWindowStart(pageWindowStart - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+
+      // Adjust page window start for "Previous"
+      if (currentPage - 1 < pageWindowStart) {
+        setPageWindowStart(pageWindowStart - 1);
+      }
+    }
+  };
+  //#endregion
+
   return (
     <div className="min-h-[calc(100vh-56px)] gap-6 mt-14 px-10 py-8 flex flex-col items-center md:px-24 lg:gap-8 lg:flex-row-reverse lg:items-start lg:justify-center xl:px-56">
       {/* Show login modal if no user cookie is found */}
@@ -354,159 +409,200 @@ const ReservationsPage = () => {
             href={"/book"}
             className="flex items-center space-x-2 font-bold text-orange-950 text-2xl text-left w-auto hover:text-orange-800 cursor-pointer mb-2"
           >
-            <i className="fa fa-book text-lg" aria-hidden="true"></i>
+            <i className="fa fa-angle-left mr-[-4px]" aria-hidden="true"></i>
             <span>Booking</span>
           </Link>
-          <h1 className="font-bold text-2xl mb-2 text-orange-950 flex gap-2 items-center w-auto">
-            <i className="fa fa-angle-right" aria-hidden="true"></i>
-            <span>My Reservations</span>
-          </h1>
+        </div>
+        <div className="w-full flex gap-4 items-center mb-4">
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          <span className="text-2xl text-center font-bold text-orange-900">
+            My Reservations
+          </span>
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
         </div>
 
         {/* RESERVATIONS CONTAINER */}
         <div className="space-y-2 w-full max-h-[720px] pb-4 overflow-y-auto">
           {/* RESERVATIONS LIST */}
           {hasReservation ? (
-            reservations.map((res) => (
-              <div
-                className="w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer"
-                key={res.id}
-                onClick={() => toggleRes(res.id)}
-              >
-                {/* UNOPENED CONTAINER */}
-                <div className="flex items-center justify-between">
-                  {/* UNEXPANDED RESERVATION DETAILS CONTAINER */}
-                  <div className="flex flex-col gap-1 w-5/6">
-                    {/* HEADERS CONTAINER */}
-                    <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                      <span className="">{res.type}</span>
-                      <span
-                        className={`${
-                          res.status === "REQUESTED"
-                            ? "text-orange-500"
-                            : res.status === "TO PAY"
-                            ? "text-yellow-500"
-                            : res.status === "PAID"
-                            ? "text-blue-500"
-                            : res.status === "DONE"
-                            ? "text-green-500"
-                            : "text-gray-500"
-                        }`}
-                      >
-                        {res.status}
-                      </span>
-                    </div>
-                    {/* SUBHEADER CONTAINER */}
-                    <div className="w-full px-4 flex justify-between font-semibold items-center text-sm text-gray-400">
-                      {/* DATE AND TIME OF RESERVATION */}
-                      <span>
-                        For
-                        {res.type === "Mobile Cart"
-                          ? ""
-                          : ` ${res.numberOfPersons} pax on`}
-                        {" " + res.dateToBeReserved} -{" "}
-                        {res.type === "Event"
-                          ? res.timeToBeReserved // Only display the end time for events
-                          : res.timeToBeReserved}
-                      </span>
+            <>
+              {currentRes.map((res) => (
+                <div
+                  className="w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer"
+                  key={res.id}
+                  onClick={() => toggleRes(res.id)}
+                >
+                  {/* UNOPENED CONTAINER */}
+                  <div className="flex items-center justify-between">
+                    {/* UNEXPANDED RESERVATION DETAILS CONTAINER */}
+                    <div className="flex flex-col gap-1 w-5/6">
+                      {/* HEADERS CONTAINER */}
+                      <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
+                        <span className="">{res.type}</span>
+                        <span
+                          className={`${
+                            res.status === "REQUESTED"
+                              ? "text-orange-500"
+                              : res.status === "TO PAY"
+                              ? "text-yellow-500"
+                              : res.status === "PAID"
+                              ? "text-blue-500"
+                              : res.status === "DONE"
+                              ? "text-green-500"
+                              : "text-gray-500"
+                          }`}
+                        >
+                          {res.status}
+                        </span>
+                      </div>
+                      {/* SUBHEADER CONTAINER */}
+                      <div className="w-full px-4 flex justify-between font-semibold items-center text-sm text-gray-400">
+                        {/* DATE AND TIME OF RESERVATION */}
+                        <span>
+                          For
+                          {res.type === "Mobile Cart"
+                            ? ""
+                            : ` ${res.numberOfPersons} pax on`}
+                          {" " + res.dateToBeReserved} -{" "}
+                          {res.type === "Event"
+                            ? res.timeToBeReserved // Only display the end time for events
+                            : res.timeToBeReserved}
+                        </span>
 
-                      {/* PRICE IF IT IS EVENT OR IN THE FUTURE, MOBILE CART */}
-                      <span className={`font-bold text-gray-600`}>
-                        {`PHP ${res.price.toFixed(2)}`}
-                      </span>
+                        {/* PRICE IF IT IS EVENT OR IN THE FUTURE, MOBILE CART */}
+                        <span
+                          className={`bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm`}
+                        >
+                          {`PHP ${res.price.toFixed(2)}`}
+                        </span>
+                      </div>
                     </div>
+                    <span className="w-6 aspect-square rounded-full bg-gray-100 flex justify-center items-center mr-4 cursor-pointer">
+                      <i
+                        className={`fa ${
+                          expandedRes[res.id]
+                            ? "fa-caret-down"
+                            : "fa-caret-right"
+                        } text-gray-300 text-xs`}
+                        aria-hidden="true"
+                      ></i>
+                    </span>
                   </div>
-                  <span className="w-6 aspect-square rounded-full bg-gray-100 flex justify-center items-center mr-4 cursor-pointer">
-                    <i
-                      className={`fa ${
-                        expandedRes[res.id] ? "fa-caret-down" : "fa-caret-right"
-                      } text-gray-300 text-xs`}
-                      aria-hidden="true"
-                    ></i>
-                  </span>
-                </div>
-                {expandedRes[res.id] && (
-                  <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
-                    {/* EXPANDED CONTENT */}
-                    {res.type === "Event" && (
-                      <>
-                        <div className="font-bold text-sm flex justify-between items-center">
-                          <span className="font-semibold">Event Package</span>
-                          <span>Package - {" " + res.package}</span>
-                        </div>
-                        {res.buffet.map((buffet) => (
-                          <div
-                            className="flex flex-col gap-1"
-                            key={buffet.title}
-                          >
-                            <hr />
-                            {/* ITEM TITLE AND PRICE CONTAINER */}
-                            <div className="font-bold text-sm text-left">
-                              <span className="font-semibold">
-                                {buffet.title}
-                              </span>
-                            </div>
-                            {buffet.foods.map((food, index) => (
-                              <p className="text-xs" key={index}>
-                                -{food}
-                              </p>
-                            ))}
-                          </div>
-                        ))}
-                      </>
-                    )}
-                    <span className="text-xs text-gray-400">
-                      Date Requested:{" "}
-                      {res.dateReserved + " - " + res.timeReserved} <br />
-                      {res.type !== "Table" && (
+                  {expandedRes[res.id] && (
+                    <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
+                      {/* EXPANDED CONTENT */}
+                      {res.type === "Event" && (
                         <>
-                          Payment Type: {res.paymentType} <br />
-                          {res.paymentType !== "fullpayment" &&
-                          res.status === "DOWNPAYMENT PAID" ? (
-                            <>Balance: {res.downpayment}</>
-                          ) : (
-                            res.paymentType !== "fullpayment" && (
-                              <>Downpayment: {res.downpayment}</>
-                            )
-                          )}
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">Event Package</span>
+                            <span>Package - {" " + res.package}</span>
+                          </div>
+                          {res.buffet.map((buffet) => (
+                            <div
+                              className="flex flex-col gap-1"
+                              key={buffet.title}
+                            >
+                              <hr />
+                              {/* ITEM TITLE AND PRICE CONTAINER */}
+                              <div className="font-bold text-sm text-left">
+                                <span className="font-semibold">
+                                  {buffet.title}
+                                </span>
+                              </div>
+                              {buffet.foods.map((food, index) => (
+                                <p className="text-xs" key={index}>
+                                  -{food}
+                                </p>
+                              ))}
+                            </div>
+                          ))}
                         </>
                       )}
-                    </span>
-                    {/* CONDITIONAL BUTTON RENDERING */}
-                    {res.status === "REJECTED" ||
-                    res.status === "CANCELLED" ||
-                    res.status === "PAID" || res.status === "DOWNPAYMENT PAID" ? null : res.status === "DONE" ? (
-                      res.type === "Table" ? (
+                      <span className="text-xs text-gray-400">
+                        Date Requested:{" "}
+                        {res.dateReserved + " - " + res.timeReserved} <br />
+                        {res.type !== "Table" && (
+                          <>
+                            Payment Type: {res.paymentType} <br />
+                            {res.paymentType !== "fullpayment" &&
+                            res.status === "DOWNPAYMENT PAID" ? (
+                              <>Balance: {res.downpayment}</>
+                            ) : (
+                              res.paymentType !== "fullpayment" && (
+                                <>Downpayment: {res.downpayment}</>
+                              )
+                            )}
+                          </>
+                        )}
+                      </span>
+                      {/* CONDITIONAL BUTTON RENDERING */}
+                      {res.status === "REJECTED" ||
+                      res.status === "CANCELLED" ||
+                      res.status === "PAID" ||
+                      res.status === "DOWNPAYMENT PAID" ? null : res.status ===
+                        "DONE" ? (
+                        res.type === "Table" ? (
+                          <button
+                            className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
+                            onClick={() => handlePrintDetails(res.id)}
+                          >
+                            Print Details
+                          </button>
+                        ) : res.type === "Event" ? (
+                          <button
+                            className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
+                            onClick={() => handlePrintEventDetails(res.id)}
+                          >
+                            Print Details
+                          </button>
+                        ) : null
+                      ) : (
                         <button
-                          className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
-                          onClick={() => handlePrintDetails(res.id)}
+                          className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedReservationId(res.id);
+                            setConfirmPopup(true);
+                          }}
                         >
-                          Print Details
+                          Cancel Reservation
                         </button>
-                      ) : res.type === "Event" ? (
-                        <button
-                          className="font-bold bg-blue-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
-                          onClick={() => handlePrintEventDetails(res.id)}
-                        >
-                          Print Details
-                        </button>
-                      ) : null
-                    ) : (
-                      <button
-                        className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedReservationId(res.id);
-                          setConfirmPopup(true);
-                        }}
-                      >
-                        Cancel Reservation
-                      </button>
-                    )}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {/* PAGINATION CONTROLS */}
+              <div className="flex justify-center items-center space-x-2">
+                <button
+                  className="font-semibold cursor-pointer w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                  disabled={currentPage === 1}
+                  onClick={handlePrevious}
+                >
+                  Prev
+                </button>
+                {visiblePages.map((page) => (
+                  <button
+                    key={page}
+                    className={`cursor-pointer h-9 aspect-square font-semibold rounded-md ${
+                      currentPage === page
+                        ? "bg-orange-300 text-white border-orange-300 border-2"
+                        : "bg-white text-gray-500 hover:bg-orange-50 border-2 border-gray-100 hover:border-orange-50 hover:text-orange-500"
+                    } shadow-md`}
+                    onClick={() => goToPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  className="cursor-pointer font-semibold w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                  disabled={currentPage === totalPages}
+                  onClick={handleNext}
+                >
+                  Next
+                </button>
               </div>
-            ))
+            </>
           ) : (
             //KAPAG HINDI PA NAKAKAPAGPA-RESERVE KAHIT ONCE, ITO ANG LALABAS
             <div className="space-x-2 text-gray-400 text-2xl font-bold bg-white py-8 rounded-md shadow-lg w-full text-center border-2 border-gray-50">
