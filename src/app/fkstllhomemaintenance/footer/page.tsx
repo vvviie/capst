@@ -8,7 +8,7 @@ import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore fu
 const FooterMaintenancePage = () => {
     const [open, setOpen] = useState(false);
     const [isPopupVisible, setIsPopupVisible] = useState(false);
-    
+
     // State to hold telephone and social media URLs
     const [tel, setTel] = useState("");
     const [socials, setSocials] = useState([]);
@@ -65,18 +65,22 @@ const FooterMaintenancePage = () => {
             {/* MAIN CONTAINER */}
             <div className="w-full max-w-[500px]">
                 {/* HEADER CONTAINER */}
-                <div className="flex justify-start items-center gap-2 mb-2">
-                    {/* LINK BACK TO PRODUCTS */}
+                <div className="flex justify-start items-center gap-2">
+                    {/* LINK BACK TO MAINTE */}
                     <Link
                         href={"/fkstllhomemaintenance"}
                         className="flex items-center space-x-2 font-bold text-orange-950 text-xl sm:text-2xl text-left hover:text-orange-800 cursor-pointer"
                     >
-                        Maintenance
+                        <i className="fa fa-angle-left" aria-hidden="true"></i>
+                        <span>Maintenance</span>
                     </Link>
-                    <div className="text-xl sm:text-2xl font-bold text-orange-950 space-x-2 flex items-center">
-                        <i className="fa fa-angle-right" aria-hidden="true"></i>
-                        <span>Footer Section</span>
-                    </div>
+                </div>
+                <div className="w-full flex gap-2 sm:gap-4 items-center mb-4 mt-2">
+                    <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                    <span className="text-xl sm:text-2xl text-center font-bold text-orange-900">
+                        Footer Section
+                    </span>
+                    <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
                 </div>
                 {/* FORM CONTAINER */}
                 <div
@@ -125,7 +129,8 @@ const FooterMaintenancePage = () => {
                                             value={soc.active ? "true" : "false"} // Reflect current active status
                                             onChange={async (e) => {
                                                 const updatedSocials = [...socials];
-                                                updatedSocials[index].active = e.target.value === "true"; // Update active status
+                                                updatedSocials[index].active =
+                                                    e.target.value === "true"; // Update active status
 
                                                 // Update state
                                                 setSocials(updatedSocials);
@@ -133,16 +138,19 @@ const FooterMaintenancePage = () => {
                                                 // Optionally, update Firestore directly
                                                 const footerData = {
                                                     tel: tel,
-                                                    socials: updatedSocials.map(soc => ({
+                                                    socials: updatedSocials.map((soc) => ({
                                                         name: soc.name,
                                                         url: soc.url,
                                                         icon: soc.icon, // Include icon class
-                                                        active: soc.active // Include active status
+                                                        active: soc.active, // Include active status
                                                     })),
                                                 };
 
                                                 try {
-                                                    await setDoc(doc(db, "webContent", "footerSection"), footerData); // Update Firestore
+                                                    await setDoc(
+                                                        doc(db, "webContent", "footerSection"),
+                                                        footerData
+                                                    ); // Update Firestore
                                                     console.log("Document successfully updated!");
                                                 } catch (error) {
                                                     console.error("Error updating document: ", error);
@@ -210,7 +218,7 @@ const FooterMaintenancePage = () => {
                                             type="text"
                                             placeholder={`${soc.name} URL`}
                                             value={soc.url}
- onChange={(e) => {
+                                            onChange={(e) => {
                                                 const updatedSocials = [...socials];
                                                 updatedSocials[index].url = e.target.value;
                                                 setSocials(updatedSocials);

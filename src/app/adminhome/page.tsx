@@ -213,10 +213,14 @@ const AdminHomePage = () => {
       lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
       ></div>
       <div className="w-full max-w-[1400px] py-4">
-        <div className="flex w-full items-center justify-between mb-4">
-          <h1 className="font-bold text-orange-950 text-lg sm:text-2xl">
-            Dashboard
-          </h1>
+      <div className="flex w-full items-center gap-2 justify-between mb-4">
+          <div className="w-full flex gap-4 items-center">
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+            <span className="text-2xl text-center font-bold text-orange-900">
+              Dashboard
+            </span>
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          </div>
           <Link
             href={`/adminhome/announcement`}
             className="h-10 bg-orange-950 shadow-md rounded-md pt-2.5 w-full max-w-[170px] sm:pt-2 text-sm sm:text-base

@@ -222,12 +222,16 @@ const VoucherListPage = () => {
       <div className="w-full max-w-[1480px]">
         {/* HEADER, MENU CAT, AND SEARCH BAR CONTAINER */}
         <div className="flex flex-col gap-4">
-          {/* HEADER*/}
-          <h1 className="text-2xl font-bold text-orange-950">
-            {selectedType === "vouchers"
-              ? "Voucher Listings"
-              : "Promo Listings"}
-          </h1>
+                    {/* HEADER*/}
+                    <div className="w-full flex gap-2 sm:gap-4 items-center">
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+            <span className="text-xl sm:text-2xl text-center font-bold text-orange-900">
+              {selectedType === "vouchers"
+                ? "Voucher Listings"
+                : "Promo Listings"}
+            </span>
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          </div>
           {/* CREATE AND SEARCH CONTAINER */}
           <div className="flex justify-between items-center gap-4">
             {/* SELECT MENU CATEGORY */}

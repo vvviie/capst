@@ -2,32 +2,32 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { db } from "@/app/firebase"; // Adjust the import based on your file structure
-import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+  import { db } from "@/app/firebase"; // Adjust the import based on your file structure
+  import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 
-const Footer = () => {
-  const [tel, setTel] = useState("");
-  const [socials, setSocials] = useState([]);
+  const Footer = () => {
+    const [tel, setTel] = useState("");
+    const [socials, setSocials] = useState([]);
 
-  // Fetch footer data from Firestore on component mount
-  useEffect(() => {
-    const fetchFooterData = async () => {
-      const docRef = doc(db, "webContent", "footerSection"); // Adjust the path as necessary
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setTel(data.tel);
-        setSocials(data.socials);
-      } else {
-        console.log("No such document!");
-        // Initialize with empty data if no document exists
-        setTel("");
-        setSocials([]);
-      }
-    };
+    // Fetch footer data from Firestore on component mount
+    useEffect(() => {
+      const fetchFooterData = async () => {
+        const docRef = doc(db, "webContent", "footerSection"); // Adjust the path as necessary
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setTel(data.tel);
+          setSocials(data.socials);
+        } else {
+          console.log("No such document!");
+          // Initialize with empty data if no document exists
+          setTel("");
+          setSocials([]);
+        }
+      };
 
-    fetchFooterData();
-  }, []);
+      fetchFooterData();
+    }, []);
 
   return (
     <div
