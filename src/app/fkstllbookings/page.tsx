@@ -37,6 +37,8 @@ type res = {
   packageOffer?: string;
   status: string;
   totalPrice?: number;
+  paymentType: string;
+  downpayment: number;
 };
 
 type resList = res[];
@@ -91,16 +93,52 @@ const AdminCheckReservationsPage = () => {
     }
   };
 
-  const handlePaid = async (id: string, totalPrice: number) => {
-    // Log the totalPrice to check if it's being passed correctly
+  const handlePayment = (res) => {
+    if (res.paymentType === "downpayment") {
+      handlePaid(res.id, res.totalPrice, res.downpayment); // Pass downpayment
+    } else if (res.paymentType === "fullpayment") {
+      handlePaid(res.id, res.totalPrice); // No downpayment to pass
+    }
+  };
+
+  const handlePaid = async (
+    id: string,
+    totalPrice: number,
+    downpayment?: number
+  ) => {
+    // Log the totalPrice and downpayment to check if they're being passed correctly
     console.log("Total Price:", totalPrice);
+    console.log("Downpayment:", downpayment);
 
     try {
-      // Update the status of the table reservation to "PAID"
+      // Fetch the current reservation document to check its status
+      const reservationDoc = await getDoc(doc(db, "tableReservations", id));
+      let currentStatus = reservationDoc.exists()
+        ? reservationDoc.data().status
+        : null;
+
+      // Determine the amount to use based on paymentType
+      const amountToUse = downpayment ? downpayment : totalPrice;
+      let paymentStatus;
+      let balance;
+
+      if (currentStatus === "DOWNPAYMENT PAID") {
+        // If the current status is "DOWNPAYMENT PAID", set the next payment status to "PAID"
+        paymentStatus = "PAID";
+        balance = 0; // Set balance to 0 when fully paid
+      } else {
+        // Otherwise, set the status based on whether downpayment is made
+        paymentStatus = downpayment ? "DOWNPAYMENT PAID" : "PAID";
+        balance = downpayment ? totalPrice * 0.5 : 0; // Calculate balance for downpayment
+      }
+
+      // Update the status of the table reservation
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "PAID",
+        status: paymentStatus,
+        balance: balance, // Set the calculated balance
       });
 
+      //#region Submit to salesData
       // Update Net Sales in salesData collection
       const salesDocumentId = "salesExpensesToday";
       const salesDataRef = doc(db, "salesData", salesDocumentId);
@@ -134,6 +172,7 @@ const AdminCheckReservationsPage = () => {
 
       // Merge the new sales data with the existing document
       await setDoc(salesDataRef, salesDataUpdate, { merge: true }); // Use merge to avoid overwriting other fields
+      //#endregion
 
       // Show the paid confirmation
       setIsPaidVisible(true);
@@ -294,81 +333,90 @@ const AdminCheckReservationsPage = () => {
   const handlePrintEventDetails = async (id: string) => {
     try {
       const docSnap = await getDoc(doc(db, "tableReservations", id));
-  
+
       if (docSnap.exists()) {
         const reservation = docSnap.data();
-  
+
         const doc = new jsPDF();
-  
+
         // Set font for title, address, and details to 16px, bold, centered
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-  
+
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, null, null, "center");
-  
+        doc.text(
+          "Brgy. Iba, Silang, Cavite, 4118",
+          105,
+          30,
+          null,
+          null,
+          "center"
+        );
+
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
-  
+
         // Set font for general content text to 14px, normal, left-aligned
         doc.setFontSize(12);
         doc.setFont("helvetica", "normal");
-  
+
         // First part of the booking details text
         const initialText = `A pleasant day to you! Upon the reservation of ${reservation.reservedBy} for the appointed date ${reservation.dateToBeReserved} at ${reservation.timeToBeReserved} for ${reservation.numberOfPersons} persons, we have deemed that your booking request was successful. Please do not forget your appointment, as this might result in the termination of your account.`;
         doc.text(initialText, 20, 60, { maxWidth: 170, align: "left" });
-  
+
         // Bold text for the total bill information
         const boldText = `Upon reviewing, your total bill to be settled would amount to PHP ${reservation.totalPrice}.`;
         doc.setFont("helvetica", "bold");
         doc.text(boldText, 20, 90, { maxWidth: 170, align: "left" });
-  
+
         // Reset font to normal for the remaining content
         doc.setFont("helvetica", "normal");
         const closingText = `Just present this as a sign that your booking was approved upon entering the shop to use its validity. Thank you and we hope to see you soon, coffee buddy!`;
         doc.text(closingText, 20, 105, { maxWidth: 170, align: "left" });
-  
+
         doc.setFont("helvetica", "normal");
         const confirText = `Here is the breakdown of your chosen items for ${reservation.packageOffer}:`;
         doc.text(confirText, 20, 125, { maxWidth: 170, align: "left" });
-  
+
         // Add Buffet Chosen details if available
         if (reservation.buffetChosen) {
           let buffetYPosition = 135; // Start position for the buffet section
-  
+
           doc.setFontSize(12);
           doc.setFont("helvetica", "bold");
           doc.text("Buffet Chosen:", 20, buffetYPosition); // Buffet section title
           buffetYPosition += 10;
-  
+
           // Iterate over buffet categories and their items
-          Object.entries(reservation.buffetChosen).forEach(([category, items], index) => {
-            // Ensure items is a string and split it into an array if needed
-            let itemsArray = [];
-            if (typeof items === 'string') {
-              itemsArray = items.split(',').map(item => item.trim()); // Split by commas and trim extra spaces
-            } else if (Array.isArray(items)) {
-              itemsArray = items; // If it's already an array, use it directly
-            }
-  
-            // Add category title
-            doc.setFont("helvetica", "bold");
-            doc.text(category, 20, buffetYPosition);
-            buffetYPosition += 8;
-  
-            // Add items under the category
-            doc.setFont("helvetica", "normal");
-            itemsArray.forEach((item, itemIndex) => {
-              doc.text(`- ${item}`, 30, buffetYPosition);
+          Object.entries(reservation.buffetChosen).forEach(
+            ([category, items], index) => {
+              // Ensure items is a string and split it into an array if needed
+              let itemsArray = [];
+              if (typeof items === "string") {
+                itemsArray = items.split(",").map((item) => item.trim()); // Split by commas and trim extra spaces
+              } else if (Array.isArray(items)) {
+                itemsArray = items; // If it's already an array, use it directly
+              }
+
+              // Add category title
+              doc.setFont("helvetica", "bold");
+              doc.text(category, 20, buffetYPosition);
+              buffetYPosition += 8;
+
+              // Add items under the category
+              doc.setFont("helvetica", "normal");
+              itemsArray.forEach((item, itemIndex) => {
+                doc.text(`- ${item}`, 30, buffetYPosition);
+                buffetYPosition += 6;
+              });
+
+              // Add spacing after each category
               buffetYPosition += 6;
-            });
-  
-            // Add spacing after each category
-            buffetYPosition += 6;
-          });
+            }
+          );
         }
-  
+
         doc.autoPrint();
         doc.output("dataurlnewwindow");
       } else {
@@ -378,7 +426,7 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
-  
+
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "tableReservations"),
@@ -471,7 +519,6 @@ const AdminCheckReservationsPage = () => {
     }
   }, [selectedFilterDate]); // Trigger useEffect when selectedFilterDate changes
 
-
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -513,7 +560,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
           {/* BOOKING REQUESTS */}
           <div className="w-full flex flex-col gap-2 max-h-[720px]">
             {
-              // #region Requests - Table
+              //#region Requests - Table
               resType === "table"
                 ? reservations.map((res) => (
                     <div
@@ -664,10 +711,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
-            border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() =>
-                                  handlePaid(res.id, res.totalPrice)
-                                } // Pass the totalPrice from the reservation
+    border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => {
+                                  handlePaid(res.id, res.totalPrice);
+                                  handlePayment(res);
+                                }} // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -770,6 +818,18 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Payment Type: ${res.paymentType}`}</p>
+
+                          {/* Conditional rendering for Downpayment Amount or Balance label */}
+                          {res.paymentType !== "fullpayment" && (
+                            <p className="text-xs select-none text-gray-400">
+                              {res.status === "DOWNPAYMENT PAID"
+                                ? "Balance:"
+                                : "Downpayment Amount:"}{" "}
+                              {res.downpayment}
+                            </p>
+                          )}
+
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
@@ -890,9 +950,10 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
             border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() =>
-                                  handlePaid(res.id, res.totalPrice)
-                                } // Pass the totalPrice from the reservation
+                                onClick={() => {
+                                  handlePaid(res.id, res.totalPrice);
+                                  handlePayment(res);
+                                }} // Pass the totalPrice from the reservation
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
@@ -1193,4 +1254,4 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
   );
 };
 
-export default AdminCheckReservationsPage;
+export default AdminCheckReservationsPage;  

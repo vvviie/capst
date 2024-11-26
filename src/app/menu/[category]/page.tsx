@@ -208,7 +208,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = pasta.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-              const matchesAllergies =
+            const matchesAllergies =
               selectedAllergies.length === 0 ||
               (Array.isArray(pasta.contains) &&
                 !selectedAllergies.some((allergy) =>
@@ -247,7 +247,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = sandwich.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-              const matchesAllergies =
+            const matchesAllergies =
               selectedAllergies.length === 0 ||
               (Array.isArray(sandwich.contains) &&
                 !selectedAllergies.some((allergy) =>
@@ -287,7 +287,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = mainCourse.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-              const matchesAllergies =
+            const matchesAllergies =
               selectedAllergies.length === 0 ||
               (Array.isArray(mainCourse.contains) &&
                 !selectedAllergies.some((allergy) =>
@@ -310,7 +310,13 @@ const MenuCategoryPage: React.FC = () => {
               : a.prodID.localeCompare(b.prodID);
           }),
       })),
-    [selectedFilter, selectedCalorie, searchText, mainCourses, selectedAllergies]
+    [
+      selectedFilter,
+      selectedCalorie,
+      searchText,
+      mainCourses,
+      selectedAllergies,
+    ]
   );
 
   const filteredSnacks = useMemo(
@@ -326,7 +332,7 @@ const MenuCategoryPage: React.FC = () => {
             const matchesSearch = snack.title
               .toLowerCase()
               .startsWith(searchText.toLowerCase());
-              const matchesAllergies =
+            const matchesAllergies =
               selectedAllergies.length === 0 ||
               (Array.isArray(snack.contains) &&
                 !selectedAllergies.some((allergy) =>
@@ -403,12 +409,13 @@ const MenuCategoryPage: React.FC = () => {
           className="flex items-center space-x-2 font-bold text-orange-950 text-xl text-left hover:text-orange-800 cursor-pointer"
         >
           <i className="fa fa-angle-left mr-[-4px]" aria-hidden="true"></i>
-          <span>Menu</span>
+          <span>Menu Categories</span>
         </Link>
         <div className="flex w-full md:w-2/3 justify-between items-center gap-4 sm:justify-end">
           <input
             type="text"
-            className="border-2 border-solid border-gray-200 w-56 sm:w-60 text-md md:w-64 md:text-lg pl-2 rounded-md bg-gray-50"
+            className="border-2 border-solid border-gray-200 sm:w-60 text-md md:w-64
+             pl-2 rounded-md bg-gray-50 h-9 w-full"
             name="inputSearch"
             id="inputSearch"
             placeholder="Search the menu..."

@@ -41,7 +41,6 @@ const LoginPage = () => {
     const userSession = Cookies.get("user");
     if (userSession) {
       router.push("/"); // Redirect to homepage if user is already logged in
-      window.location.reload();
     }
   }, [router]);
 

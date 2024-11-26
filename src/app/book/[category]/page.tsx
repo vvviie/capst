@@ -57,6 +57,7 @@ const ReservationPage = () => {
   const [chosenItems, setChosenItems] = useState([]);
   const [errorMessage, setErrorMessage] = useState("");
   const [numberOfPersonsEvent, setNumberOfPersonsEvent] = useState<number>(30);
+  const [paymentType, setPaymentType] = useState("downpayment"); // Default to downpayment
   //#endregion
 
   //#region Global EffectHooks
@@ -264,8 +265,11 @@ const ReservationPage = () => {
       });
 
       console.log("Reservation successfully saved.");
-      setIsPopupVisible(true); // Show success popup
-      setTimeout(() => setIsPopupVisible(false), 750);
+      setIsPopupVisible(true);
+      setTimeout(() => {
+        setIsPopupVisible(false); // Hide after a few seconds if desired
+        router.push("/book/reservations"); // Redirect to /book
+      }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");
@@ -575,6 +579,15 @@ const ReservationPage = () => {
       setTimeout(() => setError(false), 5000);
       return;
     }
+
+    // Calculate the downpayment and balance
+    const downpaymentAmount =
+      paymentType === "downpayment" ? totalPrice / 2 : 0;
+
+    // Define totalPrice to be submitted, depending on paymentType
+    const amountToSubmit =
+      paymentType === "fullpayment" ? totalPrice : downpaymentAmount;
+
     try {
       await setDoc(doc(db, "tableReservations", orderId), {
         dateReserved,
@@ -584,7 +597,9 @@ const ReservationPage = () => {
         packageOffer,
         buffetChosen,
         numberOfPersons: numberOfPersonsEvent,
-        totalPrice: totalPrice,
+        downpayment: paymentType === "downpayment" ? downpaymentAmount : null, // Store downpayment amount only if applicable
+        totalPrice: totalPrice, // Always store the original totalPrice
+        paymentType: paymentType,
         status: "REQUESTED",
         type: "Event",
         reservedBy: userEmail,
@@ -592,7 +607,7 @@ const ReservationPage = () => {
       setIsPopupVisible(true);
       setTimeout(() => {
         setIsPopupVisible(false); // Hide after a few seconds if desired
-        //router.push("/book/reservations"); // Redirect to /book
+        router.push("/book/reservations"); // Redirect to /book
       }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
@@ -919,24 +934,82 @@ const ReservationPage = () => {
             </>
             //#endregion
           )}
-          {/* RESERVE BUTTON */}
-          <button
-            type="button" // Change type to "button" to prevent default form submission
-            className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
-  hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
-    slug === "mobilecafe" ? "hidden" : ""
-  }`}
-            onClick={slug === "event" ? handleReserve : handleSubmit} // Call the appropriate function directly
-          >
-            <i className="fa fa-book text-sm" aria-hidden="true"></i>
-            <span className="font-bold text-md">
+          <div className="flex flex-col items-center">
+            {/* Total Price Label */}
+            <span className="font-bold text-lg mb-2 text-brown-500">
+              {" "}
+              {/* Added text-brown-500 */}
               {slug === "table"
-                ? "Reserve Table (PHP " + totalPriceT + ")"
+                ? "Total Cost: PHP " + totalPriceT + ".00"
                 : slug === "event"
-                ? "Reserve Place (PHP " + totalPrice + ")"
-                : "Book Mobile Café"}{" "}
+                ? "Estimated Cost: PHP " + totalPrice + ".00"
+                : ""}
             </span>
-          </button>
+
+            {/* Payment Type Selection - Only for 'event' slug */}
+            {slug === "event" && (
+              <div className="flex items-center mb-4">
+                <span className="text-sm text-gray-700 mr-2">
+                  Payment Type:
+                </span>
+
+                <label className="flex items-center mr-4 bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300 w-1/2">
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="downpayment"
+                    checked={paymentType === "downpayment"}
+                    onChange={() => setPaymentType("downpayment")}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">
+                    Downpayment
+                    <br />
+                    <span className="font-bold text-orange-700">
+                      PHP {(totalPrice / 2).toFixed(2)}
+                    </span>
+                  </span>
+                </label>
+
+                <label className="flex items-center bg-white rounded-md px-6 py-2 shadow-md hover:shadow-lg transition-shadow duration-300 w-1/2">
+                  <input
+                    type="radio"
+                    name="paymentType"
+                    value="fullpayment"
+                    checked={paymentType === "fullpayment"}
+                    onChange={() => setPaymentType("fullpayment")}
+                    className="mr-2"
+                  />
+                  <span className="text-sm">
+                    Full Payment
+                    <br />
+                    <span className="font-bold text-orange-700">
+                      PHP {totalPrice}
+                    </span>
+                  </span>
+                </label>
+              </div>
+            )}
+
+            {/* Button */}
+            <button
+              type="button" // Change type to "button" to prevent default form submission
+              className={`flex items-center justify-center space-x-2 w-full h-10 rounded-md shadow-md text-white bg-orange-950
+    hover:bg-orange-900 hover:scale-[1.02] duration-300 mt-2 ${
+      slug === "mobilecafe" ? "hidden" : ""
+    }`}
+              onClick={slug === "event" ? handleReserve : handleSubmit} // Call the appropriate function directly
+            >
+              <i className="fa fa-book text-sm" aria-hidden="true"></i>
+              <span className="font-bold text-md">
+                {slug === "table"
+                  ? "Reserve Table"
+                  : slug === "event"
+                  ? "Reserve Place"
+                  : "Book Mobile Café"}{" "}
+              </span>
+            </button>
+          </div>
           <p
             className={`${
               slug === "event" ? "" : slug === "table" ? "" : "hidden"
