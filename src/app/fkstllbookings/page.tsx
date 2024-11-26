@@ -1432,4 +1432,4 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
   );
 };
 
-export default AdminCheckReservationsPage;
+export default AdminCheckReservationsPage;  
