@@ -12,7 +12,7 @@ import {
   Snacks,
   Sandwiches,
 } from "../data";
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
 import {
   collection,
@@ -43,8 +43,7 @@ interface FeaturedItem {
 
 const CRUDProductPage = () => {
   const [mainCategory, setMainCategory] = useState<string>("Drinks");
-  const [selectedCategory, setSelectedCategory] =
-    useState<string>("All");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [activeItem, setActiveItem] = useState<string | null>(null);
 
   const drinks = useDrinksByCategory(mainCategory, selectedCategory);
@@ -62,63 +61,64 @@ const CRUDProductPage = () => {
   const [email, setEmail] = useState(null); // State to store the email
   const auth = getAuth(); // Get Firebase Auth instance
 
-  const [staffStatus, setStaffStatus] = useState<'activated' | 'deactivated' | null>(null);
-  const [staffRole, setStaffRole] = useState(null);  // Initially set to null
-  
+  const [staffStatus, setStaffStatus] = useState<
+    "activated" | "deactivated" | null
+  >(null);
+  const [staffRole, setStaffRole] = useState(null); // Initially set to null
+
   useEffect(() => {
-    console.log('useEffect triggered'); // Log when the useEffect runs
-  
+    console.log("useEffect triggered"); // Log when the useEffect runs
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userEmail = user.email;
-        console.log('User logged in:', userEmail);
+        console.log("User logged in:", userEmail);
         setEmail(email); // Set the email state
-  
+
         if (userEmail) {
           // Fetch the staff document from Firestore
-          const staffDocRef = doc(db, 'staff', userEmail); // Document ID is the email
+          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
           const staffDocSnap = await getDoc(staffDocRef);
-  
+
           if (staffDocSnap.exists()) {
             const data = staffDocSnap.data();
-            console.log('Staff document data:', data);
-  
+            console.log("Staff document data:", data);
+
             // Check and update the staffStatus
-            if (data.staffStatus === 'activated') {
-              setStaffStatus('activated');
-              console.log('Staff status set to: activated');
-            } else if (data.staffStatus === 'deactivated') {
-              setStaffStatus('deactivated');
-              console.log('Staff status set to: deactivated');
+            if (data.staffStatus === "activated") {
+              setStaffStatus("activated");
+              console.log("Staff status set to: activated");
+            } else if (data.staffStatus === "deactivated") {
+              setStaffStatus("deactivated");
+              console.log("Staff status set to: deactivated");
             }
-  
+
             // Log the staffRole if it exists
             if (data.staffRole) {
-              console.log('Staff role:', data.staffRole);
-              setStaffRole(data.staffRole);  // Set the correct staffRole value here
-              console.log('Updated staffRole:', data.staffRole);  // Log immediately after setting
+              console.log("Staff role:", data.staffRole);
+              setStaffRole(data.staffRole); // Set the correct staffRole value here
+              console.log("Updated staffRole:", data.staffRole); // Log immediately after setting
             } else {
-              console.log('No staffRole found in the document.');
+              console.log("No staffRole found in the document.");
             }
-            
           } else {
-            console.log('No staff document found for this user.');
+            console.log("No staff document found for this user.");
             setStaffStatus(null); // Reset if no document exists
           }
         }
       } else {
-        console.log('No user logged in');
+        console.log("No user logged in");
         setEmail(null);
         setStaffStatus(null); // Reset states if user is logged out
       }
     });
-  
+
     // Clean up the listener on component unmount
     return () => {
-      console.log('Cleaning up listener');
+      console.log("Cleaning up listener");
       unsubscribe();
     };
-  }, [auth, db]); // Dependencies  
+  }, [auth, db]); // Dependencies
 
   const handleItemClick = (id: string) => {
     setActiveItem(activeItem === id ? null : id);
@@ -440,721 +440,760 @@ const CRUDProductPage = () => {
   return (
     <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex justify-center">
       {/* MAIN CONTAINER */}
-      { staffStatus === "activated" ? (
-      <div className="w-full max-w-[1480px]">
-        {/* HEADER, MENU CAT, AND SEARCH BAR CONTAINER */}
-        <div className="flex flex-col gap-4">
-          {/* HEADER */}
-          <div className="flex justify-between items-center gap-2 w-full">    
-            <h1 className="text-2xl font-bold text-orange-950">
-              Product Listings
-            </h1>
-            <Link
-              href={"/fkstllmenucategories"}
-              className="h-10 border-2 border-gray-100 shadow-md rounded-md pt-1.5
+      {staffStatus === "activated" ? (
+        <div className="w-full max-w-[1480px]">
+          {/* HEADER, MENU CAT, AND SEARCH BAR CONTAINER */}
+          <div className="flex flex-col gap-4">
+            {/* HEADER */}
+            <div className="flex justify-between items-center gap-2 w-full">
+              <div className="w-full flex gap-2 sm:gap-4 items-center">
+                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                <span className="text-xl sm:text-2xl text-center font-bold text-orange-900">
+                  Product Listings
+                </span>
+                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+              </div>
+              <Link
+                href={"/fkstllmenucategories"}
+                className="h-10 border-2 border-gray-100 shadow-md rounded-md pt-1.5
                                 bg-white font-bold text-gray-500 w-1/2 max-w-28 text-center
                                 hover:bg-gray-50 hover:scale-[1.02] duration-200"
-            >
-              Categories
-            </Link>
-          </div>
-          {/* CREATE AND SEARCH CONTAINER */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex justify-between items-center gap-4 w-full">
-              {/* SELECT MAIN CATEGORY */}
-              <select
-                name="mainCategory"
-                id="mainCategory"
-                value={mainCategory}
-                onChange={handleMainCategoryChange}
-                className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white
+              >
+                Categories
+              </Link>
+            </div>
+            {/* CREATE AND SEARCH CONTAINER */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex justify-between items-center gap-4 w-full">
+                {/* SELECT MAIN CATEGORY */}
+                <select
+                  name="mainCategory"
+                  id="mainCategory"
+                  value={mainCategory}
+                  onChange={handleMainCategoryChange}
+                  className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600 font-semibold bg-white
                 cursor-pointer h-9 text-center flex items-center justify-center flex-1"
-              >
-                <option value="Drinks">Drinks</option>
-                <option value="Main Course">Main Course</option>
-                <option value="Pastries">Pastries</option>
-                <option value="Snacks">Snacks</option>
-                <option value="Sandwiches">Sandwiches</option>
-                <option value="Pasta">Pasta</option>
-              </select>
+                >
+                  <option value="Drinks">Drinks</option>
+                  <option value="Main Course">Main Course</option>
+                  <option value="Pastries">Pastries</option>
+                  <option value="Snacks">Snacks</option>
+                  <option value="Sandwiches">Sandwiches</option>
+                  <option value="Pasta">Pasta</option>
+                </select>
 
-              {/* SELECT MENU CATEGORY */}
-              <select
-                name="menuCategory"
-                id="menuCat"
-                value={selectedCategory || ""}
-                onChange={(e) => setSelectedCategory(e.target.value)} // Update the selected subcategory
-                className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600
+                {/* SELECT MENU CATEGORY */}
+                <select
+                  name="menuCategory"
+                  id="menuCat"
+                  value={selectedCategory || ""}
+                  onChange={(e) => setSelectedCategory(e.target.value)} // Update the selected subcategory
+                  className="rounded-md shadow-sm border-2 border-gray-100 text-sm sm:text-lg text-gray-600
                 font-semibold bg-white cursor-pointer h-9 flex-1"
-              >
-                {menuCategories.map((category, index) => (
-                  <option value={category} key={index} className="text-center">
-                    {
-                      category
-                        .replace(/([A-Z])/g, " $1") // Add space before uppercase letters
-                        .replace(/^./, (str) => str.toUpperCase()) // Capitalize the first letter
-                    }
-                  </option>
-                ))}
-              </select>
-            </div>
+                >
+                  {menuCategories.map((category, index) => (
+                    <option
+                      value={category}
+                      key={index}
+                      className="text-center"
+                    >
+                      {
+                        category
+                          .replace(/([A-Z])/g, " $1") // Add space before uppercase letters
+                          .replace(/^./, (str) => str.toUpperCase()) // Capitalize the first letter
+                      }
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* SEARCH BAR */}
-            <input
-              type="text"
-              id="inputSearch"
-              placeholder="Search menu..."
-              className="border-2 border-solid border-gray-200 text-xs sm:text-base md:text-lg h-9 pl-2 rounded-md bg-gray-50 w-full"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
-            />
+              {/* SEARCH BAR */}
+              <input
+                type="text"
+                id="inputSearch"
+                placeholder="Search menu..."
+                className="border-2 border-solid border-gray-200 text-xs sm:text-base md:text-lg h-9 pl-2 rounded-md bg-gray-50 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value.toLowerCase())}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 text-center mt-4">
+            Tap or hover on the item to set availability, edit, or delete.
+          </p>
+          {/* PRODUCTS */}
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4">
+            {/* ADD PRODUCT BUTTON */}
+            <Link
+              href={"/fkstllproduct/addproduct"}
+              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer py-4 aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-200 justify-center items-center hover:bg-gray-100 group"
+            >
+              <i className="fa-solid fa-circle-plus text-gray-300 text-7xl md:text-9xl group-hover:text-gray-400"></i>
+              <span className="text-xs md:text-lg text-gray-300 font-bold group-hover:text-gray-400">
+                Add an item
+              </span>
+            </Link>
+            {/* MENU ITEMS */}
+            {filteredDrinks.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
+                onClick={() => handleItemClick(item.id)}
+                onMouseEnter={() => setActiveItem(item.id)}
+                onMouseLeave={() => setActiveItem(null)}
+              >
+                {/* IMAGE CONTAINER */}
+                <div className="h-4/5 w-full relative">
+                  <Image
+                    src={item.img}
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+
+                {/* PRODUCT TITLE */}
+                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                  {item.title}
+                </h1>
+
+                {/* AVAILABILITY INDICATOR */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                    item.availability === "available"
+                      ? "bg-green-600"
+                      : "bg-gray-500"
+                  }`}
+                ></span>
+
+                {/* CALORIE CONTENT */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                    item.calorie === "high"
+                      ? "bg-red-500"
+                      : item.calorie === "med"
+                      ? "bg-orange-400"
+                      : "bg-green-400"
+                  }`}
+                ></span>
+
+                {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
+                {activeItem === item.id && (
+                  <div
+                    className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
+                    style={{ background: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={handleOptionsClick}
+                  >
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevents triggering parent onClick
+                          handleToggleFeatureItem(item.id, "drinks"); // Call toggle feature function with item ID and collection name
+                        }}
+                      >
+                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
+                      </button>
+                    )}
+
+                    <select
+                      value={item.availability.toLowerCase()}
+                      className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                      onChange={(e) =>
+                        handleAvailabilityChange(e, item.id, "drinks")
+                      } // Dynamically pass the collection name
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Availability.map((availability) => (
+                        <option
+                          key={availability.id}
+                          value={availability.value}
+                          className={`${
+                            availability.value === "Available"
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          } font-bold`}
+                        >
+                          {availability.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {staffRole && staffRole === "admin" && (
+                      <Link
+                        href={`/fkstllproduct/editproduct/${item.id}`}
+                        className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </Link>
+                    )}
+
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id, "drinks"); // Pass the dynamic collection name
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {filteredMainCourses.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
+                onClick={() => handleItemClick(item.id)}
+                onMouseEnter={() => setActiveItem(item.id)}
+                onMouseLeave={() => setActiveItem(null)}
+              >
+                {/* IMAGE CONTAINER */}
+                <div className="h-4/5 w-full relative">
+                  <Image
+                    src={item.img}
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                {/* PRODUCT TITLE */}
+                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                  {item.title}
+                </h1>
+                {/* AVAILABILITY */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                    item.availability === "available"
+                      ? "bg-green-600"
+                      : "bg-gray-500"
+                  }`}
+                ></span>
+                {/* CALORIE CONTENT */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                    item.calorie === "high"
+                      ? "bg-red-500"
+                      : item.calorie === "med"
+                      ? "bg-orange-400"
+                      : "bg-green-400"
+                  }`}
+                ></span>
+                {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
+                {activeItem === item.id && (
+                  <div
+                    className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
+                    style={{ background: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={handleOptionsClick}
+                  >
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevents triggering parent onClick
+                          handleToggleFeatureItem(item.id, "mainCourse"); // Call toggle feature function with item ID and collection name
+                        }}
+                      >
+                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
+                      </button>
+                    )}
+
+                    <select
+                      name=""
+                      id=""
+                      value={item.availability.toLowerCase()}
+                      className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                      onChange={(e) =>
+                        handleAvailabilityChange(e, item.id, "mainCourse")
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Availability.map((availability) => (
+                        <option
+                          key={availability.id}
+                          value={availability.value}
+                          className={`${
+                            availability.value === "Available"
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          } font-bold`}
+                        >
+                          {availability.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {staffRole && staffRole === "admin" && (
+                      <Link
+                        href={`/fkstllproduct/editproduct/${item.id}`}
+                        className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </Link>
+                    )}
+
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id, "mainCourses");
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {filteredPastas.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
+                onClick={() => handleItemClick(item.id)}
+                onMouseEnter={() => setActiveItem(item.id)}
+                onMouseLeave={() => setActiveItem(null)}
+              >
+                {/* IMAGE CONTAINER */}
+                <div className="h-4/5 w-full relative">
+                  <Image
+                    src={item.img}
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                {/* PRODUCT TITLE */}
+                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                  {item.title}
+                </h1>
+                {/* AVAILABILITY */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                    item.availability === "available"
+                      ? "bg-green-600"
+                      : "bg-gray-500"
+                  }`}
+                ></span>
+                {/* CALORIE CONTENT */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                    item.calorie === "high"
+                      ? "bg-red-500"
+                      : item.calorie === "med"
+                      ? "bg-orange-400"
+                      : "bg-green-400"
+                  }`}
+                ></span>
+                {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
+                {activeItem === item.id && (
+                  <div
+                    className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
+                    style={{ background: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={handleOptionsClick}
+                  >
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevents triggering parent onClick
+                          handleToggleFeatureItem(item.id, "pasta"); // Call toggle feature function with item ID and collection name
+                        }}
+                      >
+                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
+                      </button>
+                    )}
+
+                    <select
+                      name=""
+                      id=""
+                      value={item.availability.toLowerCase()}
+                      className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                      onChange={(e) =>
+                        handleAvailabilityChange(e, item.id, "pasta")
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Availability.map((availability) => (
+                        <option
+                          key={availability.id}
+                          value={availability.value}
+                          className={`${
+                            availability.value === "Available"
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          } font-bold`}
+                        >
+                          {availability.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {staffRole && staffRole === "admin" && (
+                      <Link
+                        href={`/fkstllproduct/editproduct/${item.id}`}
+                        className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </Link>
+                    )}
+
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id, "pastas");
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {filteredPastries.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
+                onClick={() => handleItemClick(item.id)}
+                onMouseEnter={() => setActiveItem(item.id)}
+                onMouseLeave={() => setActiveItem(null)}
+              >
+                {/* IMAGE CONTAINER */}
+                <div className="h-4/5 w-full relative">
+                  <Image
+                    src={item.img}
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                {/* PRODUCT TITLE */}
+                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                  {item.title}
+                </h1>
+                {/* AVAILABILITY */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                    item.availability === "available"
+                      ? "bg-green-600"
+                      : "bg-gray-500"
+                  }`}
+                ></span>
+                {/* CALORIE CONTENT */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                    item.calorie === "high"
+                      ? "bg-red-500"
+                      : item.calorie === "med"
+                      ? "bg-orange-400"
+                      : "bg-green-400"
+                  }`}
+                ></span>
+                {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
+                {activeItem === item.id && (
+                  <div
+                    className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
+                    style={{ background: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={handleOptionsClick}
+                  >
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevents triggering parent onClick
+                          handleToggleFeatureItem(item.id, "pastries"); // Call toggle feature function with item ID and collection name
+                        }}
+                      >
+                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
+                      </button>
+                    )}
+                    <select
+                      name=""
+                      id=""
+                      value={item.availability.toLowerCase()}
+                      className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                      onChange={(e) =>
+                        handleAvailabilityChange(e, item.id, "pastries")
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Availability.map((availability) => (
+                        <option
+                          key={availability.id}
+                          value={availability.value}
+                          className={`${
+                            availability.value === "Available"
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          } font-bold`}
+                        >
+                          {availability.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {staffRole && staffRole === "admin" && (
+                      <Link
+                        href={`/fkstllproduct/editproduct/${item.id}`}
+                        className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </Link>
+                    )}
+
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id, "pastries");
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {filteredSnacks.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
+                onClick={() => handleItemClick(item.id)}
+                onMouseEnter={() => setActiveItem(item.id)}
+                onMouseLeave={() => setActiveItem(null)}
+              >
+                {/* IMAGE CONTAINER */}
+                <div className="h-4/5 w-full relative">
+                  <Image
+                    src={item.img}
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                {/* PRODUCT TITLE */}
+                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                  {item.title}
+                </h1>
+                {/* AVAILABILITY */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                    item.availability === "available"
+                      ? "bg-green-600"
+                      : "bg-gray-500"
+                  }`}
+                ></span>
+                {/* CALORIE CONTENT */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                    item.calorie === "high"
+                      ? "bg-red-500"
+                      : item.calorie === "med"
+                      ? "bg-orange-400"
+                      : "bg-green-400"
+                  }`}
+                ></span>
+                {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
+                {activeItem === item.id && (
+                  <div
+                    className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
+                    style={{ background: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={handleOptionsClick}
+                  >
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevents triggering parent onClick
+                          handleToggleFeatureItem(item.id, "snacks"); // Call toggle feature function with item ID and collection name
+                        }}
+                      >
+                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
+                      </button>
+                    )}
+
+                    <select
+                      name=""
+                      id=""
+                      value={item.availability.toLowerCase()}
+                      className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                      onChange={(e) =>
+                        handleAvailabilityChange(e, item.id, "snacks")
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Availability.map((availability) => (
+                        <option
+                          key={availability.id}
+                          value={availability.value}
+                          className={`${
+                            availability.value === "Available"
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          } font-bold`}
+                        >
+                          {availability.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {staffRole && staffRole === "admin" && (
+                      <Link
+                        href={`/fkstllproduct/editproduct/${item.id}`}
+                        className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </Link>
+                    )}
+
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id, "snacks");
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+            {filteredSandwiches.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
+                onClick={() => handleItemClick(item.id)}
+                onMouseEnter={() => setActiveItem(item.id)}
+                onMouseLeave={() => setActiveItem(null)}
+              >
+                {/* IMAGE CONTAINER */}
+                <div className="h-4/5 w-full relative">
+                  <Image
+                    src={item.img}
+                    alt=""
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                {/* PRODUCT TITLE */}
+                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                  {item.title}
+                </h1>
+                {/* AVAILABILITY */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                    item.availability === "available"
+                      ? "bg-green-600"
+                      : "bg-gray-500"
+                  }`}
+                ></span>
+                {/* CALORIE CONTENT */}
+                <span
+                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                    item.calorie === "high"
+                      ? "bg-red-500"
+                      : item.calorie === "med"
+                      ? "bg-orange-400"
+                      : "bg-green-400"
+                  }`}
+                ></span>
+                {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
+                {activeItem === item.id && (
+                  <div
+                    className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
+                    style={{ background: "rgba(0, 0, 0, 0.6)" }}
+                    onClick={handleOptionsClick}
+                  >
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevents triggering parent onClick
+                          handleToggleFeatureItem(item.id, "sandwiches"); // Call toggle feature function with item ID and collection name
+                        }}
+                      >
+                        {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
+                      </button>
+                    )}
+
+                    <select
+                      name=""
+                      id=""
+                      value={item.availability.toLowerCase()}
+                      className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
+                      onChange={(e) =>
+                        handleAvailabilityChange(e, item.id, "sandwiches")
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {Availability.map((availability) => (
+                        <option
+                          key={availability.id}
+                          value={availability.value}
+                          className={`${
+                            availability.value === "Available"
+                              ? "text-green-600"
+                              : "text-gray-500"
+                          } font-bold`}
+                        >
+                          {availability.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    {staffRole && staffRole === "admin" && (
+                      <Link
+                        href={`/fkstllproduct/editproduct/${item.id}`}
+                        className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </Link>
+                    )}
+
+                    {staffRole && staffRole === "admin" && (
+                      <button
+                        className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(item.id, "sandwiches");
+                        }}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
-        <p className="text-xs text-gray-500 text-center mt-4">
-          Tap or hover on the item to set availability, edit, or delete.
-        </p>
-        {/* PRODUCTS */}
-        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2 lg:grid-cols-3 xl:grid-cols-4">
-          {/* ADD PRODUCT BUTTON */}
-          <Link
-            href={"/fkstllproduct/addproduct"}
-            className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer py-4 aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-200 justify-center items-center hover:bg-gray-100 group"
-          >
-            <i className="fa-solid fa-circle-plus text-gray-300 text-7xl md:text-9xl group-hover:text-gray-400"></i>
-            <span className="text-xs md:text-lg text-gray-300 font-bold group-hover:text-gray-400">
-              Add an item
-            </span>
-          </Link>
-          {/* MENU ITEMS */}
-          {filteredDrinks.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
-              onClick={() => handleItemClick(item.id)}
-              onMouseEnter={() => setActiveItem(item.id)}
-              onMouseLeave={() => setActiveItem(null)}
-            >
-              {/* IMAGE CONTAINER */}
-              <div className="h-4/5 w-full relative">
-                <Image src={item.img} alt="" fill className="object-contain" />
-              </div>
-
-              {/* PRODUCT TITLE */}
-              <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
-                {item.title}
-              </h1>
-
-              {/* AVAILABILITY INDICATOR */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
-                  item.availability === "available"
-                    ? "bg-green-600"
-                    : "bg-gray-500"
-                }`}
-              ></span>
-
-              {/* CALORIE CONTENT */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                  item.calorie === "high"
-                    ? "bg-red-500"
-                    : item.calorie === "med"
-                    ? "bg-orange-400"
-                    : "bg-green-400"
-                }`}
-              ></span>
-
-              {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
-              {activeItem === item.id && (
-                <div
-                  className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
-                  style={{ background: "rgba(0, 0, 0, 0.6)" }}
-                  onClick={handleOptionsClick}
-                >
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents triggering parent onClick
-                      handleToggleFeatureItem(item.id, "drinks"); // Call toggle feature function with item ID and collection name
-                    }}
-                  >
-                    {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
-                  </button>
-                  )}
-
-                  <select
-                    value={item.availability.toLowerCase()}
-                    className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                    onChange={(e) =>
-                      handleAvailabilityChange(e, item.id, "drinks")
-                    } // Dynamically pass the collection name
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {Availability.map((availability) => (
-                      <option
-                        key={availability.id}
-                        value={availability.value}
-                        className={`${
-                          availability.value === "Available"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        } font-bold`}
-                      >
-                        {availability.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {staffRole && staffRole === "admin" && (
-                  <Link
-                    href={`/fkstllproduct/editproduct/${item.id}`}
-                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  )}
-
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id, "drinks"); // Pass the dynamic collection name
-                    }}
-                  >
-                    Delete
-                  </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-          {filteredMainCourses.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
-              onClick={() => handleItemClick(item.id)}
-              onMouseEnter={() => setActiveItem(item.id)}
-              onMouseLeave={() => setActiveItem(null)}
-            >
-              {/* IMAGE CONTAINER */}
-              <div className="h-4/5 w-full relative">
-                <Image src={item.img} alt="" fill className="object-contain" />
-              </div>
-              {/* PRODUCT TITLE */}
-              <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
-                {item.title}
-              </h1>
-              {/* AVAILABILITY */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
-                  item.availability === "available"
-                    ? "bg-green-600"
-                    : "bg-gray-500"
-                }`}
-              ></span>
-              {/* CALORIE CONTENT */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                  item.calorie === "high"
-                    ? "bg-red-500"
-                    : item.calorie === "med"
-                    ? "bg-orange-400"
-                    : "bg-green-400"
-                }`}
-              ></span>
-              {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
-              {activeItem === item.id && (
-                <div
-                  className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
-                  style={{ background: "rgba(0, 0, 0, 0.6)" }}
-                  onClick={handleOptionsClick}
-                >
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents triggering parent onClick
-                      handleToggleFeatureItem(item.id, "mainCourse"); // Call toggle feature function with item ID and collection name
-                    }}
-                  >
-                    {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
-                  </button>
-                  )}
-                  
-                  <select
-                    name=""
-                    id=""
-                    value={item.availability.toLowerCase()}
-                    className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                    onChange={(e) =>
-                      handleAvailabilityChange(e, item.id, "mainCourse")
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {Availability.map((availability) => (
-                      <option
-                        key={availability.id}
-                        value={availability.value}
-                        className={`${
-                          availability.value === "Available"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        } font-bold`}
-                      >
-                        {availability.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {staffRole && staffRole === "admin" && (
-                  <Link
-                    href={`/fkstllproduct/editproduct/${item.id}`}
-                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  )}
-                  
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id, "mainCourses");
-                    }}
-                  >
-                    Delete
-                  </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-          {filteredPastas.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
-              onClick={() => handleItemClick(item.id)}
-              onMouseEnter={() => setActiveItem(item.id)}
-              onMouseLeave={() => setActiveItem(null)}
-            >
-              {/* IMAGE CONTAINER */}
-              <div className="h-4/5 w-full relative">
-                <Image src={item.img} alt="" fill className="object-contain" />
-              </div>
-              {/* PRODUCT TITLE */}
-              <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
-                {item.title}
-              </h1>
-              {/* AVAILABILITY */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
-                  item.availability === "available"
-                    ? "bg-green-600"
-                    : "bg-gray-500"
-                }`}
-              ></span>
-              {/* CALORIE CONTENT */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                  item.calorie === "high"
-                    ? "bg-red-500"
-                    : item.calorie === "med"
-                    ? "bg-orange-400"
-                    : "bg-green-400"
-                }`}
-              ></span>
-              {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
-              {activeItem === item.id && (
-                <div
-                  className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
-                  style={{ background: "rgba(0, 0, 0, 0.6)" }}
-                  onClick={handleOptionsClick}
-                >
-
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents triggering parent onClick
-                      handleToggleFeatureItem(item.id, "pasta"); // Call toggle feature function with item ID and collection name
-                    }}
-                  >
-                    {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
-                  </button>
-                  )}
-
-
-                  <select
-                    name=""
-                    id=""
-                    value={item.availability.toLowerCase()}
-                    className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                    onChange={(e) =>
-                      handleAvailabilityChange(e, item.id, "pasta")
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {Availability.map((availability) => (
-                      <option
-                        key={availability.id}
-                        value={availability.value}
-                        className={`${
-                          availability.value === "Available"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        } font-bold`}
-                      >
-                        {availability.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {staffRole && staffRole === "admin" && (
-                  <Link
-                    href={`/fkstllproduct/editproduct/${item.id}`}
-                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  )}
-
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id, "pastas");
-                    }}
-                  >
-                    Delete
-                  </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-          {filteredPastries.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
-              onClick={() => handleItemClick(item.id)}
-              onMouseEnter={() => setActiveItem(item.id)}
-              onMouseLeave={() => setActiveItem(null)}
-            >
-              {/* IMAGE CONTAINER */}
-              <div className="h-4/5 w-full relative">
-                <Image src={item.img} alt="" fill className="object-contain" />
-              </div>
-              {/* PRODUCT TITLE */}
-              <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
-                {item.title}
-              </h1>
-              {/* AVAILABILITY */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
-                  item.availability === "available"
-                    ? "bg-green-600"
-                    : "bg-gray-500"
-                }`}
-              ></span>
-              {/* CALORIE CONTENT */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                  item.calorie === "high"
-                    ? "bg-red-500"
-                    : item.calorie === "med"
-                    ? "bg-orange-400"
-                    : "bg-green-400"
-                }`}
-              ></span>
-              {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
-              {activeItem === item.id && (
-                <div
-                  className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
-                  style={{ background: "rgba(0, 0, 0, 0.6)" }}
-                  onClick={handleOptionsClick}
-                >
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents triggering parent onClick
-                      handleToggleFeatureItem(item.id, "pastries"); // Call toggle feature function with item ID and collection name
-                    }}
-                  >
-                    {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
-                  </button>
-                  )}
-                  <select
-                    name=""
-                    id=""
-                    value={item.availability.toLowerCase()}
-                    className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                    onChange={(e) =>
-                      handleAvailabilityChange(e, item.id, "pastries")
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {Availability.map((availability) => (
-                      <option
-                        key={availability.id}
-                        value={availability.value}
-                        className={`${
-                          availability.value === "Available"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        } font-bold`}
-                      >
-                        {availability.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {staffRole && staffRole === "admin" && (
-                  <Link
-                    href={`/fkstllproduct/editproduct/${item.id}`}
-                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  )}
-
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id, "pastries");
-                    }}
-                  >
-                    Delete
-                  </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-          {filteredSnacks.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
-              onClick={() => handleItemClick(item.id)}
-              onMouseEnter={() => setActiveItem(item.id)}
-              onMouseLeave={() => setActiveItem(null)}
-            >
-              {/* IMAGE CONTAINER */}
-              <div className="h-4/5 w-full relative">
-                <Image src={item.img} alt="" fill className="object-contain" />
-              </div>
-              {/* PRODUCT TITLE */}
-              <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
-                {item.title}
-              </h1>
-              {/* AVAILABILITY */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
-                  item.availability === "available"
-                    ? "bg-green-600"
-                    : "bg-gray-500"
-                }`}
-              ></span>
-              {/* CALORIE CONTENT */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                  item.calorie === "high"
-                    ? "bg-red-500"
-                    : item.calorie === "med"
-                    ? "bg-orange-400"
-                    : "bg-green-400"
-                }`}
-              ></span>
-              {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
-              {activeItem === item.id && (
-                <div
-                  className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
-                  style={{ background: "rgba(0, 0, 0, 0.6)" }}
-                  onClick={handleOptionsClick}
-                >
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents triggering parent onClick
-                      handleToggleFeatureItem(item.id, "snacks"); // Call toggle feature function with item ID and collection name
-                    }}
-                  >
-                    {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
-                  </button>
-                  )}
-
-                  <select
-                    name=""
-                    id=""
-                    value={item.availability.toLowerCase()}
-                    className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                    onChange={(e) =>
-                      handleAvailabilityChange(e, item.id, "snacks")
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {Availability.map((availability) => (
-                      <option
-                        key={availability.id}
-                        value={availability.value}
-                        className={`${
-                          availability.value === "Available"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        } font-bold`}
-                      >
-                        {availability.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {staffRole && staffRole === "admin" && (
-                  <Link
-                    href={`/fkstllproduct/editproduct/${item.id}`}
-                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  )}
-
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id, "snacks");
-                    }}
-                  >
-                    Delete
-                  </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-          {filteredSandwiches.map((item) => (
-            <div
-              key={item.id}
-              className="bg-white border-gray-100 border-2 shadow-lg cursor-pointer aspect-square rounded-md flex flex-col gap-1 relative overflow-clip duration-300"
-              onClick={() => handleItemClick(item.id)}
-              onMouseEnter={() => setActiveItem(item.id)}
-              onMouseLeave={() => setActiveItem(null)}
-            >
-              {/* IMAGE CONTAINER */}
-              <div className="h-4/5 w-full relative">
-                <Image src={item.img} alt="" fill className="object-contain" />
-              </div>
-              {/* PRODUCT TITLE */}
-              <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
-                {item.title}
-              </h1>
-              {/* AVAILABILITY */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
-                  item.availability === "available"
-                    ? "bg-green-600"
-                    : "bg-gray-500"
-                }`}
-              ></span>
-              {/* CALORIE CONTENT */}
-              <span
-                className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
-                  item.calorie === "high"
-                    ? "bg-red-500"
-                    : item.calorie === "med"
-                    ? "bg-orange-400"
-                    : "bg-green-400"
-                }`}
-              ></span>
-              {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
-              {activeItem === item.id && (
-                <div
-                  className="absolute w-full h-full flex flex-col gap-2 justify-center items-center"
-                  style={{ background: "rgba(0, 0, 0, 0.6)" }}
-                  onClick={handleOptionsClick}
-                >
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md bg-orange-400 w-2/3 text-center font-semibold text-orange-900 hover:bg-orange-300 hover:scale-[.98] duration-200 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevents triggering parent onClick
-                      handleToggleFeatureItem(item.id, "sandwiches"); // Call toggle feature function with item ID and collection name
-                    }}
-                  >
-                    {isItemFeatured(item.id) ? "Remove Feature" : "Feature"}
-                  </button>
-                  )}
-
-                  <select
-                    name=""
-                    id=""
-                    value={item.availability.toLowerCase()}
-                    className="rounded-sm text-center shadow-md w-2/3 border-2 border-gray-100 cursor-pointer text-sm font-semibold text-gray-600 min-h-10"
-                    onChange={(e) =>
-                      handleAvailabilityChange(e, item.id, "sandwiches")
-                    }
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {Availability.map((availability) => (
-                      <option
-                        key={availability.id}
-                        value={availability.value}
-                        className={`${
-                          availability.value === "Available"
-                            ? "text-green-600"
-                            : "text-gray-500"
-                        } font-bold`}
-                      >
-                        {availability.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  {staffRole && staffRole === "admin" && (
-                  <Link
-                    href={`/fkstllproduct/editproduct/${item.id}`}
-                    className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm min-h-10 pt-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    Edit
-                  </Link>
-                  )}
-
-                  {staffRole && staffRole === "admin" && (
-                  <button
-                    className="rounded-sm shadow-md border-red-500 border-2 bg-red-500 hover:border-red-400 w-2/3 text-center font-semibold text-orange-50 hover:bg-red-400 hover:scale-[.98] duration-200 hover:text-orange-100 text-sm min-h-10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(item.id, "sandwiches");
-                    }}
-                  >
-                    Delete
-                  </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
       ) : (
-      <div className="flex justify-center items-center h-screen w-full">
-        <span className="text-4xl font-bold text-center text-gray-500" style={{ top: '-100px', position: 'relative' }}>
-          Your account is deactivated!
-        </span>
-      </div>  
+        <div className="flex justify-center items-center h-screen w-full">
+          <span
+            className="text-4xl font-bold text-center text-gray-500"
+            style={{ top: "-100px", position: "relative" }}
+          >
+            Your account is deactivated!
+          </span>
+        </div>
       )}
     </div>
   );

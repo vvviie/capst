@@ -372,6 +372,88 @@ const AccountsListPage = () => {
     }
   };
 
+  //#region PAGES CODE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const itemsPerPage = accountType === "users" ? 5 : 3;
+  const pagesToShow = 5;
+
+  // Get current page orders
+
+  // Calculate total pages
+  const totalUserPages = Math.ceil(filteredUserAccounts.length / itemsPerPage);
+  const totalStaffPages = Math.ceil(
+    filteredStaffAccounts.length / itemsPerPage
+  );
+
+  const currentUserAccounts = filteredUserAccounts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const currentStaffAccounts = filteredStaffAccounts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const visiblePages = Array.from(
+    {
+      length: Math.min(
+        pagesToShow,
+        (accountType === "users" ? totalUserPages : totalStaffPages) -
+          pageWindowStart +
+          1
+      ),
+    },
+    (_, index) => pageWindowStart + index
+  );
+
+  // Handle page change
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+
+    // Adjust the visible page numbers if necessary
+    if (pageNumber >= pageWindowStart + pagesToShow) {
+      setPageWindowStart(pageWindowStart + 1);
+    } else if (pageNumber < pageWindowStart) {
+      setPageWindowStart(pageWindowStart - 1);
+    }
+  };
+
+  const handleUserNext = () => {
+    if (currentPage < totalUserPages) {
+      goToPage(currentPage + 1);
+
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
+
+  const handleStaffNext = () => {
+    if (currentPage < totalStaffPages) {
+      goToPage(currentPage + 1);
+
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+
+      // Adjust page window start for "Previous"
+      if (currentPage - 1 < pageWindowStart) {
+        setPageWindowStart(pageWindowStart - 1);
+      }
+    }
+  };
+  //#endregion
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -381,9 +463,13 @@ const AccountsListPage = () => {
       {/* MAIN CONTAINER */}
       <div className="w-full max-w-[600px] flex flex-col gap-2">
         {/* HEADER */}
-        <h1 className="text-xl sm:text-2xl font-bold text-orange-950">
-          Accounts
-        </h1>
+        <div className="w-full flex gap-2 sm:gap-4 items-center">
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          <span className="text-xl sm:text-2xl text-center font-bold text-orange-900">
+            Accounts
+          </span>
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+        </div>
         {/* CREATE BUTTON, SEARCH BAR, ACCOUNT TYPE, AND FILTER CONTAINER*/}
         <div className="flex flex-col-reverse items-center gap-2 w-full mb-2 md:flex-row-reverse">
           <div className="flex items-center gap-2 justify-between w-full">
@@ -432,7 +518,7 @@ const AccountsListPage = () => {
         {accountType === "users" ? (
           <div className="w-full flex flex-col justify-center gap-2 max-h-[720px] overflow-y-auto pb-2">
             {/* USER ACCOUNTS */}
-            {filteredUserAccounts.map((user) => (
+            {currentUserAccounts.map((user) => (
               <div
                 className="w-full bg-white border-2 border-gray-100 shadow-md rounded-md p-2
                                     flex flex-col justify-center gap-2"
@@ -550,7 +636,7 @@ const AccountsListPage = () => {
         ) : (
           <div className="w-full flex flex-col justify-center gap-2">
             {/* STAFF ACCOUNTS */}
-            {filteredStaffAccounts.map((staff) => (
+            {currentStaffAccounts.map((staff) => (
               <div
                 className="w-full bg-white border-2 border-gray-100 shadow-md rounded-md p-2
                                     flex flex-col justify-center gap-2"
@@ -639,7 +725,49 @@ const AccountsListPage = () => {
             ))}
           </div>
         )}
+        {/* PAGINATION CONTROLS */}
+        <div
+          className={`flex justify-center items-center space-x-2
+              ${
+                (accountType === "users" && !filteredUserAccounts) ||
+                (accountType === "staff" && !filteredStaffAccounts)
+                  ? "hidden"
+                  : ""
+              }`}
+        >
+          <button
+            className="font-semibold cursor-pointer w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+            disabled={currentPage === 1}
+            onClick={handlePrevious}
+          >
+            Prev
+          </button>
+          {visiblePages.map((page) => (
+            <button
+              key={page}
+              className={`cursor-pointer h-9 aspect-square font-semibold rounded-md ${
+                currentPage === page
+                  ? "bg-orange-300 text-white border-orange-300 border-2"
+                  : "bg-white text-gray-500 hover:bg-orange-50 border-2 border-gray-100 hover:border-orange-50 hover:text-orange-500"
+              } shadow-md`}
+              onClick={() => goToPage(page)}
+            >
+              {page}
+            </button>
+          ))}
+          <button
+            className="cursor-pointer font-semibold w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+            disabled={
+              currentPage ===
+              (accountType === "users" ? totalUserPages : totalStaffPages)
+            }
+            onClick={accountType === "users" ? handleUserNext : handleStaffNext}
+          >
+            Next
+          </button>
+        </div>
       </div>
+
       <AccGiveVoucherForm isOpen={isFormOpen} toggleForm={toggleForm} />
     </div>
   );

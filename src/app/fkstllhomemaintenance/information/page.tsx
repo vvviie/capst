@@ -295,9 +295,11 @@ const AdminLandingPageMaintenance = () => {
 
   const LimitExceededModal = ({ isVisible, message, onClose }) => {
     if (!isVisible) return null;
-  
+
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50"> {/* Added z-50 */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
+        {" "}
+        {/* Added z-50 */}
         <div className="bg-white p-4 sm:p-6 rounded shadow-md max-w-sm w-full">
           <h2 className="text-lg font-bold mb-4 text-center">{message}</h2>
           <div className="flex justify-end">
@@ -317,16 +319,21 @@ const AdminLandingPageMaintenance = () => {
     <div className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex justify-center lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center">
       <div className="w-full flex flex-col gap- 2 max-w-[680px]">
         <div className="flex justify-start items-center gap-2">
+          {/* LINK BACK TO PRODUCTS */}
           <Link
             href={"/fkstllhomemaintenance"}
             className="flex items-center space-x-2 font-bold text-orange-950 text-xl sm:text-2xl text-left hover:text-orange-800 cursor-pointer"
           >
-            Maintenance
+            <i className="fa fa-angle-left" aria-hidden="true"></i>
+            <span>Maintenance</span>
           </Link>
-          <div className="text-xl sm:text-2xl font-bold text-orange-950 space-x-2 flex items-center">
-            <i className="fa fa-angle-right" aria-hidden="true"></i>
-            <span>Information Section</span>
-          </div>
+        </div>
+        <div className="w-full flex gap-2 sm:gap-4 items-center mb-4 mt-2">
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          <span className="text-xl sm:text-2xl text-center font-bold text-orange-900">
+            Information Section
+          </span>
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
         </div>
         <div className="bg-white border-2 border-gray-100 rounded-md shadow-md px-4 pt-2 pb-6 flex flex-col gap-2">
           {!editTabOpen ? (
@@ -371,37 +378,37 @@ const AdminLandingPageMaintenance = () => {
                 ))}
               </div>
               <div className="w-full flex flex-col gap-4">
-                <h1 className="w-full text-start text-xl font-bold text-orange-950">
+                <h1 className="w-full text-start text-xl font-bold text-orange-950 mb-[-10px] mt-4">
                   Information
                 </h1>
                 <div className="grid grid-cols-1 gap-4">
                   <div className="flex flex-col gap-0.5">
                     <h1 className="text-sm text-gray-500">About Us</h1>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">
                       {data["aboutUs"]}
                     </p>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <h1 className="text-sm text-gray-500">Location</h1>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">
                       {data["location"]}
                     </p>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <h1 className="text-sm text-gray-500">Operating Days</h1>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">
                       {data["operatingDays"]}
                     </p>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <h1 className="text-sm text-gray-500">Open Hours</h1>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">
                       {data["openHours"]}
                     </p>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <h1 className="text-sm text-gray-500">Accessibility</h1>
-                    <p className="font-semibold text-gray-900">
+                    <p className="font-semibold text-gray-900 text-sm sm:text-base">
                       {data["accessibility"]}
                     </p>
                   </div>
