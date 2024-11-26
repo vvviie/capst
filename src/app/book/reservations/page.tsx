@@ -122,6 +122,7 @@ const ReservationsPage = () => {
             paymentType: data.paymentType,
             downpayment: data.downpayment,
             balance: data.balance,
+            remarks: data.remarks || "None",
           };
         });
 
@@ -409,16 +410,13 @@ const ReservationsPage = () => {
             href={"/book"}
             className="flex items-center space-x-2 font-bold text-orange-950 text-2xl text-left w-auto hover:text-orange-800 cursor-pointer mb-2"
           >
-            <i className="fa fa-angle-left mr-[-4px]" aria-hidden="true"></i>
+            <i className="fa fa-book text-lg" aria-hidden="true"></i>
             <span>Booking</span>
           </Link>
-        </div>
-        <div className="w-full flex gap-4 items-center mb-4">
-          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
-          <span className="text-2xl text-center font-bold text-orange-900">
-            My Reservations
-          </span>
-          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          <h1 className="font-bold text-2xl mb-2 text-orange-950 flex gap-2 items-center w-auto">
+            <i className="fa fa-angle-right" aria-hidden="true"></i>
+            <span>My Reservations</span>
+          </h1>
         </div>
 
         {/* RESERVATIONS CONTAINER */}
@@ -516,6 +514,13 @@ const ReservationsPage = () => {
                               ))}
                             </div>
                           ))}
+                        <span className="font-semibold">
+                          Remarks:{" "}
+                          <span className="font-normal text-xs">
+                            {res.remarks}
+                          </span>{" "}
+                          <br />
+                        </span>
                         </>
                       )}
                       <span className="text-xs text-gray-400">

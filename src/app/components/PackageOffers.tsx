@@ -1,37 +1,61 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Buffet } from "../data";
+import { db } from "../firebase"; // Adjust the path as needed
+import { collection, getDocs } from "firebase/firestore";
 
-const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
+const PackageOffers = ({ selectedPackage, onFinalize }) => {
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
   const [prevSelectedPackage, setPrevSelectedPackage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [buffet, setBuffet] = useState([]); // State to hold fetched buffet items
+  const [selectedItems, setSelectedItems] = useState({}); // State to track selected items per category
+  const [getLimits, setGetLimits] = useState({}); // State to hold limits
+  useEffect(() => {
+    const fetchBuffetData = async () => {
+      const buffetCollection = collection(db, "packageOffers");
+      const buffetSnapshot = await getDocs(buffetCollection);
+      const buffetList = buffetSnapshot.docs
+        .map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter((item) => item.title && item.title !== "PackageChoices"); // Exclude PackageChoices document
+
+      // Assuming the structure of each document in the packageOffers collection has a title, items, and limits
+      const limits = {};
+      buffetList.forEach((item) => {
+        limits[item.title] = item.limits; // Store limits for each category
+      });
+
+      setBuffet(buffetList);
+      setGetLimits(limits);
+      // Initialize selectedItems based on fetched categories
+      const initialSelectedItems = {};
+      buffetList.forEach((item) => {
+        initialSelectedItems[item.title] = [];
+      });
+      setSelectedItems(initialSelectedItems);
+    };
+
+    fetchBuffetData();
+  }, []);
 
   useEffect(() => {
     if (prevSelectedPackage !== selectedPackage) {
-      setSelectedItems({
-        Veggies: [],
-        Pasta: [],
-        Mains: [],
-        Dessert: [],
+      const resetSelectedItems = {};
+      buffet.forEach((item) => {
+        resetSelectedItems[item.title] = [];
       });
+      setSelectedItems(resetSelectedItems);
       setPrevSelectedPackage(selectedPackage);
     }
-  }, [selectedPackage, prevSelectedPackage]); // Ensure prevSelectedPackage is included to avoid loops
+  }, [selectedPackage, buffet, prevSelectedPackage]);
 
-  // State to track selected items per category
-  const [selectedItems, setSelectedItems] = useState({
-    Veggies: [],
-    Pasta: [],
-    Mains: [],
-    Dessert: [],
-  });
-
-  const handleClickOutside = (event: MouseEvent) => {
-    if (formRef.current && !formRef.current.contains(event.target as Node)) {
+  const handleClickOutside = (event) => {
+    if (formRef.current && !formRef.current.contains(event.target)) {
       setOpen(false);
     }
   };
@@ -48,14 +72,6 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
     };
   }, [open]);
 
-  // Category limits based on package
-  const getLimits = {
-    Veggies: 1,
-    Pasta: selectedPackage === "C" ? 2 : 1,
-    Mains: selectedPackage === "A" ? 2 : 3,
-    Dessert: selectedPackage === "C" ? 2 : 1,
-  };
-
   const handleItemSelect = (category, item) => {
     setSelectedItems((prev) => {
       const currentSelection = prev[category];
@@ -69,7 +85,7 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
       }
 
       // Only allow selection if the limit has not been reached
-      if (currentSelection.length < getLimits[category]) {
+      if (currentSelection.length < getLimits[category][selectedPackage]) {
         return {
           ...prev,
           [category]: [...currentSelection, item],
@@ -80,10 +96,10 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
     });
   };
 
-  // Function to handle finalization and validation
   const handleFinalize = () => {
     const unmetSelections = Object.keys(getLimits).filter(
-      (category) => selectedItems[category].length < getLimits[category]
+      (category) =>
+        selectedItems[category].length < getLimits[category][selectedPackage]
     );
 
     if (unmetSelections.length > 0) {
@@ -96,7 +112,7 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
         title: category,
         items: selectedItems[category],
       }));
-      onFinalize(chosenItemsArray); // Pass selected items back to ReservationPage
+      onFinalize(chosenItemsArray);
       setOpen(false);
     }
   };
@@ -123,41 +139,57 @@ const PackageOffers = ({ selectedPackage, onFinalize, onPackageChange }) => {
             className="bg-white rounded-md shadow-xl p-8 flex flex-col gap-2 min-w-96 mx-10
             max-h-[720px] overflow-auto border-2 border-gray-100"
           >
-            {Buffet.map((item) => (
+            {buffet.map((item) => (
               <div key={item.title}>
                 <h1 className="text-xl text-left font-semibold text-orange-950 my-1">
                   {item.title}
                 </h1>
                 <hr />
-                <p className="text-xs text-left text-gray- 400 mt-2">
-                  Choose {getLimits[item.title]} {item.title}:
-                  <span className="ml-2 text-orange-900 font-semibold">
-                    {selectedItems[item.title].length} out of{" "}
-                    {getLimits[item.title]} selected
-                  </span>
+                <p className="text-xs text-left text-gray-400 mt-2">
+                  {getLimits[item.title] &&
+                  getLimits[item.title][selectedPackage] !== undefined ? (
+                    <>
+                      Choose {getLimits[item.title][selectedPackage]}{" "}
+                      {item.title}:
+                      <span className="ml-2 text-orange-900 font-semibold">
+                        {selectedItems[item.title]?.length || 0} out of{" "}
+                        {getLimits[item.title][selectedPackage]} selected
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-red-500">Limits not defined</span>
+                  )}
                 </p>
                 <div className="grid grid-cols-2">
-                  {item.items.map((food) => (
-                    <div
-                      className="flex items-center justify-start space-x-2 mx-1 my-3"
-                      key={food}
-                    >
-                      <input
-                        type="checkbox"
-                        name={`checkbox${food}`}
-                        id={`checkbox${food}`}
-                        className="w-5 h-5"
-                        checked={selectedItems[item.title].includes(food)}
-                        onChange={() => handleItemSelect(item.title, food)}
-                        disabled={
-                          !selectedItems[item.title].includes(food) &&
-                          selectedItems[item.title].length >=
-                            getLimits[item.title]
-                        }
-                      />
-                      <span className="text-sm w-4/5">{food}</span>
-                    </div>
-                  ))}
+                  {Array.isArray(item.items) && item.items.length > 0 ? (
+                    item.items.map((food) => (
+                      <div
+                        className="flex items-center justify-start space-x-2 mx-1 my-3"
+                        key={food}
+                      >
+                        <input
+                          type="checkbox"
+                          name={`checkbox${food}`}
+                          id={`checkbox${food}`}
+                          className="w-5 h-5"
+                          checked={
+                            selectedItems[item.title]?.includes(food) || false
+                          }
+                          onChange={() => handleItemSelect(item.title, food)}
+                          disabled={
+                            !selectedItems[item.title]?.includes(food) &&
+                            selectedItems[item.title]?.length >=
+                              (getLimits[item.title]
+                                ? getLimits[item.title][selectedPackage]
+                                : 0)
+                          }
+                        />
+                        <span className="text-sm w-4/5">{food}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-red-500">No items available</span>
+                  )}
                 </div>
               </div>
             ))}
