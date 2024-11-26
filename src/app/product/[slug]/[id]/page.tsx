@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from 'next/navigation'; 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -20,7 +20,6 @@ import {
 import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
-
 
 const ProductPage: React.FC = () => {
   //#region Const Variables
@@ -115,7 +114,9 @@ const ProductPage: React.FC = () => {
   //#endregion
 
   useEffect(() => {
-    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+    const userCookie = document.cookie
+      .split(";")
+      .find((cookie) => cookie.trim().startsWith("user="));
 
     if (userCookie) {
       // If user cookie is found, set isLoggedIn to true
@@ -136,7 +137,6 @@ const ProductPage: React.FC = () => {
 
     // Cleanup Firebase listener when component unmounts
     return () => unsubscribeAuth();
-
   }, []); // Empty dependency array to run once when the component mounts
 
   useEffect(() => {
@@ -463,7 +463,7 @@ const ProductPage: React.FC = () => {
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
-      router.push('/menu'); 
+      router.push("/menu");
     }, 1000); // 2 seconds
   };
 
@@ -663,7 +663,7 @@ const ProductPage: React.FC = () => {
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
-      router.push('/foodcart'); 
+      router.push("/foodcart");
     }, 1000); // 2 seconds
   };
 
@@ -719,17 +719,21 @@ const ProductPage: React.FC = () => {
   //const totalPrice = (price + upsizePrice + additionalCost) * numberQtty;
 
   return (
-    <div className="min-h-[calc(100vh-56px)] mt-14 flex md:px-24 xl:px-56 xl:bg-orange-50 xl:flex xl:items-center xl:justify-center">
+    <div className="min-h-[calc(100vh-56px)] mt-14 flex xl:px-56 xl:bg-orange-50 xl:flex xl:items-center xl:justify-center">
       {/* WHOLE CONTAINER */}
-      <div className="flex flex-col gap-4 pb-6 md:pb-10 xl:flex-row w-full xl:bg-white xl:shadow-xl xl:max-w-[1080px] xl:py-0 xl:my-10 xl:rounded-lg xl:max-h-[1280px] xl:overflow-hidden">
+      <div
+        className="flex flex-col gap-4 pb-6 md:pb-10 xl:flex-row w-full 
+      xl:bg-white xl:shadow-md xl:max-w-[1080px] xl:py-0 xl:my-10 xl:rounded-md
+      xl:max-h-[1280px] xl:overflow-hidden xl:border-2 xl:border-gray-50"
+      >
         {/* IMAGE AND BACK BUTTON CONTAINER */}
         <div className="relative w-full aspect-video xl:w-3/5 xl:aspect-auto">
           <Image
             src={productData?.productImg || img} //src={productData.productImg} // Use productData for image source
             alt={productData.productTitle || title} // alt={productData.productTitle} // Use productData for title
             layout="fill"
-            objectFit="cover"
-            className="object-cover xl:object-cover w-3/5"
+            objectFit="contain"
+            className="object-contain"
           />
           <Link
             //href={`/menu/${slug}`}
@@ -817,21 +821,24 @@ const ProductPage: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div className="flex justify-between items-start">
               {/* NAME OF THE MENU ITEM */}
-              <span className="text-2xl font-bold text-left text-orange-900 w-4/6">
+              <span className="text-xl font-bold text-left text-orange-900 w-4/6">
                 {productData.productTitle || title}
               </span>
               {/* PRICE DIV */}
-              <div className="flex flex-col gap-1 w-2/6">
-                <span className="text-2xl font-bold text-right text-orange-900">
-                  PHP {productData.pricePerItem ? productData.pricePerItem.toFixed(2) : Number(price).toFixed(2)}
+              <div className="flex flex-col w-2/6">
+                <span className="text-xl font-bold text-right text-orange-900">
+                  PHP{" "}
+                  {productData.pricePerItem
+                    ? productData.pricePerItem.toFixed(2)
+                    : Number(price).toFixed(2)}
                 </span>
-                <span className="text-sm font-medium text-right w-full">
+                <span className="text-sm font-medium text-right w-full text-gray-500">
                   Base price
                 </span>
               </div>
             </div>
             {/* DESCRIPTION OF THE ITEM */}
-            <p className="text-justify mb-2 xl:max-h-32 xl:overflow-y-auto">
+            <p className="text-justify text-sm text-gray-500 mb-2 xl:max-h-32 xl:overflow-y-auto">
               {productData.description || desc || "No description available"}
             </p>
           </div>
