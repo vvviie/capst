@@ -12,45 +12,21 @@ import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/
 import useMenuCategories from "@/app/hooks/useMenuCategories";
 
 // MENU CATEGORY
-interface MenuCategory {
+type Category = {
     id: number;
     prodCat: string;
     title: string;
-}
+};
 
-export const menuCategory: MenuCategory[] = [
-    {
-        id: 1,
-        prodCat: "drinks",
-        title: "Drinks",
-    },
-    {
-        id: 2,
-        prodCat: "mainCourseMenu",
-        title: "Main Course",
-    },
-    {
-        id: 3,
-        prodCat: "snacksMenu",
-        title: "Snacks",
-    },
-    {
-        id: 4,
-        prodCat: "pastriesMenu",
-        title: "Pastries",
-    },
-    {
-        id: 5,
-        prodCat: "sandwichesMenu",
-        title: "Sandwiches",
-    },
-    {
-        id: 6,
-        prodCat: "pastaMenu",
-        title: "Pasta",
-    },
+// Define the menuCategory array
+const menuCategory: Category[] = [
+    { id: 1, prodCat: "drinks", title: "Drinks" },
+    { id: 2, prodCat: "mainCourseMenu", title: "Main Course" },
+    { id: 3, prodCat: "snacksMenu", title: "Snacks" },
+    { id: 4, prodCat: "pastriesMenu", title: "Pastries" },
+    { id: 5, prodCat: "sandwichesMenu", title: "Sandwiches" },
+    { id: 6, prodCat: "pastaMenu", title: "Pasta" }
 ];
-
 
 // TYPES PER CATEGORY
 //let drinkTypes = ["Coffee", "Non-Coffee"];

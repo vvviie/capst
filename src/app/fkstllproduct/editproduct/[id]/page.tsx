@@ -42,14 +42,20 @@ type ProductType = {
   allergens: string[]; // List of allergens related to the product
 } | null;
 
-// MENU CATEGORY
-export const menuCategory = [
+type Category = {
+  id: number;
+  prodCat: string;
+  title: string;
+};
+
+// Define the menuCategory array
+const menuCategory: Category[] = [
   { id: 1, prodCat: "drinks", title: "Drinks" },
   { id: 2, prodCat: "mainCourseMenu", title: "Main Course" },
   { id: 3, prodCat: "snacksMenu", title: "Snacks" },
   { id: 4, prodCat: "pastriesMenu", title: "Pastries" },
-  { id: 5, prodCat: "sandwichMenu", title: "Sandwiches" },
-  { id: 6, prodCat: "pastaMenu", title: "Pasta" },
+  { id: 5, prodCat: "sandwichesMenu", title: "Sandwiches" },
+  { id: 6, prodCat: "pastaMenu", title: "Pasta" }
 ];
 
 const EditProductPage = () => {
