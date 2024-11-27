@@ -420,7 +420,7 @@ const AdminHomePage = () => {
                     {/* Updated date and time */}
                   </div>
                   <p className="text-gray-700 text-sm italic">
-                    "{rev.comments}"
+                  {`"${rev.comments}"`}
                   </p>{" "}
                   {/* Updated review content */}
                 </div>

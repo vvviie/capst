@@ -141,7 +141,7 @@ const CustomerReviewsPage = () => {
                   {rev.date} - {rev.time}
                 </span>
               </div>
-              <p className="text-gray-700 text-sm italic">"{rev.review}"</p>
+              <p className="text-gray-700 text-sm italic">{`"${rev.review}"`}</p>
             </div>
           ))}
         </div>
