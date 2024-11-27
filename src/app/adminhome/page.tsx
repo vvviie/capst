@@ -213,7 +213,7 @@ const AdminHomePage = () => {
       lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
       ></div>
       <div className="w-full max-w-[1400px] py-4">
-        <div className="flex w-full items-center gap-2 justify-between mb-4">
+      <div className="flex w-full items-center gap-2 justify-between mb-4">
           <div className="w-full flex gap-4 items-center">
             <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
             <span className="text-2xl text-center font-bold text-orange-900">
@@ -420,7 +420,7 @@ const AdminHomePage = () => {
                     {/* Updated date and time */}
                   </div>
                   <p className="text-gray-700 text-sm italic">
-                    "{rev.comments}"
+                  {`"${rev.comments}"`}
                   </p>{" "}
                   {/* Updated review content */}
                 </div>

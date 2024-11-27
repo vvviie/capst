@@ -1,0 +1,146 @@
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Rule for the users collection
+    match /users/{userId} {
+  		allow read: if request.auth != null; // Allow read access to all authenticated users
+  		 allow write: if request.auth != null; // Allow admins and the user themselves to write
+		}
+    
+    match /users/{userId}/notifications/{notificationId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /staff/{userId} {
+  		allow read: if request.auth != null; // Allow read access to all authenticated users
+  		 allow write: if request.auth != null; // Allow admins and the user themselves to write
+		}
+    
+    // Rule for the webContent collection
+    	match /webContent/{document=**} {
+    	allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+		// Rule for the salesData collection
+    match /salesData/{document=**} {
+			allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+   // Rule for the dataAverageOrders collection
+    match /dataAverageOrders/{document=**} {
+			allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+    	// Rule for the cafeExpenses collection
+    match /cafeExpenses/{document=**} {
+			allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+        	// Rule for the cafeExpenses collection
+    match /packageOffers/{document=**} {
+			allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+
+    // Rule for the drinks collection
+    match /drinks/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+
+    // Rule for the pasta collection
+    match /pasta/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+
+    // Rule for the sandwiches collection
+    match /sandwiches/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+
+    // Rule for the main courses collection
+    match /mainCourse/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+
+    // Rule for the snacks collection
+    match /snacks/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+
+		// Rule for the snacks collection
+    match /pastries/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+    // Rule for the tempOrders collection
+    match /tempOrders/{document=**} {
+      allow read: if request.auth != null && request.auth.uid != null; // Only authenticated users can read
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+    // Rule for the tempOrders collection
+    match /completedOrders/{document=**} {
+      allow read: if request.auth != null && request.auth.uid != null; // Only authenticated users can read
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+    }
+    
+    // Rule for the promoCodes collection
+    match /promoCodes/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+  	}
+    
+    match /customerFeedbacks/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+  	}
+    
+    match /vouchers/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+  	}
+    
+    match /tableReservations/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+  	}
+    
+    match /featuredItems/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+  	}
+    
+    match /products/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+	  }
+    
+    match /notifications/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+	  }
+    
+    match /menuCategories/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+	  }
+    
+    match /menuCategories/{categorySlug} {
+      allow read, write: if request.auth != null; // Ensure the user is authenticated
+    }
+    
+    match /adminControls/{document=**} {
+      allow read: if true; // Allow read access to everyone
+      allow write: if request.auth != null && request.auth.uid != null; // Only authenticated users can write
+	  }
+  }
+}

@@ -238,12 +238,12 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
               <span className="ml-2">
-                PHP {chartData.totalSales.toFixed(2)}
+              PHP {chartData.totalSales.toFixed(2)}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">Total Expenses:</span>
               <span className="ml-2">
-                PHP {chartData.totalExpenses.toFixed(2)}
+              PHP {chartData.totalExpenses.toFixed(2)}
               </span>
             </div>
           )}

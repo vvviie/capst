@@ -493,6 +493,7 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
             )}
             {tierList.map((tier) => (
               <div
+                key={tier.value}
                 className={`w-full flex items-center justify-start h-10 pl-3
                 ${
                   tier.value === "Regular"

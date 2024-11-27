@@ -12,7 +12,13 @@ import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/
 import useMenuCategories from "@/app/hooks/useMenuCategories";
 
 // MENU CATEGORY
-export const menuCategory = [
+interface MenuCategory {
+    id: number;
+    prodCat: string;
+    title: string;
+}
+
+export const menuCategory: MenuCategory[] = [
     {
         id: 1,
         prodCat: "drinks",
@@ -44,6 +50,7 @@ export const menuCategory = [
         title: "Pasta",
     },
 ];
+
 
 // TYPES PER CATEGORY
 //let drinkTypes = ["Coffee", "Non-Coffee"];
@@ -137,8 +144,8 @@ const AddProductPage = () => {
         selectedCat === "drinks"
             ? allergensByCategory.drinks
             : selectedCat === "pastriesMenu"
-            ? allergensByCategory.pastries
-            : allergensByCategory.default;
+                ? allergensByCategory.pastries
+                : allergensByCategory.default;
 
     // SET ALLERGIES
     const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
@@ -153,7 +160,7 @@ const AddProductPage = () => {
     };
 
     // Item's Description
-    const [desc, setDesc] = useState(""); 
+    const [desc, setDesc] = useState("");
 
     const [existingIDs, setExistingIDs] = useState<string[]>([]); // Initialize existing IDs
     const existingIDsRef = useRef<string[]>([]); // Create a ref to store existing IDs
@@ -171,7 +178,7 @@ const AddProductPage = () => {
 
     useEffect(() => {
         const firstCategory = menuCategories.length > 0 ? menuCategories[0] : null;
-    
+
         const categoryTypesMap: Record<string, string[]> = {
             drinks: ["Coffee", "Non-Coffee"],
             pastaMenu: ["Pesto", "Non-Pesto"],
@@ -180,14 +187,14 @@ const AddProductPage = () => {
             pastriesMenu: ["Cake", "Cookie", "Tart"],
             mainCourseMenu: ["Meat", "Seafood", "Veggie"],
         };
-    
+
         // Determine the second category based on the selected category
         let secondCategory = null;
         if (firstCategory && categoryTypesMap[selectedCat]) {
             // If there's a valid firstCategory and it's in the categoryTypesMap
             secondCategory = categoryTypesMap[selectedCat][0]; // Set to the first option in the respective category
         }
-    
+
         if (selectedCat === "drinks" || ["pastaMenu", "snacksMenu", "sandwichesMenu", "pastriesMenu", "mainCourseMenu"].includes(selectedCat)) {
             console.log(`Switching to category: ${selectedCat}`);
             setSelectedDrinkType(secondCategory);
@@ -199,7 +206,7 @@ const AddProductPage = () => {
             setPassableSelectedDrinkType(null);
             setUpsize(false);
         }
-    }, [selectedCat, menuCategories]);    
+    }, [selectedCat, menuCategories]);
 
     useEffect(() => {
         if (selectedCat !== "drinks") {
@@ -284,17 +291,17 @@ const AddProductPage = () => {
     const generateNewID = (ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
         // Use 'drink' as the prefix for drinks, regardless of the drink type
         const prefix = selectedCat === "drinks" ? drinkTypePrefixes.drink : `${extractedCategory}`;
-    
+
         if (!prefix) {
             console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
             return; // Early return if no prefix is available
         }
-    
+
         // Generate the new ID
-        const newID = ids.length === 0 
-            ? `${prefix}1` 
+        const newID = ids.length === 0
+            ? `${prefix}1`
             : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
-    
+
         setNewProdID(newID);
         console.log("Generated new product ID:", newID);
     };
@@ -386,7 +393,7 @@ const AddProductPage = () => {
             setFileName(file.name); // Update the file name in state
             const previewUrl = URL.createObjectURL(file); // Create a local URL for preview
             setImageUrl(previewUrl); // Update the image preview state
-    
+
             try {
                 // Convert and upload the image immediately
                 const webpUrl = await uploadImageToStorage(file); // Upload the image and get the URL
@@ -439,7 +446,7 @@ const AddProductPage = () => {
             reader.readAsDataURL(file); // Read the file as Data URL
         });
     };
-    
+
     // Function to upload image to Firebase Storage
     const uploadImageToStorage = async (file) => {
         const storage = getStorage();
@@ -477,7 +484,7 @@ const AddProductPage = () => {
         const storageRef = ref(storage); // Root directory or specify folder if needed
         const files = await listAll(storageRef);
         const placeholderFile = files.items.find(item => item.name === "placeholder-photo.webp");
-    
+
         if (placeholderFile) {
             return await getDownloadURL(placeholderFile); // Get the download URL
         } else {
@@ -493,12 +500,12 @@ const AddProductPage = () => {
             itemNameRef.current.focus(); // Set focus back to item name
             return; // Exit the function if validation fails
         }
-    
+
         if (!itemPrice) {
             itemPriceRef.current.focus(); // Set focus back to item price
             return; // Exit if item price is not provided
         }
-    
+
         if (selectedCat === "drinks") {
             if (!drinkSize) {
                 drinkSizeRef.current.focus();
@@ -513,12 +520,12 @@ const AddProductPage = () => {
                 return; // Exit if upsize price is not provided
             }
         }
-        
+
         if (!desc) {
             descriptionRef.current.focus();
             return; // Exit if description is not provided
         }
-    
+
         // Optional ingredients with default values of null
         let addEspresso = null;
         let addSyrup = null;
@@ -527,14 +534,14 @@ const AddProductPage = () => {
         let addVanilla = null;
         let serveMashedPotato = null;
         let serveRice = null;
-    
+
         // Assign values conditionally based on selected category
         if (selectedCat === "drinks") {
             addEspresso = 30;
             addSyrup = 30;
             milkOat = 40;
             milkAlmond = 30;
-    
+
             if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
                 addVanilla = 25;
             }
@@ -542,10 +549,10 @@ const AddProductPage = () => {
             serveMashedPotato = false;
             serveRice = false;
         }
-    
+
         // Document name from item title
         const documentName = itemName.toLowerCase().replace(/\s+/g, "-");
-    
+
         // Upload the image if it exists
         let finalImageUrl;
         if (fileInputRef.current.files[0]) {
@@ -563,13 +570,13 @@ const AddProductPage = () => {
         } else {
             finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
         }
-    
+
         function toCamelCase(str) {
             return str
                 .toLowerCase() // Convert the entire string to lowercase
                 .split(" ") // Split the string by spaces
-                .map((word, index) => 
-                    index === 0 
+                .map((word, index) =>
+                    index === 0
                         ? word // Keep the first word lowercase
                         : word.charAt(0).toUpperCase() + word.slice(1) // Capitalize the first letter of subsequent words
                 )
@@ -588,7 +595,7 @@ const AddProductPage = () => {
             title: itemName,
             type: selectedDrinkType || "",
             contains: selectedAllergens.length > 0 ? selectedAllergens : [""], // Allergens only
-    
+
             // Optional drink fields
             ...(selectedCat === "drinks" && {
                 addEspresso,
@@ -599,31 +606,31 @@ const AddProductPage = () => {
                 currSize: drinkSize || "",
                 upsizable: upsize,
             }),
-    
+
             // Optional main course fields
             ...(selectedCat === "mainCourseMenu" && {
                 serveMashedPotato,
                 serveRice,
             }),
-    
+
             // Optional upsize fields, only if upsizable
             ...(upsize && {
                 upsizePrice: upsizePrice || 10,
                 upsizeSize: upsizeSize || "12oz",
             }),
         };
-    
+
         // Show popup only after validation passes
         setIsPopupVisible(true);
         setTimeout(() => {
             setIsPopupVisible(false);
         }, 750);
-    
+
         // Add to Firestore
         try {
             await setDoc(doc(db, extractedCategory, documentName), documentData);
             console.log("Document successfully written!");
-    
+
             // Reload the page after a delay
             setTimeout(() => {
                 window.location.reload();
@@ -633,12 +640,12 @@ const AddProductPage = () => {
         }
     };
 
-     // Fetch categories from the database based on selected main category
+    // Fetch categories from the database based on selected main category
     const fetchCategoriesFromDB = async (mainCategory: string) => {
         try {
             // Reference to the menuCategories collection
             const menuCategoriesRef = collection(db, "menuCategories");
-    
+
             // Determine the document based on the selected main category
             let categoriesDoc = null;
             switch (mainCategory) {
@@ -664,21 +671,21 @@ const AddProductPage = () => {
                     categoriesDoc = null; // Default case, in case no main category is selected
                     break;
             }
-    
+
             console.log("Categories document reference:", categoriesDoc);
-    
+
             if (!categoriesDoc) return;
-    
+
             // Get the document snapshot
             const docSnapshot = await getDoc(categoriesDoc);
-            
+
             console.log("Document snapshot:", docSnapshot);
-    
+
             // If the document exists, extract the categories
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
                 console.log("Document data:", data);
-    
+
                 let allCategories: string[] = [];
                 if (data.categories && Array.isArray(data.categories)) {
                     // Extract categories from the document
@@ -686,18 +693,18 @@ const AddProductPage = () => {
                         .filter((item) => item.category) // Filter out any items without a category
                         .map((item) => item.category); // Extract the category names
                 }
-    
+
                 console.log("All categories:", allCategories);
-    
+
                 // Format categories for display: Convert category names to a human-readable format
                 const formattedCategories = allCategories.map((category) =>
                     category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
                 );
-    
+
                 console.log("Formatted categories:", formattedCategories);
-    
+
                 setMenuCategories(formattedCategories);
-    
+
                 // Reset selectedCategory if it's not a valid option
                 if (!formattedCategories.includes(selectedCategory)) {
                     setSelectedCategory(formattedCategories[0] || null); // Default to first category
@@ -709,12 +716,12 @@ const AddProductPage = () => {
             console.error("Error fetching categories from database:", error);
         }
     };
-    
+
 
     useEffect(() => {
         fetchCategoriesFromDB(selectedCat);
     }, [selectedCat]);
-    
+
     return (
         <div
             className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex items-center justify-center
@@ -950,14 +957,14 @@ const AddProductPage = () => {
                             </div>
                             {/* PRODUCT CATEGORY - KAPAG HINDI DRINK, AUTOMATIC NA KUNG ANO ANG MENU CATEGORY NILA*/}
                             {/*EDITEDITEDIT*/}
-                                <div className="flex-1 flex flex-col gap-1 items-center justify-center">
-                                    <label
-                                        className="text-orange-950 text-sm w-full text-left space-x-1"
-                                        htmlFor="catDrinks"
-                                    >
-                                        <span>Item Category</span>
-                                    </label>
-                                    <select
+                            <div className="flex-1 flex flex-col gap-1 items-center justify-center">
+                                <label
+                                    className="text-orange-950 text-sm w-full text-left space-x-1"
+                                    htmlFor="catDrinks"
+                                >
+                                    <span>Item Category</span>
+                                </label>
+                                <select
                                     name="catDrinks"
                                     id="catDrinks"
                                     className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer py-[5px] w-full text-center"
@@ -978,7 +985,7 @@ const AddProductPage = () => {
                                         <option>No categories available</option>
                                     )}
                                 </select>
-                                </div>
+                            </div>
                         </div>
 
                         {selectedCat === "drinks" && (
@@ -1119,8 +1126,8 @@ const AddProductPage = () => {
                                 >
                                     <span>Allergen</span>
                                 </label>
-                                <AddAllergens 
-                                    selectedCat={selectedCat} 
+                                <AddAllergens
+                                    selectedCat={selectedCat}
                                     selectedAllergens={selectedAllergens} // Pass the current selected allergens
                                     onAdd={handleAllergenAdd} // Handle adding allergens
                                 />
@@ -1129,19 +1136,19 @@ const AddProductPage = () => {
 
                         {/* DISPLAY CHOSEN ALLERGENS */}
                         {mayroongNapilingAllergen && selectedAllergens.length > 0 && (
-                        <div className="w-full flex flex-col gap-1 items-center justify-center">
-                            <label className="text-orange-950 text-sm w-full text-left space-x-1" htmlFor="menuItemDescription">
-                                <span>Contains these allergens:</span>
-                                <div className="grid grid-cols-3 gap-1.5 mt-2">
-                                    {selectedAllergens.map((allergen, index) => (
-                                        <span key={index} className="rounded-full bg-orange-400 py-1.5 text-center font-semibold text-orange-50">
-                                            {allergen}
-                                        </span>
-                                    ))}
-                                </div>
-                            </label>
-                        </div>
-                    )}
+                            <div className="w-full flex flex-col gap-1 items-center justify-center">
+                                <label className="text-orange-950 text-sm w-full text-left space-x-1" htmlFor="menuItemDescription">
+                                    <span>Contains these allergens:</span>
+                                    <div className="grid grid-cols-3 gap-1.5 mt-2">
+                                        {selectedAllergens.map((allergen, index) => (
+                                            <span key={index} className="rounded-full bg-orange-400 py-1.5 text-center font-semibold text-orange-50">
+                                                {allergen}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </label>
+                            </div>
+                        )}
 
                         {/* MENU ITEM DESCRIPTION */}
                         <div className="w-full flex flex-col gap-1 items-center justify-center">
