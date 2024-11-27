@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import CheckoutPopup from "./CheckoutPopup";
 import { db } from "../firebase";
-import { doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 const hasExpenses = true;
 const InputExpenses = ({ isOpen, toggleForm }) => {
   const formRef = useRef(null);
@@ -32,7 +32,6 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
   const handleCancel = () => {
     setActiveExpenseIndex(null); // Reset the active expense index to close the action menu
   };
-  
   const handleAddExpense = () => {
     // Clear previous error
     setError("");
@@ -83,9 +82,9 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault(); // Prevent the default form submission behavior
+    event.preventDefault();
     let isValid = true;
-  
+
     // Validation checks
     if (addedExpenses.length === 0) {
       setError("Please add at least one expense.");
@@ -94,7 +93,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
       }, 4000);
       isValid = false;
     }
-  
+
     if (input !== "today" && !date) {
       setError("Date is required when not selecting 'Today'.");
       setTimeout(() => {
@@ -102,89 +101,91 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
       }, 4000);
       isValid = false;
     }
-  
+
     // If validation fails, stop the function here
     if (!isValid) {
       return; // Exit the function if validation fails
     }
-  
+
     // Show the popup after successful validation
     setIsPopUpVisible(true);
     setTimeout(() => {
       setIsPopUpVisible(false);
     }, 750);
-  
+
     const now = new Date();
+    const todayDocumentId = now.toISOString().split("T")[0]; // Today's date in YYYY-MM-DD format
     const expenseData = {
-      date: date || now.toISOString().split("T")[0], // Use today's date if not provided
+      date: date || todayDocumentId,
       time: `${now.getHours().toString().padStart(2, "0")}:${now
         .getMinutes()
         .toString()
-        .padStart(2, "0")}`, // Get time in HH:MM format (military time)
+        .padStart(2, "0")}`,
       totalExpenses: totalExpense,
       addedExpenses: addedExpenses,
     };
-  
-    // Use the date in YYYY-MM-DD format for the document ID
-    const documentId =
-      input === "today" ? now.toISOString().split("T")[0] : date; // Use selected date if input is not "today"
-  
-    try {
-      // Get the current data from Firestore (if any) to accumulate expenses
-      const docRef = doc(db, "cafeExpenses", documentId);
-      const docSnap = await getDoc(docRef);
-  
-      let updatedExpenses = [...addedExpenses];
-      let newTotalExpense = totalExpense;
-  
-      if (docSnap.exists()) {
-        // If the document exists, fetch the existing addedExpenses and append new ones
-        const existingExpenses = docSnap.data().addedExpenses || [];
-        const existingTotalExpense = docSnap.data().totalExpenses || 0;
-  
-        // Update the newTotalExpense by adding the existing totalExpense and the new totalExpense
-        newTotalExpense = existingTotalExpense + totalExpense;
-  
-        // Merge the existing expenses with the new expenses
-        updatedExpenses = [...existingExpenses, ...addedExpenses];
-      }
-  
-      // Use setDoc with merge: true to create or update the document
-      await setDoc(docRef, { addedExpenses: updatedExpenses, totalExpenses: newTotalExpense });
-  
-      // Handle sales data update for formatted date (e.g., "11/27/2024")
-      const salesDocumentId = "salesExpensesToday";
-      const salesDataRef = doc(db, "salesData", salesDocumentId);
-  
-      const formattedDate = `${
-        now.getMonth() + 1
-      }/${now.getDate()}/${now.getFullYear()}`; // Format date as MM/DD/YYYY
-  
-      // Get the current sales data (if any) to accumulate expenses
-      const salesDocSnap = await getDoc(salesDataRef);
-      let currentSalesData = salesDocSnap.exists() ? salesDocSnap.data() : {};
-  
-      // Ensure the data structure is available for Expenses and NetSales
-      const expensesData = currentSalesData.Expenses || { data: {}, labels: "Expenses" };
-  
-      // Accumulate the existing expenses and update the total expenses for the formatted date
-      let newSalesTotal = expensesData.data[formattedDate] || 0;
-      newSalesTotal += totalExpense;
-  
-      // Update the sales data with the new total for the formatted date
-      expensesData.data[formattedDate] = newSalesTotal;
-  
-      // Now update or create the sales data document in Firestore
-      await setDoc(salesDataRef, { Expenses: expensesData }, { merge: true });
-  
-      // Hide the popup and toggle the form after a delay
-      setTimeout(() => {
-        setIsPopUpVisible(false);
-        toggleForm(); // Close the form
-      }, 750);
-    } catch (error) {
-      console.error("Error submitting expenses: ", error);
+
+    // Check if the document for today exists
+    const todayDocRef = doc(db, "cafeExpenses", todayDocumentId);
+    const todayDocSnap = await getDoc(todayDocRef);
+
+    let currentTotalExpenses = 0; // Initialize variable to hold current total expenses
+
+    if (todayDocSnap.exists()) {
+      // Document exists, update it
+      const existingData = todayDocSnap.data();
+      const updatedAddedExpenses = [
+        ...existingData.addedExpenses,
+        ...addedExpenses,
+      ];
+      currentTotalExpenses = existingData.totalExpenses + totalExpense; // Update totalExpenses
+      await updateDoc(todayDocRef, {
+        addedExpenses: updatedAddedExpenses,
+        totalExpenses: currentTotalExpenses,
+      });
+    } else {
+      // Document does not exist, create it
+      currentTotalExpenses = totalExpense; // If creating a new document, totalExpenses is just the current totalExpense
+      await setDoc(todayDocRef, expenseData);
     }
+
+    // Reset the form state
+    setAddedExpenses([]);
+    setTotalExpense(0);
+    setDate("");
+    setExpenseLabel("");
+    setExpenseAmount(0);
+
+    // Submit to salesData collection
+    const salesDocumentId = "salesExpensesToday";
+    const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+    // Prepare the update data
+    const formattedDate = `${
+      now.getMonth() + 1
+    }/${now.getDate()}/${now.getFullYear()}`; // Format date as MM/DD/YYYY
+
+    // Update the salesData document
+    const expensesData = {
+      Expenses: {
+        data: {
+          [formattedDate]: currentTotalExpenses, // Use the current total expenses for the formatted date
+        },
+      },
+    };
+
+    // Merge the new expenses data with the existing document
+    try {
+      await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+    } catch (error) {
+      console.error("Error updating sales data: ", error);
+    }
+
+    // Hide the popup and toggle the form after a delay
+    setTimeout(() => {
+      setIsPopUpVisible(false);
+      toggleForm(); // Close the form
+    }, 750);
   };
 
   const handleChange = (event) => {

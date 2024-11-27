@@ -677,7 +677,7 @@ const AdminReservationPage = () => {
         paymentType: paymentType,
         status: "REQUESTED",
         type: "Event",
-        reservedBy: userEmail,
+        reservedBy: reservedByUser,
         remarks: remarks || "None",
       });
       setIsPopupVisible(true);
