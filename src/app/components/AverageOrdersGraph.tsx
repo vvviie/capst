@@ -13,7 +13,7 @@ import {
   Legend,
 } from "chart.js";
 import { db } from "../firebase"; // Adjust the path as necessary
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
 
 // Define the types for chart data
 interface ChartDataset {
@@ -40,14 +40,17 @@ ChartJS.register(
 );
 
 const AverageOrdersGraph = () => {
-  const [chartData, setChartData] = useState<ChartData>({ labels: [], datasets: [] });
+  const [chartData, setChartData] = useState<ChartData>({
+    labels: [],
+    datasets: [],
+  });
 
   useEffect(() => {
-    const fetchAverageOrders = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "dataAverageOrders"));
-        const ordersData: { [key: string]: { date: string; totalOrders: number } } = {};
-        
+    const unsubscribe = onSnapshot(
+      collection(db, "dataAverageOrders"),
+      (querySnapshot) => {
+        const ordersData = {};
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           ordersData[doc.id] = data; // Store the data using the document ID as the key
@@ -59,14 +62,16 @@ const AverageOrdersGraph = () => {
 
         // Prepare data for the chart, filtering out future dates
         const filteredOrdersData = Object.keys(ordersData)
-          .map(date => ({
+          .map((date) => ({
             ...ordersData[date],
-            date: new Date(ordersData[date].date) // Convert to Date object for comparison
+            date: new Date(ordersData[date].date), // Convert to Date object for comparison
           }))
-          .filter(order => order.date <= currentDate); // Keep only orders with dates up to the current date
+          .filter((order) => order.date <= currentDate); // Keep only orders with dates up to the current date
 
         // Check if there's data for today
-        const hasTodayData = filteredOrdersData.some(order => order.date.toLocaleDateString() === todayString);
+        const hasTodayData = filteredOrdersData.some(
+          (order) => order.date.toLocaleDateString() === todayString
+        );
 
         // If there's no data for today, add a placeholder
         if (!hasTodayData) {
@@ -76,8 +81,12 @@ const AverageOrdersGraph = () => {
           });
         }
 
-        const labels = filteredOrdersData.map(order => order.date.toLocaleDateString());
-        const totalOrders = filteredOrdersData.map(order => order.totalOrders);
+        const labels = filteredOrdersData.map((order) =>
+          order.date.toLocaleDateString()
+        );
+        const totalOrders = filteredOrdersData.map(
+          (order) => order.totalOrders
+        );
 
         setChartData({
           labels: labels,
@@ -91,23 +100,25 @@ const AverageOrdersGraph = () => {
             },
           ],
         });
-      } catch (error) {
+      },
+      (error) => {
         console.error("Error fetching documents: ", error);
       }
-    };
+    );
 
-    fetchAverageOrders();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const options = {
     responsive: true,
     plugins: {
       legend: {
-        position: 'top',
+        position: "top",
       },
       title: {
         display: true,
-        text: 'Average Orders Per Day',
+        text: "Average Orders Per Day",
       },
     },
   };
