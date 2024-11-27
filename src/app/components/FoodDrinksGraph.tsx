@@ -229,14 +229,14 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Food Sold:</span>
               <span className="ml-2">
-                PHP {chartData.totalFoodSales.toLocaleString()}
+                {chartData.totalFoodSales.toLocaleString()}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">
                 Total Drink Sold:
               </span>
               <span className="ml-2">
-                PHP {chartData.totalDrinkSales.toLocaleString()}
+                {chartData.totalDrinkSales.toLocaleString()}
               </span>
             </div>
           )}
