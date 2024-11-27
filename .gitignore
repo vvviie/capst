@@ -12,7 +12,7 @@
 # next.js
 /out/
 /.next/cache/
-./next 
+.next/
 #nexttt
 
 # production build
