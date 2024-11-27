@@ -628,7 +628,9 @@ const AdminCheckReservationsPage = () => {
               </span>
               <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
             </div>
-            <div className="w-full flex justify-between items-center gap-1">
+            <div className="w-full flex justify-between items-start gap-1">
+              <div className="flex flex-col gap-2 items-start
+              lg:flex-row lg:items-center">
               <Link
                 href={`/fkstllbookings/${
                   resType === "table" ? "table" : "event"
@@ -638,14 +640,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
               >
                 Add
               </Link>
-              {/* Conditionally render DynamicPackageOffers if resType is "event" */}
               {resType === "event" && (
-                <div className="flex items-center mt-4">
-                  {" "}
-                  {/* Add margin-top to push it down */}
                   <DynamicPackageOffers />
-                </div>
               )}
+              </div>
+              
               <div className="flex items-center gap-2 flex-1 justify-end">
                 <select
                   className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
