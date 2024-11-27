@@ -16,13 +16,16 @@ checkFields<Diff<{
   preferredRegion?: 'auto' | 'global' | 'home' | string | string[]
   runtime?: 'nodejs' | 'experimental-edge' | 'edge'
   maxDuration?: number
-  
+
   metadata?: any
   generateMetadata?: Function
   viewport?: any
   generateViewport?: Function
-  
-}, TEntry, ''>>()
+
+  // Add the menuCategory property
+  menuCategory?: { id: number; prodCat: string; title: string }[];
+}, TEntry, ''>>();
+
 
 // Check the prop type of the entry function
 checkFields<Diff<PageProps, FirstArg<TEntry['default']>, 'default'>>()
