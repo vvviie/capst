@@ -12,6 +12,7 @@
 # next.js
 /out/
 /.next/cache/
+./next
 
 # production build
 /build/
