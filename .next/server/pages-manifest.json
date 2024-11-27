@@ -1,0 +1,10 @@
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/api/createNewStaff": "pages/api/createNewStaff.js",
+  "/api/createNewUser": "pages/api/createNewUser.js",
+  "/api/deleteUser": "pages/api/deleteUser.js",
+  "/api/deleteStaff": "pages/api/deleteStaff.js",
+  "/api/saveUser": "pages/api/saveUser.js",
+  "/_document": "pages/_document.js"
+}
