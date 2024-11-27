@@ -16,7 +16,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
-import DynamicPackageOffers from "../components/DyanmicPackageOffers";
+import DynamicPackageOffers from "../components/DynamicPackageOffers";
 import jsPDF from "jspdf";
 
 //#region Sample Data
