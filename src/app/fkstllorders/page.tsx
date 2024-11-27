@@ -599,24 +599,24 @@ const AdminAndStaffOrdersPage = () => {
       }
 
       const orderData = orderDoc.data(); // Get the order data from the document
-      const userId = orderData.user; // Retrieve the user associated with the order 
+      const userId = orderData.user; // Retrieve the user associated with the order
 
       // Deduct from the user's totalPaid field
       const userRef = doc(db, "users", userId); // Reference to the user's document
-      const userDoc = await getDoc(userRef); 
+      const userDoc = await getDoc(userRef);
 
-      if (userDoc.exists()) { 
-        const userData = userDoc.data(); 
-        const currentTotalPaid = userData.totalPaid || 0; 
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        const currentTotalPaid = userData.totalPaid || 0;
         const newTotalPaid = Math.max(currentTotalPaid - price, 0); // Ensure totalPaid doesn't go negative
 
-        await updateDoc(userRef, { 
-          totalPaid: newTotalPaid, 
-        }); 
-      } else { 
-        console.error("User  document not found"); 
-      } 
-      
+        await updateDoc(userRef, {
+          totalPaid: newTotalPaid,
+        });
+      } else {
+        console.error("User  document not found");
+      }
+
       // Log the order date and price for debugging
       console.log("Order Date:", orderDate);
       console.log("Price:", price);
@@ -1007,6 +1007,61 @@ const AdminAndStaffOrdersPage = () => {
     console.log("User role is set to:", user);
   }, [user]); // Add `userRole` as a dependency to log updates if it changes
 
+  //#region PAGES CODE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const itemsPerPage = 5;
+  const pagesToShow = 5;
+
+  // Calculate total pages
+  const totalPages = Math.ceil(userOrders.length / itemsPerPage);
+
+  // Get current page orders
+  const currentOrders = userOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const visiblePages = Array.from(
+    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
+    (_, index) => pageWindowStart + index
+  );
+
+  // Handle page change
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+
+    // Adjust the visible page numbers if necessary
+    if (pageNumber >= pageWindowStart + pagesToShow) {
+      setPageWindowStart(pageWindowStart + 1);
+    } else if (pageNumber < pageWindowStart) {
+      setPageWindowStart(pageWindowStart - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+
+      // Adjust page window start for "Previous"
+      if (currentPage - 1 < pageWindowStart) {
+        setPageWindowStart(pageWindowStart - 1);
+      }
+    }
+  };
+  //#endregion
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full bg-white flex 
@@ -1022,10 +1077,14 @@ const AdminAndStaffOrdersPage = () => {
         {user === "admin" ? (
           <>
             {/* HEADER */}
-            <div className="w-full flex items-center gap-2 justify-between">
-              <span className="text-xl sm:text-2xl font-bold text-orange-950">
-                Orders
-              </span>
+            <div className="w-full flex flex-col items-end mb-4">
+              <div className="w-full flex gap-4 items-center">
+                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                <span className="text-2xl text-center font-bold text-orange-900">
+                  Orders
+                </span>
+                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+              </div>
               <select
                 name=""
                 id=""
@@ -1048,430 +1107,474 @@ const AdminAndStaffOrdersPage = () => {
             {/* ORDERS LIST CONTAINER */}
             <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
               {hasOrder ? (
-                userOrders.map((order) => (
-                  <div
-                    className={`w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
-                ${
-                  orderStatCat === "topay" && order.status !== "TO PAY"
-                    ? "hidden"
-                    : orderStatCat === "paid" && order.status !== "PAID"
-                    ? "hidden"
-                    : orderStatCat === "prep" && order.status !== "PREP"
-                    ? "hidden"
-                    : orderStatCat === "ready" && order.status !== "READY"
-                    ? "hidden"
-                    : orderStatCat === "done" && order.status !== "DONE"
-                    ? "hidden"
-                    : orderStatCat === "refund" && order.status !== "REFUNDED"
-                    ? "hidden"
-                    : "visible"
-                }`}
-                    key={order.id}
-                    onClick={() => toggleOrder(order.id)}
-                  >
-                    {/* UNOPENED CONTAINER */}
-                    <div className="flex items-center justify-between">
-                      {/* UNEXPANDED ORDER DETAILS CONTAINER */}
-                      <div className="flex flex-col gap-1 w-5/6">
-                        {/* HEADERS CONTAINER */}
-                        <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                          <span className="">ID: {order.id}</span>
-                          <span>
-                            PHP{" "}
-                            {order.status === "TO PAY"
-                              ? applySrPWD[order.id]
-                                ? order.price - order.sampleDiscountDeduction
-                                : order.price
-                              : order.subtotal}
-                            .00
-                          </span>
-                        </div>
-                        {/* SUBHEADER CONTAINER */}
-                        <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
-                          {/* DATE AND TIME, TABLE OR PICK UP */}
-                          <span>
-                            {order.date} - {order.time}, {order.where}
-                          </span>
-                          {/* STATUS OF PAYMENT */}
-                          <span
-                            className={`${
-                              order.status === "TO PAY"
-                                ? "text-red-700"
-                                : order.status === "PAID"
-                                ? "text-orange-500"
-                                : order.status === "PREP"
-                                ? "text-yellow-500"
-                                : order.status === "READY"
-                                ? "text-blue-600"
-                                : order.status === "DONE"
-                                ? "text-green-700"
-                                : order.status === "REFUNDED"
-                                ? "text-black-700"
-                                : "text-red-700"
-                            } font-bold`}
-                          >
-                            {order.status}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="w-6 aspect-square rounded-full bg-gray-100 flex justify-center items-center mr-4 cursor-pointer">
-                        <i
-                          className={`fa ${
-                            expandedOrders[order.id]
-                              ? "fa-caret-down"
-                              : "fa-caret-right"
-                          } text-gray-300 text-xs`}
-                          aria-hidden="true"
-                        ></i>
-                      </span>
-                    </div>
-                    {expandedOrders[order.id] && (
-                      <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
-                        {/* EXPANDED CONTENT */}
-                        {/* PAYMENT METHOD */}
-                        <div className="font-bold text-sm flex justify-between items-center">
-                          <span className="font-semibold">Payment method</span>
-                          <span>{order.payment}</span>
-                        </div>
-                        {/* CARD */}
-                        {order.payment === "Card" && (
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              Card Payment Receipt
+                <>
+                  {currentOrders.map((order) => (
+                    <div
+                      className={`w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
+                  ${
+                    orderStatCat === "topay" && order.status !== "TO PAY"
+                      ? "hidden"
+                      : orderStatCat === "paid" && order.status !== "PAID"
+                      ? "hidden"
+                      : orderStatCat === "prep" && order.status !== "PREP"
+                      ? "hidden"
+                      : orderStatCat === "ready" && order.status !== "READY"
+                      ? "hidden"
+                      : orderStatCat === "done" && order.status !== "DONE"
+                      ? "hidden"
+                      : orderStatCat === "refund" && order.status !== "REFUNDED"
+                      ? "hidden"
+                      : "visible"
+                  }`}
+                      key={order.id}
+                      onClick={() => toggleOrder(order.id)}
+                    >
+                      {/* UNOPENED CONTAINER */}
+                      <div className="flex items-center justify-between">
+                        {/* UNEXPANDED ORDER DETAILS CONTAINER */}
+                        <div className="flex flex-col gap-1 w-5/6">
+                          {/* HEADERS CONTAINER */}
+                          <div className="w-full px-4 flex justify-between items-center">
+                            <span className="font-bold text-orange-900">
+                              ID: {order.id}
+                            </span>
+                            <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                              PHP{" "}
+                              {order.status === "TO PAY"
+                                ? applySrPWD[order.id]
+                                  ? (
+                                      order.price -
+                                      order.sampleDiscountDeduction
+                                    ).toFixed(2)
+                                  : order.price.toFixed(2)
+                                : order.subtotal.toFixed(2)}
                             </span>
                           </div>
-                        )}
-                        {order.payment === "Card" && order.cardIdImg && (
-                          <>
-                            <div className="w-full flex flex-col gap-1 justify-center items-center">
-                              <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                                <Image
-                                  src={order.cardIdImg}
-                                  alt="idpic"
-                                  layout="fill"
-                                  className="object-cover"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEnlargePicture(true);
-                                  }}
-                                />
-                              </div>
-                              <p className="text-xs text-gray-400">
-                                Click the picture to enlarge.
-                              </p>
+                          {/* SUBHEADER CONTAINER */}
+                          <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
+                            {/* DATE AND TIME, TABLE OR PICK UP */}
+                            <span>
+                              {order.date} - {order.time}, {order.where}
+                            </span>
+                            {/* STATUS OF PAYMENT */}
+                            <span
+                              className={`${
+                                order.status === "TO PAY"
+                                  ? "text-red-700"
+                                  : order.status === "PAID"
+                                  ? "text-orange-500"
+                                  : order.status === "PREP"
+                                  ? "text-yellow-500"
+                                  : order.status === "READY"
+                                  ? "text-blue-600"
+                                  : order.status === "DONE"
+                                  ? "text-green-700"
+                                  : order.status === "REFUNDED"
+                                  ? "text-black-700"
+                                  : "text-red-700"
+                              } font-bold`}
+                            >
+                              {order.status}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="w-6 aspect-square rounded-full bg-gray-100 flex justify-center items-center mr-4 cursor-pointer">
+                          <i
+                            className={`fa ${
+                              expandedOrders[order.id]
+                                ? "fa-caret-down"
+                                : "fa-caret-right"
+                            } text-gray-300 text-xs`}
+                            aria-hidden="true"
+                          ></i>
+                        </span>
+                      </div>
+                      {expandedOrders[order.id] && (
+                        <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
+                          {/* EXPANDED CONTENT */}
+                          {/* PAYMENT METHOD */}
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">
+                              Payment method
+                            </span>
+                            <span>{order.payment}</span>
+                          </div>
+                          {/* CARD */}
+                          {order.payment === "Card" && (
+                            <div className="font-bold text-sm flex justify-between items-center">
+                              <span className="font-semibold">
+                                Card Payment Receipt
+                              </span>
                             </div>
-                            {enlargePicture && (
-                              // ENLARGED IMAGE
-                              <div
-                                className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                                style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                              >
-                                <div className="w-full max-w-[620px] aspect-square relative">
-                                  <div
-                                    className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                                  absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                                  hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                    onClick={() => setEnlargePicture(false)}
-                                  >
-                                    <span className="font-bold">X</span>
-                                  </div>
+                          )}
+                          {order.payment === "Card" && order.cardIdImg && (
+                            <>
+                              <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                   <Image
                                     src={order.cardIdImg}
                                     alt="idpic"
-                                    fill
+                                    layout="fill"
                                     className="object-cover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEnlargePicture(true);
+                                    }}
                                   />
                                 </div>
+                                <p className="text-xs text-gray-400">
+                                  Click the picture to enlarge.
+                                </p>
                               </div>
-                            )}
-                          </>
-                        )}
-                        {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                        <div className="font-bold text-sm flex justify-between items-center">
-                          <span className="font-semibold">
-                            {order.status !== "TO PAY"
-                              ? "Senior Citizen / PWD Discount Given?"
-                              : "Applied for Senior/PWD?"}
-                          </span>
-                          <span>{order.pwdSenior ? "Yes" : "No"}</span>
-                        </div>
-
-                        {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
-                        {((order.status === "TO PAY" &&
-                          order.pwdSenior &&
-                          applySrPWD[order.id]) ||
-                          (order.status !== "TO PAY" && order.pwdSenior)) && (
+                              {enlargePicture && (
+                                // ENLARGED IMAGE
+                                <div
+                                  className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                  style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                                >
+                                  <div className="w-full max-w-[620px] aspect-square relative">
+                                    <div
+                                      className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                                    absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                                    hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                      onClick={() => setEnlargePicture(false)}
+                                    >
+                                      <span className="font-bold">X</span>
+                                    </div>
+                                    <Image
+                                      src={order.cardIdImg}
+                                      alt="idpic"
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">
-                              Senior Citizen/PWD Discount
+                              {order.status !== "TO PAY"
+                                ? "Senior Citizen / PWD Discount Given?"
+                                : "Applied for Senior/PWD?"}
                             </span>
-                            <span>
-                              PHP {order.sampleDiscountDeduction?.toFixed(2)}
-                            </span>
+                            <span>{order.pwdSenior ? "Yes" : "No"}</span>
                           </div>
-                        )}
-                        {/* PICTURE OF ID CONTAINER */}
-                        {order.pwdSenior && (
-                          <>
-                            <div className="w-full flex flex-col gap-1 justify-center items-center">
-                              <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                                <Image
-                                  src={order.idPic}
-                                  alt="idpic"
-                                  layout="fill"
-                                  className="object-cover"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEnlargePicture(true);
-                                  }}
-                                />
-                              </div>
-                              <p className="text-xs text-gray-400">
-                                Click the picture to enlarge.
-                              </p>
+
+                          {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
+                          {((order.status === "TO PAY" &&
+                            order.pwdSenior &&
+                            applySrPWD[order.id]) ||
+                            (order.status !== "TO PAY" && order.pwdSenior)) && (
+                            <div className="font-bold text-sm flex justify-between items-center">
+                              <span className="font-semibold">
+                                Senior Citizen/PWD Discount
+                              </span>
+                              <span>
+                                PHP {order.sampleDiscountDeduction?.toFixed(2)}
+                              </span>
                             </div>
-                            {enlargePicture && (
-                              // ENLARGED IMAGE
-                              <div
-                                className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                                style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                              >
-                                <div className="w-full max-w-[620px] aspect-square relative">
-                                  <div
-                                    className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                      absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                      hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                    onClick={() => setEnlargePicture(false)}
-                                  >
-                                    <span className="font-bold">X</span>
-                                  </div>
+                          )}
+                          {/* PICTURE OF ID CONTAINER */}
+                          {order.pwdSenior && (
+                            <>
+                              <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                   <Image
                                     src={order.idPic}
                                     alt="idpic"
-                                    fill
+                                    layout="fill"
                                     className="object-cover"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEnlargePicture(true);
+                                    }}
                                   />
                                 </div>
+                                <p className="text-xs text-gray-400">
+                                  Click the picture to enlarge.
+                                </p>
+                              </div>
+                              {enlargePicture && (
+                                // ENLARGED IMAGE
+                                <div
+                                  className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                  style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                                >
+                                  <div className="w-full max-w-[620px] aspect-square relative">
+                                    <div
+                                      className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                        absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                        hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                      onClick={() => setEnlargePicture(false)}
+                                    >
+                                      <span className="font-bold">X</span>
+                                    </div>
+                                    <Image
+                                      src={order.idPic}
+                                      alt="idpic"
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {/* Apply Sr/PWD Discount Button */}
+                          {order.status === "TO PAY" &&
+                            order.pwdSenior === true && (
+                              <div className="w-full flex justify-end">
+                                <button
+                                  className={`h-10 ${
+                                    applySrPWD[order.id]
+                                      ? "bg-red-500 hover:bg-red-400 text-white"
+                                      : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"
+                                  } shadow-md hover:scale-[1.02] duration-200 rounded-md font-bold w-full`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleSrPWD(order.id); // Toggle the Sr/PWD discount for this order only
+                                  }}
+                                >
+                                  {applySrPWD[order.id] ? "Cancel" : "Apply"}{" "}
+                                  Senior/PWD Discount
+                                </button>
                               </div>
                             )}
-                          </>
-                        )}
-
-                        {/* Apply Sr/PWD Discount Button */}
-                        {order.status === "TO PAY" &&
-                          order.pwdSenior === true && (
-                            <div className="w-full flex justify-end">
-                              <button
-                                className={`h-10 ${
-                                  applySrPWD[order.id]
-                                    ? "bg-red-500 hover:bg-red-400 text-white"
-                                    : "bg-white border-2 border-gray-100 hover:bg-gray-50 text-gray-500"
-                                } shadow-md hover:scale-[1.02] duration-200 rounded-md font-bold w-full`}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleSrPWD(order.id); // Toggle the Sr/PWD discount for this order only
-                                }}
-                              >
-                                {applySrPWD[order.id] ? "Cancel" : "Apply"}{" "}
-                                Senior/PWD Discount
-                              </button>
-                            </div>
-                          )}
-                        {/* PROMO, IF THERE IS ONE */}
-                        {(order.promo || order.promo === 0) &&
-                          order.promo !== null &&
-                          order.promo !== undefined &&
-                          order.promo !== 0 && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Promo discount
-                              </span>
-                              <span>{order.promo}</span>
-                            </div>
-                          )}
-                        {order.items.map((item, index) => {
-                          // Find the highest price in the order items
-                          const maxPrice = Math.max(
-                            ...order.items.map((i) => i.price)
-                          );
-
-                          // Check if this is the first item with the highest price
-                          const isHighestPriced =
-                            item.price === maxPrice &&
-                            order.items.findIndex(
-                              (i) => i.price === maxPrice
-                            ) === index;
-
-                          // Apply discount conditionally based on the order's status and senior discount eligibility
-                          const discountAmount =
-                            isHighestPriced &&
-                            ((order.status === "TO PAY" &&
-                              applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
-                              (order.status !== "TO PAY" && order.pwdSenior)) // Discount if status is not 'TO PAY' and it's a senior order
-                              ? item.price * 0.2
-                              : 0;
-
-                          // Calculate discounted price if the discount applies
-                          const discountedPrice = isHighestPriced
-                            ? item.price - discountAmount
-                            : item.price;
-
-                          return (
-                            <div
-                              className="flex flex-col gap-1"
-                              key={item.title}
-                            >
-                              <hr />
-                              {/* ITEM TITLE AND PRICE CONTAINER */}
+                          {/* PROMO, IF THERE IS ONE */}
+                          {(order.promo || order.promo === 0) &&
+                            order.promo !== null &&
+                            order.promo !== undefined &&
+                            order.promo !== 0 && (
                               <div className="font-bold text-sm flex justify-between items-center">
                                 <span className="font-semibold">
-                                  {`${item.qty}x - ${item.title}`}
-                                  {isHighestPriced && // Only show discounted label for the highest-priced item
-                                    ((order.status === "TO PAY" &&
-                                      applySrPWD[order.id]) ||
-                                      (order.status !== "TO PAY" &&
-                                        order.pwdSenior)) && ( // Apply condition to show discount label
-                                      <span className="text-green-600 text-xs ml-2">
-                                        (discounted: PHP{" "}
-                                        {discountAmount.toFixed(2)})
-                                      </span>
-                                    )}
+                                  Promo discount
                                 </span>
-                                <span
-                                  className={
-                                    isHighestPriced && // Highlight the discounted price
-                                    ((order.status === "TO PAY" &&
-                                      applySrPWD[order.id]) ||
-                                      (order.status !== "TO PAY" &&
-                                        order.pwdSenior))
-                                      ? "text-green-600"
-                                      : ""
-                                  }
-                                >
-                                  PHP {discountedPrice.toFixed(2)}
-                                </span>
+                                <span>{order.promo}</span>
                               </div>
-                              {item.tags.map((tag, index) => (
-                                <p className="text-xs" key={index}>
-                                  -{tag}
-                                </p>
-                              ))}
-                            </div>
-                          );
-                        })}
+                            )}
+                          {order.items.map((item, index) => {
+                            // Find the highest price in the order items
+                            const maxPrice = Math.max(
+                              ...order.items.map((i) => i.price)
+                            );
 
-                        {/* USERNAME */}
-                        <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
-                          <hr className="mb-1" />
-                          <span>Order by:</span>
-                          <span className="mb-[-2px] mt-2">
-                            {order.userName}
+                            // Check if this is the first item with the highest price
+                            const isHighestPriced =
+                              item.price === maxPrice &&
+                              order.items.findIndex(
+                                (i) => i.price === maxPrice
+                              ) === index;
+
+                            // Apply discount conditionally based on the order's status and senior discount eligibility
+                            const discountAmount =
+                              isHighestPriced &&
+                              ((order.status === "TO PAY" &&
+                                applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
+                                (order.status !== "TO PAY" && order.pwdSenior)) // Discount if status is not 'TO PAY' and it's a senior order
+                                ? item.price * 0.2
+                                : 0;
+
+                            // Calculate discounted price if the discount applies
+                            const discountedPrice = isHighestPriced
+                              ? item.price - discountAmount
+                              : item.price;
+
+                            return (
+                              <div
+                                className="flex flex-col gap-1"
+                                key={item.title}
+                              >
+                                <hr />
+                                {/* ITEM TITLE AND PRICE CONTAINER */}
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    {`${item.qty}x - ${item.title}`}
+                                    {isHighestPriced && // Only show discounted label for the highest-priced item
+                                      ((order.status === "TO PAY" &&
+                                        applySrPWD[order.id]) ||
+                                        (order.status !== "TO PAY" &&
+                                          order.pwdSenior)) && ( // Apply condition to show discount label
+                                        <span className="text-green-600 text-xs ml-2">
+                                          (discounted: PHP{" "}
+                                          {discountAmount.toFixed(2)})
+                                        </span>
+                                      )}
+                                  </span>
+                                  <span
+                                    className={
+                                      isHighestPriced && // Highlight the discounted price
+                                      ((order.status === "TO PAY" &&
+                                        applySrPWD[order.id]) ||
+                                        (order.status !== "TO PAY" &&
+                                          order.pwdSenior))
+                                        ? "text-green-600"
+                                        : ""
+                                    }
+                                  >
+                                    PHP {discountedPrice.toFixed(2)}
+                                  </span>
+                                </div>
+                                {item.tags.map((tag, index) => (
+                                  <p className="text-xs" key={index}>
+                                    -{tag}
+                                  </p>
+                                ))}
+                              </div>
+                            );
+                          })}
+
+                          {/* USERNAME */}
+                          <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
+                            <hr className="mb-1" />
+                            <span>Order by:</span>
+                            <span className="mb-[-2px] mt-2">
+                              {order.userName}
+                            </span>
+                            <span className="font-light">
+                              {order.userEmail}
+                            </span>
                           </span>
-                          <span className="font-light">{order.userEmail}</span>
-                        </span>
 
-                        {/* CANCEL BUTTON */}
-                        <div className="w-full flex items-center gap-1">
-                          <button
-                            className={` font-bold ${
-                              order.status === "TO PAY"
-                                ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
-                                : order.status === "PAID"
-                                ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
-                                : order.status === "PREP"
-                                ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
-                                : order.status === "READY"
-                                ? "bg-green-700 text-white hover:bg-green-600 w-full"
-                                : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
-                            } shadow-md hover:scale-[1.02] duration-200
-          rounded-md h-10`}
-                            onClick={() => {
-                              if (order.status === "TO PAY") {
-                                handlePaid(order.id);
-                              } else if (order.status === "PAID") {
-                                handlePrep(order.id);
-                              } else if (order.status === "PREP") {
-                                handleReady(order.id);
-                              } else if (order.status === "READY") {
-                                handleDone(order.id);
-                              }
-                            }}
-                          >
-                            {order.status === "TO PAY"
-                              ? "Mark as Paid"
-                              : order.status === "PAID"
-                              ? "Mark as Prep"
-                              : order.status === "PREP"
-                              ? "Mark as Ready"
-                              : order.status === "READY"
-                              ? "Mark as Done"
-                              : "Hide"}
-                          </button>
-
-                          {order.status === "PAID" && (
+                          {/* CANCEL BUTTON */}
+                          <div className="w-full flex items-center gap-1">
                             <button
-                              className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-          hover:scale-[1.02] duration-200 hover:bg-red-400"
-                              onClick={() =>
-                                handleRefund(order.id, order.date, order.price)
-                              } // Call handleRefund here
+                              className={` font-bold ${
+                                order.status === "TO PAY"
+                                  ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
+                                  : order.status === "PAID"
+                                  ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
+                                  : order.status === "PREP"
+                                  ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                  : order.status === "READY"
+                                  ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                  : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
+                              } shadow-md hover:scale-[1.02] duration-200
+            rounded-md h-10`}
+                              onClick={() => {
+                                if (order.status === "TO PAY") {
+                                  handlePaid(order.id);
+                                } else if (order.status === "PAID") {
+                                  handlePrep(order.id);
+                                } else if (order.status === "PREP") {
+                                  handleReady(order.id);
+                                } else if (order.status === "READY") {
+                                  handleDone(order.id);
+                                }
+                              }}
                             >
-                              Refund
+                              {order.status === "TO PAY"
+                                ? "Mark as Paid"
+                                : order.status === "PAID"
+                                ? "Mark as Prep"
+                                : order.status === "PREP"
+                                ? "Mark as Ready"
+                                : order.status === "READY"
+                                ? "Mark as Done"
+                                : "Hide"}
                             </button>
-                          )}
-                          <button
-                            className={`${
-                              order.status !== "TO PAY" && "hidden"
-                            } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-          hover:scale-[1.02] duration-200 hover:bg-red-400`}
-                            onClick={() => {
-                              if (order.payment === "Card") {
-                                handleReject(order.id); // Handle rejection for card payment
-                              } else {
-                                handleCancel(order.id); // Handle cancellation for other payments
-                              }
-                            }}
-                          >
-                            {order.payment === "Card" ? "Reject" : "Cancel"}
-                          </button>
-                          {order.status === "CANCELLED" ||
-                            (order.status === "REJECTED" && (
-                              <button
-                                className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-              hover:scale-[1.02] duration-200 hover:bg-red-400"
-                                onClick={() => {
-                                  handleDelete(order.id);
-                                }}
-                              >
-                                Delete
-                              </button>
-                            ))}
-                          {order.status === "DONE" && (
-                            <div className="flex w-full gap-2">
-                              {/* Print Details Button */}
-                              <button
-                                className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handlePrintDetails(order.id)}
-                              >
-                                Print Details
-                              </button>
 
-                              {/* Delete Button */}
+                            {order.status === "PAID" && (
                               <button
-                                className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
-                                onClick={() => handleDelete(order.id)}
+                                className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+            hover:scale-[1.02] duration-200 hover:bg-red-400"
+                                onClick={() =>
+                                  handleRefund(
+                                    order.id,
+                                    order.date,
+                                    order.price
+                                  )
+                                } // Call handleRefund here
                               >
-                                Delete
+                                Refund
                               </button>
-                            </div>
-                          )}
+                            )}
+                            <button
+                              className={`${
+                                order.status !== "TO PAY" && "hidden"
+                              } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+            hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                              onClick={() => {
+                                if (order.payment === "Card") {
+                                  handleReject(order.id); // Handle rejection for card payment
+                                } else {
+                                  handleCancel(order.id); // Handle cancellation for other payments
+                                }
+                              }}
+                            >
+                              {order.payment === "Card" ? "Reject" : "Cancel"}
+                            </button>
+                            {order.status === "CANCELLED" ||
+                              (order.status === "REJECTED" && (
+                                <button
+                                  className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
+                hover:scale-[1.02] duration-200 hover:bg-red-400"
+                                  onClick={() => {
+                                    handleDelete(order.id);
+                                  }}
+                                >
+                                  Delete
+                                </button>
+                              ))}
+                            {order.status === "DONE" && (
+                              <div className="flex w-full gap-2">
+                                {/* Print Details Button */}
+                                <button
+                                  className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
+                  hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  onClick={() => handlePrintDetails(order.id)}
+                                >
+                                  Print Details
+                                </button>
+
+                                {/* Delete Button */}
+                                <button
+                                  className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                  hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  onClick={() => handleDelete(order.id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                  ))}
+                  {/* PAGINATION CONTROLS */}
+                  <div className="flex justify-center items-center space-x-2">
+                    <button
+                      className="font-semibold cursor-pointer w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                      disabled={currentPage === 1}
+                      onClick={handlePrevious}
+                    >
+                      Prev
+                    </button>
+                    {visiblePages.map((page) => (
+                      <button
+                        key={page}
+                        className={`cursor-pointer h-9 aspect-square font-semibold rounded-md ${
+                          currentPage === page
+                            ? "bg-orange-300 text-white border-orange-300 border-2"
+                            : "bg-white text-gray-500 hover:bg-orange-50 border-2 border-gray-100 hover:border-orange-50 hover:text-orange-500"
+                        } shadow-md`}
+                        onClick={() => goToPage(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      className="cursor-pointer font-semibold w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                      disabled={currentPage === totalPages}
+                      onClick={handleNext}
+                    >
+                      Next
+                    </button>
                   </div>
-                ))
+                </>
               ) : (
                 // IF WALANG MAIPAKITA
                 <div
@@ -1487,10 +1590,14 @@ const AdminAndStaffOrdersPage = () => {
           <>
             {/* HEADER */}
             {staffStatus === "activated" && (
-              <div className="w-full flex items-center gap-2 justify-between">
-                <span className="text-xl sm:text-2xl font-bold text-orange-950">
-                  Orders
-                </span>
+              <div className="w-full flex flex-col items-end gap-2">
+                <div className="w-full flex gap-4 items-center">
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                  <span className="text-2xl text-center font-bold text-orange-900">
+                    Orders
+                  </span>
+                  <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                </div>
                 <button
                   name="btnReverse"
                   id="btnReverse"
@@ -1524,15 +1631,16 @@ const AdminAndStaffOrdersPage = () => {
                   </span>
                 </div>
               ) : (
+                //#region Staff Orders
                 <>
                   <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
-                    <h1
-                      className={`uppercase font-bold text-${
-                        user === "bar" ? "blue-600" : "yellow-500"
+                    <span
+                      className={`uppercase font-bold text-white px-4 py-1 rounded-full w-fit bg-${
+                        user === "bar" ? "blue-500" : "yellow-500"
                       }`}
                     >
                       {user === "bar" ? "Ready" : "Prep"}
-                    </h1>
+                    </span>
                     {hasOrder ? (
                       userOrders.map((order) => (
                         <div
@@ -1551,16 +1659,19 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="flex flex-col gap-1 w-5/6">
                               {/* HEADERS CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                                <span className="">ID: {order.id}</span>
-                                <span>
+                                <span className="font-bold text-orange-900">
+                                  ID: {order.id}
+                                </span>
+                                <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
                                   PHP{" "}
                                   {order.status === "TO PAY"
                                     ? applySrPWD[order.id]
-                                      ? order.price -
-                                        order.sampleDiscountDeduction
-                                      : order.price
-                                    : order.subtotal}
-                                  .00
+                                      ? (
+                                          order.price -
+                                          order.sampleDiscountDeduction
+                                        ).toFixed(2)
+                                      : order.price.toFixed(2)
+                                    : order.subtotal.toFixed(2)}
                                 </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}
@@ -1896,8 +2007,8 @@ const AdminAndStaffOrdersPage = () => {
                   </div>
                   <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
                     <h1
-                      className={`uppercase font-bold text-${
-                        user === "bar" ? "red-700" : "orange-500"
+                      className={`uppercase font-bold text-white px-4 py-1 rounded-full w-fit bg-${
+                        user === "bar" ? "red-500" : "orange-500"
                       }`}
                     >
                       {user === "bar" ? "To Pay" : "Paid"}
@@ -1920,16 +2031,19 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="flex flex-col gap-1 w-5/6">
                               {/* HEADERS CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                                <span className="">ID: {order.id}</span>
-                                <span>
+                                <span className="font-bold text-orange-900">
+                                  ID: {order.id}
+                                </span>
+                                <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
                                   PHP{" "}
                                   {order.status === "TO PAY"
                                     ? applySrPWD[order.id]
-                                      ? order.price -
-                                        order.sampleDiscountDeduction
-                                      : order.price
-                                    : order.subtotal}
-                                  .00
+                                      ? (
+                                          order.price -
+                                          order.sampleDiscountDeduction
+                                        ).toFixed(2)
+                                      : order.price.toFixed(2)
+                                    : order.subtotal.toFixed(2)}
                                 </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}

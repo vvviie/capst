@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -259,14 +257,14 @@ const BurgerMenu = () => {
     <div className="cursor-pointer">
       {!open ? (
         <i
-        className="fa-solid fa-bars text-white text-xl pt-0.5 select-none"
-        onClick={() => setOpen(true)}
-      ></i>
-    ) : (
-      <i
-        className="fa fa-close text-white text-xl pt-0.5 select-none"
-        onClick={() => setOpen(false)}
-      ></i>
+          className="fa-solid fa-bars text-white text-xl pt-0.5 select-none"
+          onClick={() => setOpen(true)}
+        ></i>
+      ) : (
+        <i
+          className="fa fa-close text-white text-xl pt-0.5 select-none"
+          onClick={() => setOpen(false)}
+        ></i>
       )}
       {open && (
         <div

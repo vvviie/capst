@@ -180,12 +180,16 @@ const LoginPage = () => {
 
       <form
         onSubmit={handleLogin}
-        className="w-full flex flex-1 items-center justify-center"
+        className="w-full flex flex-1 items-center justify-center mt-10 xl:mt-0"
       >
-        <div className="flex flex-col items-center justify-center gap-4">
-          <h1 className="text-3xl font-bold text-orange-950 text-center my-4">
-            Hello, there! Welcome back!
-          </h1>
+        <div className="w-full max-w-[500px] flex flex-col items-center justify-center gap-4">
+          <div className="w-full flex gap-4 items-center">
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+            <span className="text-2xl text-center font-bold text-orange-900">
+              Welcome back!
+            </span>
+            <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          </div>
 
           {message && (
             <span

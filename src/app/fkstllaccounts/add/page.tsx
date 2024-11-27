@@ -10,7 +10,7 @@ import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import createNewUser from "@/pages/api/createNewUser";
 
-// Firebase configuration
+// Firebase configuration.
 const firebaseConfig = {
     apiKey: "AIzaSyAWhVssqbS2QQ7NkI1CwiOHTq6sN31gsVg",
     authDomain: "testingcapstonejg.firebaseapp.com",

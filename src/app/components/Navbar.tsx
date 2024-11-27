@@ -45,7 +45,7 @@ const Navbar = () => {
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Vouchers>({});
   const [hasUserCookie, setHasUserCookie] = useState(false);
-  
+
   const unsubscribeAuthRef = useRef(null);
   const unsubscribeCartRef = useRef(null);
   const unsubscribeDocRef = useRef(null);
@@ -359,11 +359,13 @@ const Navbar = () => {
     // Cleanup function to unsubscribe from the auth state listener when the component unmounts or the user changes
     return () => unsubscribe();
   }, [user]); // This will run when the `user` state changes
-  
+
   useEffect(() => {
     if (typeof document !== "undefined") {
       const cookies = document.cookie.split("; ");
-      const userCookieExists = cookies.some((cookie) => cookie.startsWith("user="));
+      const userCookieExists = cookies.some((cookie) =>
+        cookie.startsWith("user=")
+      );
       setHasUserCookie(userCookieExists);
     }
   }, []); // This effect runs once when the component mounts
@@ -384,16 +386,16 @@ const Navbar = () => {
         </Link>
       </div>
       <div className="flex items-center justify-center gap-6">
-      {hasUserCookie && role !== "" && (
-      <>
-        <div
-          className={`${
-            ["admin", "bar", "kitchen"].includes(role) ? "hidden" : ""
-          } lg:hidden`}
-        >
-          <NotificationBell foodCartAvailable={foodCartAvailable} />
-        </div>
-        </>
+        {hasUserCookie && role !== "" && (
+          <>
+            <div
+              className={`${
+                ["admin", "bar", "kitchen"].includes(role) ? "hidden" : ""
+              } lg:hidden`}
+            >
+              <NotificationBell foodCartAvailable={foodCartAvailable} />
+            </div>
+          </>
         )}
         <div className="lg:hidden hover:text-yellow-100">
           <BurgerMenu />
@@ -512,7 +514,7 @@ const Navbar = () => {
           </div>
         </div>
       ) : (
-        <div className="hidden md:block font-semibold hover:text-yellow-100">
+        <div className="hidden lg:block font-semibold hover:text-yellow-100">
           <Link href="/login">Login</Link>
         </div>
       )}

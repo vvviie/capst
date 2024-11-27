@@ -180,12 +180,16 @@ const AdminLandingPageMaintenance = () => {
             href={"/fkstllhomemaintenance"}
             className="flex items-center space-x-2 font-bold text-orange-950 text-xl sm:text-2xl text-left hover:text-orange-800 cursor-pointer"
           >
-            Maintenance
+            <i className="fa fa-angle-left" aria-hidden="true"></i>
+            <span>Maintenance</span>
           </Link>
-          <div className="text-xl sm:text-2xl font-bold text-orange-950 space-x-2 flex items-center">
-            <i className="fa fa-angle-right" aria-hidden="true"></i>
-            <span>Landing Section</span>
-          </div>
+        </div>
+        <div className="w-full flex gap-2 sm:gap-4 items-center mb-4">
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          <span className="text-xl sm:text-2xl text-center font-bold text-orange-900">
+            Landing Section
+          </span>
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
         </div>
         <div
           className="bg-white border-2 border-gray-100 shadow-md w-full flex flex-col gap-4 px-4
