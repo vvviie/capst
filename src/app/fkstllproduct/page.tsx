@@ -553,22 +553,31 @@ const CRUDProductPage = () => {
                 </div>
 
                 {/* PRODUCT TITLE */}
-                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                <h1 className="text-center text-orange-950 text-md font-semibold md:text-lg">
                   {item.title}
                 </h1>
 
                 {/* AVAILABILITY INDICATOR */}
-                <span
-                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
+                  <span
+                  className={`w-4 h-4 rounded-full ${
                     item.availability === "available"
                       ? "bg-green-600"
                       : "bg-gray-500"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
+                text-sm`}>
+                  {item.availability === "available" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
 
                 {/* CALORIE CONTENT */}
+                <div className="absolute top-16 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
                 <span
-                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                  className={`w-4 h-4 rounded-full ${
                     item.calorie === "high"
                       ? "bg-red-500"
                       : item.calorie === "med"
@@ -576,6 +585,21 @@ const CRUDProductPage = () => {
                       : "bg-green-400"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.calorie === "high"
+                      ? "text-red-500"
+                      : item.calorie === "med"
+                      ? "text-orange-400"
+                      : "text-green-400"}
+                text-sm`}>
+                  {
+                    item.calorie === "high"
+                    ? "High Cal."
+                    : item.calorie === "med"
+                    ? "Med. Cal."
+                    : "Low Cal."
+                  }
+                  </span>
+                </div>
 
                 {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                 {activeItem === item.id && (
@@ -662,20 +686,30 @@ const CRUDProductPage = () => {
                   />
                 </div>
                 {/* PRODUCT TITLE */}
-                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                <h1 className="text-center text-orange-950 text-md font-semibold md:text-lg">
                   {item.title}
                 </h1>
-                {/* AVAILABILITY */}
-                <span
-                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                {/* AVAILABILITY INDICATOR */}
+                <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
+                  <span
+                  className={`w-4 h-4 rounded-full ${
                     item.availability === "available"
                       ? "bg-green-600"
                       : "bg-gray-500"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
+                text-sm`}>
+                  {item.availability === "available" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+
                 {/* CALORIE CONTENT */}
+                <div className="absolute top-16 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
                 <span
-                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                  className={`w-4 h-4 rounded-full ${
                     item.calorie === "high"
                       ? "bg-red-500"
                       : item.calorie === "med"
@@ -683,6 +717,21 @@ const CRUDProductPage = () => {
                       : "bg-green-400"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.calorie === "high"
+                      ? "text-red-500"
+                      : item.calorie === "med"
+                      ? "text-orange-400"
+                      : "text-green-400"}
+                text-sm`}>
+                  {
+                    item.calorie === "high"
+                    ? "High Cal."
+                    : item.calorie === "med"
+                    ? "Med. Cal."
+                    : "Low Cal."
+                  }
+                  </span>
+                </div>
                 {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                 {activeItem === item.id && (
                   <div
@@ -770,20 +819,30 @@ const CRUDProductPage = () => {
                   />
                 </div>
                 {/* PRODUCT TITLE */}
-                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                <h1 className="text-center text-orange-950 text-md font-semibold md:text-lg">
                   {item.title}
                 </h1>
-                {/* AVAILABILITY */}
-                <span
-                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                {/* AVAILABILITY INDICATOR */}
+                <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
+                  <span
+                  className={`w-4 h-4 rounded-full ${
                     item.availability === "available"
                       ? "bg-green-600"
                       : "bg-gray-500"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
+                text-sm`}>
+                  {item.availability === "available" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+
                 {/* CALORIE CONTENT */}
+                <div className="absolute top-16 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
                 <span
-                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                  className={`w-4 h-4 rounded-full ${
                     item.calorie === "high"
                       ? "bg-red-500"
                       : item.calorie === "med"
@@ -791,6 +850,21 @@ const CRUDProductPage = () => {
                       : "bg-green-400"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.calorie === "high"
+                      ? "text-red-500"
+                      : item.calorie === "med"
+                      ? "text-orange-400"
+                      : "text-green-400"}
+                text-sm`}>
+                  {
+                    item.calorie === "high"
+                    ? "High Cal."
+                    : item.calorie === "med"
+                    ? "Med. Cal."
+                    : "Low Cal."
+                  }
+                  </span>
+                </div>
                 {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                 {activeItem === item.id && (
                   <div
@@ -878,20 +952,30 @@ const CRUDProductPage = () => {
                   />
                 </div>
                 {/* PRODUCT TITLE */}
-                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                <h1 className="text-center text-orange-950 text-md font-semibold md:text-lg">
                   {item.title}
                 </h1>
-                {/* AVAILABILITY */}
-                <span
-                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                {/* AVAILABILITY INDICATOR */}
+                <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
+                  <span
+                  className={`w-4 h-4 rounded-full ${
                     item.availability === "available"
                       ? "bg-green-600"
                       : "bg-gray-500"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
+                text-sm`}>
+                  {item.availability === "available" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+
                 {/* CALORIE CONTENT */}
+                <div className="absolute top-16 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
                 <span
-                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                  className={`w-4 h-4 rounded-full ${
                     item.calorie === "high"
                       ? "bg-red-500"
                       : item.calorie === "med"
@@ -899,6 +983,21 @@ const CRUDProductPage = () => {
                       : "bg-green-400"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.calorie === "high"
+                      ? "text-red-500"
+                      : item.calorie === "med"
+                      ? "text-orange-400"
+                      : "text-green-400"}
+                text-sm`}>
+                  {
+                    item.calorie === "high"
+                    ? "High Cal."
+                    : item.calorie === "med"
+                    ? "Med. Cal."
+                    : "Low Cal."
+                  }
+                  </span>
+                </div>
                 {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                 {activeItem === item.id && (
                   <div
@@ -985,20 +1084,30 @@ const CRUDProductPage = () => {
                   />
                 </div>
                 {/* PRODUCT TITLE */}
-                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                <h1 className="text-center text-orange-950 text-md font-semibold md:text-lg">
                   {item.title}
                 </h1>
-                {/* AVAILABILITY */}
-                <span
-                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                {/* AVAILABILITY INDICATOR */}
+                <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
+                  <span
+                  className={`w-4 h-4 rounded-full ${
                     item.availability === "available"
                       ? "bg-green-600"
                       : "bg-gray-500"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
+                text-sm`}>
+                  {item.availability === "available" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+
                 {/* CALORIE CONTENT */}
+                <div className="absolute top-16 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
                 <span
-                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                  className={`w-4 h-4 rounded-full ${
                     item.calorie === "high"
                       ? "bg-red-500"
                       : item.calorie === "med"
@@ -1006,6 +1115,21 @@ const CRUDProductPage = () => {
                       : "bg-green-400"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.calorie === "high"
+                      ? "text-red-500"
+                      : item.calorie === "med"
+                      ? "text-orange-400"
+                      : "text-green-400"}
+                text-sm`}>
+                  {
+                    item.calorie === "high"
+                    ? "High Cal."
+                    : item.calorie === "med"
+                    ? "Med. Cal."
+                    : "Low Cal."
+                  }
+                  </span>
+                </div>
                 {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                 {activeItem === item.id && (
                   <div
@@ -1093,20 +1217,30 @@ const CRUDProductPage = () => {
                   />
                 </div>
                 {/* PRODUCT TITLE */}
-                <h1 className="text-center text-orange-950 text-xs font-semibold md:text-lg">
+                <h1 className="text-center text-orange-950 text-md font-semibold md:text-lg">
                   {item.title}
                 </h1>
-                {/* AVAILABILITY */}
-                <span
-                  className={`w-4 h-4 absolute top-4 left-4 rounded-full ${
+                {/* AVAILABILITY INDICATOR */}
+                <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
+                  <span
+                  className={`w-4 h-4 rounded-full ${
                     item.availability === "available"
                       ? "bg-green-600"
                       : "bg-gray-500"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
+                text-sm`}>
+                  {item.availability === "available" ? "Available" : "Unavailable"}
+                  </span>
+                </div>
+
                 {/* CALORIE CONTENT */}
+                <div className="absolute top-16 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
+                flex items-center gap-2">
                 <span
-                  className={`w-4 h-4 absolute top-4 left-10 rounded-full ${
+                  className={`w-4 h-4 rounded-full ${
                     item.calorie === "high"
                       ? "bg-red-500"
                       : item.calorie === "med"
@@ -1114,6 +1248,21 @@ const CRUDProductPage = () => {
                       : "bg-green-400"
                   }`}
                 ></span>
+                <span className={`font-bold ${item.calorie === "high"
+                      ? "text-red-500"
+                      : item.calorie === "med"
+                      ? "text-orange-400"
+                      : "text-green-400"}
+                text-sm`}>
+                  {
+                    item.calorie === "high"
+                    ? "High Cal."
+                    : item.calorie === "med"
+                    ? "Med. Cal."
+                    : "Low Cal."
+                  }
+                  </span>
+                </div>
                 {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
                 {activeItem === item.id && (
                   <div

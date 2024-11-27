@@ -1602,13 +1602,16 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
                               {/* EXPANDED CONTENT */}
                               {/* PAYMENT METHOD */}
-                              <div className="font-bold text-sm flex justify-between items-center">
-                                <span className="font-semibold">
-                                  Payment method
-                                </span>
-                                <span>{order.payment}</span>
-                              </div>
+                              {user === "bar" && (
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    Payment method
+                                  </span>
+                                  <span>{order.payment}</span>
+                                </div>
+                              )}
                               {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
+                              { user === "bar" && (
                               <div className="font-bold text-sm flex justify-between items-center">
                                 <span className="font-semibold">
                                   {order.status !== "TO PAY"
@@ -1617,22 +1620,26 @@ const AdminAndStaffOrdersPage = () => {
                                 </span>
                                 <span>{order.pwdSenior ? "Yes" : "No"}</span>
                               </div>
+                              )}
 
                               {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
-                              {((order.status === "TO PAY" &&
-                                order.pwdSenior &&
-                                applySrPWD[order.id]) ||
-                                (order.status !== "TO PAY" &&
-                                  order.pwdSenior)) && (
-                                <div className="font-bold text-sm flex justify-between items-center">
-                                  <span className="font-semibold">
-                                    Senior Citizen/PWD Discount
-                                  </span>
-                                  <span>{order.sampleDiscountDeduction}</span>
-                                </div>
+
+                              {user === "bar" && (
+                                ((order.status === "TO PAY" &&
+                                  order.pwdSenior &&
+                                  applySrPWD[order.id]) ||
+                                  (order.status !== "TO PAY" && order.pwdSenior)) && (
+                                  <div className="font-bold text-sm flex justify-between items-center">
+                                    <span className="font-semibold">
+                                      Senior Citizen/PWD Discount
+                                    </span>
+                                    <span>{order.sampleDiscountDeduction}</span>
+                                  </div>
+                                )
                               )}
+
                               {/* PICTURE OF ID CONTAINER */}
-                              {order.pwdSenior && (
+                              { user === "bar" && order.pwdSenior && (
                                 <>
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
@@ -1683,7 +1690,7 @@ const AdminAndStaffOrdersPage = () => {
                               )}
 
                               {/* Apply Sr/PWD Discount Button */}
-                              {order.status === "TO PAY" &&
+                              {user === "bar" && order.status === "TO PAY" &&
                                 order.pwdSenior === true && (
                                   <div className="w-full flex justify-end">
                                     <button
@@ -1705,92 +1712,81 @@ const AdminAndStaffOrdersPage = () => {
                                   </div>
                                 )}
                               {/* PROMO, IF THERE IS ONE */}
-                              {(order.promo || order.promo === 0) &&
-                                order.promo !== null &&
-                                order.promo !== undefined &&
-                                order.promo !== 0 && (
+                              {user === "bar" && (order.promo || order.promo === 0) &&
+                              order.promo !== null &&
+                              order.promo !== undefined &&
+                              order.promo !== 0 && (
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    Promo discount
+                                  </span>
+                                  <span>{order.promo}</span>
+                                </div>
+                              )}
+                              {order.items.map((item, index) => {
+                              // Find the highest price in the order items
+                              const maxPrice = Math.max(...order.items.map((i) => i.price));
+
+                              // Check if this is the first item with the highest price
+                              const isHighestPriced =
+                                item.price === maxPrice &&
+                                order.items.findIndex((i) => i.price === maxPrice) === index;
+
+                              // Apply discount conditionally based on the order's status and senior discount eligibility
+                              const discountAmount =
+                                isHighestPriced &&
+                                ((order.status === "TO PAY" && applySrPWD[order.id]) || 
+                                  (order.status !== "TO PAY" && order.pwdSenior))
+                                  ? item.price * 0.2
+                                  : 0;
+
+                              // Calculate discounted price if the discount applies
+                              const discountedPrice = isHighestPriced
+                                ? item.price - discountAmount
+                                : item.price;
+
+                              return (
+                                <div className="flex flex-col gap-1" key={item.title}>
+                                  {/* ITEM TITLE AND PRICE CONTAINER */}
                                   <div className="font-bold text-sm flex justify-between items-center">
                                     <span className="font-semibold">
-                                      Promo discount
+                                      {`${item.qty}x - ${item.title}`}
+                                      {isHighestPriced &&
+                                        ((order.status === "TO PAY" && applySrPWD[order.id]) ||
+                                          (order.status !== "TO PAY" && order.pwdSenior && user === "bar")) && (
+                                          <span className="text-green-600 text-xs ml-2">
+                                            (discounted: PHP {discountAmount.toFixed(2)})
+                                          </span>
+                                        )}
                                     </span>
-                                    <span>{order.promo}</span>
-                                  </div>
-                                )}
-                              {order.items.map((item, index) => {
-                                // Find the highest price in the order items
-                                const maxPrice = Math.max(
-                                  ...order.items.map((i) => i.price)
-                                );
-
-                                // Check if this is the first item with the highest price
-                                const isHighestPriced =
-                                  item.price === maxPrice &&
-                                  order.items.findIndex(
-                                    (i) => i.price === maxPrice
-                                  ) === index;
-
-                                // Apply discount conditionally based on the order's status and senior discount eligibility
-                                const discountAmount =
-                                  isHighestPriced &&
-                                  ((order.status === "TO PAY" &&
-                                    applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
-                                    (order.status !== "TO PAY" &&
-                                      order.pwdSenior)) // Discount if status is not 'TO PAY' and it's a senior order
-                                    ? item.price * 0.2
-                                    : 0;
-
-                                // Calculate discounted price if the discount applies
-                                const discountedPrice = isHighestPriced
-                                  ? item.price - discountAmount
-                                  : item.price;
-
-                                return (
-                                  <div
-                                    className="flex flex-col gap-1"
-                                    key={item.title}
-                                  >
-                                    <hr />
-                                    {/* ITEM TITLE AND PRICE CONTAINER */}
-                                    <div className="font-bold text-sm flex justify-between items-center">
-                                      <span className="font-semibold">
-                                        {`${item.qty}x - ${item.title}`}
-                                        {isHighestPriced && // Only show discounted label for the highest-priced item
-                                          ((order.status === "TO PAY" &&
-                                            applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" &&
-                                              order.pwdSenior)) && ( // Apply condition to show discount label
-                                            <span className="text-green-600 text-xs ml-2">
-                                              (discounted: PHP{" "}
-                                              {discountAmount.toFixed(2)})
-                                            </span>
-                                          )}
-                                      </span>
+                                    {/* Only show the price if the role is "bar" */}
+                                    {user === "bar" && (
                                       <span
                                         className={
-                                          isHighestPriced && // Highlight the discounted price
-                                          ((order.status === "TO PAY" &&
-                                            applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" &&
-                                              order.pwdSenior))
+                                          isHighestPriced &&
+                                          ((order.status === "TO PAY" && applySrPWD[order.id]) ||
+                                            (order.status !== "TO PAY" && order.pwdSenior))
                                             ? "text-green-600"
                                             : ""
                                         }
                                       >
                                         PHP {discountedPrice.toFixed(2)}
                                       </span>
-                                    </div>
-                                    {item.tags.map((tag, index) => (
-                                      <p className="text-xs" key={index}>
-                                        -{tag}
-                                      </p>
-                                    ))}
+                                    )}
                                   </div>
-                                );
-                              })}
+                                  {item.tags.map((tag, index) => (
+                                    <p className="text-xs" key={index}>
+                                      -{tag}
+                                    </p>
+                                  ))}
+                                <hr />
+                                </div>
+                              );
+                            })}
+
 
                               {/* USERNAME */}
                               <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
-                                <hr className="mb-1" />
                                 <span>Order by:</span>
                                 <span className="mb-[-2px] mt-2">
                                   {order.userName}
@@ -1975,13 +1971,16 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
                               {/* EXPANDED CONTENT */}
                               {/* PAYMENT METHOD */}
-                              <div className="font-bold text-sm flex justify-between items-center">
-                                <span className="font-semibold">
-                                  Payment method
-                                </span>
-                                <span>{order.payment}</span>
-                              </div>
+                              {user === "bar" && (
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    Payment method
+                                  </span>
+                                  <span>{order.payment}</span>
+                                </div>
+                              )}
                               {/* CARD */}
+                              
                               {order.payment === "Card" && (
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
@@ -1989,6 +1988,7 @@ const AdminAndStaffOrdersPage = () => {
                                   </span>
                                 </div>
                               )}
+
                               {order.payment === "Card" && order.cardIdImg && (
                                 <>
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
@@ -2039,6 +2039,7 @@ const AdminAndStaffOrdersPage = () => {
                                 </>
                               )}
                               {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
+                              { user === "bar" && (
                               <div className="font-bold text-sm flex justify-between items-center">
                                 <span className="font-semibold">
                                   {order.status !== "TO PAY"
@@ -2047,22 +2048,24 @@ const AdminAndStaffOrdersPage = () => {
                                 </span>
                                 <span>{order.pwdSenior ? "Yes" : "No"}</span>
                               </div>
+                              )}
 
                               {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
-                              {((order.status === "TO PAY" &&
-                                order.pwdSenior &&
-                                applySrPWD[order.id]) ||
-                                (order.status !== "TO PAY" &&
-                                  order.pwdSenior)) && (
-                                <div className="font-bold text-sm flex justify-between items-center">
-                                  <span className="font-semibold">
-                                    Senior Citizen/PWD Discount
-                                  </span>
-                                  <span>{order.sampleDiscountDeduction}</span>
-                                </div>
+                              {user === "bar" && (
+                                ((order.status === "TO PAY" &&
+                                  order.pwdSenior &&
+                                  applySrPWD[order.id]) ||
+                                  (order.status !== "TO PAY" && order.pwdSenior)) && (
+                                  <div className="font-bold text-sm flex justify-between items-center">
+                                    <span className="font-semibold">
+                                      Senior Citizen/PWD Discount
+                                    </span>
+                                    <span>{order.sampleDiscountDeduction}</span>
+                                  </div>
+                                )
                               )}
                               {/* PICTURE OF ID CONTAINER */}
-                              {order.pwdSenior && (
+                              {user === "bar" && order.pwdSenior && (
                                 <>
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
@@ -2113,7 +2116,7 @@ const AdminAndStaffOrdersPage = () => {
                               )}
 
                               {/* Apply Sr/PWD Discount Button */}
-                              {order.status === "TO PAY" &&
+                              {user === "bar" && order.status === "TO PAY" &&
                                 order.pwdSenior === true && (
                                   <div className="w-full flex justify-end">
                                     <button
@@ -2135,91 +2138,79 @@ const AdminAndStaffOrdersPage = () => {
                                   </div>
                                 )}
                               {/* PROMO, IF THERE IS ONE */}
-                              {(order.promo || order.promo === 0) &&
-                                order.promo !== null &&
-                                order.promo !== undefined &&
-                                order.promo !== 0 && (
+                              {user === "bar" && (order.promo || order.promo === 0) &&
+                              order.promo !== null &&
+                              order.promo !== undefined &&
+                              order.promo !== 0 && (
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    Promo discount
+                                  </span>
+                                  <span>{order.promo}</span>
+                                </div>
+                              )}
+                              {order.items.map((item, index) => {
+                              // Find the highest price in the order items
+                              const maxPrice = Math.max(...order.items.map((i) => i.price));
+
+                              // Check if this is the first item with the highest price
+                              const isHighestPriced =
+                                item.price === maxPrice &&
+                                order.items.findIndex((i) => i.price === maxPrice) === index;
+
+                              // Apply discount conditionally based on the order's status and senior discount eligibility
+                              const discountAmount =
+                                isHighestPriced &&
+                                ((order.status === "TO PAY" && applySrPWD[order.id]) || 
+                                  (order.status !== "TO PAY" && order.pwdSenior))
+                                  ? item.price * 0.2
+                                  : 0;
+
+                              // Calculate discounted price if the discount applies
+                              const discountedPrice = isHighestPriced
+                                ? item.price - discountAmount
+                                : item.price;
+
+                              return (
+                                <div className="flex flex-col gap-1" key={item.title}>
+                                  {/* ITEM TITLE AND PRICE CONTAINER */}
                                   <div className="font-bold text-sm flex justify-between items-center">
                                     <span className="font-semibold">
-                                      Promo discount
+                                      {`${item.qty}x - ${item.title}`}
+                                      {isHighestPriced &&
+                                        ((order.status === "TO PAY" && applySrPWD[order.id]) ||
+                                          (order.status !== "TO PAY" && order.pwdSenior && user === "bar")) && (
+                                          <span className="text-green-600 text-xs ml-2">
+                                            (discounted: PHP {discountAmount.toFixed(2)})
+                                          </span>
+                                        )}
                                     </span>
-                                    <span>{order.promo}</span>
-                                  </div>
-                                )}
-                              {order.items.map((item, index) => {
-                                // Find the highest price in the order items
-                                const maxPrice = Math.max(
-                                  ...order.items.map((i) => i.price)
-                                );
-
-                                // Check if this is the first item with the highest price
-                                const isHighestPriced =
-                                  item.price === maxPrice &&
-                                  order.items.findIndex(
-                                    (i) => i.price === maxPrice
-                                  ) === index;
-
-                                // Apply discount conditionally based on the order's status and senior discount eligibility
-                                const discountAmount =
-                                  isHighestPriced &&
-                                  ((order.status === "TO PAY" &&
-                                    applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
-                                    (order.status !== "TO PAY" &&
-                                      order.pwdSenior)) // Discount if status is not 'TO PAY' and it's a senior order
-                                    ? item.price * 0.2
-                                    : 0;
-
-                                // Calculate discounted price if the discount applies
-                                const discountedPrice = isHighestPriced
-                                  ? item.price - discountAmount
-                                  : item.price;
-
-                                return (
-                                  <div
-                                    className="flex flex-col gap-1"
-                                    key={item.title}
-                                  >
-                                    <hr />
-                                    {/* ITEM TITLE AND PRICE CONTAINER */}
-                                    <div className="font-bold text-sm flex justify-between items-center">
-                                      <span className="font-semibold">
-                                        {`${item.qty}x - ${item.title}`}
-                                        {isHighestPriced && // Only show discounted label for the highest-priced item
-                                          ((order.status === "TO PAY" &&
-                                            applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" &&
-                                              order.pwdSenior)) && ( // Apply condition to show discount label
-                                            <span className="text-green-600 text-xs ml-2">
-                                              (discounted: PHP{" "}
-                                              {discountAmount.toFixed(2)})
-                                            </span>
-                                          )}
-                                      </span>
+                                    {/* Only show the price if the role is "bar" */}
+                                    {user === "bar" && (
                                       <span
                                         className={
-                                          isHighestPriced && // Highlight the discounted price
-                                          ((order.status === "TO PAY" &&
-                                            applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" &&
-                                              order.pwdSenior))
+                                          isHighestPriced &&
+                                          ((order.status === "TO PAY" && applySrPWD[order.id]) ||
+                                            (order.status !== "TO PAY" && order.pwdSenior))
                                             ? "text-green-600"
                                             : ""
                                         }
                                       >
                                         PHP {discountedPrice.toFixed(2)}
                                       </span>
-                                    </div>
-                                    {item.tags.map((tag, index) => (
-                                      <p className="text-xs" key={index}>
-                                        -{tag}
-                                      </p>
-                                    ))}
+                                    )}
                                   </div>
-                                );
-                              })}
+                                  {item.tags.map((tag, index) => (
+                                    <p className="text-xs" key={index}>
+                                      -{tag}
+                                    </p>
+                                  ))}
+                                <hr />
+                                </div>
+                              );
+                            })}
                               {/* USERNAME */}
                               <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
-                                <hr className="mb-1" />
                                 <span>Order by:</span>
                                 <span className="mb-[-2px] mt-2">
                                   {order.userName}

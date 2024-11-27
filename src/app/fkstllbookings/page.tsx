@@ -16,6 +16,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
+import DynamicPackageOffers from "../components/DyanmicPackageOffers";
 import jsPDF from "jspdf";
 
 //#region Sample Data
@@ -627,7 +628,9 @@ const AdminCheckReservationsPage = () => {
               </span>
               <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
             </div>
-            <div className="w-full flex justify-between items-center gap-1">
+            <div className="w-full flex justify-between items-start gap-1">
+              <div className="flex flex-col gap-2 items-start
+              lg:flex-row lg:items-center">
               <Link
                 href={`/fkstllbookings/${
                   resType === "table" ? "table" : "event"
@@ -637,6 +640,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
               >
                 Add
               </Link>
+              {resType === "event" && (
+                  <DynamicPackageOffers />
+              )}
+              </div>
+              
               <div className="flex items-center gap-2 flex-1 justify-end">
                 <select
                   className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
@@ -734,6 +742,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
 
                             {/* BUTTON CONTAINER */}
                             {res.status === "PENDING" ? (
@@ -928,6 +937,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           )}
 
                           <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                           <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                           <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                           <div className="flex flex-col gap-4">
@@ -1235,6 +1245,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                            <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                                 {/* BUTTON CONTAINER */}
                                 <div className="flex gap-2 items-center w-full mt-1">
                                   <button
@@ -1328,6 +1339,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                             <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                             <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                             <div className="flex flex-col gap-4">

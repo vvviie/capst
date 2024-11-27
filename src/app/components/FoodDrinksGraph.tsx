@@ -12,7 +12,7 @@ import {
   BarElement,
 } from "chart.js";
 import { db } from "../firebase"; // Adjust the path as necessary
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 ChartJS.register(
   CategoryScale,
@@ -28,11 +28,11 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
   const options = {};
 
   useEffect(() => {
-    const fetchFoodDrinkSalesData = async () => {
-      try {
-        const docRef = doc(db, "salesData", "foodDrinkSold");
-        const docSnap = await getDoc(docRef);
+    const docRef = doc(db, "salesData", "foodDrinkSold");
 
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           console.log("Fetched data:", data); // Log the fetched data
@@ -40,12 +40,14 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
         } else {
           console.log("No such document!");
         }
-      } catch (error) {
+      },
+      (error) => {
         console.error("Error fetching document: ", error);
       }
-    };
+    );
 
-    fetchFoodDrinkSalesData();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const getLatestData = (data) => {
@@ -227,14 +229,14 @@ const FoodDrinkSalesGraph = ({ timeFrame }) => {
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Food Sold:</span>
               <span className="ml-2">
-                PHP {chartData.totalFoodSales.toLocaleString()}
+                {chartData.totalFoodSales.toLocaleString()}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">
                 Total Drink Sold:
               </span>
               <span className="ml-2">
-                PHP {chartData.totalDrinkSales.toLocaleString()}
+                {chartData.totalDrinkSales.toLocaleString()}
               </span>
             </div>
           )}

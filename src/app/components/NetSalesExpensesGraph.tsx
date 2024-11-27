@@ -17,7 +17,7 @@ import {
 } from "../data";
 
 import { db } from "../firebase"; // Adjust the path as necessary
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 
 ChartJS.register(
   CategoryScale,
@@ -33,11 +33,11 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
   const options = {};
 
   useEffect(() => {
-    const fetchSalesExpensesToday = async () => {
-      try {
-        const docRef = doc(db, "salesData", "salesExpensesToday");
-        const docSnap = await getDoc(docRef);
+    const docRef = doc(db, "salesData", "salesExpensesToday");
 
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           console.log(data); // Log the fetched data to the console
@@ -45,12 +45,14 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
         } else {
           console.log("No such document!");
         }
-      } catch (error) {
+      },
+      (error) => {
         console.error("Error fetching document: ", error);
       }
-    };
+    );
 
-    fetchSalesExpensesToday();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   const getLatestData = (data) => {
@@ -134,7 +136,6 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
 
     // Determine if today is Monday or Thursday
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-
 
     return {
       labels: dayLabels, // Use the formatted day names and dates as labels
@@ -237,12 +238,12 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
               <span className="ml-2">
-                PHP {chartData.totalSales.toLocaleString()}
+              PHP {chartData.totalSales.toFixed(2)}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">Total Expenses:</span>
               <span className="ml-2">
-                PHP {chartData.totalExpenses.toLocaleString()}
+              PHP {chartData.totalExpenses.toFixed(2)}
               </span>
             </div>
           )}
