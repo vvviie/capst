@@ -198,30 +198,11 @@ const AddProductPage = () => {
         }
     }, [extractedCategory, selectedDrinkType, selectedCat, passableSelectedDrinkType]);
 
-        // Function to generate a new product ID
-        const generateNewID = (ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
-            // Use 'drink' as the prefix for drinks, regardless of the drink type
-            const prefix = selectedCat === "drinks" ? drinkTypePrefixes.drink : `${extractedCategory}`;
-    
-            if (!prefix) {
-                console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
-                return; // Early return if no prefix is available
-            }
-    
-            // Generate the new ID
-            const newID = ids.length === 0
-                ? `${prefix}1`
-                : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
-    
-            setNewProdID(newID);
-            console.log("Generated new product ID:", newID);
-        };
-
     // Effect to generate a new ID based on existing IDs
     useEffect(() => {
         const drinkType = selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
         generateNewID(existingIDsRef.current, drinkType); // Call with the current value of existing IDs
-    }, [existingIDs, generateNewID, passableSelectedDrinkType, selectedCat, selectedDrinkType ]);
+    }, [existingIDs]);
 
     useEffect(() => {
         // Handle drinkSize bounds
@@ -282,7 +263,24 @@ const AddProductPage = () => {
         }
     };
 
+    // Function to generate a new product ID
+    const generateNewID = (ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
+        // Use 'drink' as the prefix for drinks, regardless of the drink type
+        const prefix = selectedCat === "drinks" ? drinkTypePrefixes.drink : `${extractedCategory}`;
 
+        if (!prefix) {
+            console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
+            return; // Early return if no prefix is available
+        }
+
+        // Generate the new ID
+        const newID = ids.length === 0
+            ? `${prefix}1`
+            : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
+
+        setNewProdID(newID);
+        console.log("Generated new product ID:", newID);
+    };
 
     const handleAvailabilityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedValue = event.target.value;
@@ -698,7 +696,7 @@ const AddProductPage = () => {
 
     useEffect(() => {
         fetchCategoriesFromDB(selectedCat);
-    }, [selectedCat, fetchCategoriesFromDB]);
+    }, [selectedCat]);
 
     return (
         <div

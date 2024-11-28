@@ -75,6 +75,93 @@ const AdminAndStaffOrdersPage = () => {
     "activated" | "deactivated" | null
   >(null);
 
+  useEffect(() => {
+    console.log("useEffect triggered"); // Log when the useEffect runs
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userEmail = user.email;
+        console.log("User logged in:", userEmail);
+        setEmail(email); // Set the email state
+
+        if (userEmail) {
+          // Fetch the staff document from Firestore
+          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
+          const staffDocSnap = await getDoc(staffDocRef);
+
+          if (staffDocSnap.exists()) {
+            const data = staffDocSnap.data();
+            console.log("Staff document data:", data);
+
+            // Check and update the staffStatus
+            if (data.staffStatus === "activated") {
+              setStaffStatus("activated");
+              console.log("Staff status set to: activated");
+            } else if (data.staffStatus === "deactivated") {
+              setStaffStatus("deactivated");
+              console.log("Staff status set to: deactivated");
+            }
+          } else {
+            console.log("No staff document found for this user.");
+            setStaffStatus(null); // Reset if no document exists
+          }
+        }
+      } else {
+        console.log("No user logged in");
+        setEmail(null);
+        setStaffStatus(null); // Reset states if user is logged out
+      }
+    });
+
+    // Clean up the listener on component unmount
+    return () => {
+      console.log("Cleaning up listener");
+      unsubscribe();
+    };
+  }, [auth, db]); // Dependencies
+
+  // Fetch orders on component mount and when `orderStatCat` changes
+  useEffect(() => {
+    const unsubscribe = fetchCompletedOrders();
+
+    return () => unsubscribe();
+  }, [orderStatCat]);
+
+  const toggleOrder = (id: string) => {
+    setExpandedOrders((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const toggleSrPWD = (orderId: string) => {
+    setApplySrPWD((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId],
+    }));
+  };
+
+  const toggleDiscount = (orderId: string) => {
+    setDiscounts((prev) => ({
+      ...prev,
+      [orderId]: !prev[orderId], // Toggle the discount state for this specific order
+    }));
+  };
+
+  const formatTime = (time: string) => {
+    const [hour, minute] = time.split(":").map(Number);
+    const isPM = hour >= 12;
+
+    // Convert 24-hour time to 12-hour format
+    const formattedHour = hour % 12 === 0 ? 12 : hour % 12;
+
+    // Determine AM or PM
+    const period = isPM ? "PM" : "AM";
+
+    // Return formatted time
+    return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
+  };
+
   const fetchCompletedOrders = () => {
     const unsubscribe = onSnapshot(
       collection(db, "completedOrders"),
@@ -179,95 +266,6 @@ const AdminAndStaffOrdersPage = () => {
 
     return unsubscribe;
   };
-  
-  useEffect(() => {
-    console.log("useEffect triggered"); // Log when the useEffect runs
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userEmail = user.email;
-        console.log("User logged in:", userEmail);
-        setEmail(email); // Set the email state
-
-        if (userEmail) {
-          // Fetch the staff document from Firestore
-          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
-          const staffDocSnap = await getDoc(staffDocRef);
-
-          if (staffDocSnap.exists()) {
-            const data = staffDocSnap.data();
-            console.log("Staff document data:", data);
-
-            // Check and update the staffStatus
-            if (data.staffStatus === "activated") {
-              setStaffStatus("activated");
-              console.log("Staff status set to: activated");
-            } else if (data.staffStatus === "deactivated") {
-              setStaffStatus("deactivated");
-              console.log("Staff status set to: deactivated");
-            }
-          } else {
-            console.log("No staff document found for this user.");
-            setStaffStatus(null); // Reset if no document exists
-          }
-        }
-      } else {
-        console.log("No user logged in");
-        setEmail(null);
-        setStaffStatus(null); // Reset states if user is logged out
-      }
-    });
-
-    // Clean up the listener on component unmount
-    return () => {
-      console.log("Cleaning up listener");
-      unsubscribe();
-    };
-  }, [auth, db, email, fetchCompletedOrders]); // Dependencies
-
-  // Fetch orders on component mount and when `orderStatCat` changes
-  useEffect(() => {
-    const unsubscribe = fetchCompletedOrders();
-
-    return () => unsubscribe();
-  }, [orderStatCat, email, fetchCompletedOrders]);
-
-  const toggleOrder = (id: string) => {
-    setExpandedOrders((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  const toggleSrPWD = (orderId: string) => {
-    setApplySrPWD((prev) => ({
-      ...prev,
-      [orderId]: !prev[orderId],
-    }));
-  };
-
-  const toggleDiscount = (orderId: string) => {
-    setDiscounts((prev) => ({
-      ...prev,
-      [orderId]: !prev[orderId], // Toggle the discount state for this specific order
-    }));
-  };
-
-  const formatTime = (time: string) => {
-    const [hour, minute] = time.split(":").map(Number);
-    const isPM = hour >= 12;
-
-    // Convert 24-hour time to 12-hour format
-    const formattedHour = hour % 12 === 0 ? 12 : hour % 12;
-
-    // Determine AM or PM
-    const period = isPM ? "PM" : "AM";
-
-    // Return formatted time
-    return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
-  };
-
-
 
   // FOR OPENING NG POP UP
   const [confirmPopup, setConfirmPopup] = useState(false);

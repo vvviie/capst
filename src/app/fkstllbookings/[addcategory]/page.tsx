@@ -897,7 +897,7 @@ const AdminReservationPage = () => {
                   name="date"
                   id="inputDate"
                   type="date"
-                  value={date} //
+                  value={date}//
                   min={minDate}
                   onChange={(e) => setDate(e.target.value)}
                   required
@@ -996,7 +996,7 @@ const AdminReservationPage = () => {
               <div className="flex flex-col gap-0.5">
                 {chosenItems.length > 0 && ( // Check if there are chosen items
                   <span className="text-sm text-gray-700 flex items-center space-x-1 font-semibold">
-                    {"You've chosen:"}
+                    {'You\'ve chosen:'}
                   </span>
                 )}
                 <div className="text-sm">
@@ -1168,13 +1168,6 @@ const AdminReservationPage = () => {
             }
             fill
             className="object-cover lg:h-full"
-            alt={
-              slug === "table"
-                ? "Image of a table"
-                : slug === "event"
-                ? "Image of an event"
-                : "Image of a general item"
-            }
           />
         </div>
       </div>

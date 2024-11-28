@@ -101,7 +101,7 @@ const VoucherListPage = () => {
     return () => {
       unsubscribe(); // Clean up the listener when the component unmounts
     };
-  }, [selectedType, fetchItems]); // Add selectedType as a dependency
+  }, [selectedType]); // Add selectedType as a dependency
 
   // Function to handle availability change
   const handleAvailabilityChange = async (itemId: string, newValue: string) => {

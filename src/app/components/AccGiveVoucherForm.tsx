@@ -85,10 +85,8 @@ const AccGiveVoucherForm = ({ isOpen, toggleForm }) => {
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-
-    // Cleanup function to remove the event listener
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, handleClickOutside]); // Added handleClickOutside to the dependency array
+  }, [isOpen]);
 
   const handleTypeChange = (event) => {
     setType(event.target.value);

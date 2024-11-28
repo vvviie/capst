@@ -240,7 +240,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen, handleClickOutside]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

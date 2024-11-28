@@ -123,33 +123,6 @@ const NotificationBell = () => {
   }, []);
   //#endregion
 
-  const fetchTableReservations = () => {
-    if (!userEmail) return;
-  
-    const tempReservationsRef = collection(db, "tableReservations");
-    const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
-  
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const newNotifications: notifs = []; // Temporary array for updated notifications
-  
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        if (!data.isNotifDeleted) { // Check for deletion before adding
-          const notification = {
-            id: doc.id,
-            type: "Table Reservation",
-            subject: `New Booking for: ${data.type || "Unknown"}`,
-            details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
-              data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
-            }.`,
-            time: data.timeReserved || "N/A",
-            date: data.dateReserved || "N/A",
-            read: data.isRead || false,
-          };
-          newNotifications.push(notification);
-        }
-      });
-      
   //#region Fetching of Orders
   useEffect(() => {
     const fetchOrders = async () => {
@@ -254,7 +227,7 @@ const NotificationBell = () => {
     };
   
     fetchOrders();
-  }, [userEmail, voucherNotifs, fetchTableReservations]);
+  }, [userEmail, voucherNotifs]);
 //#endregion
 
 // Define fetchNotifications before useEffect
@@ -316,7 +289,32 @@ const fetchNotifications = () => {
 };
 //#region Fetching of Table Reservations
 
+const fetchTableReservations = () => {
+  if (!userEmail) return;
 
+  const tempReservationsRef = collection(db, "tableReservations");
+  const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
+
+  const unsubscribe = onSnapshot(q, (querySnapshot) => {
+    const newNotifications: notifs = []; // Temporary array for updated notifications
+
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (!data.isNotifDeleted) { // Check for deletion before adding
+        const notification = {
+          id: doc.id,
+          type: "Table Reservation",
+          subject: `New Booking for: ${data.type || "Unknown"}`,
+          details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
+            data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
+          }.`,
+          time: data.timeReserved || "N/A",
+          date: data.dateReserved || "N/A",
+          read: data.isRead || false,
+        };
+        newNotifications.push(notification);
+      }
+    });
 
     // Update the notifItems state with the latest reservations, avoiding duplicates
     setNotifItems((prevNotifItems) => {
