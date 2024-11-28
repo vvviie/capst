@@ -37,10 +37,19 @@ type TopSpendingCustomer = {
   amount: number;
 };
 
+type Review = {
+  name: string;
+  dateAdded: string;
+  timeAdded: string;
+  userEmail: string;
+  [key: string]: any; // Allow for other properties that may exist in review data
+};
+
 const AdminHomePage = () => {
   const [timeFrame, setTimeFrame] = useState("today");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [latestReviews, setLatestReviews] = useState([]);
+  const [latestReviews, setLatestReviews] = useState<Review[]>([]); 
+
   const [topSpendingCustomers, setTopSpendingCustomers] = useState<
     TopSpendingCustomer[]
   >([]);
@@ -137,8 +146,8 @@ const AdminHomePage = () => {
     setIsFormOpen((prev) => !prev);
   };
 
-  const handleTimeFrameChange = (event) => {
-    setTimeFrame(event.target.value);
+  const handleTimeFrameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTimeFrame(e.target.value);
   };
 
   // GETS THE FIVE LATEST REVIEWS TO DISPLAY
@@ -146,14 +155,13 @@ const AdminHomePage = () => {
     const fetchReviews = async () => {
       try {
         // Step 1: Fetch reviews from customerFeedbacks collection
-        const reviewsSnapshot = await getDocs(
-          collection(db, "customerFeedbacks")
-        );
-        const reviewsData = [];
+        const reviewsSnapshot = await getDocs(collection(db, "customerFeedbacks"));
+
+        const reviewsData: Review[] = [];
 
         // Step 2: Fetch user info for each review
         for (const reviewDoc of reviewsSnapshot.docs) {
-          const review = reviewDoc.data();
+          const review = reviewDoc.data() as Review;
           const userEmail = review.userEmail;
 
           // Ensure the userEmail exists and is valid
@@ -192,7 +200,7 @@ const AdminHomePage = () => {
         const sortedReviews = reviewsData.sort((a, b) => {
           const dateA = new Date(`${a.dateAdded} ${a.timeAdded}`);
           const dateB = new Date(`${b.dateAdded} ${b.timeAdded}`);
-          return dateB - dateA; // Sort in descending order
+          return dateB.getTime() - dateA.getTime(); // Sort in descending order
         });
 
         // Step 4: Get the latest 5 reviews
@@ -203,7 +211,7 @@ const AdminHomePage = () => {
     };
 
     fetchReviews();
-  }, []);
+  }, []); // Empty dependency array ensures this effect runs only once
 
   return (
     <div className="mt-14 min-h-[calc(100vh-56px)] w-full px-10 md:px-24 2xl:px-56">
