@@ -192,108 +192,6 @@ const EditProductPage = () => {
   const drinkUpsizePriceRef = useRef(null);
   const descriptionRef = useRef(null);
 
-    // Fetch product from Firestore
-    const fetchProduct = async (collectionRef) => {
-      if (typeof id === "string") {
-        const docRef = doc(db, collectionRef, id);
-        console.log(`Document ID: ${id}`);
-        console.log(`Document Reference: ${docRef.path}`);
-    
-        try {
-          const docSnap = await getDoc(docRef);
-          console.log(
-            "Document Snapshot:",
-            docSnap.exists() ? "Exists" : "Does not exist"
-          );
-    
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            console.log("Document Data:", data); // Log entire document data for inspection
-    
-            // Extract allergens and ensure it's an array
-            const fetchedAllergens = Array.isArray(data.contains) ? data.contains : [];
-            console.log("Fetched Allergens:", fetchedAllergens);
-    
-            // Extract the size and convert it to a number
-            const sizeWithUnit = data.currSize || "0oz"; // Fallback to '0oz' if undefined
-            const sizeValue = parseFloat(sizeWithUnit); // Extract numeric part
-            const upsizeWithUnit = data.upsizeSize || "0oz"; // Fallback to '0oz' if undefined
-            const upsizeValue = parseFloat(upsizeWithUnit); // Extract numeric part for display
-    
-            // Ensure the data matches the ProductType structure
-            const fetchedProduct = {
-              name: data.title,
-              category: data.prodCategory,
-              availability: data.availability,
-              imageUrl: data.img,
-              itemDescription: data.desc,
-              itemId: data.prodID,
-              calorieLevel: data.calorie,
-              price: data.price,
-              itemCategory: data.prodCategory,
-              size: sizeValue,
-              isUpsize: data.upsize,
-              upsizePrice: data.upsizePrice,
-              upsizeSize: upsizeValue,
-              type: data.type,
-              allergens: fetchedAllergens,
-            };
-    
-            console.log("Fetched Product Object:", fetchedProduct); // Log the entire product object
-    
-            // Determine selected category based on itemId
-            let determinedCategory = "drinks"; // Default category
-            if (fetchedProduct.itemId.includes("drink")) {
-              determinedCategory = "drinks";
-            } else if (fetchedProduct.itemId.includes("mainCourse")) {
-              determinedCategory = "mainCourseMenu";
-            } else if (fetchedProduct.itemId.includes("pastries")) {
-              determinedCategory = "pastriesMenu";
-            } else if (fetchedProduct.itemId.includes("pasta")) {
-              determinedCategory = "pastaMenu";
-            } else if (fetchedProduct.itemId.includes("snacks")) {
-              determinedCategory = "snacksMenu";
-            } else if (fetchedProduct.itemId.includes("sandwiches")) {
-              determinedCategory = "sandwichesMenu";
-            }
-    
-            console.log("Determined Category:", determinedCategory);
-    
-            // Set state with fetched product data
-            setAaa(fetchedProduct.itemCategory);
-            setProduct(fetchedProduct);
-            setImageUrl(fetchedProduct.imageUrl);
-            setFileName(decodeURIComponent(fetchedProduct.imageUrl.split("/").pop().split("?")[0]).split('/').pop());
-            setSelectedAvailability(fetchedProduct.availability);
-            setProdID(fetchedProduct.itemId);
-            setItemName(fetchedProduct.name);
-            setCalorie(fetchedProduct.calorieLevel);
-            setItemPrice(fetchedProduct.price);
-            setPassableSelectedDrinkType(fetchedProduct.itemCategory);
-            setDrinkSize(`${fetchedProduct.size}oz`);
-            setUpsize(fetchedProduct.isUpsize);
-            setUpsizeSize(`${fetchedProduct.upsizeSize}oz`);
-            setUpsizePrice(fetchedProduct.upsizePrice);
-            setSelectedDrinkType(fetchedProduct.type);
-            setSelectedAllergens(fetchedAllergens.filter((allergen) => allergen !== ""));
-            setDesc(fetchedProduct.itemDescription);
-    
-            // Use the determined category directly
-            setSelectedCat(determinedCategory);
-          } else {
-            console.error("No such document!");
-          }
-        } catch (error) {
-          console.error("Error fetching document:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        console.error("Invalid document ID");
-        setLoading(false);
-      }
-    };  
-    
   // Effect to update extractedCategory when selectedCat changes
   useEffect(() => {
     const category = selectedCat.replace("Menu", "");
@@ -324,7 +222,7 @@ const EditProductPage = () => {
     const drinkType =
       selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
     generateNewID(existingIDsRef.current, drinkType); // Call with the current value of existing IDs
-  }, [existingIDs, fetchProduct]);
+  }, [existingIDs]);
 
   useEffect(() => {
     // Handle drinkSize bounds
@@ -622,7 +520,107 @@ const EditProductPage = () => {
   };
   //#endregion
 
-
+  // Fetch product from Firestore
+  const fetchProduct = async (collectionRef) => {
+    if (typeof id === "string") {
+      const docRef = doc(db, collectionRef, id);
+      console.log(`Document ID: ${id}`);
+      console.log(`Document Reference: ${docRef.path}`);
+  
+      try {
+        const docSnap = await getDoc(docRef);
+        console.log(
+          "Document Snapshot:",
+          docSnap.exists() ? "Exists" : "Does not exist"
+        );
+  
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          console.log("Document Data:", data); // Log entire document data for inspection
+  
+          // Extract allergens and ensure it's an array
+          const fetchedAllergens = Array.isArray(data.contains) ? data.contains : [];
+          console.log("Fetched Allergens:", fetchedAllergens);
+  
+          // Extract the size and convert it to a number
+          const sizeWithUnit = data.currSize || "0oz"; // Fallback to '0oz' if undefined
+          const sizeValue = parseFloat(sizeWithUnit); // Extract numeric part
+          const upsizeWithUnit = data.upsizeSize || "0oz"; // Fallback to '0oz' if undefined
+          const upsizeValue = parseFloat(upsizeWithUnit); // Extract numeric part for display
+  
+          // Ensure the data matches the ProductType structure
+          const fetchedProduct = {
+            name: data.title,
+            category: data.prodCategory,
+            availability: data.availability,
+            imageUrl: data.img,
+            itemDescription: data.desc,
+            itemId: data.prodID,
+            calorieLevel: data.calorie,
+            price: data.price,
+            itemCategory: data.prodCategory,
+            size: sizeValue,
+            isUpsize: data.upsize,
+            upsizePrice: data.upsizePrice,
+            upsizeSize: upsizeValue,
+            type: data.type,
+            allergens: fetchedAllergens,
+          };
+  
+          console.log("Fetched Product Object:", fetchedProduct); // Log the entire product object
+  
+          // Determine selected category based on itemId
+          let determinedCategory = "drinks"; // Default category
+          if (fetchedProduct.itemId.includes("drink")) {
+            determinedCategory = "drinks";
+          } else if (fetchedProduct.itemId.includes("mainCourse")) {
+            determinedCategory = "mainCourseMenu";
+          } else if (fetchedProduct.itemId.includes("pastries")) {
+            determinedCategory = "pastriesMenu";
+          } else if (fetchedProduct.itemId.includes("pasta")) {
+            determinedCategory = "pastaMenu";
+          } else if (fetchedProduct.itemId.includes("snacks")) {
+            determinedCategory = "snacksMenu";
+          } else if (fetchedProduct.itemId.includes("sandwiches")) {
+            determinedCategory = "sandwichesMenu";
+          }
+  
+          console.log("Determined Category:", determinedCategory);
+  
+          // Set state with fetched product data
+          setAaa(fetchedProduct.itemCategory);
+          setProduct(fetchedProduct);
+          setImageUrl(fetchedProduct.imageUrl);
+          setFileName(decodeURIComponent(fetchedProduct.imageUrl.split("/").pop().split("?")[0]).split('/').pop());
+          setSelectedAvailability(fetchedProduct.availability);
+          setProdID(fetchedProduct.itemId);
+          setItemName(fetchedProduct.name);
+          setCalorie(fetchedProduct.calorieLevel);
+          setItemPrice(fetchedProduct.price);
+          setPassableSelectedDrinkType(fetchedProduct.itemCategory);
+          setDrinkSize(`${fetchedProduct.size}oz`);
+          setUpsize(fetchedProduct.isUpsize);
+          setUpsizeSize(`${fetchedProduct.upsizeSize}oz`);
+          setUpsizePrice(fetchedProduct.upsizePrice);
+          setSelectedDrinkType(fetchedProduct.type);
+          setSelectedAllergens(fetchedAllergens.filter((allergen) => allergen !== ""));
+          setDesc(fetchedProduct.itemDescription);
+  
+          // Use the determined category directly
+          setSelectedCat(determinedCategory);
+        } else {
+          console.error("No such document!");
+        }
+      } catch (error) {
+        console.error("Error fetching document:", error);
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      console.error("Invalid document ID");
+      setLoading(false);
+    }
+  };  
   
   // useEffect to log `aaa` after it changes
   useEffect(() => {
@@ -662,7 +660,7 @@ const EditProductPage = () => {
   const passableSelectedDrinkTypeRef = useRef(passableSelectedDrinkType);
   useEffect(() => {
     passableSelectedDrinkTypeRef.current = passableSelectedDrinkType;
-  }, [passableSelectedDrinkType, fetchProduct]);
+  }, [passableSelectedDrinkType]);
 
   const selectedDrinkTypeRef = useRef(selectedDrinkType);
   useEffect(() => {
@@ -926,7 +924,7 @@ const EditProductPage = () => {
 
 useEffect(() => {
     fetchCategoriesFromDB(selectedCat);
-}, [selectedCat, fetchProduct]);
+}, [selectedCat]);
 
   if (loading) return <p>Loading...</p>;
 

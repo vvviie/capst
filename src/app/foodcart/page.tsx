@@ -1272,7 +1272,7 @@ const CartPage = () => {
   //#region Fetching of All Items in Cart
   useEffect(() => {
     fetchCartItems();
-  }, [userEmail, fetchCartItems]);
+  }, [userEmail]);
   //#endregion
 
   //#region Check All Existing Orders for Display
