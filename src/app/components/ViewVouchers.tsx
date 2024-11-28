@@ -129,16 +129,22 @@ const ViewVouchers = () => {
 
                   // Set time to 00:00:00 for a date-only comparison
                   today.setHours(0, 0, 0, 0);
-                  const validityDate = new Date(selectedVoucher?.validityDate);
-                  validityDate.setHours(0, 0, 0, 0);
 
-                  // Check expiration (excluding today's date)
-                  if (validityDate < today) {
-                    return "Voucher has expired.";
-                  } else if (validityDate.getTime() === today.getTime()) {
-                    return `Voucher valid today: ${formattedToday}`;
+                  // Ensure validityDate is defined before creating a Date object
+                  if (selectedVoucher?.validityDate) {
+                    const validityDate = new Date(selectedVoucher.validityDate);
+                    validityDate.setHours(0, 0, 0, 0);
+
+                    // Check expiration (excluding today's date)
+                    if (validityDate < today) {
+                      return "Voucher has expired.";
+                    } else if (validityDate.getTime() === today.getTime()) {
+                      return `Voucher valid today: ${formattedToday}`;
+                    } else {
+                      return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
+                    }
                   } else {
-                    return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
+                    return "Voucher validity date is not available.";
                   }
                 })()}
               </p>

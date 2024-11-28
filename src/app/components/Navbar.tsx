@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
+import { User } from "firebase/auth";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   collection,
@@ -13,6 +14,8 @@ import {
   onSnapshot,
   updateDoc,
   getDocs,
+  Unsubscribe,
+  DocumentSnapshot
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -36,7 +39,7 @@ interface Vouchers {
 }
 
 const Navbar = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState("");
   const [role, setRole] = useState(""); // New state for role
   const [totalItems, setTotalItems] = useState(0);
@@ -46,9 +49,12 @@ const Navbar = () => {
   const [vouchers, setVouchers] = useState<Vouchers>({});
   const [hasUserCookie, setHasUserCookie] = useState(false);
 
-  const unsubscribeAuthRef = useRef(null);
-  const unsubscribeCartRef = useRef(null);
-  const unsubscribeDocRef = useRef(null);
+  let unsubscribeAuth: Unsubscribe | null = null;
+  let unsubscribeCartListener: Unsubscribe | null = null;
+  let unsubscribeTempOrderDoc: Unsubscribe | null = null;
+  
+  const unsubscribeCartRef = useRef<(() => void) | null>(null);
+  const unsubscribeDocRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const unsubscribeFoodCart = onSnapshot(
@@ -73,10 +79,6 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    let unsubscribeAuth;
-    let unsubscribeCartListener;
-    let unsubscribeTempOrderDoc;
-
     // Real-time listener for foodCartAvailable
     const unsubscribeFoodCart = onSnapshot(
       doc(db, "adminControls", "adminAccess"),
@@ -96,7 +98,7 @@ const Navbar = () => {
 
     // Authentication state listener
     unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-      if (authUser) {
+      if (authUser && authUser.email) {
         // Check if the email belongs to a staff member
         const isStaff = authUser.email.endsWith("@fikastallestaff.com");
         const collectionName = isStaff ? "staff" : "users";
@@ -207,59 +209,50 @@ const Navbar = () => {
     };
   }, []); // Only run once, when the component mounts
 
-  const cleanUpListeners = () => {
-    if (unsubscribeCartRef.current) {
-      unsubscribeCartRef.current();
-      unsubscribeCartRef.current = null;
-    }
-    if (unsubscribeDocRef.current) {
-      unsubscribeDocRef.current();
-      unsubscribeDocRef.current = null;
-    }
-  };
-
-  const checkCookiesAndLogout = async () => {
+  const checkCookiesAndLogout = async (event?: React.MouseEvent) => {
     const allCookies = Cookies.get();
     if (Object.keys(allCookies).length === 0) {
-      await handleLogout();
+      // If event is provided, pass it to handleLogout, otherwise pass null
+      await handleLogout(event || null); 
     }
   };
 
-  const handleLogout = async (event) => {
-    if (event) event.preventDefault();
+  const handleLogout = async (event: React.MouseEvent | React.FormEvent | null = null) => {
+    if (event) event.preventDefault(); // Prevent default if the event is present
+  
     try {
       const allCookies = Cookies.get();
       Object.keys(allCookies).forEach((cookieName) => {
         Cookies.remove(cookieName);
       });
-
+  
       if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
+        unsubscribeCartRef.current(); // Call the unsubscribe function
+        unsubscribeCartRef.current = null; // Reset the ref
       }
       if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
+        unsubscribeDocRef.current(); // Call the unsubscribe function
+        unsubscribeDocRef.current = null; // Reset the ref
       }
-
-      await signOut(auth);
-      router.push("/");
+  
+      await signOut(auth); // Sign out from Firebase
+      router.push("/"); // Redirect to the home page
     } catch (error) {
-      // Handle any errors during sign-out
+      console.error("Error during logout:", error);
     }
   };
 
   // Fetch voucher configurations from Firestore
-  const fetchVoucherConfig = async () => {
+  const fetchVoucherConfig = async (): Promise<Vouchers> => {
     const voucherConfigRef = collection(db, "vouchers");
     const voucherSnapshot = await getDocs(voucherConfigRef);
-
+  
     const voucherConfig: Vouchers = {}; // Initialize as Vouchers type
-
+  
     voucherSnapshot.forEach((doc) => {
       const data = doc.data();
       const key = doc.id;
-
+  
       // Ensure only vouchers from the static voucherConfig are included
       voucherConfig[key] = {
         thresholdCondition: data.thresholdCondition,
@@ -274,12 +267,15 @@ const Navbar = () => {
         voucherName: data.voucherName,
       };
     });
-
-    setVouchers(voucherConfig); // Store the fetched voucher config in state
+  
+    return voucherConfig; // Explicitly return the voucherConfig object
   };
 
-  const checkAndAssignVouchers = async (userDoc, totalPaid) => {
-    const userVouchers = userDoc.data().vouchers || {}; // Fetch existing vouchers or initialize as empty object
+    const checkAndAssignVouchers = async (
+    userDoc: DocumentSnapshot, // Firestore DocumentSnapshot type
+    totalPaid: number           // totalPaid is a number
+  ) => {
+    const userVouchers = userDoc.data()?.vouchers || {}; // Fetch existing vouchers or initialize as empty object
 
     // Define the thresholds and the corresponding voucher keys
     const thresholds = [
@@ -332,24 +328,27 @@ const Navbar = () => {
     await updateDoc(doc(db, "users", userDoc.id), { vouchers: userVouchers });
   };
 
-  useEffect(() => {
+
+    useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         // Fetch the voucher config from Firestore
         const fetchedVoucherConfig = await fetchVoucherConfig();
 
-        // Set the fetched voucher config to state (you may want to store it in state)
+        // Set the fetched voucher config to state
         setVouchers(fetchedVoucherConfig);
 
         const fetchUserData = async () => {
-          // Use authUser.email to fetch the user document from Firestore
-          const userDoc = await getDoc(doc(db, "users", authUser.email));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const totalPaid = userData.totalPaid || 0; // Fetch totalPaid from Firestore
+          if (authUser.email) {
+            // Use authUser.email to fetch the user document from Firestore
+            const userDoc = await getDoc(doc(db, "users", authUser.email));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const totalPaid = userData.totalPaid || 0; // Fetch totalPaid from Firestore
 
-            // Call the function to check and assign vouchers, passing only the required arguments
-            await checkAndAssignVouchers(userDoc, totalPaid);
+              // Call the function to check and assign vouchers, passing only the required arguments
+              await checkAndAssignVouchers(userDoc, totalPaid);
+            }
           }
         };
         fetchUserData();

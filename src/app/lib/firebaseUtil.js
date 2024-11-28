@@ -12,12 +12,14 @@ export const fetchFeaturedItems = async () => {
         snapshot.docs.forEach((doc) => {
           items.push({ id: doc.id, ...doc.data() });
         });
+        // Resolve with the items and then unsubscribe
         resolve(items);
         unsubscribe(); // Stop listening after fetching
       },
       (error) => {
         console.error("Error fetching featured items:", error);
         reject(error);
+        unsubscribe(); // Ensure the listener is unsubscribed in case of an error
       }
     );
   });

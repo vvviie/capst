@@ -30,7 +30,7 @@ type BuffetItem = {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [buffet, setBuffet] = useState<BuffetItem[]>([]); // State to hold fetched buffet items
-  const [selectedItems, setSelectedItems] = useState({}); // State to track selected items per category
+  const [selectedItems, setSelectedItems] = useState<{ [key: string]: string[] }>({}); // State to track selected items per category
   const [getLimits, setGetLimits] = useState<Record<string, Record<string, number>>>({}); // State to hold limits
 
   useEffect(() => {
@@ -38,14 +38,21 @@ type BuffetItem = {
       const buffetCollection = collection(db, "packageOffers");
       const buffetSnapshot = await getDocs(buffetCollection);
       const buffetList = buffetSnapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((item) => item.title && item.title !== "PackageChoices"); // Exclude PackageChoices document
+      .map((doc) => {
+        const data = doc.data() as BuffetItem; // Explicitly cast data to BuffetItem type
+        const { title, items, limits } = data; // Destructure data and avoid including `id` here
+        return {
+          id: doc.id, // Explicitly add the id
+          title,      // Add title, items, and limits manually
+          items,
+          limits,
+        };
+      })
+      .filter((item) => item.title && item.title !== "PackageChoices");
 
       // Assuming the structure of each document in the packageOffers collection has a title, items, and limits
-      const limits = {};
+      const limits: Record<string, Record<string, number>> = {}; // Define the type for limits
+
       buffetList.forEach((item) => {
         limits[item.title] = item.limits; // Store limits for each category
       });
@@ -53,7 +60,7 @@ type BuffetItem = {
       setBuffet(buffetList);
       setGetLimits(limits);
       // Initialize selectedItems based on fetched categories
-      const initialSelectedItems = {};
+      const initialSelectedItems: Record<string, any[]> = {};
       buffetList.forEach((item) => {
         initialSelectedItems[item.title] = [];
       });
@@ -65,39 +72,43 @@ type BuffetItem = {
 
   useEffect(() => {
     if (prevSelectedPackage !== selectedPackage) {
-      const resetSelectedItems = {};
+      const resetSelectedItems: Record<string, any[]> = {}; // Define the type for resetSelectedItems
+  
       buffet.forEach((item) => {
-        resetSelectedItems[item.title] = [];
+        resetSelectedItems[item.title] = []; // Initialize with an empty array for each title
       });
+  
       setSelectedItems(resetSelectedItems);
       setPrevSelectedPackage(selectedPackage);
   
       // Call the onPackageChange callback when the package changes
       if (onPackageChange) {
-        onPackageChange();  // Updated callback to onPackageChange
+        onPackageChange(); // Updated callback to onPackageChange
       }
     }
   }, [selectedPackage, buffet, prevSelectedPackage, onPackageChange]);
 
-  const handleClickOutside = (event) => {
-    if (formRef.current && !formRef.current.contains(event.target)) {
-      setOpen(false);
-    }
-  };
-
   useEffect(() => {
+    // Event listener setup and teardown based on the 'open' state
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+  
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-
+  
+    // Cleanup event listener on unmount or when 'open' changes
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open]);
 
-  const handleItemSelect = (category, item) => {
+  const handleItemSelect = (category: string, item: string) => {
     setSelectedItems((prev) => {
       const currentSelection = prev[category];
 
@@ -122,25 +133,26 @@ type BuffetItem = {
   };
 
   const handleFinalize = () => {
-  const unmetSelections = Object.keys(getLimits).filter(
-    (category) =>
-      selectedItems[category].length < getLimits[category][selectedPackage]
-  );
-
-  if (unmetSelections.length > 0) {
-    setShowErrorModal(true);
-    setErrorMessage(
-      `Please complete your selection for the following categories:\n- ${unmetSelections.join("\n- ")}`
+    const unmetSelections = Object.keys(getLimits).filter(
+      (category) =>
+        selectedItems[category].length < getLimits[category][selectedPackage]
     );
-  } else {
-    const chosenItemsArray: ChosenItem[] = Object.keys(selectedItems).map((category) => ({
-      title: category, // Ensure 'title' matches the expected field
-      items: selectedItems[category], // Ensure 'items' matches the expected field
-    }));
-    onFinalize(chosenItemsArray);
-    setOpen(false);
-  }
-};
+  
+    if (unmetSelections.length > 0) {
+      setShowErrorModal(true);
+      setErrorMessage(
+        `Please complete your selection for the following categories:\n- ${unmetSelections.join("\n- ")}`
+      );
+    } else {
+      const chosenItemsArray: ChosenItem[] = Object.keys(selectedItems).map((category) => ({
+        id: category, // Assign the category as the id
+        title: category, // Ensure 'title' matches the expected field
+        items: selectedItems[category], // Ensure 'items' matches the expected field
+      }));
+      onFinalize(chosenItemsArray);
+      setOpen(false);
+    }
+  };
 
   return (
     <div className="w-1/2 cursor-pointer z-10">

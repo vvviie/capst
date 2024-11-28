@@ -1,6 +1,10 @@
 import React from "react";
 
-const CheckoutPopup = ({ message }) => {
+interface CheckoutPopupProps {
+  message: string; // Explicitly declare the type for message
+}
+
+const CheckoutPopup: React.FC<CheckoutPopupProps> = ({ message }) => {
   return (
     <div
       className="fixed top-14 left-0 w-full h-[calc(100vh-56px)] flex items-start justify-center z-20"

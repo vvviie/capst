@@ -29,6 +29,17 @@ interface ChartData {
   datasets: ChartDataset[];
 }
 
+// Define the structure of each order
+interface OrderData {
+  date: string; // The date of the order as a string
+  totalOrders: number; // The total number of orders for that day
+}
+
+// Define the type for the `ordersData` object
+interface OrdersData {
+  [key: string]: OrderData; // Each key is a string (doc.id), and the value is the order data
+}
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -49,10 +60,11 @@ const AverageOrdersGraph = () => {
     const unsubscribe = onSnapshot(
       collection(db, "dataAverageOrders"),
       (querySnapshot) => {
-        const ordersData = {};
+        const ordersData: OrdersData = {};
 
         querySnapshot.forEach((doc) => {
-          const data = doc.data();
+          // Cast the document data to OrderData type
+          const data = doc.data() as OrderData;
           ordersData[doc.id] = data; // Store the data using the document ID as the key
         });
 
@@ -114,7 +126,7 @@ const AverageOrdersGraph = () => {
     responsive: true,
     plugins: {
       legend: {
-        position: "top",
+        position: "top" as const,
       },
       title: {
         display: true,
