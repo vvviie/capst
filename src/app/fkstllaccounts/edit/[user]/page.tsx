@@ -22,12 +22,12 @@ const EditStaffAccountPage = () => {
     //   PARA LANG SA POP-UP KAPAG NAG-ADD BUTTON
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const pathname = usePathname();
-    const email = pathname.split("/").pop(); // Extract the email from the pathname
+    const email: string = pathname ? pathname.split("/").pop() ?? "" : "";
     const [errorMessage, setErrorMessage] = useState("");
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
-    const [status, setStatus] = useState("");
-    const [role, setRole] = useState("");
+    const [selectedStatus, setSelectedStatus] = useState(status[0].value); // Rename this state
+    const [selectedRole, setSelectedRole] = useState(roles[0].value);      // Rename this state
 
     const [staffData, setStaffData] = useState({
         email: '',
@@ -62,8 +62,8 @@ const EditStaffAccountPage = () => {
     }, [email]);
 
     // Handle First Name Input Change
-    const handleFirstNameInputChange = (e) => {
-        const { value } = e.target;
+    const handleFirstNameInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target; // Use the correctly typed 'event' variable
         setStaffData((prevData) => ({
             ...prevData,
             firstName: value, // Update firstName in staffData state
@@ -71,26 +71,26 @@ const EditStaffAccountPage = () => {
     };
 
     // Handle Last Name Input Change
-    const handleLastNameInputChange = (e) => {
-        const { value } = e.target;
+    const handleLastNameInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const { value } = event.target;
         setStaffData((prevData) => ({
             ...prevData,
-            lastName: value,
+            lastName: value, // Update lastName in staffData state
         }));
     };
 
     // Handle Status Change
-    const handleStatusChange = (e) => {
-        const { value } = e.target;
+    const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const { value } = event.target;
         setStaffData((prevData) => ({
             ...prevData,
-            status: value,
+            status: value, // Update status in staffData state
         }));
     };
 
     // Handle Role Change
-    const handleRoleChange = (e) => {
-        const { value } = e.target;
+    const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const { value } = event.target;
         setStaffData((prevData) => ({
             ...prevData,
             role: value,

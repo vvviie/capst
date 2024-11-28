@@ -329,35 +329,36 @@ const Navbar = () => {
   };
 
 
-    useEffect(() => {
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
-        // Fetch the voucher config from Firestore
-        const fetchedVoucherConfig = await fetchVoucherConfig();
+        try {
+          // Fetch the voucher config from Firestore
+          const fetchedVoucherConfig = await fetchVoucherConfig();
+          setVouchers(fetchedVoucherConfig);
 
-        // Set the fetched voucher config to state
-        setVouchers(fetchedVoucherConfig);
-
-        const fetchUserData = async () => {
           if (authUser.email) {
             // Use authUser.email to fetch the user document from Firestore
             const userDoc = await getDoc(doc(db, "users", authUser.email));
             if (userDoc.exists()) {
               const userData = userDoc.data();
-              const totalPaid = userData.totalPaid || 0; // Fetch totalPaid from Firestore
+              const totalPaid = userData.totalPaid || 0;
 
-              // Call the function to check and assign vouchers, passing only the required arguments
+              // Check and assign vouchers
               await checkAndAssignVouchers(userDoc, totalPaid);
             }
           }
-        };
-        fetchUserData();
+        } catch (error) {
+          console.error("Error fetching data or assigning vouchers:", error);
+        }
+      } else {
+        // Handle unauthenticated state if needed
+        console.log("No user is signed in.");
       }
     });
 
-    // Cleanup function to unsubscribe from the auth state listener when the component unmounts or the user changes
     return () => unsubscribe();
-  }, [user]); // This will run when the `user` state changes
+  }, [user]);
 
   useEffect(() => {
     if (typeof document !== "undefined") {

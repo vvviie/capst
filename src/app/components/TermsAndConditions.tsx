@@ -7,7 +7,11 @@ import {
   terms,
 } from "../data";
 
-const TermsAndConditions = ({ onClose }) => {
+interface TermsAndConditionsProps {
+  onClose: () => void; // onClose is a function that doesn't return anything
+}
+
+const TermsAndConditions: React.FC<TermsAndConditionsProps> = ({ onClose }) => {
   return (
     <div
       className="bg-white border-2 border-gray-100 shadow-md rounded-md w-full max-w-[500px]
