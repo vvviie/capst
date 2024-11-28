@@ -103,7 +103,7 @@ const BookPage = () => {
           >
             <div className="relative sm:absolute sm:top-0 sm:left-0 w-1/3 sm:w-full aspect-square">
               <Image
-                src={category.img}
+                src={category.img || "/fikaplace/3.jpg" || "/fikaplace/1.jpg" || "/fikaplace/6.jpg"}
                 alt={category.title}
                 fill
                 className="object-cover"

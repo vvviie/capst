@@ -21,6 +21,15 @@ import {
   getDocs,
   getDoc,
 } from "firebase/firestore";
+import { ChosenItem } from "@/app/hooks/types";
+
+type PackageChoice = {
+  id: string;
+  label: string;
+  price: number;
+};
+
+type LimitsMap = { [key: string]: any };
 
 const ReservationPage = () => {
   //#region Global Variables
@@ -28,7 +37,7 @@ const ReservationPage = () => {
   const modalRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
-  const slug = pathname.split("/").pop();
+  const slug = pathname?.split("/").pop() || '';
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
@@ -62,9 +71,9 @@ const ReservationPage = () => {
 
   const packagePricePerPerson = 550; // Price per person
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
-  const [chosenItems, setChosenItems] = useState([]);
-  const [packageChoices, setPackageChoices] = useState([]);
-  const [limits, setLimits] = useState({}); // To store limits for each category
+  const [chosenItems, setChosenItems] = useState<ChosenItem[]>([]);
+  const [packageChoices, setPackageChoices] = useState<PackageChoice[]>([]);
+  const [limits, setLimits] = useState<LimitsMap>({});
 
   const [remarks, setRemarks] = useState("");
   //#endregion
@@ -194,15 +203,17 @@ const ReservationPage = () => {
 
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
-      setError("Please fill in all required fields."); // Show error message
-      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      setError(true)
+      setErrorMessage("Please fill in all required fields."); // Show error message
+      setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
       return;
     }
 
     // Check for hour input of 0 specifically
     if (hourInput === 0) {
-      setError("Please enter a valid hour."); // Show error message for invalid hour
-      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      setError(true)
+      setErrorMessage("Please enter a valid hour."); // Show error message for invalid hour
+      setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
       return;
     }
 
@@ -339,22 +350,22 @@ const ReservationPage = () => {
       try {
         const limitsCollection = collection(db, "packageOffers"); // Assuming limits are in the same collection
         const limitsSnapshot = await getDocs(limitsCollection);
-        const limitsMap = {};
-
+        const limitsMap: LimitsMap = {}; // Explicitly typed object
+  
         limitsSnapshot.docs.forEach((doc) => {
           const data = doc.data();
-          if (data.limits) {
+          if (data.limits && data.title) { // Ensure data has 'limits' and 'title'
             limitsMap[data.title] = data.limits; // Store limits by document title
           }
         });
-
+  
         console.log("Fetched Limits:", limitsMap); // Debugging log
         setLimits(limitsMap);
       } catch (error) {
         console.error("Error fetching limits:", error);
       }
     };
-
+  
     fetchLimits();
   }, []);
 
@@ -475,7 +486,7 @@ const ReservationPage = () => {
     }
   }, [showLoginModal]);
 
-  const handleFinalize = (chosenItemsArray) => {
+  const handleFinalize = (chosenItemsArray: ChosenItem[]) => {
     setChosenItems(chosenItemsArray);
   };
 
@@ -535,7 +546,7 @@ const ReservationPage = () => {
     }
     //#region Time StartEnd
     // Helper function to convert 12-hour format to 24-hour format for proper comparison
-    function convertTo24Hour(time) {
+    function convertTo24Hour(time: number): number {
       if (time === 12) return 12; // 12 PM is 12 in 24-hour format
       if (
         time === 1 ||
@@ -613,7 +624,7 @@ const ReservationPage = () => {
     //#endregion
 
     // Format the selected date
-    const formatDate = (date) => {
+    const formatDate = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
       const day = String(date.getDate()).padStart(2, "0");
@@ -628,10 +639,10 @@ const ReservationPage = () => {
         : selectedPackage === "B"
         ? "Package B"
         : "Package C";
-    const buffetChosen = chosenItems.reduce((acc, item) => {
-      acc[item.title] = item.items.join(", ");
-      return acc;
-    }, {});
+        const buffetChosen = chosenItems.reduce<{ [key: string]: string }>((acc, item) => {
+          acc[item.title] = item.items.join(", ");
+          return acc;
+        }, {});
 
     const orderId = Math.floor(
       1000000000 + Math.random() * 9000000000
@@ -786,15 +797,12 @@ const ReservationPage = () => {
                     min={12}
                     max={19}
                     required
-                    onInput={(e) => {
-                      // Limit to 2 digits and prevent values greater than 19
-                      if (
-                        e.target.value.length > 2 ||
-                        parseInt(e.target.value) > 19
-                      ) {
-                        e.target.value = e.target.value.slice(0, 2); // Limit to 2 digits
-                        if (parseInt(e.target.value) > 19) {
-                          e.target.value = "19"; // Set to max value if exceeded
+                    onInput={(e: React.ChangeEvent<HTMLInputElement>) => {
+                      const value = e.target.value;
+                      if (value.length > 2 || parseInt(value) > 19) {
+                        e.target.value = value.slice(0, 2);
+                        if (parseInt(value) > 19) {
+                          e.target.value = "19";
                         }
                       }
                     }}
@@ -1113,17 +1121,24 @@ const ReservationPage = () => {
         </form>
         {/* IMAGE CONTAINER */}
         <div className="w-full aspect-video relative lg:aspect-auto lg:w-1/2 z-0">
-          <Image
-            src={
-              slug === "table"
-                ? Reserve[0].img
-                : slug === "event"
-                ? Reserve[1].img
-                : Reserve[2].img
-            }
-            fill
-            className="object-cover lg:h-full"
-          />
+        <Image
+          src={
+            slug === "table"
+              ? Reserve[0]?.img || "/fikaplace/3.jpg"
+              : slug === "event"
+              ? Reserve[1]?.img || "/fikaplace/1.jpg"
+              : Reserve[2]?.img || "/fikaplace/6.jpg"
+          }
+          alt={
+            slug === "table"
+              ? "Table setting image"
+              : slug === "event"
+              ? "Event image"
+              : "Default image"
+          }
+          fill
+          className="object-cover lg:h-full"
+        />
         </div>
       </div>
       {/* BOOKING MADE POP UP */}

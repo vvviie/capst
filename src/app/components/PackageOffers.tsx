@@ -3,16 +3,36 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../firebase"; // Adjust the path as needed
 import { collection, getDocs } from "firebase/firestore";
+import { ChosenItem } from "../hooks/types";
 
-const PackageOffers = ({ selectedPackage, onFinalize }) => {
+type PackageOffersProps = {
+  selectedPackage: string;
+  onFinalize: (chosenItemsArray: ChosenItem[]) => void; // Update to ChosenItem[]
+  onPackageChange: () => void; // Update prop name here
+};
+
+type BuffetItem = {
+  id: string;
+  title: string;
+  items: string[];
+  limits: Record<string, number>;
+};
+
+  const PackageOffers: React.FC<PackageOffersProps> = ({
+    selectedPackage,
+    onFinalize,
+    onPackageChange,
+  }) => {
+
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
   const [prevSelectedPackage, setPrevSelectedPackage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [buffet, setBuffet] = useState([]); // State to hold fetched buffet items
+  const [buffet, setBuffet] = useState<BuffetItem[]>([]); // State to hold fetched buffet items
   const [selectedItems, setSelectedItems] = useState({}); // State to track selected items per category
-  const [getLimits, setGetLimits] = useState({}); // State to hold limits
+  const [getLimits, setGetLimits] = useState<Record<string, Record<string, number>>>({}); // State to hold limits
+
   useEffect(() => {
     const fetchBuffetData = async () => {
       const buffetCollection = collection(db, "packageOffers");
@@ -51,8 +71,13 @@ const PackageOffers = ({ selectedPackage, onFinalize }) => {
       });
       setSelectedItems(resetSelectedItems);
       setPrevSelectedPackage(selectedPackage);
+  
+      // Call the onPackageChange callback when the package changes
+      if (onPackageChange) {
+        onPackageChange();  // Updated callback to onPackageChange
+      }
     }
-  }, [selectedPackage, buffet, prevSelectedPackage]);
+  }, [selectedPackage, buffet, prevSelectedPackage, onPackageChange]);
 
   const handleClickOutside = (event) => {
     if (formRef.current && !formRef.current.contains(event.target)) {
@@ -97,25 +122,25 @@ const PackageOffers = ({ selectedPackage, onFinalize }) => {
   };
 
   const handleFinalize = () => {
-    const unmetSelections = Object.keys(getLimits).filter(
-      (category) =>
-        selectedItems[category].length < getLimits[category][selectedPackage]
-    );
+  const unmetSelections = Object.keys(getLimits).filter(
+    (category) =>
+      selectedItems[category].length < getLimits[category][selectedPackage]
+  );
 
-    if (unmetSelections.length > 0) {
-      setShowErrorModal(true);
-      setErrorMessage(
-        `Please complete your selection for: ${unmetSelections.join(", ")}`
-      );
-    } else {
-      const chosenItemsArray = Object.keys(selectedItems).map((category) => ({
-        title: category,
-        items: selectedItems[category],
-      }));
-      onFinalize(chosenItemsArray);
-      setOpen(false);
-    }
-  };
+  if (unmetSelections.length > 0) {
+    setShowErrorModal(true);
+    setErrorMessage(
+      `Please complete your selection for the following categories:\n- ${unmetSelections.join("\n- ")}`
+    );
+  } else {
+    const chosenItemsArray: ChosenItem[] = Object.keys(selectedItems).map((category) => ({
+      title: category, // Ensure 'title' matches the expected field
+      items: selectedItems[category], // Ensure 'items' matches the expected field
+    }));
+    onFinalize(chosenItemsArray);
+    setOpen(false);
+  }
+};
 
   return (
     <div className="w-1/2 cursor-pointer z-10">

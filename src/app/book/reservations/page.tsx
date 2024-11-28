@@ -17,11 +17,35 @@ import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 
+interface BuffetItem {
+  title: string;
+  foods: string[]; // Array of food items
+}
+
+interface Reservation {
+  id: string;
+  type: string;
+  dateReserved: string;
+  dateToBeReserved: string;
+  timeReserved: string;
+  timeToBeReserved: string;
+  numberOfPersons: number;
+  reservedBy: string;
+  status: string;
+  package: string;
+  buffet: BuffetItem[];
+  price: number;
+  paymentType: string;
+  downpayment: number;
+  balance: number;
+  remarks: string;
+}
+
 const ReservationsPage = () => {
   const [expandedRes, setExpandedRes] = useState<Record<string, boolean>>({});
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [reservations, setReservations] = useState([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [hasReservation, setHasReservation] = useState(false);
   const [selectedReservationId, setSelectedReservationId] = useState<
     string | null
@@ -97,10 +121,10 @@ const ReservationsPage = () => {
           const data = doc.data();
 
           // Parse buffetChosen from the stored object with comma-separated values
-          const buffetChosen = Object.entries(data.buffetChosen || {}).map(
-            ([title, foods]) => ({
+          const buffetChosen: BuffetItem[] = Object.entries(data.buffetChosen || {}).map(
+            ([title, foods]: [string, unknown]) => ({
               title,
-              foods: foods.split(",").map((food) => food.trim()),
+              foods: (foods as string).split(",").map((food) => food.trim()),
             })
           );
 
@@ -187,18 +211,11 @@ const ReservationsPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
@@ -233,18 +250,11 @@ const ReservationsPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for general content text to 14px, normal, left-aligned
         doc.setFontSize(12);
@@ -337,9 +347,9 @@ const ReservationsPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
-
+  
     // Adjust the visible page numbers if necessary
     if (pageNumber >= pageWindowStart + pagesToShow) {
       setPageWindowStart(pageWindowStart + 1);
