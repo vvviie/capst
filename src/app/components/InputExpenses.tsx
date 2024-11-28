@@ -17,6 +17,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
   const [activeExpenseIndex, setActiveExpenseIndex] = useState(null); // State to track the active expense
 
   const handleExpenseClick = (index) => {
+    setInput("today");
     setActiveExpenseIndex(index); // Set the clicked expense as active
   };
 
@@ -25,12 +26,15 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     setExpenseAmount(0);
     setAddedExpenses([]);
     setTotalExpense(0);
+    setInput("today");
     setError("");
     toggleForm();
   };
 
   const handleCancel = () => {
+
     setActiveExpenseIndex(null); // Reset the active expense index to close the action menu
+
   };
   const handleAddExpense = () => {
     // Clear previous error
@@ -115,38 +119,48 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
 
     const now = new Date();
     const todayDocumentId = now.toISOString().split("T")[0]; // Today's date in YYYY-MM-DD format
+    const timeString = `${now.getHours().toString().padStart(2, "0")}:${now
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`; // Get the current time
+
+    // Create a new array of added expenses with the time included
+    const updatedAddedExpenses = addedExpenses.map((expense) => ({
+      ...expense,
+      time: timeString, // Add the time to each expense
+    }));
+
+    // Determine the document ID based on input
+    const documentId = input === "today" ? todayDocumentId : date;
+
     const expenseData = {
       date: date || todayDocumentId,
-      time: `${now.getHours().toString().padStart(2, "0")}:${now
-        .getMinutes()
-        .toString()
-        .padStart(2, "0")}`,
       totalExpenses: totalExpense,
-      addedExpenses: addedExpenses,
+      addedExpenses: updatedAddedExpenses, // Use the updated array
     };
 
-    // Check if the document for today exists
-    const todayDocRef = doc(db, "cafeExpenses", todayDocumentId);
-    const todayDocSnap = await getDoc(todayDocRef);
+    // Check if the document for the specified date exists
+    const docRef = doc(db, "cafeExpenses", documentId);
+    const docSnap = await getDoc(docRef);
 
     let currentTotalExpenses = 0; // Initialize variable to hold current total expenses
 
-    if (todayDocSnap.exists()) {
+    if (docSnap.exists()) {
       // Document exists, update it
-      const existingData = todayDocSnap.data();
-      const updatedAddedExpenses = [
+      const existingData = docSnap.data();
+      const newAddedExpenses = [
         ...existingData.addedExpenses,
-        ...addedExpenses,
+        ...updatedAddedExpenses,
       ];
       currentTotalExpenses = existingData.totalExpenses + totalExpense; // Update totalExpenses
-      await updateDoc(todayDocRef, {
-        addedExpenses: updatedAddedExpenses,
+      await updateDoc(docRef, {
+        addedExpenses: newAddedExpenses,
         totalExpenses: currentTotalExpenses,
       });
     } else {
       // Document does not exist, create it
       currentTotalExpenses = totalExpense; // If creating a new document, totalExpenses is just the current totalExpense
-      await setDoc(todayDocRef, expenseData);
+      await setDoc(docRef, expenseData);
     }
 
     // Reset the form state
@@ -155,15 +169,20 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     setDate("");
     setExpenseLabel("");
     setExpenseAmount(0);
+    setInput("today");
+
 
     // Submit to salesData collection
     const salesDocumentId = "salesExpensesToday";
     const salesDataRef = doc(db, "salesData", salesDocumentId);
 
     // Prepare the update data
-    const formattedDate = `${
-      now.getMonth() + 1
-    }/${now.getDate()}/${now.getFullYear()}`; // Format date as MM/DD/YYYY
+    const formattedDate =
+      input === "today"
+        ? `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}` // Format date as MM/DD/YYYY for today
+        : `${new Date(date).getMonth() + 1}/${new Date(
+            date
+          ).getDate()}/${new Date(date).getFullYear()}`; // Format date as MM/DD/YYYY for selected date
 
     // Update the salesData document
     const expensesData = {
@@ -203,7 +222,14 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
 
   const handleClickOutside = (event) => {
     if (formRef.current && !formRef.current.contains(event.target)) {
+      
       toggleForm();
+      setExpenseLabel("");
+      setExpenseAmount(0);
+      setAddedExpenses([]);
+      setTotalExpense(0);
+      setInput("today");
+      setError("");
     }
   };
 
