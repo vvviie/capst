@@ -118,7 +118,7 @@ const CRUDProductPage = () => {
       console.log("Cleaning up listener");
       unsubscribe();
     };
-  }, [auth, db]); // Dependencies
+  }, [auth, db, email]); // Dependencies
 
   const handleItemClick = (id: string) => {
     setActiveItem(activeItem === id ? null : id);
@@ -211,7 +211,7 @@ const CRUDProductPage = () => {
     if (mainCategory) {
       fetchCategoriesFromDB(mainCategory); // Fetch categories based on selected main category
     }
-  }, [mainCategory]);
+  }, [mainCategory, fetchCategoriesFromDB]);
 
   useEffect(() => {
     if (
@@ -221,7 +221,7 @@ const CRUDProductPage = () => {
       // If the current selectedCategory is not in the new menuCategories, reset to the first category
       setSelectedCategory(menuCategories[0]);
     }
-  }, [menuCategories]); // Run when menuCategories changes
+  }, [menuCategories, selectedCategory]); // Run when menuCategories changes
 
   const filteredDrinks = useMemo(() => {
     return drinks.filter((drink) =>

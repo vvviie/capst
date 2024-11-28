@@ -274,7 +274,7 @@ const OrdersPage = () => {
 
     // Cleanup function to unsubscribe from onSnapshot when component unmounts or userEmail changes
     return () => unsubscribe();
-  }, [userEmail]);
+  }, [userEmail, applySrPWD]);
 
   // Check orders length on state change
   useEffect(() => {

@@ -71,7 +71,7 @@ const useDynamicCategoryFetch = () => {
     if (menuCategories.length > 0) {
       fetchItemsForCategories();
     }
-  }, [menuCategories]);
+  }, [menuCategories,fetchItemsForCategories]);
 
   return { menuCategories, itemsByCategory, loading, error };
 };

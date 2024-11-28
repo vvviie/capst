@@ -81,7 +81,7 @@ const useMenuCategories = (mainCategory: string) => {
     if (mainCategory) {
       return fetchCategoriesFromDB(); // Trigger fetching based on mainCategory
     }
-  }, [mainCategory]); // Dependency array ensures fetch is triggered when mainCategory changes
+  }, [mainCategory, fetchCategoriesFromDB]); // Dependency array ensures fetch is triggered when mainCategory changes
 
   return menuCategories; // Return the filtered menu categories
 };

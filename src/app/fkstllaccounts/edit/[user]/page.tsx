@@ -59,7 +59,7 @@ const EditStaffAccountPage = () => {
         };
     
         fetchStaffData();
-    }, [email]);
+    }, [email, status]);
 
     // Handle First Name Input Change
     const handleFirstNameInputChange = (e) => {
