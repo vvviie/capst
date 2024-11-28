@@ -1,0 +1,377 @@
+"use client";
+import { ExpenseDocs, months } from "@/app/data";
+import Link from "next/link";
+import React, { useEffect, useState } from "react";
+
+const ExpensesPage = () => {
+  const [totalExpenses, setTotalExpenses] = useState(2000);
+
+  // Calculate the total expenses when the component mounts or when ExpenseDocs changes
+  useEffect(() => {
+    const total = ExpenseDocs.reduce(
+      (sum, doc) =>
+        sum +
+        doc.addedExpenses.reduce(
+          (innerSum, expense) => innerSum + expense.expenseAmount,
+          0
+        ),
+      0
+    );
+    setTotalExpenses(total);
+  }, []);
+
+  //#region PAGES CODE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
+  const pagesToShow = 5;
+
+  // Calculate total pages
+  const totalPages = Math.ceil(ExpenseDocs.length / itemsPerPage);
+
+  // Get current page orders
+  const currentExp = ExpenseDocs.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const visiblePages = Array.from(
+    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
+    (_, index) => pageWindowStart + index
+  );
+
+  // Handle page change
+  const goToPage = (pageNumber) => {
+    setCurrentPage(pageNumber);
+
+    // Adjust the visible page numbers if necessary
+    if (pageNumber >= pageWindowStart + pagesToShow) {
+      setPageWindowStart(pageWindowStart + 1);
+    } else if (pageNumber < pageWindowStart) {
+      setPageWindowStart(pageWindowStart - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+
+      // Adjust page window start for "Previous"
+      if (currentPage - 1 < pageWindowStart) {
+        setPageWindowStart(pageWindowStart - 1);
+      }
+    }
+  };
+
+  // Handle items per page change
+  const handleItemsPerPageChange = (e) => {
+    const selectedValue = parseInt(e.target.value, 10);
+    setItemsPerPage(selectedValue);
+    setCurrentPage(1);
+    setPageWindowStart(1);
+  };
+  //#endregion
+
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
+  const years = Array.from(
+    { length: 11 }, // LENGTH OF YEARS
+    (_, i) => 2023 + i
+  );
+
+  const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedYear(Number(event.target.value));
+  };
+
+  const [selectedDate, setSelectedDate] = useState(ExpenseDocs[0]);
+
+  const handleDateClick = (doc) => {
+    setSelectedDate(doc);
+  };
+
+  const [editingIndex, setEditingIndex] = useState(null); // To track which expense is being edited
+  const [editedAmount, setEditedAmount] = useState(null); // To track the new value during editing
+
+  const handleEditClick = (index, currentAmount) => {
+    setEditingIndex(index);
+    setEditedAmount(currentAmount);
+  };
+
+  const handleSaveClick = (index) => {
+    // Logic to save the edited amount can go here (e.g., update backend or state)
+    const updatedExpenses = [...selectedDate.addedExpenses];
+    updatedExpenses[index].expenseAmount = editedAmount;
+    setSelectedDate({ ...selectedDate, addedExpenses: updatedExpenses });
+    setEditingIndex(null);
+  };
+
+  return (
+    <div
+      className="bg-white min-h-[80vh] mt-14 w-full flex justify-center items-start
+    px-5 md:px-24 xl:px-56 
+    lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center py-10"
+    >
+      {/* MAIN CONTAINER */}
+      <div className="w-full max-w-[500px] lg:max-w-[900px]">
+        {/* LINK BACK TO DASHBOARD */}
+        <Link
+          href={"/adminhome"}
+          className="flex items-center space-x-1 font-bold text-orange-950 text-xl text-left
+              hover:text-orange-800 cursor-pointer lg:text-2xl mb-2"
+        >
+          <i className="fa fa-angle-left" aria-hidden="true"></i>
+          <span>Dashboard</span>
+        </Link>
+        {/* HEADER */}
+        <div className="w-full flex gap-4 items-center mb-2">
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+          <span className="text-2xl text-center font-bold text-orange-900">
+            Expenses
+          </span>
+          <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+        </div>
+        {/* FORM */}
+        <div
+          className="w-full bg-white border-2 border-gray-100 shadow-md rounded-md pt-4 pb-6 px-4
+        flex flex-col gap-2 items-center"
+        >
+          {/* MONTH AND YEAR */}
+          <div className="w-full flex gap-2 items-center font-bold">
+            <select
+              name="selectMonth"
+              id="selectMonth"
+              className="border-2 pl-2 pr-4 py-1 rounded-md text-gray-500 w-2/3 text-center border-gray-200"
+            >
+              {months.map((month) => (
+                <option value={month}>{month}</option>
+              ))}
+            </select>
+            <select
+              id="yearSelect"
+              value={selectedYear}
+              onChange={handleYearChange}
+              className="border-2 pl-2 pr-4 py-1 rounded-md text-gray-500 w-1/3 border-gray-200 text-center"
+            >
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="h-0.5 bg-gray-100 w-full my-2"></div>
+          <div className="w-full flex justify-between gap-2 items-center font-bold">
+            <span className="text-gray-800">Monthly Total</span>
+            <span className="text-white bg-red-500 px-2 py-1 rounded-full text-sm">
+              PHP {totalExpenses.toFixed(2)}
+            </span>
+          </div>
+          <div className="h-0.5 bg-gray-100 w-full my-2"></div>
+
+          {/* DATE AND DETAILS CONTAINER */}
+          <div className="flex flex-col gap-4 items-center w-full lg:flex-row lg:items-start">
+            {/* DATE CONTAINER */}
+            <div
+              className="flex flex-col gap-2 w-full bg-gray-100 p-2 rounded-md lg:w-2/5
+            lg:min-w-80"
+            >
+              <div className="w-full flex justify-between gap-2 items-center">
+                <h1 className="font-semibold text-gray-700">Dates</h1>
+                <span className="flex items-center gap-1">
+                  <span className="font-semibold text-xs text-gray-500">
+                    Shown Items:
+                  </span>
+                  <select
+                    name="selectItemsPerPage"
+                    id="selectItemsPerPage"
+                    className="border-2 pl-1 rounded-md text-gray-500 w-12"
+                    onChange={handleItemsPerPageChange}
+                  >
+                    <option value={3}>3</option>
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                  </select>
+                </span>
+              </div>
+              <hr />
+              {/* DATE LIST */}
+              <div className="flex flex-col gap-2 justify-center">
+                {ExpenseDocs.length === 0 ? (
+                  <p>There is no recorded expense this month.</p>
+                ) : (
+                  <>
+                    {currentExp.map((exp) => (
+                      <div
+                        className={`w-full border-2 py-1 px-2 rounded-md shadow-md text-gray-600 cursor-pointer ${
+                          selectedDate.docID === exp.docID
+                            ? "bg-orange-300 border-orange-300 text-white"
+                            : "bg-white border-gray-100 hover:bg-orange-100 hover:text-orange-500 hover:border-orange-100"
+                        }`}
+                        key={exp.docID}
+                        onClick={() => handleDateClick(exp)}
+                      >
+                        <p className="w-full font-bold text-center">
+                          {exp.date}
+                        </p>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+              {/* PAGINATION CONTROLS */}
+              <div className="flex justify-center items-center space-x-2">
+                <button
+                  className="font-semibold cursor-pointer w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                  disabled={currentPage === 1}
+                  onClick={handlePrevious}
+                >
+                  Prev
+                </button>
+                {visiblePages.map((page) => (
+                  <button
+                    key={page}
+                    className={`cursor-pointer h-9 aspect-square font-semibold rounded-md ${
+                      currentPage === page
+                        ? "bg-orange-300 text-white border-orange-300 border-2"
+                        : "bg-white text-gray-500 hover:bg-orange-50 border-2 border-gray-100 hover:border-orange-50 hover:text-orange-500"
+                    } shadow-md`}
+                    onClick={() => goToPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  className="cursor-pointer font-semibold w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                  disabled={currentPage === totalPages}
+                  onClick={handleNext}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+            {/* DETAILS CONTAINER */}
+            <div className="p-2 sm:px-4 rounded-md bg-gray-100 w-full lg:3/5">
+              <div className="flex flex-col gap-2 w-full">
+                <div className="w-full flex justify-between gap-2 items-center">
+                  <h1 className="font-semibold text-gray-700">Details</h1>
+                  <button
+                    className="bg-red-500 shadow-md rounded-md px-2 py-1 text-white font-semibold
+                  text-sm space-x-2"
+                  >
+                    <i className="fa fa-trash text-xs" aria-hidden="true"></i>
+                    <span className="">Delete</span>
+                  </button>
+                </div>
+                <hr className="" />
+                <div className="w-full flex justify-between gap-2 items-center">
+                  {/* PUT THE SELECTED DOCEXPENSE DATE HERE */}
+                  <h1
+                    className="font-bold text-sm text-gray-600 bg-white px-2 py-1 rounded-sm shadow-sm
+                  space-x-2"
+                  >
+                    <span>For</span>
+                    <span className="text-orange-300">{selectedDate.date}</span>
+                  </h1>
+                  <span className="flex items-center gap-1">
+                    <span className="font-semibold text-xs text-gray-500">
+                      Shown Items:
+                    </span>
+                    {/* PUT NUMBER/LENGTH OF addedExpenses OF THE SELECTED DOCEXPENSE HERE */}
+                    <span className="bg-gray-500 text-xs px-2 py-0.5 rounded-md text-center text-white">
+                      {selectedDate.addedExpenses.length}
+                    </span>
+                  </span>
+                </div>
+                <hr className="mb-1" />
+              </div>
+              {/* LIST OF EXPENSES */}
+              <div className="flex flex-col gap-2 w-full">
+                {/* PUT THE DETAILS OF THE addedExpenses HERE */}
+                {selectedDate.addedExpenses.map((expense, index) => (
+                  <div
+                    className="flex items-center justify-between bg-white border-2 border-gray-100
+                  shadow-md py-1 px-2 sm:px-4"
+                    key={index}
+                  >
+                    {/* EXPENSE LABEL */}
+                    <span className="text-gray-600 font-bold text-sm">
+                      {expense.expenseLabel}
+                    </span>
+                    {editingIndex === index ? (
+                      <input
+                        type="number"
+                        min={1}
+                        className="border-2 rounded-md max-w-20 pl-2 text-sm h-8 text-red-500 font-bold"
+                        placeholder="Amount"
+                        value={editedAmount}
+                        onChange={(e) =>
+                          setEditedAmount(Number(e.target.value))
+                        }
+                      />
+                    ) : (
+                      <span className="text-red-500 font-bold text-sm">
+                        PHP {expense.expenseAmount.toFixed(2)}
+                      </span>
+                    )}
+                    <div className="flex gap-2 items-center">
+                      {editingIndex === index ? (
+                        <button
+                          onClick={() => handleSaveClick(index)}
+                          className="text-sm font-bold bg-orange-300 h-8 px-4 rounded-md text-white hover:bg-orange-200 hover-scale-[1.02] duration-200"
+                        >
+                          Save
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            handleEditClick(index, expense.expenseAmount)
+                          }
+                          className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover-scale-[1.02] duration-200"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {/* CLOSE BUTTON */}
+                      <button
+                        className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold
+                      hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
+                      >
+                        x
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2 mt-2">
+                <hr />
+                <div className="flex justify-between gap-2">
+                  <span className="text-gray-700 text-sm font-bold">Total</span>
+                  {/* TOTAL EXPENSE FOR THE DATE */}
+                  <span className="text-white bg-red-500 font-semibold text-xs px-2 py-1 rounded-full">
+                    PHP{" "}
+                    {selectedDate.addedExpenses
+                      .reduce((sum, exp) => sum + exp.expenseAmount, 0)
+                      .toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ExpensesPage;

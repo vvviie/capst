@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { db } from "../firebase"; // Adjust the path as necessary
 import {
   collection,
@@ -32,11 +32,12 @@ const DynamicPackageOffers = () => {
 
   const modalRef = useRef<HTMLDivElement | null>(null); // Create a ref for the modal
 
-  const handleClickOutside = (event: MouseEvent) => {
+  const handleClickOutside = useCallback((event) => {
     if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
       closeModal(); // Close the modal if the click is outside
     }
-  };
+    console.log("Clicked outside:", event);
+  }, []);
 
   useEffect(() => {
     // Add event listener for clicks
@@ -46,7 +47,7 @@ const DynamicPackageOffers = () => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [handleClickOutside]); // Added handleClickOutside to the dependency array
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -72,7 +73,7 @@ const DynamicPackageOffers = () => {
     };
 
     fetchCategories();
-  }, []);
+  }, [packageOffersRef]);
 
   const handleAddCategory = async () => {
     if (newCategoryTitle) {
@@ -190,12 +191,17 @@ const DynamicPackageOffers = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div ref={modalRef} className="bg-white rounded-md p-4 w-full max-w-sm mx-4 z-50 max-h-[80vh] overflow-y-auto">
+          <div
+            ref={modalRef}
+            className="bg-white rounded-md p-6 w-full max-w-xl mx-4 z-50 max-h-[80vh] overflow-y-auto"
+          >
             {" "}
             {/* max-w-sm for mobile */}
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-center flex-1
-              text-orange-950">
+              <h2
+                className="text-xl font-bold text-center flex-1
+              text-orange-950"
+              >
                 Manage Package Offers
               </h2>
               <button
@@ -318,7 +324,9 @@ const DynamicPackageOffers = () => {
                           key={foodIndex}
                           className="flex justify-between items-center p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
                         >
-                          <span className="text-gray-700 text-sm font-bold">{foodItem}</span>
+                          <span className="text-gray-700 text-sm font-bold">
+                            {foodItem}
+                          </span>
                           <button
                             onClick={() =>
                               handleDeleteFoodItem(category.id, foodItem)
@@ -335,7 +343,7 @@ const DynamicPackageOffers = () => {
 
                   {/* Confirmation Modal for Deletion */}
                   {isConfirmDeleteOpen && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-10 z-50">
                       <div className="bg-white rounded-md p-4 w-full max-w-sm mx-4 z-50">
                         <h2 className="text-lg font-bold mb-4 text-center">
                           Are you sure you want to delete this category?
