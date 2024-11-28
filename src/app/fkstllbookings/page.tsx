@@ -742,7 +742,6 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
-                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
 
                             {/* BUTTON CONTAINER */}
                             {res.status === "PENDING" ? (
@@ -1247,7 +1246,6 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
-                            <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                                 {/* BUTTON CONTAINER */}
                                 <div className="flex gap-2 items-center w-full mt-1">
                                   <button
