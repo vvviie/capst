@@ -75,7 +75,8 @@ const GiveVoucherForm = ({ isOpen, toggleForm, selectedVoucher }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, handleClickOutside]);
+  
   const handleTypeChange = (event) => {
     setType(event.target.value);
   };

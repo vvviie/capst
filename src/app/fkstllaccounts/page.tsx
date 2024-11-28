@@ -229,7 +229,7 @@ const AccountsListPage = () => {
 
     // Cleanup for auth listener
     return () => unsubscribeAuth();
-  }, [router]);
+  }, [router, auth, fetchStaff]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -248,7 +248,7 @@ const AccountsListPage = () => {
     } else if (accountType === "staff") {
       fetchStaff();
     }
-  }, [accountType]);
+  }, [accountType, fetchStaff, fetchUsers]);
 
   const statusInfo = status.find((s) => s.value === filteredStatus); // Move this outside
 
