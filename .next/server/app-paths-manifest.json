@@ -1,7 +1,0 @@
-{
-  "/page": "app/page.js",
-  "/adminhome/page": "app/adminhome/page.js",
-  "/fkstllbookings/page": "app/fkstllbookings/page.js",
-  "/login/page": "app/login/page.js",
-  "/fkstllbookings/[addcategory]/page": "app/fkstllbookings/[addcategory]/page.js"
-}
