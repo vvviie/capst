@@ -213,7 +213,7 @@ const AdminHomePage = () => {
       lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
       ></div>
       <div className="w-full max-w-[1400px] py-4">
-      <div className="flex w-full items-center gap-2 justify-between mb-4">
+        <div className="flex w-full items-center gap-2 justify-between mb-4">
           <div className="w-full flex gap-4 items-center">
             <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
             <span className="text-2xl text-center font-bold text-orange-900">
@@ -221,6 +221,8 @@ const AdminHomePage = () => {
             </span>
             <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
           </div>
+        </div>
+        <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
           <Link
             href={`/adminhome/announcement`}
             className="h-10 bg-orange-950 shadow-md rounded-md pt-2.5 w-full max-w-[170px] sm:pt-2 text-sm sm:text-base
@@ -229,18 +231,6 @@ const AdminHomePage = () => {
           >
             Make Announcement
           </Link>
-        </div>
-        <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
-          <button
-            className="font-bold h-10 bg-[#F0565F] max-w-[170px] w-full text-white duration-200
-          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:bg-red-400 hover:scale-[1.02]"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsFormOpen((prev) => !prev); // Toggle state directly
-            }}
-          >
-            Input Expenses
-          </button>
           <select
             name="timeframe"
             id="timeframe"
@@ -252,6 +242,26 @@ const AdminHomePage = () => {
             <option value="week">Week</option>
             <option value="year">Year</option>
           </select>
+        </div>
+        <div className="flex flex-row w-full items-center justify-between sm:justify-start gap-2 mb-4">
+          <button
+            className="font-bold h-10 bg-[#F0565F] max-w-[170px] w-full text-white duration-200
+          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:bg-red-400 hover:scale-[1.02]"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsFormOpen((prev) => !prev); // Toggle state directly
+            }}
+          >
+            Input Expenses
+          </button>
+          <Link
+            href={`/adminhome/expenses`}
+            className="h-10 bg-orange-300 shadow-md rounded-md pt-2.5 w-full max-w-[170px] sm:pt-2 text-sm sm:text-base
+                font-bold text-white hover:scale-[1.02] hover:bg-orange-200 duration-200 text-center
+                sm:max-w-[200px]"
+          >
+            Expense Records
+          </Link>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           {/* NET SALES AND EXPENSES SECTION */}
@@ -420,7 +430,7 @@ const AdminHomePage = () => {
                     {/* Updated date and time */}
                   </div>
                   <p className="text-gray-700 text-sm italic">
-                  {`"${rev.comments}"`}
+                    {`"${rev.comments}"`}
                   </p>{" "}
                   {/* Updated review content */}
                 </div>
