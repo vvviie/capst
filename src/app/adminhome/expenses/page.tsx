@@ -33,6 +33,11 @@ const ExpensesPage = () => {
     months[new Date().getMonth()]
   ); // Default to current month
 
+  // Function to get the month index from month name
+  const getMonthIndex = (monthName: string) => {
+    return months.indexOf(monthName);
+  };
+
   useEffect(() => {
     const fetchCafeExpenses = async () => {
       try {
@@ -57,19 +62,49 @@ const ExpensesPage = () => {
     fetchCafeExpenses();
   }, []);
 
+  // use this for totalExpenses of all the docz
+  //  // Calculate the total expenses when the component mounts or when ExpenseDocs changes
+  //  useEffect(() => {
+  //   const total = ExpenseDocs.reduce(
+  //     (sum, doc) =>
+  //       sum +
+  //       doc.addedExpenses.reduce(
+  //         (innerSum, expense) => innerSum + expense.expenseAmount,
+  //         0
+  //       ),
+  //     0
+  //   );
+  //   setTotalExpenses(total);
+  // }, [ExpenseDocs]);
+
   // Calculate the total expenses when the component mounts or when ExpenseDocs changes
+  
   useEffect(() => {
-    const total = ExpenseDocs.reduce(
-      (sum, doc) =>
-        sum +
-        doc.addedExpenses.reduce(
-          (innerSum, expense) => innerSum + expense.expenseAmount,
-          0
-        ),
-      0
-    );
+    const total = ExpenseDocs.reduce((sum, doc) => {
+      // Extract the month and year from the doc's date
+      const expenseDate = new Date(doc.date);
+      const expenseMonth = expenseDate.getMonth();
+      const expenseYear = expenseDate.getFullYear();
+
+      // Get the selected month index and current year
+      const selectedMonthIndex = getMonthIndex(selectedMonth);
+      const currentYear = new Date().getFullYear();
+
+      // Check if the expense is in the selected month and the current year
+      if (expenseMonth === selectedMonthIndex && expenseYear === currentYear) {
+        return (
+          sum +
+          doc.addedExpenses.reduce(
+            (innerSum, expense) => innerSum + expense.expenseAmount,
+            0
+          )
+        );
+      }
+      return sum;
+    }, 0);
+
     setTotalExpenses(total);
-  }, [ExpenseDocs]);
+  }, [ExpenseDocs, selectedMonth]); // Add selectedMonth to the dependency array
 
   //#region PAGES CODE
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,11 +114,19 @@ const ExpensesPage = () => {
   // Calculate total pages
   const totalPages = Math.ceil(ExpenseDocs.length / itemsPerPage);
 
-  // Get current page orders
-  const currentExp = ExpenseDocs.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const [currentExp, setCurrentExp] = useState<ExpenseDocument[]>([]); // Filtered expenses
+
+  // Filter expenses based on the selected month
+  useEffect(() => {
+    const filteredExpenses = ExpenseDocs.filter((expense) => {
+      const expenseDate = new Date(expense.date);
+      const expenseMonth = expenseDate.getMonth(); // 0-11 for Jan-Dec
+      return months[expenseMonth] === selectedMonth; // Compare with selected month
+    });
+
+    // Update the currentExp based on the filtered expenses and items per page
+    setCurrentExp(filteredExpenses.slice(0, itemsPerPage));
+  }, [ExpenseDocs, selectedMonth, itemsPerPage]);
 
   const visiblePages = Array.from(
     { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
@@ -154,6 +197,7 @@ const ExpensesPage = () => {
   // Assuming ExpenseDocument is the correct type for doc
   const handleDateClick = (doc: ExpenseDocument) => {
     setSelectedDate(doc);
+    console.log("Selected Date:", doc);
   };
 
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -396,9 +440,15 @@ const ExpensesPage = () => {
           <div className="h-0.5 bg-gray-100 w-full my-2"></div>
           <div className="w-full flex justify-between gap-2 items-center font-bold">
             <span className="text-gray-800">Monthly Total</span>
-            <span className="text-white bg-red-500 px-2 py-1 rounded-full text-sm">
-              PHP {totalExpenses.toFixed(2)}
-            </span>
+            {currentExp.length > 0 ? (
+              <span className="text-red-500 font-bold text-sm">
+                PHP {totalExpenses.toFixed(2)}
+              </span>
+            ) : (
+              <span className="text-gray-500 text-sm">
+                No expenses for the selected month.
+              </span>
+            )}
           </div>
           <div className="h-0.5 bg-gray-100 w-full my-2"></div>
 
@@ -430,7 +480,7 @@ const ExpensesPage = () => {
               <hr />
               {/* DATE LIST */}
               <div className="flex flex-col gap-2 justify-center">
-                {ExpenseDocs.length === 0 ? (
+                {currentExp.length === 0 ? (
                   <p>There is no recorded expense this month.</p>
                 ) : (
                   <>
