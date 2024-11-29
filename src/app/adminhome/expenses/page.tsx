@@ -19,7 +19,6 @@ type ExpenseDocument = {
 };
 
 const ExpensesPage = () => {
-
   const [totalExpenses, setTotalExpenses] = useState(2000);
   const [ExpenseDocs, setExpenseDocs] = useState<ExpenseDocument[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(
@@ -34,13 +33,19 @@ const ExpensesPage = () => {
         querySnapshot.forEach((doc) => {
           expenses.push({ docID: doc.id, ...doc.data() } as ExpenseDocument);
         });
+
+        // Assuming the date field is in a format that can be compared, e.g., a timestamp or a Date object
+        expenses.sort((a, b) => {
+          return new Date(b.date).getTime() - new Date(a.date).getTime(); // Sort in descending order
+        });
+
         setExpenseDocs(expenses);
         console.log(expenses);
       } catch (error) {
         console.error("Error fetching cafeExpenses: ", error);
       }
     };
-  
+
     fetchCafeExpenses();
   }, []);
 
@@ -78,7 +83,7 @@ const ExpensesPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
 
     // Adjust the visible page numbers if necessary
@@ -112,7 +117,9 @@ const ExpensesPage = () => {
   };
 
   // Handle items per page change
-  const handleItemsPerPageChange = (e) => {
+  const handleItemsPerPageChange = (
+    e: React.ChangeEvent<HTMLSelectElement>
+  ) => {
     const selectedValue = parseInt(e.target.value, 10);
     setItemsPerPage(selectedValue);
     setCurrentPage(1);
@@ -133,22 +140,23 @@ const ExpensesPage = () => {
 
   const [selectedDate, setSelectedDate] = useState(ExpenseDocs[0]);
 
-  const handleDateClick = (doc) => {
+  // Assuming ExpenseDocument is the correct type for doc
+  const handleDateClick = (doc: ExpenseDocument) => {
     setSelectedDate(doc);
   };
 
-  const [editingIndex, setEditingIndex] = useState(null);
-  const [editedAmount, setEditedAmount] = useState(null);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editedAmount, setEditedAmount] = useState<number | null>(null);
 
-  const handleEditClick = (index, currentAmount) => {
+  const handleEditClick = (index: number, currentAmount: number) => {
     setEditingIndex(index);
     setEditedAmount(currentAmount);
   };
 
-  const handleSaveClick = (index) => {
-    // Logic to save the edited amount can go here (e.g., update backend or state)
+  const handleSaveClick = (index: number) => {
     const updatedExpenses = [...selectedDate.addedExpenses];
-    updatedExpenses[index].expenseAmount = editedAmount;
+    updatedExpenses[index].expenseAmount =
+      editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
     setSelectedDate({ ...selectedDate, addedExpenses: updatedExpenses });
     setEditingIndex(null);
   };
@@ -255,11 +263,11 @@ const ExpensesPage = () => {
                     {currentExp.map((exp) => (
                       <div
                         className={`w-full border-2 py-1 px-2 rounded-md shadow-md text-gray-600 cursor-pointer ${
-                          selectedDate?.docID === exp.id
+                          selectedDate?.docID === exp.docID
                             ? "bg-orange-300 border-orange-300 text-white"
                             : "bg-white border-gray-100 hover:bg-orange-100 hover:text-orange-500 hover:border-orange-100"
                         }`}
-                        key={exp.id}
+                        key={exp.docID}
                         onClick={() => handleDateClick(exp)}
                       >
                         <p className="w-full font-bold text-center">
@@ -353,7 +361,7 @@ const ExpensesPage = () => {
                             min={1}
                             className="border-2 rounded-md max-w-20 pl-2 text-sm h-8 text-red-500 font-bold"
                             placeholder="Amount"
-                            value={editedAmount}
+                            value={editedAmount !== null ? editedAmount : ""} // Use empty string if editedAmount is null
                             onChange={(e) =>
                               setEditedAmount(Number(e.target.value))
                             }
