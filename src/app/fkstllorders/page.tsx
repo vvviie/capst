@@ -22,6 +22,20 @@ import jsPDF from "jspdf";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // #region Sample Data
+type Item = {
+  productTitle: string;
+  price: number;
+  itemQty: number;
+  note?: string;
+  selectedDrinkSize?: string;
+  slug: string;
+  id: string;
+  totalPrice: number;
+  additionals?: string[];
+  mainCourseOption?: string;
+  milkOption?: string;
+};
+
 type Order = {
   userName: string;
   userEmail: string;
@@ -42,12 +56,20 @@ type Order = {
   subtotal: number;
   cardIdImg?: string;
 };
+
+interface OrderItem {
+  productTitle: string;
+  totalPrice: number;
+  // Add any other properties that an item might have
+}
 // #endregion
 
 const AdminAndStaffOrdersPage = () => {
   const [reversePosition, setReversePosition] = useState(false);
   const [orderStatCat, setOrderStatCat] = useState<string>("ALL");
   const [enlargePicture, setEnlargePicture] = useState(false);
+  const [cardIdImageEnlarge, setCardIdImageEnlarge] = useState(false);
+  const [idPicEnlarge, setIdPicEnlarge] = useState(false)
   const [hasOrder, setHasOrder] = useState(false);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [applySrPWD, setApplySrPWD] = useState<{ [key: string]: boolean }>({});
@@ -181,7 +203,7 @@ const AdminAndStaffOrdersPage = () => {
             }
           });
 
-          const items = data.items.map((item: any) => {
+          const items = data.items.map((item: Item) => {
             let discountedPrice = item.totalPrice;
 
             // Apply the discount only if this order's Sr/PWD discount is active
@@ -202,7 +224,7 @@ const AdminAndStaffOrdersPage = () => {
 
           // Recalculate the total price
           const totalPrice = items.reduce(
-            (total, item) => total + item.price,
+            (total: number, item: { price: number }) => total + item.price,  // Explicitly type total and item
             0
           );
 
@@ -233,7 +255,7 @@ const AdminAndStaffOrdersPage = () => {
           }
         });
 
-        const convertTo24HourFormat = (timeStr) => {
+        const convertTo24HourFormat = (timeStr: string) => {
           const [time, modifier] = timeStr.split(" ");
           let [hours, minutes] = time.split(":").map(Number);
 
@@ -382,8 +404,8 @@ const AdminAndStaffOrdersPage = () => {
 
       // Fetch existing food and drink data
       const foodDrinkDoc = await getDoc(foodDrinkDataRef);
-      let existingFoodData = {};
-      let existingDrinkData = {};
+      let existingFoodData: { [key: string]: number } = {}; 
+      let existingDrinkData: { [key: string]: number } = {}; 
 
       if (foodDrinkDoc.exists()) {
         const foodDrinkData = foodDrinkDoc.data();
@@ -713,8 +735,8 @@ const AdminAndStaffOrdersPage = () => {
 
         // Fetch existing food and drink data
         const foodDrinkDoc = await getDoc(foodDrinkDataRef);
-        let existingFoodData = {};
-        let existingDrinkData = {};
+        let existingFoodData: { [key: string]: number } = {}; 
+        let existingDrinkData: { [key: string]: number } = {}; 
 
         if (foodDrinkDoc.exists()) {
           const foodDrinkData = foodDrinkDoc.data();
@@ -842,18 +864,11 @@ const AdminAndStaffOrdersPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text(`ORDER DETAILS - ${id}`, 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
@@ -894,7 +909,7 @@ const AdminAndStaffOrdersPage = () => {
         // Check if the discount applies and find the highest priced item
         if (order.pwdSenior) {
           // Find the highest priced item
-          const highestPricedItem = order.items.reduce((maxItem, item) =>
+          const highestPricedItem = order.items.reduce((maxItem: OrderItem, item: OrderItem) =>
             item.totalPrice > maxItem.totalPrice ? item : maxItem
           );
 
@@ -912,7 +927,7 @@ const AdminAndStaffOrdersPage = () => {
 
           // Optionally, update the total for the order (if you are recalculating it)
           const newSubtotal = order.items.reduce(
-            (total, item) => total + item.totalPrice,
+            (total: number, item: OrderItem) => total + item.totalPrice,
             0
           );
           order.subtotal = newSubtotal;
@@ -926,7 +941,7 @@ const AdminAndStaffOrdersPage = () => {
         yPosition += 10; // Move down to start printing product details
 
         // Loop through items and print each one
-        order.items.forEach((item) => {
+        order.items.forEach((item: Item) => {
           // Product title, quantity
           const productLine = `${item.productTitle} ${
             item.selectedDrinkSize ? `(${item.selectedDrinkSize})` : ""
@@ -1028,7 +1043,7 @@ const AdminAndStaffOrdersPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
 
     // Adjust the visible page numbers if necessary
@@ -1142,10 +1157,7 @@ const AdminAndStaffOrdersPage = () => {
                               PHP{" "}
                               {order.status === "TO PAY"
                                 ? applySrPWD[order.id]
-                                  ? (
-                                      order.price -
-                                      order.sampleDiscountDeduction
-                                    ).toFixed(2)
+                                  ? (order.price - (order.sampleDiscountDeduction || 0)).toFixed(2)
                                   : order.price.toFixed(2)
                                 : order.subtotal.toFixed(2)}
                             </span>
@@ -1218,7 +1230,7 @@ const AdminAndStaffOrdersPage = () => {
                                     className="object-cover"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEnlargePicture(true);
+                                      setCardIdImageEnlarge(true);
                                     }}
                                   />
                                 </div>
@@ -1226,7 +1238,7 @@ const AdminAndStaffOrdersPage = () => {
                                   Click the picture to enlarge.
                                 </p>
                               </div>
-                              {enlargePicture && (
+                              {cardIdImageEnlarge && (
                                 // ENLARGED IMAGE
                                 <div
                                   className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
@@ -1237,7 +1249,7 @@ const AdminAndStaffOrdersPage = () => {
                                       className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                                     absolute top-[8px] right-[8px] flex justify-center items-center z-10
                                     hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setEnlargePicture(false)}
+                                      onClick={() => setCardIdImageEnlarge(false)}
                                     >
                                       <span className="font-bold">X</span>
                                     </div>
@@ -1282,13 +1294,13 @@ const AdminAndStaffOrdersPage = () => {
                               <div className="w-full flex flex-col gap-1 justify-center items-center">
                                 <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                   <Image
-                                    src={order.idPic}
+                                    src={order.idPic ?? "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                     alt="idpic"
                                     layout="fill"
                                     className="object-cover"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEnlargePicture(true);
+                                      setIdPicEnlarge(true);
                                     }}
                                   />
                                 </div>
@@ -1296,7 +1308,7 @@ const AdminAndStaffOrdersPage = () => {
                                   Click the picture to enlarge.
                                 </p>
                               </div>
-                              {enlargePicture && (
+                              {idPicEnlarge && (
                                 // ENLARGED IMAGE
                                 <div
                                   className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
@@ -1307,12 +1319,12 @@ const AdminAndStaffOrdersPage = () => {
                                       className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                         absolute top-[8px] right-[8px] flex justify-center items-center z-10
                         hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setEnlargePicture(false)}
+                                      onClick={() => setIdPicEnlarge(false)}
                                     >
                                       <span className="font-bold">X</span>
                                     </div>
                                     <Image
-                                      src={order.idPic}
+                                      src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                       alt="idpic"
                                       fill
                                       className="object-cover"
@@ -1666,10 +1678,7 @@ const AdminAndStaffOrdersPage = () => {
                                   PHP{" "}
                                   {order.status === "TO PAY"
                                     ? applySrPWD[order.id]
-                                      ? (
-                                          order.price -
-                                          order.sampleDiscountDeduction
-                                        ).toFixed(2)
+                                      ? (order.price - (order.sampleDiscountDeduction || 0)).toFixed(2)
                                       : order.price.toFixed(2)
                                     : order.subtotal.toFixed(2)}
                                 </span>
@@ -1755,13 +1764,13 @@ const AdminAndStaffOrdersPage = () => {
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                       <Image
-                                        src={order.idPic}
+                                        src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                         alt="idpic"
                                         fill
                                         className="object-cover"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEnlargePicture(true);
+                                          setIdPicEnlarge(true);
                                         }}
                                       />
                                     </div>
@@ -1769,7 +1778,7 @@ const AdminAndStaffOrdersPage = () => {
                                       Click the picture to enlarge.
                                     </p>
                                   </div>
-                                  {enlargePicture && (
+                                  {idPicEnlarge && (
                                     // ENLARGED IMAGE
                                     <div
                                       className="absolute top-0 left-0 w-full h-[100vh] flex justify-center items-center"
@@ -1783,13 +1792,13 @@ const AdminAndStaffOrdersPage = () => {
                       absolute top-[8px] right-[8px] flex justify-center items-center z-10
                       hover:bg-gray-950 hover:scale-[1.02] duration-200"
                                           onClick={() =>
-                                            setEnlargePicture(false)
+                                            setIdPicEnlarge(false)
                                           }
                                         >
                                           <span className="font-bold">X</span>
                                         </div>
                                         <Image
-                                          src={order.idPic}
+                                          src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                           alt="idpic"
                                           fill
                                           className="object-cover"
@@ -2038,10 +2047,7 @@ const AdminAndStaffOrdersPage = () => {
                                   PHP{" "}
                                   {order.status === "TO PAY"
                                     ? applySrPWD[order.id]
-                                      ? (
-                                          order.price -
-                                          order.sampleDiscountDeduction
-                                        ).toFixed(2)
+                                      ? (order.price - (order.sampleDiscountDeduction || 0)).toFixed(2)
                                       : order.price.toFixed(2)
                                     : order.subtotal.toFixed(2)}
                                 </span>
@@ -2114,7 +2120,7 @@ const AdminAndStaffOrdersPage = () => {
                                         className="object-cover"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEnlargePicture(true);
+                                          setCardIdImageEnlarge(true);
                                         }}
                                       />
                                     </div>
@@ -2122,7 +2128,7 @@ const AdminAndStaffOrdersPage = () => {
                                       Click the picture to enlarge.
                                     </p>
                                   </div>
-                                  {enlargePicture && (
+                                  {cardIdImageEnlarge && (
                                     // ENLARGED IMAGE
                                     <div
                                       className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
@@ -2136,7 +2142,7 @@ const AdminAndStaffOrdersPage = () => {
                                   absolute top-[8px] right-[8px] flex justify-center items-center z-10
                                   hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
                                           onClick={() =>
-                                            setEnlargePicture(false)
+                                            setCardIdImageEnlarge(false)
                                           }
                                         >
                                           <span className="font-bold">X</span>
@@ -2184,13 +2190,13 @@ const AdminAndStaffOrdersPage = () => {
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                       <Image
-                                        src={order.idPic}
+                                        src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                         alt="idpic"
                                         fill
                                         className="object-cover"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEnlargePicture(true);
+                                          setIdPicEnlarge(true);
                                         }}
                                       />
                                     </div>
@@ -2198,7 +2204,7 @@ const AdminAndStaffOrdersPage = () => {
                                       Click the picture to enlarge.
                                     </p>
                                   </div>
-                                  {enlargePicture && (
+                                  {idPicEnlarge && (
                                     // ENLARGED IMAGE
                                     <div
                                       className="absolute top-0 left-0 w-full h-[100vh] flex justify-center items-center"
@@ -2212,13 +2218,13 @@ const AdminAndStaffOrdersPage = () => {
                       absolute top-[8px] right-[8px] flex justify-center items-center z-10
                       hover:bg-gray-950 hover:scale-[1.02] duration-200"
                                           onClick={() =>
-                                            setEnlargePicture(false)
+                                            setIdPicEnlarge(false)
                                           }
                                         >
                                           <span className="font-bold">X</span>
                                         </div>
                                         <Image
-                                          src={order.idPic}
+                                          src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                           alt="idpic"
                                           fill
                                           className="object-cover"
