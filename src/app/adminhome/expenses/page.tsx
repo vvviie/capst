@@ -2,7 +2,7 @@
 import { months } from "@/app/data"; // Import months from your data file
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
 import { db } from "@/app/firebase";
 
 type Expense = {
@@ -19,7 +19,7 @@ type ExpenseDocument = {
 };
 
 const ExpensesPage = () => {
-  const [totalExpenses, setTotalExpenses] = useState(2000);
+  const [totalExpenses, setTotalExpenses] = useState(0);
   const [ExpenseDocs, setExpenseDocs] = useState<ExpenseDocument[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(
     months[new Date().getMonth()]
@@ -153,14 +153,38 @@ const ExpensesPage = () => {
     setEditedAmount(currentAmount);
   };
 
-  const handleSaveClick = (index: number) => {
+  const handleSaveClick = async (index: number) => {
     const updatedExpenses = [...selectedDate.addedExpenses];
-    updatedExpenses[index].expenseAmount =
-      editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
-    setSelectedDate({ ...selectedDate, addedExpenses: updatedExpenses });
-    setEditingIndex(null);
+  
+    // Update the specific expenseAmount
+    updatedExpenses[index].expenseAmount = editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
+  
+    // Calculate the new totalExpenses
+    const newTotalExpenses = updatedExpenses.reduce((total, expense) => total + expense.expenseAmount, 0);
+  
+    // Create a reference to the document in Firestore
+    const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID); // Use the docID to reference the document
+  
+    try {
+      // Update the document in Firestore
+      await updateDoc(expenseDocRef, {
+        addedExpenses: updatedExpenses,
+        totalExpenses: newTotalExpenses
+      });
+  
+      // Update the selectedDate in local state
+      setSelectedDate({ 
+        ...selectedDate, 
+        addedExpenses: updatedExpenses, 
+        totalExpenses: newTotalExpenses // Update totalExpenses
+      });
+  
+      // Reset the editing index
+      setEditingIndex(null);
+    } catch (error) {
+      console.error("Error updating document: ", error);
+    }
   };
-
   return (
     <div
       className="bg-white min-h-[80vh] mt-14 w-full flex justify-center items-start
