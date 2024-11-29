@@ -26,7 +26,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const firestore = getFirestore(app);
 
-const urlEncode = (str) => encodeURIComponent(str);
+const urlEncode = (str: string) => encodeURIComponent(str);
 
 const LoginPage = () => {
   const [isEyeOpen, setIsEyeOpen] = useState(true);

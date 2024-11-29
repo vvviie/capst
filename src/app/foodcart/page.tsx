@@ -97,6 +97,7 @@ const CartPage = () => {
   // For Image's File Name
   const [fileName, setFileName] = useState("");
   const [cardFileName, setCardFileName] = useState("");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cardInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -827,11 +828,11 @@ const CartPage = () => {
   };
 
   const handleCardPaymentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
+    const files2 = e.target.files;
     
     // Ensure files is not null and contains at least one file
-    if (files && files.length > 0) {
-      const file = files[0];
+    if (files2 && files2.length > 0) {
+      const file = files2[0];
       const validTypes = ["image/jpeg", "image/png"];
       
       // Check if the file type is valid
@@ -847,7 +848,7 @@ const CartPage = () => {
   
       try {
         // Upload the image and get the URL
-        const webpUrl: string | null = await uploadImageToStorage(file);
+        const webpUrl: string | null = await uploadImageToStorageCard(file);
         console.log("Uploaded image URL:", webpUrl);
   
         // Update Firebase image URL in state only if webpUrl is not null
@@ -941,9 +942,47 @@ const CartPage = () => {
     }
   };
 
+  const uploadImageToStorageCard = async (file: File) => {
+    const storage = getStorage();
+    const storageRef = ref(
+      storage,
+      `images/tempImg/${file.name.split(".").slice(0, -1).join(".")}.webp`
+    ); // Update path to WebP
+
+    try {
+      // Convert the image to WebP format
+      const webpBlob = await convertImageToWebP(file);
+      console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
+      console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
+
+      // Create URL for the WebP Blob to preview
+      const webpUrl = URL.createObjectURL(webpBlob);
+      console.log("Converted to WebP:", webpUrl); // Log the WebP URL
+      setCardUrl(webpUrl); // Set this URL for preview, if needed
+
+      // Upload the WebP file
+      await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
+      const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+      return downloadUrl; // Return the URL
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null; // Return null if there's an error
+    }
+  };
+
   const handleRemoveImage = () => {
     setImageUrl(""); // Remove the image preview
     setFileName(""); // Clear the file name
+  
+    // Check if fileInputRef.current is not null
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Clear the file input
+    }
+  };
+
+  const handleRemoveImageCard = () => {
+    setCardUrl(""); // Remove the image preview
+    setCardFileName(""); // Clear the file name
   
     // Check if fileInputRef.current is not null
     if (fileInputRef.current) {
@@ -2135,6 +2174,12 @@ const CartPage = () => {
                         fill
                         className="object-cover"
                       />
+                      <button
+                      onClick={handleRemoveImage}
+                      className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                    >
+                      X
+                    </button>
                     </div>
                   )}
 
