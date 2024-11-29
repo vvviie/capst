@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { initializeApp } from "firebase/app";
 import { useRouter } from "next/navigation";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { signOut, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 import Cookies from "js-cookie";
 
@@ -52,7 +52,7 @@ const LoginPage = () => {
     setIsEyeOpen(!isEyeOpen); // Toggle between true and false
   };
 
-  const fetchUserDetails = async (email) => {
+  const fetchUserDetails = async (email: string) => {
     try {
       const isStaff = email.endsWith("@fikastallestaff.com");
       const collectionName = isStaff ? "staff" : "users";
@@ -92,19 +92,28 @@ const LoginPage = () => {
         return null;
       }
     } catch (error) {
-      console.error("Error fetching user details:", error);
-      setMessage({
-        text: `Error fetching user details: ${error.message}`,
-        type: "error",
-      });
+      // Type assertion here to specify that `error` is an instance of `Error`
+      if (error instanceof Error) {
+        console.error("Error fetching user details:", error);
+        setMessage({
+          text: `Error fetching user details: ${error.message}`,
+          type: "error",
+        });
+      } else {
+        console.error("Unknown error occurred");
+        setMessage({
+          text: "An unknown error occurred.",
+          type: "error",
+        });
+      }
       return null;
     }
-  };
+};
 
-  const handleLogin = async (event) => {
+  const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();
-    const email = event.target.email.value;
-    const password = event.target.password.value;
+    const email = (event.target as HTMLFormElement).email.value;
+    const password = (event.target as HTMLFormElement).password.value;
 
     try {
       const userCredential = await signInWithEmailAndPassword(
