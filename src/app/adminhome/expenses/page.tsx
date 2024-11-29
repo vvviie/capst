@@ -155,36 +155,79 @@ const ExpensesPage = () => {
 
   const handleSaveClick = async (index: number) => {
     const updatedExpenses = [...selectedDate.addedExpenses];
-  
+
+    // Get the old expense amount for the specific index
+    const oldExpenseAmount = updatedExpenses[index].expenseAmount;
+
     // Update the specific expenseAmount
-    updatedExpenses[index].expenseAmount = editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
-  
-    // Calculate the new totalExpenses
-    const newTotalExpenses = updatedExpenses.reduce((total, expense) => total + expense.expenseAmount, 0);
-  
-    // Create a reference to the document in Firestore
-    const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID); // Use the docID to reference the document
-  
+    updatedExpenses[index].expenseAmount =
+      editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
+
+    // Calculate the difference between the new and old expense amounts
+    const difference = updatedExpenses[index].expenseAmount - oldExpenseAmount;
+
+    // Update the totalExpenses by adding the difference
+    const newTotalExpenses = totalExpenses + difference;
+
+    const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
+
     try {
       // Update the document in Firestore
       await updateDoc(expenseDocRef, {
         addedExpenses: updatedExpenses,
-        totalExpenses: newTotalExpenses
+        totalExpenses: newTotalExpenses,
       });
-  
+
       // Update the selectedDate in local state
-      setSelectedDate({ 
-        ...selectedDate, 
-        addedExpenses: updatedExpenses, 
-        totalExpenses: newTotalExpenses // Update totalExpenses
+      setSelectedDate({
+        ...selectedDate,
+        addedExpenses: updatedExpenses,
+        totalExpenses: newTotalExpenses, // Update totalExpenses
       });
-  
-      // Reset the editing index
+
+      // Update the local totalExpenses state
+      setTotalExpenses(newTotalExpenses); // Update local state for totalExpenses
       setEditingIndex(null);
     } catch (error) {
       console.error("Error updating document: ", error);
     }
   };
+
+  const handleDelete = async (index: number) => {
+    const updatedExpenses = [...selectedDate.addedExpenses];
+
+    // Get the amount of the expense to be deleted
+    const deletedExpenseAmount = updatedExpenses[index].expenseAmount;
+
+    // Remove the expense from the array
+    updatedExpenses.splice(index, 1);
+
+    // Update the totalExpenses
+    const newTotalExpenses = totalExpenses - deletedExpenseAmount;
+
+    const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
+
+    try {
+      // Update the document in Firestore
+      await updateDoc(expenseDocRef, {
+        addedExpenses: updatedExpenses,
+        totalExpenses: newTotalExpenses,
+      });
+
+      // Update the selectedDate in local state
+      setSelectedDate({
+        ...selectedDate,
+        addedExpenses: updatedExpenses,
+        totalExpenses: newTotalExpenses,
+      });
+
+      // Update the local totalExpenses state
+      setTotalExpenses(newTotalExpenses);
+    } catch (error) {
+      console.error("Error deleting expense: ", error);
+    }
+  };
+
   return (
     <div
       className="bg-white min-h-[80vh] mt-14 w-full flex justify-center items-start
@@ -413,8 +456,11 @@ const ExpensesPage = () => {
                               Edit
                             </button>
                           )}
-                          {/* CLOSE BUTTON */}
-                          <button className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center">
+                          {/* DELETE BUTTON */}
+                          <button
+                            onClick={() => handleDelete(index)}
+                            className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
+                          >
                             x
                           </button>
                         </div>
