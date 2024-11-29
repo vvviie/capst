@@ -43,13 +43,13 @@ const EditPromoPage = () => {
     const [promoDescription, setPromoDescription] = useState("");
     const today = new Date().toISOString().split("T")[0];
     const pathname = usePathname();
-    const promoId = pathname.split("/").pop();
+    const promoId = pathname ? pathname.split("/").pop() : null;
     const [showMessage, setShowMessage] = useState(false);
 
     const promoDeductionValueRef = useRef<HTMLInputElement>(null);
     const promoValidityDateRef = useRef<HTMLInputElement>(null);
     const promoNumberOfUsesRef = useRef<HTMLInputElement>(null);
-    const promoDescriptionRef = useRef<HTMLInputElement>(null);
+    const promoDescriptionRef = useRef<HTMLTextAreaElement>(null);
     const promoThresholdValueRef = useRef<HTMLInputElement>(null);
     const promoCodeRef = useRef<HTMLInputElement>(null);
 
@@ -177,20 +177,21 @@ const EditPromoPage = () => {
 
     const handleDeductionTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedType = event.target.value;
-
+    
+        // Ensure promoDeduction is a number before performing arithmetic operations
+        const currentDeduction = typeof promoDeduction === 'number' ? promoDeduction : 0;
+    
         // Avoid altering the underlying value on type switch
         if (selectedType === "percent" && deductionType === "minus") {
             // Convert to percent display format when switching to "percent"
-            setPromoDeduction(prev => prev / 100);
+            setPromoDeduction(currentDeduction / 100);
         } else if (selectedType === "minus" && deductionType === "percent") {
             // Keep promoDeduction as is when switching to "minus"
-            setPromoDeduction(prev => prev);
+            setPromoDeduction(currentDeduction); // Ensures no change
         }
-
+    
         setDeductionType(selectedType); // Update the deduction type
     };
-
-
 
     const handleDeductionValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const value = event.target.value === "" ? "" : Number(event.target.value);
@@ -211,7 +212,7 @@ const EditPromoPage = () => {
         }
     };
 
-    const handleNumberOfUsesChange = (e) => {
+    const handleNumberOfUsesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value === "" ? "" : Number(e.target.value); // Allow empty string or convert to number
         setNumberOfUses(value); // Update state
         console.log("Number of Uses set to:", value); // Log the value
@@ -714,7 +715,7 @@ const EditPromoPage = () => {
                     {/* SUBMIT BUTTON */}
                     <button
                         className="w-full bg-orange-950 font-bold text-xl text-white p-2 rounded-md mt-2
-          shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
+                            shadow-md hover:scale-[1.02] duration-200 hover:bg-orange-900"
                         onClick={() => {
                             handleSubmit();
                         }}
