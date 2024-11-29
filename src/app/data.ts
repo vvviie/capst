@@ -8,6 +8,7 @@ export type Drinks = {
   availability: string;
   calorie: string;
   contains: string[];
+  prodID: string;
 };
 
 export type Pastries = {
@@ -20,6 +21,7 @@ export type Pastries = {
   availability: string;
   calorie: string;
   contains: string[];
+  prodID: string;
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -32,6 +34,8 @@ export type Pasta = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -44,6 +48,8 @@ export type Sandwiches = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -56,6 +62,8 @@ export type MainCourse = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -68,6 +76,8 @@ export type Snacks = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 

@@ -78,7 +78,7 @@ type PastriesCategoryData = {
 
 const MenuCategoryPage: React.FC = () => {
   const pathname = usePathname();
-  const slug = pathname.split("/").pop();
+  const slug = pathname?.split("/").pop();
 
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const [searchText, setSearchText] = useState<string>("");
@@ -363,7 +363,7 @@ const MenuCategoryPage: React.FC = () => {
       pastries.map((category) => ({
         ...category,
         pastries: category.pastries
-          .filter((pastry: Pastry) => {
+          .filter((pastry) => {
             const matchesFilter =
               selectedFilter === "all" || pastry.type === selectedFilter;
             const matchesCalorie =
