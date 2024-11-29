@@ -7,8 +7,8 @@ import { ChosenItem } from "../hooks/types";
 
 type PackageOffersProps = {
   selectedPackage: string;
-  onFinalize: (chosenItemsArray: ChosenItem[]) => void; // Update to ChosenItem[]
-  onPackageChange: () => void; // Update prop name here
+  onFinalize: (chosenItemsArray: ChosenItemInterface[]) => void; // Use ChosenItemInterface here
+  onPackageChange: () => void;
 };
 
 type BuffetItem = {
@@ -17,6 +17,22 @@ type BuffetItem = {
   items: string[];
   limits: Record<string, number>;
 };
+
+interface Item {
+  id: string;
+  label: string;
+  price: number;
+  items: string[];
+  title: string;
+}
+
+interface ChosenItemInterface {
+  id: string;
+  label: string;
+  price: number;
+  items: string[];
+  title: string;
+}
 
   const PackageOffers: React.FC<PackageOffersProps> = ({
     selectedPackage,
@@ -144,12 +160,15 @@ type BuffetItem = {
         `Please complete your selection for the following categories:\n- ${unmetSelections.join("\n- ")}`
       );
     } else {
-      const chosenItemsArray: ChosenItem[] = Object.keys(selectedItems).map((category) => ({
-        id: category, // Assign the category as the id
-        title: category, // Ensure 'title' matches the expected field
-        items: selectedItems[category], // Ensure 'items' matches the expected field
+      const chosenItemsArray: ChosenItemInterface[] = Object.keys(selectedItems).map((category) => ({
+        id: category,
+        label: category, // You can derive label or assign a default
+        price: 0, // You can assign a default or fetch price from elsewhere
+        items: selectedItems[category], // Ensure items is of the correct type
+        title: category, // Add the title property from the category or something else
       }));
-      onFinalize(chosenItemsArray);
+  
+      onFinalize(chosenItemsArray); // Pass mapped items to onFinalize
       setOpen(false);
     }
   };
