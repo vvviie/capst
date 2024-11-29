@@ -940,7 +940,7 @@ const OrdersPage = () => {
                                 ? (
                                     order.price - order.sampleDiscountDeduction
                                   ).toFixed(2)
-                                : order.price.toFixed(2)
+                                : order.subtotal.toFixed(2)
                               : order.subtotal.toFixed(2)}
                           </span>
                         </div>

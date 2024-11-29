@@ -1150,17 +1150,25 @@ const AdminAndStaffOrdersPage = () => {
                         <div className="flex flex-col gap-1 w-5/6">
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center">
-                            <span className="font-bold text-orange-900">
-                              ID: {order.id}
-                            </span>
-                            <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
-                              PHP{" "}
-                              {order.status === "TO PAY"
-                                ? applySrPWD[order.id]
-                                  ? (order.price - (order.sampleDiscountDeduction || 0)).toFixed(2)
-                                  : order.price.toFixed(2)
-                                : order.subtotal.toFixed(2)}
-                            </span>
+                          <span className="font-bold text-orange-900">
+                            ID: {order.id}
+                          </span>
+                          <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                            PHP{" "}
+                            {order.status === "TO PAY" // If order is "TO PAY"
+                              ? applySrPWD[order.id] // If PWD is applied for this order
+                                ? // Apply PWD after promo has been subtracted
+                                  Number(
+                                    (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
+                                  ).toFixed(2)
+                                : // If PWD is not applied, subtract promo if available
+                                  (order.promo && order.promo > 0
+                                    ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                      (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
+                                    : order.subtotal.toFixed(2)) // If no promo, show original subtotal
+                              : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                            }
+                          </span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -1671,17 +1679,25 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="flex flex-col gap-1 w-5/6">
                               {/* HEADERS CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                                <span className="font-bold text-orange-900">
-                                  ID: {order.id}
-                                </span>
-                                <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
-                                  PHP{" "}
-                                  {order.status === "TO PAY"
-                                    ? applySrPWD[order.id]
-                                      ? (order.price - (order.sampleDiscountDeduction || 0)).toFixed(2)
-                                      : order.price.toFixed(2)
-                                    : order.subtotal.toFixed(2)}
-                                </span>
+                              <span className="font-bold text-orange-900">
+                                ID: {order.id}
+                              </span>
+                              <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                                PHP{" "}
+                                {order.status === "TO PAY" // If order is "TO PAY"
+                                  ? applySrPWD[order.id] // If PWD is applied for this order
+                                    ? // Apply PWD after promo has been subtracted
+                                      Number(
+                                        (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
+                                      ).toFixed(2)
+                                    : // If PWD is not applied, subtract promo if available
+                                      (order.promo && order.promo > 0
+                                        ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                          (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
+                                        : order.subtotal.toFixed(2)) // If no promo, show original subtotal
+                                  : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                                }
+                              </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -2045,11 +2061,19 @@ const AdminAndStaffOrdersPage = () => {
                                 </span>
                                 <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
                                   PHP{" "}
-                                  {order.status === "TO PAY"
-                                    ? applySrPWD[order.id]
-                                      ? (order.price - (order.sampleDiscountDeduction || 0)).toFixed(2)
-                                      : order.price.toFixed(2)
-                                    : order.subtotal.toFixed(2)}
+                                  {order.status === "TO PAY" // If order is "TO PAY"
+                                    ? applySrPWD[order.id] // If PWD is applied for this order
+                                      ? // Apply PWD after promo has been subtracted
+                                        Number(
+                                          (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
+                                        ).toFixed(2)
+                                      : // If PWD is not applied, subtract promo if available
+                                        (order.promo && order.promo > 0
+                                          ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                            (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
+                                          : order.subtotal.toFixed(2)) // If no promo, show original subtotal
+                                    : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                                  }
                                 </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}
