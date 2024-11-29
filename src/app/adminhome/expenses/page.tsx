@@ -1,4 +1,3 @@
-// latest
 "use client";
 import { months } from "@/app/data"; // Import months from your data file
 import Link from "next/link";
@@ -6,9 +5,23 @@ import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/app/firebase";
 
+type Expense = {
+  expenseAmount: number;
+  expenseLabel: string;
+  time: string;
+};
+
+type ExpenseDocument = {
+  docID: string;
+  addedExpenses: Expense[];
+  date: string;
+  totalExpenses: number;
+};
+
 const ExpensesPage = () => {
+
   const [totalExpenses, setTotalExpenses] = useState(2000);
-  const [ExpenseDocs, setExpenseDocs] = useState([]); // State to hold fetched expenses
+  const [ExpenseDocs, setExpenseDocs] = useState<ExpenseDocument[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(
     months[new Date().getMonth()]
   ); // Default to current month
@@ -17,9 +30,9 @@ const ExpensesPage = () => {
     const fetchCafeExpenses = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "cafeExpenses"));
-        const expenses: { id: string }[] = [];
+        const expenses: ExpenseDocument[] = [];
         querySnapshot.forEach((doc) => {
-          expenses.push({ id: doc.id, ...doc.data() });
+          expenses.push({ docID: doc.id, ...doc.data() } as ExpenseDocument);
         });
         setExpenseDocs(expenses);
         console.log(expenses);
@@ -27,7 +40,7 @@ const ExpensesPage = () => {
         console.error("Error fetching cafeExpenses: ", error);
       }
     };
-
+  
     fetchCafeExpenses();
   }, []);
 
