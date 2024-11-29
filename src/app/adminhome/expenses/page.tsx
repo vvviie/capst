@@ -1,5 +1,5 @@
 "use client";
-import { ExpenseDocs, months } from "@/app/data";
+import { months } from "@/app/data"; // Import months from your data file
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
@@ -7,16 +7,21 @@ import { db } from "@/app/firebase";
 
 const ExpensesPage = () => {
   const [totalExpenses, setTotalExpenses] = useState(2000);
+  const [ExpenseDocs, setExpenseDocs] = useState([]); // State to hold fetched expenses
+  const [selectedMonth, setSelectedMonth] = useState(
+    months[new Date().getMonth()]
+  ); // Default to current month
 
   useEffect(() => {
     const fetchCafeExpenses = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "cafeExpenses"));
-        const expenses: { id: string; }[] = [];
+        const expenses: { id: string }[] = [];
         querySnapshot.forEach((doc) => {
           expenses.push({ id: doc.id, ...doc.data() });
         });
-        console.log(expenses); // This will log the cafeExpenses collection
+        setExpenseDocs(expenses);
+        console.log(expenses);
       } catch (error) {
         console.error("Error fetching cafeExpenses: ", error);
       }
@@ -24,7 +29,7 @@ const ExpensesPage = () => {
 
     fetchCafeExpenses();
   }, []);
-  
+
   // Calculate the total expenses when the component mounts or when ExpenseDocs changes
   useEffect(() => {
     const total = ExpenseDocs.reduce(
@@ -37,14 +42,13 @@ const ExpensesPage = () => {
       0
     );
     setTotalExpenses(total);
-  }, []);
+  }, [ExpenseDocs]);
 
   //#region PAGES CODE
   const [currentPage, setCurrentPage] = useState(1);
   const [pageWindowStart, setPageWindowStart] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
   const pagesToShow = 5;
-
   // Calculate total pages
   const totalPages = Math.ceil(ExpenseDocs.length / itemsPerPage);
 
@@ -119,8 +123,8 @@ const ExpensesPage = () => {
     setSelectedDate(doc);
   };
 
-  const [editingIndex, setEditingIndex] = useState(null); // To track which expense is being edited
-  const [editedAmount, setEditedAmount] = useState(null); // To track the new value during editing
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editedAmount, setEditedAmount] = useState(null);
 
   const handleEditClick = (index, currentAmount) => {
     setEditingIndex(index);
@@ -170,10 +174,14 @@ const ExpensesPage = () => {
             <select
               name="selectMonth"
               id="selectMonth"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
               className="border-2 pl-2 pr-4 py-1 rounded-md text-gray-500 w-2/3 text-center border-gray-200"
             >
               {months.map((month) => (
-                <option value={month}>{month}</option>
+                <option key={month} value={month}>
+                  {month}
+                </option>
               ))}
             </select>
             <select
@@ -233,11 +241,11 @@ const ExpensesPage = () => {
                     {currentExp.map((exp) => (
                       <div
                         className={`w-full border-2 py-1 px-2 rounded-md shadow-md text-gray-600 cursor-pointer ${
-                          selectedDate.docID === exp.docID
+                          selectedDate?.docID === exp.id
                             ? "bg-orange-300 border-orange-300 text-white"
                             : "bg-white border-gray-100 hover:bg-orange-100 hover:text-orange-500 hover:border-orange-100"
                         }`}
-                        key={exp.docID}
+                        key={exp.id}
                         onClick={() => handleDateClick(exp)}
                       >
                         <p className="w-full font-bold text-center">
@@ -280,111 +288,115 @@ const ExpensesPage = () => {
               </div>
             </div>
             {/* DETAILS CONTAINER */}
-            <div className="p-2 sm:px-4 rounded-md bg-gray-100 w-full lg:3/5">
-              <div className="flex flex-col gap-2 w-full">
-                <div className="w-full flex justify-between gap-2 items-center">
-                  <h1 className="font-semibold text-gray-700">Details</h1>
-                  <button
-                    className="bg-red-500 shadow-md rounded-md px-2 py-1 text-white font-semibold
-                  text-sm space-x-2"
-                  >
-                    <i className="fa fa-trash text-xs" aria-hidden="true"></i>
-                    <span className="">Delete</span>
-                  </button>
-                </div>
-                <hr className="" />
-                <div className="w-full flex justify-between gap-2 items-center">
-                  {/* PUT THE SELECTED DOCEXPENSE DATE HERE */}
-                  <h1
-                    className="font-bold text-sm text-gray-600 bg-white px-2 py-1 rounded-sm shadow-sm
-                  space-x-2"
-                  >
-                    <span>For</span>
-                    <span className="text-orange-300">{selectedDate.date}</span>
-                  </h1>
-                  <span className="flex items-center gap-1">
-                    <span className="font-semibold text-xs text-gray-500">
-                      Shown Items:
-                    </span>
-                    {/* PUT NUMBER/LENGTH OF addedExpenses OF THE SELECTED DOCEXPENSE HERE */}
-                    <span className="bg-gray-500 text-xs px-2 py-0.5 rounded-md text-center text-white">
-                      {selectedDate.addedExpenses.length}
-                    </span>
-                  </span>
-                </div>
-                <hr className="mb-1" />
-              </div>
-              {/* LIST OF EXPENSES */}
-              <div className="flex flex-col gap-2 w-full">
-                {/* PUT THE DETAILS OF THE addedExpenses HERE */}
-                {selectedDate.addedExpenses.map((expense, index) => (
-                  <div
-                    className="flex items-center justify-between bg-white border-2 border-gray-100
-                  shadow-md py-1 px-2 sm:px-4"
-                    key={index}
-                  >
-                    {/* EXPENSE LABEL */}
-                    <span className="text-gray-600 font-bold text-sm">
-                      {expense.expenseLabel}
-                    </span>
-                    {editingIndex === index ? (
-                      <input
-                        type="number"
-                        min={1}
-                        className="border-2 rounded-md max-w-20 pl-2 text-sm h-8 text-red-500 font-bold"
-                        placeholder="Amount"
-                        value={editedAmount}
-                        onChange={(e) =>
-                          setEditedAmount(Number(e.target.value))
-                        }
-                      />
-                    ) : (
-                      <span className="text-red-500 font-bold text-sm">
-                        PHP {expense.expenseAmount.toFixed(2)}
-                      </span>
-                    )}
-                    <div className="flex gap-2 items-center">
-                      {editingIndex === index ? (
-                        <button
-                          onClick={() => handleSaveClick(index)}
-                          className="text-sm font-bold bg-orange-300 h-8 px-4 rounded-md text-white hover:bg-orange-200 hover-scale-[1.02] duration-200"
-                        >
-                          Save
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() =>
-                            handleEditClick(index, expense.expenseAmount)
-                          }
-                          className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover-scale-[1.02] duration-200"
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {/* CLOSE BUTTON */}
-                      <button
-                        className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold
-                      hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
-                      >
-                        x
+            <div className="p-2 sm:px-4 rounded-md bg-gray-100 w-full lg:w-3/5">
+              {selectedDate ? (
+                <>
+                  <div className="flex flex-col gap-2 w-full">
+                    <div className="w-full flex justify-between gap-2 items-center">
+                      <h1 className="font-semibold text-gray-700">Details</h1>
+                      <button className="bg-red-500 shadow-md rounded-md px-2 py-1 text-white font-semibold text-sm space-x-2">
+                        <i
+                          className="fa fa-trash text-xs"
+                          aria-hidden="true"
+                        ></i>
+                        <span className="">Delete</span>
                       </button>
                     </div>
+                    <hr />
+                    <div className="w-full flex justify-between gap-2 items-center">
+                      {/* PUT THE SELECTED DOCEXPENSE DATE HERE */}
+                      <h1 className="font-bold text-sm text-gray-600 bg-white px-2 py-1 rounded-sm shadow-sm space-x-2">
+                        <span>For</span>
+                        <span className="text-orange-300">
+                          {selectedDate.date}
+                        </span>
+                      </h1>
+                      <span className="flex items-center gap-1">
+                        <span className="font-semibold text-xs text-gray-500">
+                          Shown Items:
+                        </span>
+                        <span className="bg-gray-500 text-xs px-2 py-0.5 rounded-md text-center text-white">
+                          {selectedDate.addedExpenses.length}
+                        </span>
+                      </span>
+                    </div>
+                    <hr className="mb-1" />
                   </div>
-                ))}
-              </div>
-              <div className="flex flex-col gap-2 mt-2">
-                <hr />
-                <div className="flex justify-between gap-2">
-                  <span className="text-gray-700 text-sm font-bold">Total</span>
-                  {/* TOTAL EXPENSE FOR THE DATE */}
-                  <span className="text-white bg-red-500 font-semibold text-xs px-2 py-1 rounded-full">
-                    PHP{" "}
-                    {selectedDate.addedExpenses
-                      .reduce((sum, exp) => sum + exp.expenseAmount, 0)
-                      .toFixed(2)}
+                  {/* LIST OF EXPENSES */}
+                  <div className="flex flex-col gap-2 w-full">
+                    {selectedDate.addedExpenses.map((expense, index) => (
+                      <div
+                        className="flex items-center justify-between bg-white border-2 border-gray-100 shadow-md py-1 px-2 sm:px-4"
+                        key={index}
+                      >
+                        {/* EXPENSE LABEL */}
+                        <span className="text-gray-600 font-bold text-sm">
+                          {expense.expenseLabel}
+                        </span>
+                        {editingIndex === index ? (
+                          <input
+                            type="number"
+                            min={1}
+                            className="border-2 rounded-md max-w-20 pl-2 text-sm h-8 text-red-500 font-bold"
+                            placeholder="Amount"
+                            value={editedAmount}
+                            onChange={(e) =>
+                              setEditedAmount(Number(e.target.value))
+                            }
+                          />
+                        ) : (
+                          <span className="text-red-500 font-bold text-sm">
+                            PHP {expense.expenseAmount.toFixed(2)}
+                          </span>
+                        )}
+                        <div className="flex gap-2 items-center">
+                          {editingIndex === index ? (
+                            <button
+                              onClick={() => handleSaveClick(index)}
+                              className="text-sm font-bold bg-orange-300 h-8 px-4 rounded-md text-white hover:bg-orange-200 hover:scale-[1.02] duration-200"
+                            >
+                              Save
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleEditClick(index, expense.expenseAmount)
+                              }
+                              className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {/* CLOSE BUTTON */}
+                          <button className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center">
+                            x
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <hr />
+                    <div className="flex justify-between gap-2">
+                      <span className="text-gray-700 text-sm font-bold">
+                        Total
+                      </span>
+                      <span className="text-white bg-red-500 font-semibold text-xs px-2 py-1 rounded-full">
+                        PHP{" "}
+                        {selectedDate.addedExpenses
+                          .reduce((sum, exp) => sum + exp.expenseAmount, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center bg-white border-2 border-gray-100 shadow-md py-5">
+                  <span className="text-gray-500 font-bold text-center">
+                    Choose a date to see the details
                   </span>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
