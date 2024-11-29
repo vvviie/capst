@@ -26,6 +26,7 @@ type ExpenseDocument = {
 };
 
 const ExpensesPage = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [ExpenseDocs, setExpenseDocs] = useState<ExpenseDocument[]>([]);
   const [selectedMonth, setSelectedMonth] = useState(
@@ -145,7 +146,10 @@ const ExpensesPage = () => {
     setSelectedYear(Number(event.target.value));
   };
 
-  const [selectedDate, setSelectedDate] = useState(ExpenseDocs[0]);
+  //const [selectedDate, setSelectedDate] = useState(ExpenseDocs[0]);
+  const [selectedDate, setSelectedDate] = useState<ExpenseDocument | null>(
+    null
+  );
 
   // Assuming ExpenseDocument is the correct type for doc
   const handleDateClick = (doc: ExpenseDocument) => {
@@ -161,126 +165,174 @@ const ExpensesPage = () => {
   };
 
   const handleSaveClick = async (index: number) => {
-    const updatedExpenses = [...selectedDate.addedExpenses];
+    // Check if selectedDate is not null
+    if (selectedDate) {
+      const updatedExpenses = [...selectedDate.addedExpenses];
 
-    // Get the old expense amount for the specific index
-    const oldExpenseAmount = updatedExpenses[index].expenseAmount;
+      // Get the old expense amount for the specific index
+      const oldExpenseAmount = updatedExpenses[index].expenseAmount;
 
-    // Update the specific expenseAmount
-    updatedExpenses[index].expenseAmount =
-      editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
+      // Update the specific expenseAmount
+      updatedExpenses[index].expenseAmount =
+        editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
 
-    // Calculate the difference between the new and old expense amounts
-    const difference = updatedExpenses[index].expenseAmount - oldExpenseAmount;
+      // Calculate the difference between the new and old expense amounts
+      const difference =
+        updatedExpenses[index].expenseAmount - oldExpenseAmount;
 
-    // Update the totalExpenses by adding the difference
-    const newTotalExpenses = totalExpenses + difference;
+      // Update the totalExpenses by adding the difference
+      const newTotalExpenses = totalExpenses + difference;
 
-    const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
+      const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
 
-    try {
-      // Update the document in Firestore
-      await updateDoc(expenseDocRef, {
-        addedExpenses: updatedExpenses,
-        totalExpenses: newTotalExpenses,
-      });
+      try {
+        // Update the document in Firestore
+        await updateDoc(expenseDocRef, {
+          addedExpenses: updatedExpenses,
+          totalExpenses: newTotalExpenses,
+        });
 
-      // Update the selectedDate in local state
-      setSelectedDate({
-        ...selectedDate,
-        addedExpenses: updatedExpenses,
-        totalExpenses: newTotalExpenses, // Update totalExpenses
-      });
+        // Update the selectedDate in local state
+        setSelectedDate({
+          ...selectedDate,
+          addedExpenses: updatedExpenses,
+          totalExpenses: newTotalExpenses, // Update totalExpenses
+        });
 
-      // Update the local totalExpenses state
-      setTotalExpenses(newTotalExpenses); // Update local state for totalExpenses
-      setEditingIndex(null);
-    } catch (error) {
-      console.error("Error updating document: ", error);
-    }
+        // Update the local totalExpenses state
+        setTotalExpenses(newTotalExpenses); // Update local state for totalExpenses
+        setEditingIndex(null);
+      } catch (error) {
+        console.error("Error updating document: ", error);
+      }
 
-    // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
-    const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
-    const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+      // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
+      const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
+      const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
 
-    // Submit to salesData collection
-    const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
-    const salesDataRef = doc(db, "salesData", salesDocumentId);
+      // Submit to salesData collection
+      const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+      const salesDataRef = doc(db, "salesData", salesDocumentId);
 
-    // Update the salesData document
-    const expensesData = {
-      Expenses: {
-        data: {
-          [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+      // Update the salesData document
+      const expensesData = {
+        Expenses: {
+          data: {
+            [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+          },
         },
-      },
-    };
+      };
 
-    // Merge the new expenses data with the existing document
-    try {
-      await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
-    } catch (error) {
-      console.error("Error updating sales data: ", error);
+      // Merge the new expenses data with the existing document
+      try {
+        await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+      } catch (error) {
+        console.error("Error updating sales data: ", error);
+      }
+    } else {
+      console.error("No expense document is selected.");
     }
   };
 
   const handleRemove = async (index: number) => {
-    const updatedExpenses = [...selectedDate.addedExpenses];
+    // Check if selectedDate is not null
+    if (selectedDate) {
+      const updatedExpenses = [...selectedDate.addedExpenses];
 
-    // Get the amount of the expense to be deleted
-    const deletedExpenseAmount = updatedExpenses[index].expenseAmount;
+      // Get the amount of the expense to be deleted
+      const deletedExpenseAmount = updatedExpenses[index].expenseAmount;
 
-    // Remove the expense from the array
-    updatedExpenses.splice(index, 1);
+      // Remove the expense from the array
+      updatedExpenses.splice(index, 1);
 
-    // Update the totalExpenses
-    const newTotalExpenses = totalExpenses - deletedExpenseAmount;
+      // Update the totalExpenses
+      const newTotalExpenses = totalExpenses - deletedExpenseAmount;
 
-    const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
+      const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
 
-    try {
-      // Update the document in Firestore
-      await updateDoc(expenseDocRef, {
-        addedExpenses: updatedExpenses,
-        totalExpenses: newTotalExpenses,
-      });
+      try {
+        // Update the document in Firestore
+        await updateDoc(expenseDocRef, {
+          addedExpenses: updatedExpenses,
+          totalExpenses: newTotalExpenses,
+        });
 
-      // Update the selectedDate in local state
-      setSelectedDate({
-        ...selectedDate,
-        addedExpenses: updatedExpenses,
-        totalExpenses: newTotalExpenses,
-      });
+        // Update the selectedDate in local state
+        setSelectedDate({
+          ...selectedDate,
+          addedExpenses: updatedExpenses,
+          totalExpenses: newTotalExpenses,
+        });
 
-      // Update the local totalExpenses state
-      setTotalExpenses(newTotalExpenses);
-    } catch (error) {
-      console.error("Error deleting expense: ", error);
-    }
+        // Update the local totalExpenses state
+        setTotalExpenses(newTotalExpenses);
+      } catch (error) {
+        console.error("Error deleting expense: ", error);
+      }
 
-    // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
-    const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
-    const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+      // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
+      const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
+      const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
 
-    // Submit to salesData collection
-    const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
-    const salesDataRef = doc(db, "salesData", salesDocumentId);
+      // Submit to salesData collection
+      const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+      const salesDataRef = doc(db, "salesData", salesDocumentId);
 
-    // Update the salesData document
-    const expensesData = {
-      Expenses: {
-        data: {
-          [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+      // Update the salesData document
+      const expensesData = {
+        Expenses: {
+          data: {
+            [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+          },
         },
-      },
-    };
+      };
 
-    // Merge the new expenses data with the existing document
-    try {
-      await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
-    } catch (error) {
-      console.error("Error updating sales data: ", error);
+      // Merge the new expenses data with the existing document
+      try {
+        await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+      } catch (error) {
+        console.error("Error updating sales data: ", error);
+      }
+    } else {
+      console.error("No expense document is selected.");
     }
+  };
+
+  const handleDelete = async () => {
+    if (selectedDate) {
+      try {
+        await deleteDoc(doc(db, "cafeExpenses", selectedDate.docID));
+
+        setExpenseDocs((prevDocs) => {
+          const updatedDocs = prevDocs.filter(
+            (doc) => doc.docID !== selectedDate.docID
+          );
+          const newTotalExpenses = updatedDocs.reduce(
+            (sum, doc) => sum + doc.totalExpenses,
+            0
+          );
+          setTotalExpenses(newTotalExpenses);
+          return updatedDocs;
+        });
+
+        // Reset selected date after deletion
+        setSelectedDate(null);
+
+        console.log("Document deleted successfully");
+      } catch (error) {
+        console.error("Error deleting document:", error);
+      }
+    } else {
+      console.error("No document selected for deletion");
+    }
+  };
+
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  const confirmDelete = () => {
+    handleDelete();
+    closeModal();
   };
 
   return (
@@ -438,7 +490,10 @@ const ExpensesPage = () => {
                   <div className="flex flex-col gap-2 w-full">
                     <div className="w-full flex justify-between gap-2 items-center">
                       <h1 className="font-semibold text-gray-700">Details</h1>
-                      <button className="bg-red-500 shadow-md rounded-md px-2 py-1 text-white font-semibold text-sm space-x-2">
+                      <button
+                        className="bg-red-500 shadow-md rounded-md px-2 py-1 text-white font-semibold text-sm space-x-2"
+                        onClick={openModal} // Open the confirmation modal
+                      >
                         <i
                           className="fa fa-trash text-xs"
                           aria-hidden="true"
@@ -447,6 +502,32 @@ const ExpensesPage = () => {
                       </button>
                     </div>
                     <hr />
+
+                    {/* Confirmation Modal */}
+                    {isModalOpen && (
+                      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+                        <div className="bg-white rounded-md shadow-lg p-6">
+                          <h2 className="text-lg font-semibold">
+                            Confirm Deletion
+                          </h2>
+                          <p>Are you sure you want to delete this item?</p>
+                          <div className="mt-4 flex justify-end">
+                            <button
+                              className="bg-gray-300 text-black px-4 py-2 rounded-md mr-2"
+                              onClick={closeModal}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              className="bg-red-500 text-white px-4 py-2 rounded-md"
+                              onClick={confirmDelete}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="w-full flex justify-between gap-2 items-center">
                       {/* PUT THE SELECTED DOCEXPENSE DATE HERE */}
                       <h1 className="font-bold text-sm text-gray-600 bg-white px-2 py-1 rounded-sm shadow-sm space-x-2">
@@ -511,7 +592,7 @@ const ExpensesPage = () => {
                               Edit
                             </button>
                           )}
-                          {/* DELETE BUTTON */}
+                          {/* REMOVE ITEM BUTTON */}
                           <button
                             onClick={() => handleRemove(index)}
                             className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"

@@ -203,7 +203,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     // Hide the popup and toggle the form after a delay
     setTimeout(() => {
       setIsPopUpVisible(false);
-      toggleForm(); // Close the form
+      //toggleForm(); // Close the form
     }, 750);
   };
 
