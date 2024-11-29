@@ -28,8 +28,48 @@ ChartJS.register(
   Legend
 );
 
-const NetSalesExpensesGraph = ({ timeFrame }) => {
-  const [salesExpensesToday, setSalesExpensesToday] = useState(null);
+interface NetSalesExpensesGraphProps {
+  timeFrame: string; // Adjust the type based on your actual data (e.g., 'string', 'number', or a union type).
+}
+
+interface SalesData {
+  NetSales: {
+    data: { [key: string]: number }; // Dates as keys and numeric values
+    color?: string;
+    labels?: string;
+  };
+  Expenses: {
+    data: { [key: string]: number }; // Dates as keys and numeric values
+    color?: string;
+    labels?: string;
+  };
+}
+
+interface WeeklyChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    backgroundColor: string;
+    borderColor: string;
+    data: number[];
+  }[];
+  additionalLabel?: string; // Optional property for the week timeframe
+}
+
+interface YearlyChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    backgroundColor: string;
+    borderColor: string;
+    data: number[];
+  }[];
+  totalSales: number; // Ensure totalSales is part of the return type
+  totalExpenses: number; // Ensure totalExpenses is part of the return type
+}
+
+const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame }) => {
+  const [salesExpensesToday, setSalesExpensesToday] = useState<any>(null);
   const options = {};
 
   useEffect(() => {
@@ -55,22 +95,26 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
     return () => unsubscribe();
   }, []);
 
-  const getLatestData = (data) => {
+  const getLatestData = (data: SalesData | null) => {
     if (!data) return null;
-
+  
     const today = new Date().toLocaleDateString(); // Format today's date
     const dates = Object.keys(data.NetSales.data);
-
+  
     // Sort dates in descending order
-    dates.sort((a, b) => new Date(b) - new Date(a));
-
+    dates.sort((a, b) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      return dateB.getTime() - dateA.getTime(); // Use getTime() to compare numeric values
+    });
+  
     // Check for today's data
     const latestNetSales = data.NetSales.data[today] || 0; // Default to 0 if no data for today
     const latestExpenses = data.Expenses.data[today] || 0; // Default to 0 if no data for today
-
+  
     // Prepare the label for today's report
     const label = `${today} - Today's Report`;
-
+  
     return {
       labels: [label], // Use the formatted label
       datasets: [
@@ -79,6 +123,7 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
           borderColor: data.NetSales.color || "#60A66F", // Fallback color if not found
           data: [latestNetSales], // Use 0 if no data
           label: data.NetSales.labels || "Net Sales", // Use the fetched label for Net Sales
+          
         },
         {
           backgroundColor: data.Expenses.color || "#F0565F", // Fallback color if not found
@@ -89,118 +134,100 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
       ],
     };
   };
-  const getWeeklyData = (salesData) => {
-    const today = new Date();
-    const datesOfWeek = []; // To store the corresponding dates
-    const weeklySales = []; // Create array for sales data
-    const weeklyExpenses = []; // Create array for expenses data
 
-    // Fetch sales and expenses data from the existing document
+  const getWeeklyData = (salesData: SalesData): WeeklyChartData => {
+    const today = new Date();
+    const datesOfWeek = [];
+    const weeklySales = [];
+    const weeklyExpenses = [];
+  
     const sales = salesData.NetSales.data;
     const expenses = salesData.Expenses.data;
-
-    // Add today's data first
+  
     const todayFormatted = today.toLocaleDateString();
-    datesOfWeek.push(todayFormatted); // Add today's date
-    weeklySales.push(sales[todayFormatted] || 0); // Push today's sales data or 0 if no data
-    weeklyExpenses.push(expenses[todayFormatted] || 0); // Push today's expenses data or 0 if no data
-
-    // Array of day names
-    const dayNames = [
-      "Sunday",
-      "Monday",
-      "Tuesday",
-      "Wednesday",
-      "Thursday",
-      "Friday",
-      "Saturday",
-    ];
-
-    // Loop to get the last 3 days excluding today
+    datesOfWeek.push(todayFormatted);
+    weeklySales.push(sales[todayFormatted] || 0);
+    weeklyExpenses.push(expenses[todayFormatted] || 0);
+  
+    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  
     for (let i = 1; i <= 6; i++) {
       const currentDay = new Date(today);
-      currentDay.setDate(today.getDate() - i); // Move back one day for each iteration
-
-      const formattedDate = currentDay.toLocaleDateString(); // Format date for comparison
-      datesOfWeek.unshift(formattedDate); // Add the date at the beginning for ascending order
-      weeklySales.unshift(sales[formattedDate] || 0); // Push sales data or 0 if no data at the beginning
-      weeklyExpenses.unshift(expenses[formattedDate] || 0); // Push expenses data or 0 if no data at the beginning
+      currentDay.setDate(today.getDate() - i);
+      const formattedDate = currentDay.toLocaleDateString();
+      datesOfWeek.unshift(formattedDate);
+      weeklySales.unshift(sales[formattedDate] || 0);
+      weeklyExpenses.unshift(expenses[formattedDate] || 0);
     }
-
-    // Get the day names for the labels with the corresponding date
+  
     const dayLabels = datesOfWeek.map((date) => {
-      const dayIndex = new Date(date).getDay(); // Get day index (0-6)
-      const dayName = dayNames[dayIndex]; // Map to day names
-      return `${dayName}\n(${date})`; // Format as "Day\n(MM/DD/YYYY)"
+      const dayIndex = new Date(date).getDay();
+      const dayName = dayNames[dayIndex];
+      return `${dayName}\n(${date})`;
     });
-
-    // Determine if today is Monday or Thursday
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-
+  
+    const dayOfWeek = today.getDay();
+  
+    // Set additionalLabel based on the week context
+    let additionalLabel = '';
+    if (dayOfWeek === 0) {
+      additionalLabel = 'It’s Sunday! Start your week strong!';
+    } else if (dayOfWeek === 6) {
+      additionalLabel = 'It’s Saturday! Wrap up your week!';
+    }
+  
     return {
-      labels: dayLabels, // Use the formatted day names and dates as labels
+      labels: dayLabels,
       datasets: [
         {
           label: "Net Sales",
           backgroundColor: "#60A66F",
           borderColor: "#60A66F",
-          data: [...weeklySales], // Keep the sales data in the same order
+          data: [...weeklySales],
         },
         {
           label: "Expenses",
           backgroundColor: "#F0565F",
           borderColor: "#F0565F",
-          data: [...weeklyExpenses], // Keep the expenses data in the same order
+          data: [...weeklyExpenses],
         },
       ],
+      additionalLabel, // Include additionalLabel in the returned object
     };
-  };
+  };  
 
-  const getYearlyData = (salesData) => {
+  const getYearlyData = (salesData: SalesData): YearlyChartData => {
     const monthlySales = new Array(12).fill(0); // Array to hold sales totals for each month
     const monthlyExpenses = new Array(12).fill(0); // Array to hold expenses totals for each month
     let totalSales = 0; // Initialize total sales
     let totalExpenses = 0; // Initialize total expenses
-
+  
     // Loop through Net Sales data and aggregate by month
     for (const [dateString, sales] of Object.entries(salesData.NetSales.data)) {
       const date = new Date(dateString);
       const month = date.getMonth(); // Get month (0-11)
-
+  
       if (!isNaN(month)) {
         monthlySales[month] += sales; // Sum sales for the month
         totalSales += sales; // Add to total sales
       }
     }
-
+  
     // Loop through Expenses data and aggregate by month
-    for (const [dateString, expenses] of Object.entries(
-      salesData.Expenses.data
-    )) {
+    for (const [dateString, expenses] of Object.entries(salesData.Expenses.data)) {
       const date = new Date(dateString);
       const month = date.getMonth(); // Get month (0-11)
-
+  
       if (!isNaN(month)) {
         monthlyExpenses[month] += expenses; // Sum expenses for the month
         totalExpenses += expenses; // Add to total expenses
       }
     }
-
+  
     // Prepare the chart data
     return {
       labels: [
-        "Jan",
-        "Feb",
-        "Mar",
-        "Apr",
-        "May",
-        "Jun",
-        "Jul",
-        "Aug",
-        "Sep",
-        "Oct",
-        "Nov",
-        "Dec",
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
       ],
       datasets: [
         {
@@ -222,13 +249,17 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
   };
 
   const chartData =
-    timeFrame === "today" && salesExpensesToday
-      ? getLatestData(salesExpensesToday)
-      : timeFrame === "week" && salesExpensesToday
-      ? getWeeklyData(salesExpensesToday) // Use the new function to get weekly data
-      : timeFrame === "year" && salesExpensesToday
-      ? getYearlyData(salesExpensesToday)
-      : salesExpensesYear;
+  timeFrame === "today" && salesExpensesToday
+    ? getLatestData(salesExpensesToday)
+    : timeFrame === "week" && salesExpensesToday
+    ? getWeeklyData(salesExpensesToday)
+    : timeFrame === "year" && salesExpensesToday
+    ? getYearlyData(salesExpensesToday) // Ensure this function is being used for yearly data
+    : salesExpensesYear;
+
+// Type assertion to ensure the data conforms to the expected type
+  const yearlyChartData = chartData as YearlyChartData;
+  const weeklyChartData = chartData as WeeklyChartData;
 
   return (
     <>
@@ -238,21 +269,21 @@ const NetSalesExpensesGraph = ({ timeFrame }) => {
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
               <span className="ml-2">
-                PHP {chartData.totalSales.toLocaleString()}
+                PHP {yearlyChartData.totalSales.toFixed(2)}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">Total Expenses:</span>
               <span className="ml-2">
-                PHP {chartData.totalExpenses.toLocaleString()}
+                PHP {yearlyChartData.totalExpenses.toFixed(2)}
               </span>
             </div>
           )}
 
           {timeFrame === "week" && (
             <>
-              {chartData.additionalLabel && (
+              {weeklyChartData.additionalLabel && (
                 <div className="text-center font-bold mb-2">
-                  {chartData.additionalLabel}
+                  {weeklyChartData.additionalLabel}
                 </div>
               )}
               {/* No total sales or expenses displayed for week */}
