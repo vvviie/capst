@@ -19,7 +19,7 @@ const AddMenuCategoryPage = () => {
   };
 
   // Format camelCase to human-readable strings
-  const formatCamelCase = (str) => {
+  const formatCamelCase = (str: string): string => {
     return str
       .replace(/([A-Z])/g, " $1") // Add space before uppercase letters
       .replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()); // Capitalize the first letter
@@ -28,9 +28,15 @@ const AddMenuCategoryPage = () => {
   useEffect(() => {
     const fetchSubCategories = async () => {
       const slug = window.location.pathname.split("/").pop(); // Get the last part of the URL
-      const docRef = doc(db, "menuCategories", slug);
+      
+      if (!slug) {
+        console.error("Slug is undefined!");
+        return;
+      }
+  
+      const docRef = doc(db, "menuCategories", slug); // Only call doc() if slug is defined
       const docSnap = await getDoc(docRef);
-
+  
       if (docSnap.exists()) {
         const data = docSnap.data();
         setSubCategories(data.categories || []);
@@ -38,7 +44,7 @@ const AddMenuCategoryPage = () => {
         console.error("Document not found!");
       }
     };
-
+  
     fetchSubCategories();
   }, []);
 
