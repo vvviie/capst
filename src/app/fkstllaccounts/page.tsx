@@ -84,9 +84,9 @@ const AccountsListPage = () => {
     setIsFormOpen((prev) => !prev);
   };
 
-  const handleFilterChange = (status) => {
+  const handleFilterChange = (status: string) => {
     setFilteredStatus(status);
-  };
+};
 
   const handleFilterStaffChange = (status: string, role: string) => {
     setFilteredStaffStatus(status);
@@ -112,7 +112,7 @@ const AccountsListPage = () => {
     setSearchInput(event.target.value);
   };
 
-  const handleStatusChange = async (username, newStatus) => {
+  const handleStatusChange = async (username: string, newStatus: string) => {
     const staffRef = doc(db, "staff", username); // Reference the specific staff document
     try {
       await updateDoc(staffRef, { staffStatus: newStatus }); // Update the staff status in Firestore
@@ -122,7 +122,7 @@ const AccountsListPage = () => {
     }
   };
 
-  const handleRoleChange = async (username, newRole) => {
+  const handleRoleChange = async (username: string, newRole: string) => {
     const staffRef = doc(db, "staff", username); // Reference the specific staff document
     try {
       await updateDoc(staffRef, { staffRole: newRole }); // Update the staff role in Firestore
@@ -153,12 +153,17 @@ const AccountsListPage = () => {
         role: doc.data().role,
       }));
       setUserAccounts(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      if (error.message.includes("insufficient permissions")) {
-        alert(
-          "You do not have permission to access this data. Please check your authentication status."
-        );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error fetching users:", error);
+        if (error.message.includes("insufficient permissions")) {
+          alert(
+            "You do not have permission to access this data. Please check your authentication status."
+          );
+        }
+      } else {
+        // If error is not an instance of Error, handle it here if needed
+        console.error("An unexpected error occurred:", error);
       }
     }
   };
@@ -195,12 +200,17 @@ const AccountsListPage = () => {
 
       // Return the unsubscribe function for cleanup
       return unsubscribe;
-    } catch (error) {
-      console.error("Error fetching staff:", error);
-      if (error.message.includes("insufficient permissions")) {
-        alert(
-          "You do not have permission to access this data. Please check your authentication status."
-        );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error fetching staff:", error);
+        if (error.message.includes("insufficient permissions")) {
+          alert(
+            "You do not have permission to access this data. Please check your authentication status."
+          );
+        }
+      } else {
+        // Handle the case where error is not an instance of Error
+        console.error("An unexpected error occurred:", error);
       }
     }
   };
@@ -409,7 +419,7 @@ const AccountsListPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
 
     // Adjust the visible page numbers if necessary
@@ -611,9 +621,9 @@ const AccountsListPage = () => {
                       <button
                         className="h-10 w-2/3 bg-white border-2 border-gray-100 font-bold rounded-md shadow-md
                                     hover:bg-gray-50 hover:scale-[1.02] duration-200 mt-2 text-gray-500"
-                        onClick={() => {
+                          onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
                           setIsFormOpen(true);
-                          e.stopPropagation();
+                          event.stopPropagation();
                           toggleForm();
                         }}
                       >

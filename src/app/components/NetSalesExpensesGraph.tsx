@@ -269,12 +269,12 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
               <span className="ml-2">
-                PHP {yearlyChartData.totalSales.toFixed(2)}
+                PHP {yearlyChartData.totalSales.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">Total Expenses:</span>
               <span className="ml-2">
-                PHP {yearlyChartData.totalExpenses.toFixed(2)}
+                PHP {yearlyChartData.totalExpenses.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
               </span>
             </div>
           )}
