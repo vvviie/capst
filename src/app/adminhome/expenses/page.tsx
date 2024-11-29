@@ -2,10 +2,29 @@
 import { ExpenseDocs, months } from "@/app/data";
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/app/firebase";
 
 const ExpensesPage = () => {
   const [totalExpenses, setTotalExpenses] = useState(2000);
 
+  useEffect(() => {
+    const fetchCafeExpenses = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "cafeExpenses"));
+        const expenses: { id: string; }[] = [];
+        querySnapshot.forEach((doc) => {
+          expenses.push({ id: doc.id, ...doc.data() });
+        });
+        console.log(expenses); // This will log the cafeExpenses collection
+      } catch (error) {
+        console.error("Error fetching cafeExpenses: ", error);
+      }
+    };
+
+    fetchCafeExpenses();
+  }, []);
+  
   // Calculate the total expenses when the component mounts or when ExpenseDocs changes
   useEffect(() => {
     const total = ExpenseDocs.reduce(
