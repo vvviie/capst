@@ -9,9 +9,9 @@ import Link from "next/link";
 
 const ForgotPasswordPage: React.FC = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const mode = searchParams.get("mode"); // This will be 'reset' after clicking the email link
-  const oobCode = searchParams.get("oobCode"); // Verification code from the email
+  const searchParams = useSearchParams() ?? new URLSearchParams(); // Fallback to an empty URLSearchParams object
+  const mode = searchParams.get("mode"); // Safely get the "mode" parameter
+  const oobCode = searchParams.get("oobCode"); // Safely get the "oobCode" parameter
 
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
