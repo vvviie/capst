@@ -2,7 +2,14 @@
 import { months } from "@/app/data"; // Import months from your data file
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "@/app/firebase";
 
 type Expense = {
@@ -191,9 +198,33 @@ const ExpensesPage = () => {
     } catch (error) {
       console.error("Error updating document: ", error);
     }
+
+    // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
+    const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
+    const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+
+    // Submit to salesData collection
+    const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+    const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+    // Update the salesData document
+    const expensesData = {
+      Expenses: {
+        data: {
+          [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+        },
+      },
+    };
+
+    // Merge the new expenses data with the existing document
+    try {
+      await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+    } catch (error) {
+      console.error("Error updating sales data: ", error);
+    }
   };
 
-  const handleDelete = async (index: number) => {
+  const handleRemove = async (index: number) => {
     const updatedExpenses = [...selectedDate.addedExpenses];
 
     // Get the amount of the expense to be deleted
@@ -225,6 +256,30 @@ const ExpensesPage = () => {
       setTotalExpenses(newTotalExpenses);
     } catch (error) {
       console.error("Error deleting expense: ", error);
+    }
+
+    // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
+    const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
+    const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+
+    // Submit to salesData collection
+    const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+    const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+    // Update the salesData document
+    const expensesData = {
+      Expenses: {
+        data: {
+          [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+        },
+      },
+    };
+
+    // Merge the new expenses data with the existing document
+    try {
+      await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+    } catch (error) {
+      console.error("Error updating sales data: ", error);
     }
   };
 
@@ -458,7 +513,7 @@ const ExpensesPage = () => {
                           )}
                           {/* DELETE BUTTON */}
                           <button
-                            onClick={() => handleDelete(index)}
+                            onClick={() => handleRemove(index)}
                             className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
                           >
                             x
