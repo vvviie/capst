@@ -135,7 +135,7 @@ const CRUDProductPage = () => {
   };
 
   // Fetch categories from the database
-  const fetchCategoriesFromDB = async (mainCategory) => {
+  const fetchCategoriesFromDB = async (mainCategory: string) => {
     try {
       // Determine the collection based on the selected main category
       let categoriesCollection = "";
@@ -187,10 +187,8 @@ const CRUDProductPage = () => {
       const formattedCategories = allCategories.map((category) =>
         category
           .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase())
+          .replace(/^./, (str: string) => str.toUpperCase())  // Explicitly type 'str' as a string
       );
-
-      setMenuCategories(formattedCategories);
 
       // Only set the selectedCategory if it's a valid option in the new categories list
       if (formattedCategories.includes(selectedCategory)) {
@@ -272,7 +270,7 @@ const CRUDProductPage = () => {
         sandwiches: "sandwiches",
       };
 
-      const collectionName = collectionMap[category];
+      const collectionName = collectionMap[category as keyof typeof collectionMap];
       if (!collectionName) {
         console.error("Invalid category");
         return;
@@ -299,63 +297,8 @@ const CRUDProductPage = () => {
         `Availability for item ${id} in ${collectionName} updated to ${newAvailability}`
       );
 
-      // Optionally, update local state directly to avoid re-fetching data
-      updateLocalStateAvailability(collectionName, id, newAvailability);
     } catch (error) {
       console.error(`Error updating availability in ${collectionName}:`, error);
-    }
-  };
-
-  const updateLocalStateAvailability = (
-    collectionName: string,
-    id: string,
-    newAvailability: string
-  ) => {
-    switch (collectionName) {
-      case "drinks":
-        setDrinks((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "mainCourse":
-        setMainCourses((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "pasta":
-        setPasta((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "pastries":
-        setPastries((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "snacks":
-        setSnacks((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "sandwiches":
-        setSandwiches((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      default:
-        console.warn("Unknown collection name:", collectionName);
     }
   };
 

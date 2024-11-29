@@ -64,7 +64,7 @@ const AddProductPage = () => {
 
     // For Image's File Name
     const [fileName, setFileName] = useState("");
-    const fileInputRef = useRef(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // For Product IDs
     const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>("Iced Drinks");
@@ -140,12 +140,12 @@ const AddProductPage = () => {
 
     const [existingIDs, setExistingIDs] = useState<string[]>([]); // Initialize existing IDs
     const existingIDsRef = useRef<string[]>([]); // Create a ref to store existing IDs
-    const itemNameRef = useRef(null);
-    const itemPriceRef = useRef(null);
-    const drinkSizeRef = useRef(null);
-    const drinkUpsizeRef = useRef(null);
-    const drinkUpsizePriceRef = useRef(null);
-    const descriptionRef = useRef(null);
+    const itemNameRef = useRef<HTMLInputElement | null>(null);
+    const itemPriceRef = useRef<HTMLInputElement | null>(null);
+    const drinkSizeRef = useRef<HTMLInputElement | null>(null);
+    const drinkUpsizeRef = useRef<HTMLInputElement | null>(null);
+    const drinkUpsizePriceRef = useRef<HTMLInputElement | null>(null);
+    const descriptionRef = useRef<HTMLTextAreaElement | null>(null); // Update the type
     // Effect to update extractedCategory when selectedCat changes
     useEffect(() => {
         const category = selectedCat.replace("Menu", "");
@@ -200,8 +200,14 @@ const AddProductPage = () => {
 
     // Effect to generate a new ID based on existing IDs
     useEffect(() => {
-        const drinkType = selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
-        generateNewID(existingIDsRef.current, drinkType); // Call with the current value of existing IDs
+        let drinkType: "drink" | null = null;
+        if (selectedCat === "drinks") {
+            drinkType = selectedDrinkType === "drink" ? "drink" : null;
+        } else {
+            drinkType = passableSelectedDrinkType === "drink" ? "drink" : null;
+        }
+    
+        generateNewID(existingIDsRef.current, drinkType);
     }, [existingIDs]);
 
     useEffect(() => {
@@ -304,8 +310,10 @@ const AddProductPage = () => {
     }, [passableSelectedDrinkType]); // Runs when passableSelectedDrinkType changes
 
     const handleUploadClick = () => {
+    if (fileInputRef.current) {
         // Trigger the file input click
         fileInputRef.current.click();
+        }
     };
 
     // Handler for input change
@@ -358,8 +366,8 @@ const AddProductPage = () => {
         console.log("Selected allergens:", allergens); // Log or handle the selected allergens as needed
     };
 
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0]; // Get the uploaded file
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; // Get the uploaded file
         if (file) {
             const validTypes = ['image/jpeg', 'image/png'];
             if (!validTypes.includes(file.type)) {
@@ -387,7 +395,11 @@ const AddProductPage = () => {
             const reader = new FileReader();
 
             reader.onload = (e) => {
-                imgElement.src = e.target.result as string;
+                if (e.target) { // Check if e.target is not null
+                    imgElement.src = e.target.result as string;
+                } else {
+                    reject(new Error("FileReader target is null."));
+                }
             };
 
             imgElement.onload = () => {
@@ -424,21 +436,21 @@ const AddProductPage = () => {
     };
 
     // Function to upload image to Firebase Storage
-    const uploadImageToStorage = async (file) => {
+    const uploadImageToStorage = async (file: File): Promise<string | null> => {
         const storage = getStorage();
         const storageRef = ref(storage, `images/${file.name.split('.').slice(0, -1).join('.')}.webp`); // Update path to WebP
-
+    
         try {
             // Convert the image to WebP format
             const webpBlob = await convertImageToWebP(file);
             console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
             console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
-
+    
             // Create URL for the WebP Blob to preview
             const webpUrl = URL.createObjectURL(webpBlob);
             console.log("Converted to WebP:", webpUrl); // Log the WebP URL
             setImageUrl(webpUrl); // Set this URL for preview, if needed
-
+    
             // Upload the WebP file
             await uploadBytes(storageRef, webpBlob, { contentType: 'image/webp' });
             const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
@@ -447,12 +459,16 @@ const AddProductPage = () => {
             console.error("Error uploading image:", error);
             return null; // Return null if there's an error
         }
-    };
+    };    
 
     const handleRemoveImage = () => {
         setImageUrl(""); // Remove the image preview
         setFileName(""); // Clear the file name
-        fileInputRef.current.value = ""; // Clear the file input
+    
+        // Null check to ensure fileInputRef.current is not null
+        if (fileInputRef.current) {
+            fileInputRef.current.value = ""; // Clear the file input
+        }
     };
 
     const fetchPlaceholderImageUrl = async () => {
@@ -473,32 +489,44 @@ const AddProductPage = () => {
     const handleSubmit = async () => {
         // Validate required fields
         if (!itemName) {
-            itemNameRef.current.focus(); // Set focus back to item name
+            if (itemNameRef.current) {
+                itemNameRef.current.focus(); // Set focus back to item name
+            }
             return; // Exit the function if validation fails
         }
-
+    
         if (!itemPrice) {
-            itemPriceRef.current.focus(); // Set focus back to item price
+            if (itemPriceRef.current) {
+                itemPriceRef.current.focus(); // Set focus back to item price
+            }
             return; // Exit if item price is not provided
         }
 
         if (selectedCat === "drinks") {
             if (!drinkSize) {
-                drinkSizeRef.current.focus();
+                if (drinkSizeRef.current) {
+                    drinkSizeRef.current.focus();
+                }
                 return; // Exit if drink size is not provided
             }
             if (upsize && !upsizeSize) {
-                drinkUpsizeRef.current.focus();
+                if (drinkUpsizeRef.current) {
+                    drinkUpsizeRef.current.focus();
+                }
                 return; // Exit if upsize size is not provided
             }
             if (upsize && !upsizePrice) {
-                drinkUpsizePriceRef.current.focus();
+                if (drinkUpsizePriceRef.current) {
+                    drinkUpsizePriceRef.current.focus();
+                }
                 return; // Exit if upsize price is not provided
             }
         }
-
+    
         if (!desc) {
-            descriptionRef.current.focus();
+            if (descriptionRef.current) {
+                descriptionRef.current.focus();
+            }
             return; // Exit if description is not provided
         }
 
@@ -518,7 +546,7 @@ const AddProductPage = () => {
             milkOat = 40;
             milkAlmond = 30;
 
-            if (toCamelCase(passableSelectedDrinkType) === "icedDrinks") {
+            if (toCamelCase(passableSelectedDrinkType || "") === "icedDrinks") {
                 addVanilla = 25;
             }
         } else if (selectedCat === "mainCourseMenu") {
@@ -531,7 +559,7 @@ const AddProductPage = () => {
 
         // Upload the image if it exists
         let finalImageUrl;
-        if (fileInputRef.current.files[0]) {
+        if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files[0]) {
             const file = fileInputRef.current.files[0]; // Get the uploaded file
             try {
                 finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
@@ -547,7 +575,7 @@ const AddProductPage = () => {
             finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no file is uploaded
         }
 
-        function toCamelCase(str) {
+        function toCamelCase(str: string) {
             return str
                 .toLowerCase() // Convert the entire string to lowercase
                 .split(" ") // Split the string by spaces
@@ -566,7 +594,7 @@ const AddProductPage = () => {
             desc: desc,
             img: finalImageUrl,
             price: itemPrice,
-            prodCategory: toCamelCase(passableSelectedDrinkType), // Logic for prodCategory
+            prodCategory: toCamelCase(passableSelectedDrinkType || ""), // Logic for prodCategory
             prodID: newProdID,
             title: itemName,
             type: selectedDrinkType || "",
@@ -682,8 +710,8 @@ const AddProductPage = () => {
                 setMenuCategories(formattedCategories);
 
                 // Reset selectedCategory if it's not a valid option
-                if (!formattedCategories.includes(selectedCategory)) {
-                    setSelectedCategory(formattedCategories[0] || null); // Default to first category
+                if (!selectedCategory || !formattedCategories.includes(selectedCategory)) {
+                    setSelectedCategory(formattedCategories[0] || "defaultCategory"); // Use default category if no match
                 }
             } else {
                 console.log("No such document!");
@@ -944,7 +972,7 @@ const AddProductPage = () => {
                                     name="catDrinks"
                                     id="catDrinks"
                                     className="rounded-md shadow-sm border-2 border-gray-100 text-lg text-gray-600 font-semibold bg-white cursor-pointer py-[5px] w-full text-center"
-                                    value={passableSelectedDrinkType} // Use passableSelectedDrinkType as default
+                                    value={passableSelectedDrinkType || ""} // Use passableSelectedDrinkType as default
                                     onChange={(e) => {
                                         const selectedValue = e.target.value;
                                         setPassableSelectedDrinkType(selectedValue); // Set passableSelectedDrinkType
