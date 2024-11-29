@@ -78,7 +78,7 @@ const ExpensesPage = () => {
   // }, [ExpenseDocs]);
 
   // Calculate the total expenses when the component mounts or when ExpenseDocs changes
-  
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   useEffect(() => {
     const total = ExpenseDocs.reduce((sum, doc) => {
       // Extract the month and year from the doc's date
@@ -86,12 +86,11 @@ const ExpensesPage = () => {
       const expenseMonth = expenseDate.getMonth();
       const expenseYear = expenseDate.getFullYear();
 
-      // Get the selected month index and current year
+      // Get the selected month index
       const selectedMonthIndex = getMonthIndex(selectedMonth);
-      const currentYear = new Date().getFullYear();
 
-      // Check if the expense is in the selected month and the current year
-      if (expenseMonth === selectedMonthIndex && expenseYear === currentYear) {
+      // Check if the expense is in the selected month and the selected year
+      if (expenseMonth === selectedMonthIndex && expenseYear === selectedYear) {
         return (
           sum +
           doc.addedExpenses.reduce(
@@ -104,8 +103,7 @@ const ExpensesPage = () => {
     }, 0);
 
     setTotalExpenses(total);
-  }, [ExpenseDocs, selectedMonth]); // Add selectedMonth to the dependency array
-
+  }, [ExpenseDocs, selectedMonth, selectedYear]); // Add selectedYear to the dependency array
   //#region PAGES CODE
   const [currentPage, setCurrentPage] = useState(1);
   const [pageWindowStart, setPageWindowStart] = useState(1);
@@ -116,17 +114,22 @@ const ExpensesPage = () => {
 
   const [currentExp, setCurrentExp] = useState<ExpenseDocument[]>([]); // Filtered expenses
 
-  // Filter expenses based on the selected month
+  // Filter expenses based on the selected month and year
   useEffect(() => {
     const filteredExpenses = ExpenseDocs.filter((expense) => {
       const expenseDate = new Date(expense.date);
       const expenseMonth = expenseDate.getMonth(); // 0-11 for Jan-Dec
-      return months[expenseMonth] === selectedMonth; // Compare with selected month
+      const expenseYear = expenseDate.getFullYear(); // Get the year
+
+      // Check if the expense month matches the selected month and the expense year matches the selected year
+      return (
+        months[expenseMonth] === selectedMonth && expenseYear === selectedYear
+      );
     });
 
     // Update the currentExp based on the filtered expenses and items per page
     setCurrentExp(filteredExpenses.slice(0, itemsPerPage));
-  }, [ExpenseDocs, selectedMonth, itemsPerPage]);
+  }, [ExpenseDocs, selectedMonth, selectedYear, itemsPerPage]);
 
   const visiblePages = Array.from(
     { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
@@ -177,8 +180,6 @@ const ExpensesPage = () => {
     setPageWindowStart(1);
   };
   //#endregion
-
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const years = Array.from(
     { length: 11 }, // LENGTH OF YEARS
