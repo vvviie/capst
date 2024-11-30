@@ -47,13 +47,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
             console.log(`User with UID: ${userId} deleted successfully.`); // Log successful deletion
             return res.status(200).json({ message: "User deleted successfully" });
-        } catch (error) {
+        } catch (error: unknown) {
             console.error("Error deleting user:", error);
-            // Check for specific Firebase error codes for more informative responses
-            if (error.code === 'auth/user-not-found') {
-                return res.status(404).json({ error: "User not found" });
+
+            // Check if error is an instance of Error and has a code property
+            if (error instanceof Error) {
+                // Handle Firebase error codes
+                if ((error as any).code === 'auth/user-not-found') {
+                    return res.status(404).json({ error: "User not found" });
+                }
+
+                // Generic error handling for other cases
+                return res.status(500).json({ error: error.message || "Failed to delete user" });
             }
-            return res.status(500).json({ error: error.message || "Failed to delete user" });
+
+            // Fallback for unknown error types
+            return res.status(500).json({ error: "An unknown error occurred" });
         }
     } else {
         res.setHeader("Allow", ["POST"]);
