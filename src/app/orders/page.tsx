@@ -301,7 +301,7 @@ const OrdersPage = () => {
   
     // Cleanup function to unsubscribe from onSnapshot when component unmounts or userEmail changes
     return () => unsubscribe();
-  }, [userEmail]);
+  }, [userEmail, applySrPWD]);
   
 
   // Check orders length on state change
@@ -1016,7 +1016,7 @@ const OrdersPage = () => {
                         <div className="font-bold text-sm flex justify-between items-center">
                           <span className="font-semibold">
                             {order.status !== "TO PAY"
-                              ? "Senior Citizen / PWD Discount Given?"
+                              ? "Senior Citizen/PWD Discount Given?"
                               : "Applied for Senior/PWD?"}
                           </span>
                           <span>{order.pwdSenior ? "Yes" : "No"}</span>

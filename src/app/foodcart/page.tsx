@@ -1,7 +1,7 @@
 "use client";
 
 //#region Import statements
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   getDocs,
   query,
@@ -546,22 +546,22 @@ const CartPage = () => {
   //#endregion
 
   //#region Handling of Fetching of All Items
-  const fetchCartItems = async () => {
+  const fetchCartItems = useCallback(async () => {
     if (!userEmail) {
       setShowLoginModal(true);
       return;
     }
-
+  
     try {
       const tempOrdersRef = collection(db, "tempOrders");
       const querySnapshot = await getDocs(
         query(tempOrdersRef, where("user", "==", userEmail))
       );
-
+  
       let cartItems: any[] = [];
       let totalCartPrice = 0;
       let subtotal = 0;
-
+  
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         Object.keys(data).forEach((key) => {
@@ -572,7 +572,7 @@ const CartPage = () => {
           ) {
             const itemData = data[key];
             const slug = itemData.slug;
-
+  
             let tags = [];
             if (slug === "drinks") {
               tags = [
@@ -595,7 +595,7 @@ const CartPage = () => {
             } else if (slug === "pastries") {
               tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
             }
-
+  
             cartItems.push({
               id: key,
               title: itemData.productTitle,
@@ -605,16 +605,16 @@ const CartPage = () => {
               qtty: itemData.itemQty,
               price: itemData.totalPrice,
             });
-
+  
             subtotal += itemData.totalPrice;
           }
         });
         totalCartPrice = data.totalCartPrice;
       });
-
+  
       setTotalCartPrice(totalCartPrice);
       setSubtotal(subtotal);
-
+  
       if (cartItems.length > 0) {
         setAddedToCart(cartItems);
         setIsEmpty(false);
@@ -624,7 +624,7 @@ const CartPage = () => {
     } catch (error) {
       //console.error("Error fetching cart items:", error);
     }
-  };
+  }, [userEmail]);
   //#endregion
 
   const calculateFinalTotal = () => {
@@ -1353,7 +1353,7 @@ const CartPage = () => {
   //#region Fetching of All Items in Cart
   useEffect(() => {
     fetchCartItems();
-  }, [userEmail]);
+  }, [userEmail, fetchCartItems]);
   //#endregion
 
   //#region Check All Existing Orders for Display
@@ -1455,7 +1455,7 @@ const CartPage = () => {
     };
   
     fetchNumberOfUses();
-  }, [selectedVoucher?.id]);
+  }, [selectedVoucher?.id, selectedVoucher?.usageLimitType]);
 
   //#region Mark Voucher as Used
 

@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -104,6 +104,20 @@ const ProductPage: React.FC = () => {
   const [showCartUpdateNotif, setShowCartUpdateNotif] = useState(false);
   const notificationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  const handleDrinkSizeChange = useCallback((size: string) => {
+    setSelectedDrinkSize(size);
+
+    if (size === productData.upsizeSize) {
+      setUpsizePrice(productData.upsizePrice); // Correctly set the upsize price
+    } else {
+      setUpsizePrice(0); // Reset if the default size is selected
+    }
+
+    // If the product is not upsizable, only allow "8oz" or "16oz" sizes
+    if (!productData.upsizable && size !== productData.currSize) {
+      setSelectedDrinkSize(productData.currSize);
+    }
+  }, [productData]);
   //#endregion
 
   //#region functions
@@ -196,7 +210,7 @@ const ProductPage: React.FC = () => {
         handleDrinkSizeChange(previouslySelectedSize);
       }
     }
-  }, [productData]);
+  }, [productData, handleDrinkSizeChange]);
   // Fetches existing products
   // Automatically uses the following data from the database through the slug
   useEffect(() => {
@@ -738,21 +752,6 @@ const ProductPage: React.FC = () => {
 
   let productAvailable = productData.availability === "available";
   let calorieContent = calorie;
-
-  const handleDrinkSizeChange = (size: string) => {
-    setSelectedDrinkSize(size);
-
-    if (size === productData.upsizeSize) {
-      setUpsizePrice(productData.upsizePrice); // Correctly set the upsize price
-    } else {
-      setUpsizePrice(0); // Reset if the default size is selected
-    }
-
-    // If the product is not upsizable, only allow "8oz" or "16oz" sizes
-    if (!productData.upsizable && size !== productData.currSize) {
-      setSelectedDrinkSize(productData.currSize);
-    }
-  };
 
   const handleAdditionalCostChange = (cost: number) => {
     setAdditionalCost(cost);

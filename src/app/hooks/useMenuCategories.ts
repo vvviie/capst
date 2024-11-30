@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { doc, onSnapshot } from "firebase/firestore"; // Use onSnapshot for real-time updates
 import { db } from "../firebase"; // Adjust path as needed
 
 const useMenuCategories = (mainCategory: string) => {
   const [menuCategories, setMenuCategories] = useState<string[]>([]);
 
-  const fetchCategoriesFromDB = () => {
+  // Use useCallback to memoize the fetchCategoriesFromDB function
+  const fetchCategoriesFromDB = useCallback(() => {
     let categoryDoc = ""; // Initialize to an empty string
 
     // Choose the document name based on the selected mainCategory
@@ -74,14 +75,14 @@ const useMenuCategories = (mainCategory: string) => {
 
     // Cleanup listener on component unmount or category change
     return () => unsubscribe();
-  };
+  }, [mainCategory]); // Dependency array now includes mainCategory
 
   // Fetch categories whenever mainCategory changes
   useEffect(() => {
     if (mainCategory) {
-      return fetchCategoriesFromDB(); // Trigger fetching based on mainCategory
+      fetchCategoriesFromDB(); // Trigger fetching based on mainCategory
     }
-  }, [mainCategory]); // Dependency array ensures fetch is triggered when mainCategory changes
+  }, [mainCategory, fetchCategoriesFromDB]); // Add fetchCategoriesFromDB to the dependency array
 
   return menuCategories; // Return the filtered menu categories
 };
