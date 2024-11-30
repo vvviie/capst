@@ -63,7 +63,7 @@ const ExpensesPage = () => {
     fetchCafeExpenses();
   }, []);
 
-  // use this for totalExpenses of all the docz
+  // totalExpenses of all the docz
   //  // Calculate the total expenses when the component mounts or when ExpenseDocs changes
   //  useEffect(() => {
   //   const total = ExpenseDocs.reduce(
@@ -82,16 +82,31 @@ const ExpensesPage = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   useEffect(() => {
     const total = ExpenseDocs.reduce((sum, doc) => {
-      // Extract the month and year from the doc's date
       const expenseDate = new Date(doc.date);
-      const expenseMonth = expenseDate.getMonth();
       const expenseYear = expenseDate.getFullYear();
+
+      // Check if the selected month is "Show All"
+      if (
+        selectedMonth === "----Show All----" &&
+        expenseYear === selectedYear
+      ) {
+        return (
+          sum +
+          doc.addedExpenses.reduce(
+            (innerSum, expense) => innerSum + expense.expenseAmount,
+            0
+          )
+        );
+      }
 
       // Get the selected month index
       const selectedMonthIndex = getMonthIndex(selectedMonth);
 
       // Check if the expense is in the selected month and the selected year
-      if (expenseMonth === selectedMonthIndex && expenseYear === selectedYear) {
+      if (
+        expenseDate.getMonth() === selectedMonthIndex &&
+        expenseYear === selectedYear
+      ) {
         return (
           sum +
           doc.addedExpenses.reduce(
@@ -104,8 +119,7 @@ const ExpensesPage = () => {
     }, 0);
 
     setTotalExpenses(total);
-  }, [ExpenseDocs, selectedMonth, selectedYear]); // Add selectedYear to the dependency array
-  //#region PAGES CODE
+  }, [ExpenseDocs, selectedMonth, selectedYear]); //#region PAGES CODE
   const [currentPage, setCurrentPage] = useState(1);
   const [pageWindowStart, setPageWindowStart] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
@@ -121,6 +135,11 @@ const ExpensesPage = () => {
       const expenseDate = new Date(expense.date);
       const expenseMonth = expenseDate.getMonth(); // 0-11 for Jan-Dec
       const expenseYear = expenseDate.getFullYear(); // Get the year
+
+      // Check if the selected month is "Show All"
+      if (selectedMonth === "----Show All----") {
+        return expenseYear === selectedYear; // Only filter by year
+      }
 
       // Check if the expense month matches the selected month and the expense year matches the selected year
       return (
@@ -183,8 +202,8 @@ const ExpensesPage = () => {
   //#endregion
 
   const years = Array.from(
-    { length: 11 }, // LENGTH OF YEARS
-    (_, i) => 2023 + i
+    { length: 8 }, // LENGTH OF YEARS (2028 to 2021 is 8 years)
+    (_, i) => 2028 - i // Start from 2028 and decrement
   );
 
   const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -608,7 +627,7 @@ const ExpensesPage = () => {
                   <div className="flex flex-col w-full">
                     {/* Header Row */}
                     <div className="flex bg-gray-200 font-bold text-gray-700 py-2 px-4 rounded-md mb-2">
-                      <span className="w-1/3">Expense Label</span>
+                      <span className="w-1/3">Title</span>
                       <span className="w-1/3 text-center">Time</span>
                       <span className="w-1/3 text-right">Amount</span>
                     </div>
