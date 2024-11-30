@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
 import classNames from "classnames";
 import { auth } from "@/app/firebase"; // Add your firebase instance here
@@ -91,7 +91,7 @@ const ForgotPasswordPage: React.FC = () => {
       setMessageColor("green");
     } catch (error: any) {
       if (error.message.includes("auth/user-not-found")) {
-        setMessage("User      not found");
+        setMessage("User not found");
       } else {
         setMessage(error.message);
       }
@@ -181,4 +181,13 @@ const ForgotPasswordPage: React.FC = () => {
   );
 };
 
-export default ForgotPasswordPage;
+// Wrap the component in Suspense for any potential async operations
+const ForgotPasswordPageWrapper: React.FC = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ForgotPasswordPage />
+    </Suspense>
+  );
+};
+
+export default ForgotPasswordPageWrapper;
