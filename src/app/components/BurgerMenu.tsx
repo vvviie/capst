@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { auth, db } from "../firebase"; // Update with the correct path
@@ -74,6 +74,46 @@ const BurgerMenu = () => {
 
   const unsubscribeCartRef = useRef<(() => void) | null>(null);
   const unsubscribeDocRef = useRef<(() => void) | null>(null);
+
+  const handleLogout = useCallback(
+    async (event: React.MouseEvent | React.FormEvent | null = null) => {
+      if (event) event.preventDefault(); // Prevent default if the event is present
+      
+      try {
+        const allCookies = Cookies.get();
+        Object.keys(allCookies).forEach((cookieName) => {
+          Cookies.remove(cookieName);
+        });
+      
+        if (unsubscribeCartRef.current) {
+          unsubscribeCartRef.current(); // Call the unsubscribe function
+          unsubscribeCartRef.current = null; // Reset the ref
+        }
+        if (unsubscribeDocRef.current) {
+          unsubscribeDocRef.current(); // Call the unsubscribe function
+          unsubscribeDocRef.current = null; // Reset the ref
+        }
+      
+        await signOut(auth); // Sign out from Firebase
+        setIsLoggedIn(false); // Update the login state
+        router.push("/"); // Redirect to the home page
+      } catch (error) {
+        console.error("Error during logout:", error);
+      }
+    },
+    [router] // Only include router in the dependency array
+  );
+  
+  const checkCookiesAndLogout = useCallback(
+    async (event?: React.MouseEvent) => {
+      const allCookies = Cookies.get();
+      if (Object.keys(allCookies).length === 0) {
+        // If event is provided, pass it to handleLogout, otherwise pass null
+        await handleLogout(event || null);
+      }
+    },
+    [handleLogout] // Include handleLogout in the dependency array
+  );
 
   useEffect(() => {
     let unsubscribeAuth: Unsubscribe | null = null;
@@ -200,9 +240,6 @@ const BurgerMenu = () => {
       }
     });
 
-    // Check for cookies when the component mounts
-    checkCookiesAndLogout();
-
     // Cleanup
     return () => {
       if (unsubscribeFoodCart) unsubscribeFoodCart();
@@ -210,41 +247,7 @@ const BurgerMenu = () => {
       if (unsubscribeCartListener) unsubscribeCartListener();
       if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
     };
-  }, []); // Only run once, when the component mounts
-
-  const checkCookiesAndLogout = async (event?: React.MouseEvent) => {
-    const allCookies = Cookies.get();
-    if (Object.keys(allCookies).length === 0) {
-      // If event is provided, pass it to handleLogout, otherwise pass null
-      await handleLogout(event || null); 
-    }
-  };
-
-  const handleLogout = async (event: React.MouseEvent | React.FormEvent | null = null) => {
-    if (event) event.preventDefault(); // Prevent default if the event is present
-  
-    try {
-      const allCookies = Cookies.get();
-      Object.keys(allCookies).forEach((cookieName) => {
-        Cookies.remove(cookieName);
-      });
-  
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current(); // Call the unsubscribe function
-        unsubscribeCartRef.current = null; // Reset the ref
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current(); // Call the unsubscribe function
-        unsubscribeDocRef.current = null; // Reset the ref
-      }
-  
-      await signOut(auth); // Sign out from Firebase
-      setIsLoggedIn(false); // Update the login state
-      router.push("/"); // Redirect to the home page
-    } catch (error) {
-      console.error("Error during logout:", error);
-    }
-  };
+  }, [checkCookiesAndLogout]); // Only run once, when the component mounts
 
   return (
     <div className="cursor-pointer">

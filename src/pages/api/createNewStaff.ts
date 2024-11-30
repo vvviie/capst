@@ -9,7 +9,7 @@ if (!admin.apps.length) {
     });
 }
 
-export default async (req: NextApiRequest, res: NextApiResponse) => {
+const createNewStaff = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === "POST") {
         const { username, password } = req.body;
 
@@ -42,3 +42,5 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 };
+
+export default createNewStaff;

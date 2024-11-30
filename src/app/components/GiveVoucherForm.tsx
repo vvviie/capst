@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import CheckoutPopup from "./CheckoutPopup";
 import {
   getFirestore,
@@ -74,13 +74,16 @@ const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({ isOpen, toggleForm, s
     }, 750);
   };
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (formRef.current && !formRef.current.contains(event.target as Node)) { // Ensure event.target is a Node
-      toggleForm();
-      setEmail("");
-      setRecipients([]);
-    }
-  };
+  const handleClickOutside = useCallback(
+    (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        toggleForm(); // Assuming toggleForm is defined somewhere in your component
+        setEmail("");
+        setRecipients([]);
+      }
+    },
+    [toggleForm] // Add toggleForm to the dependency array
+  );
 
   useEffect(() => {
     if (isOpen) {
@@ -88,8 +91,11 @@ const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({ isOpen, toggleForm, s
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, handleClickOutside]);
 
   const handleTypeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setType(event.target.value);

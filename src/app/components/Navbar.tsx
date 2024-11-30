@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
@@ -48,13 +48,41 @@ const Navbar = () => {
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Vouchers>({});
   const [hasUserCookie, setHasUserCookie] = useState(false);
-
-  let unsubscribeAuth: Unsubscribe | null = null;
-  let unsubscribeCartListener: Unsubscribe | null = null;
-  let unsubscribeTempOrderDoc: Unsubscribe | null = null;
   
   const unsubscribeCartRef = useRef<(() => void) | null>(null);
   const unsubscribeDocRef = useRef<(() => void) | null>(null);
+
+  const handleLogout = useCallback(async (event: React.MouseEvent | React.FormEvent | null = null) => {
+    if (event) event.preventDefault(); // Prevent default if the event is present
+  
+    try {
+      const allCookies = Cookies.get();
+      Object.keys(allCookies).forEach((cookieName) => {
+        Cookies.remove(cookieName);
+      });
+  
+      if (unsubscribeCartRef.current) {
+        unsubscribeCartRef.current(); // Call the unsubscribe function
+        unsubscribeCartRef.current = null; // Reset the ref
+      }
+      if (unsubscribeDocRef.current) {
+        unsubscribeDocRef.current(); // Call the unsubscribe function
+        unsubscribeDocRef.current = null; // Reset the ref
+      }
+  
+      await signOut(auth); // Sign out from Firebase
+      router.push("/"); // Redirect to the home page
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  }, [router]); // Only include `router` in the dependency array
+
+  const checkCookiesAndLogout = useCallback(async (event?: React.MouseEvent) => {
+    const allCookies = Cookies.get();
+    if (Object.keys(allCookies).length === 0) {
+      await handleLogout(event || null);
+    }
+  }, [handleLogout]);
 
   useEffect(() => {
     const unsubscribeFoodCart = onSnapshot(
@@ -79,6 +107,11 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+
+    let unsubscribeAuth: Unsubscribe | null = null;
+    let unsubscribeCartListener: Unsubscribe | null = null;
+    let unsubscribeTempOrderDoc: Unsubscribe | null = null;
+
     // Real-time listener for foodCartAvailable
     const unsubscribeFoodCart = onSnapshot(
       doc(db, "adminControls", "adminAccess"),
@@ -197,9 +230,6 @@ const Navbar = () => {
       }
     });
 
-    // Check for cookies when the component mounts
-    checkCookiesAndLogout();
-
     // Cleanup
     return () => {
       unsubscribeFoodCart();
@@ -207,40 +237,7 @@ const Navbar = () => {
       if (unsubscribeCartListener) unsubscribeCartListener();
       if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
     };
-  }, []); // Only run once, when the component mounts
-
-  const checkCookiesAndLogout = async (event?: React.MouseEvent) => {
-    const allCookies = Cookies.get();
-    if (Object.keys(allCookies).length === 0) {
-      // If event is provided, pass it to handleLogout, otherwise pass null
-      await handleLogout(event || null); 
-    }
-  };
-
-  const handleLogout = async (event: React.MouseEvent | React.FormEvent | null = null) => {
-    if (event) event.preventDefault(); // Prevent default if the event is present
-  
-    try {
-      const allCookies = Cookies.get();
-      Object.keys(allCookies).forEach((cookieName) => {
-        Cookies.remove(cookieName);
-      });
-  
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current(); // Call the unsubscribe function
-        unsubscribeCartRef.current = null; // Reset the ref
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current(); // Call the unsubscribe function
-        unsubscribeDocRef.current = null; // Reset the ref
-      }
-  
-      await signOut(auth); // Sign out from Firebase
-      router.push("/"); // Redirect to the home page
-    } catch (error) {
-      console.error("Error during logout:", error);
-    }
-  };
+  }, [checkCookiesAndLogout]); // Only run once, when the component mounts
 
   // Fetch voucher configurations from Firestore
   const fetchVoucherConfig = async (): Promise<Vouchers> => {

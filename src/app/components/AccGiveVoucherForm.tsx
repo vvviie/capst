@@ -69,20 +69,21 @@ const AccGiveVoucherForm: React.FC<AccGiveVoucherFormProps> = ({ isOpen, toggleF
     }, 750);
   };
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (formRef.current && !formRef.current.contains(event.target as Node)) {
-      toggleForm();
-    }
-  };
-
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        toggleForm();
+      }
+    };
+  
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
+  
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, toggleForm]); // Remove handleClickOutside from the dependency array
 
   const handleVoucherClick = (voucher: voucher) => {  // Change to `voucher` type
     setSelectedVoucher(voucher);

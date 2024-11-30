@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { db } from "../firebase"; // Adjust the path as necessary
 import {
   collection,
@@ -37,21 +37,24 @@ const DynamicPackageOffers = () => {
 
   const modalRef = useRef<HTMLDivElement | null>(null); // Create a ref for the modal
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-      closeModal(); // Close the modal if the click is outside
-    }
-  };
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        closeModal(); // Close the modal if the click is outside
+      }
+    };
+  
     // Add event listener for clicks
     document.addEventListener("mousedown", handleClickOutside);
-
+  
     // Clean up the event listener on component unmount
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [closeModal]); // The effect now depends on closeModal, which is stable
 
   const hasLimits = (category: PackageOffer): category is PackageOffer & { limits: Record<string, number> } => {
     return category.limits !== undefined;
@@ -185,9 +188,6 @@ const DynamicPackageOffers = () => {
       [categoryId]: !showFoodInput[categoryId],
     });
   };
-
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
 
   return (
     <div className="">
@@ -339,9 +339,6 @@ const DynamicPackageOffers = () => {
                           key={foodIndex}
                           className="flex justify-between items-center p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
                         >
-                          <span className="text-gray-700 text-sm font-bold">
-                            {foodItem}
-                          </span>
                           <span className="text-gray-700 text-sm font-bold">{foodItem}</span>
                           <button
                             onClick={() =>

@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import CheckoutPopup from "./CheckoutPopup";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
@@ -230,9 +230,8 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
     }
   };
 
-  const handleClickOutside = (event: MouseEvent) => {
+  const handleClickOutside = useCallback((event: MouseEvent) => {
     if (formRef.current && !formRef.current.contains(event.target as Node)) {
-      
       toggleForm();
       setExpenseLabel("");
       setExpenseAmount(0);
@@ -241,7 +240,7 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
       setInput("today");
       setError("");
     }
-  };
+  }, [toggleForm, setExpenseLabel, setExpenseAmount, setAddedExpenses, setTotalExpense, setInput, setError]);
 
   useEffect(() => {
     if (isOpen) {
@@ -250,7 +249,7 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
       document.removeEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, handleClickOutside]);
 
   if (!isOpen) return null;
 
