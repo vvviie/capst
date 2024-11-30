@@ -777,6 +777,7 @@ const deleteAllNotifs = async () => {
     );
 
     // Clear all notifications in local state
+    setHasUnreadNotifs(false);
     setNotifItems([]);
   } catch (error) {
     console.error("Error deleting all notifications:", error);
