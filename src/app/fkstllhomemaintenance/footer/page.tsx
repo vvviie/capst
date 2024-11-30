@@ -5,13 +5,20 @@ import React, { useState, useEffect } from "react";
 import { db } from "@/app/firebase"; // Adjust the import based on your file structure
 import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
 
+interface Social {
+    name: string;
+    url: string;
+    icon: string;
+    active: boolean;
+}
+
 const FooterMaintenancePage = () => {
     const [open, setOpen] = useState(false);
     const [isPopupVisible, setIsPopupVisible] = useState(false);
 
     // State to hold telephone and social media URLs
     const [tel, setTel] = useState("");
-    const [socials, setSocials] = useState([]);
+    const [socials, setSocials] = useState<Social[]>([]);
 
     // Fetch existing footer data from Firestore on component mount
     useEffect(() => {

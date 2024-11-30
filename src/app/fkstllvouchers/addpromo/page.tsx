@@ -32,10 +32,10 @@ const AddPromoPage = () => {
     const promoDeductionValueRef = useRef<HTMLInputElement>(null);
     const promoValidityDateRef = useRef<HTMLInputElement>(null);
     const promoNumberOfUsesRef = useRef<HTMLInputElement>(null);
-    const promoDescriptionRef = useRef<HTMLInputElement>(null);
+    const promoDescriptionRef = useRef<HTMLTextAreaElement>(null);
     const promoThresholdValueRef = useRef<HTMLInputElement>(null);
 
-    const toCamelCase = (str) => {
+    const toCamelCase = (str: string) => {
         return str
             .toLowerCase() // Convert the whole string to lowercase
             .split(' ') // Split the string into words

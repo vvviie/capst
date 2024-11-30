@@ -41,12 +41,12 @@ const EditVoucherPage = () => {
   const [voucherDescription, setVoucherDescription] = useState("");
   const today = new Date().toISOString().split("T")[0];
   const pathname = usePathname();
-  const voucherId = pathname.split("/").pop();
+  const voucherId = pathname ? pathname.split("/").pop() : null;
   const [showMessage, setShowMessage] = useState(false);
   const voucherDeductionValueRef = useRef<HTMLInputElement>(null);
   const voucherValidityDateRef = useRef<HTMLInputElement>(null);
   const voucherNumberOfUsesRef = useRef<HTMLInputElement>(null);
-  const voucherDescriptionRef = useRef<HTMLInputElement>(null);
+  const voucherDescriptionRef = useRef<HTMLTextAreaElement>(null);
   const voucherThresholdValueRef = useRef<HTMLInputElement>(null);
   
   const formatDate = (dateString: string): string => {
@@ -169,7 +169,7 @@ const EditVoucherPage = () => {
     // Avoid altering the underlying value on type switch
     if (selectedType === "percent" && deductionType === "minus") {
         // Convert to percent display format when switching to "percent"
-        setVoucherDeduction(prev => prev / 100);
+        setVoucherDeduction(prev => typeof prev === "number" ? prev / 100 : 0);
     } else if (selectedType === "minus" && deductionType === "percent") {
         // Keep voucherDeduction as is when switching to "minus"
         setVoucherDeduction(prev => prev); 
@@ -199,7 +199,7 @@ const EditVoucherPage = () => {
     }
   };
 
-  const handleNumberOfUsesChange = (e) => {
+  const handleNumberOfUsesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === "" ? "" : Number(e.target.value); // Allow empty string or convert to number
     setNumberOfUses(value); // Update state
     console.log("Number of Uses set to:", value); // Log the value

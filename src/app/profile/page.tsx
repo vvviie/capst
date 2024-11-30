@@ -47,9 +47,9 @@ const ProfilePage = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser) {
+      if (authUser && authUser.email) { // Ensure authUser.email is not null or undefined
         try {
-          const userDocRef = doc(db, "users", authUser.email);
+          const userDocRef = doc(db, "users", authUser.email); // Now we are sure authUser.email is a string
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
             const userData = userDoc.data();
@@ -65,7 +65,7 @@ const ProfilePage = () => {
         setLastName("");
       }
     });
-
+  
     return () => unsubscribe();
   }, []);
 

@@ -3,15 +3,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import CheckoutPopup from "./CheckoutPopup";
 
-let hasRecipients = true;
-
-const recipients = [
-  "abc@gmail.com",
-  "def@gmail.com",
-  "ghi@gmail.com",
-  "jkl@gmail.com",
-];
-
 type voucher = {
   id: string;
   name: string;
@@ -20,6 +11,12 @@ type voucher = {
 };
 
 type vouchers = voucher[];
+
+// Define types for the component props
+interface AccGiveVoucherFormProps {
+  isOpen: boolean; // isOpen should be a boolean value
+  toggleForm: () => void; // toggleForm should be a function with no parameters and no return value
+}
 
 const voucherList: vouchers = [
   {
@@ -60,9 +57,8 @@ const voucherList: vouchers = [
   },
 ];
 
-const AccGiveVoucherForm = ({ isOpen, toggleForm }) => {
-  const formRef = useRef(null);
-  const [type, setType] = useState("voucher");
+const AccGiveVoucherForm: React.FC<AccGiveVoucherFormProps> = ({ isOpen, toggleForm }) => {
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState(voucherList[0]);
 
@@ -73,26 +69,23 @@ const AccGiveVoucherForm = ({ isOpen, toggleForm }) => {
     }, 750);
   };
 
-  const handleClickOutside = (event) => {
-    if (formRef.current && !formRef.current.contains(event.target)) {
-      toggleForm();
-    }
-  };
-
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        toggleForm();
+      }
+    };
+  
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
+  
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, toggleForm]); // Remove handleClickOutside from the dependency array
 
-  const handleTypeChange = (event) => {
-    setType(event.target.value);
-  };
-
-  const handleVoucherClick = (voucher) => {
+  const handleVoucherClick = (voucher: voucher) => {  // Change to `voucher` type
     setSelectedVoucher(voucher);
   };
 

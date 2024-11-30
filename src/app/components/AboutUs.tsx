@@ -5,7 +5,18 @@ import Image from "next/image";
 import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
 import { db } from "@/app/firebase"; // Adjust the import to your Firebase config
 
-const AboutUs = () => {
+interface AboutUsProps {
+  data: {
+    aboutUs: string;
+    location: string;
+    operatingDays: string;
+    openHours: string;
+    accessibility: string;
+    img: string[]; // Array of image URLs
+  };
+}
+
+const AboutUs: React.FC<AboutUsProps> = ({ data }) => {
   // Block of code para sa transition at change ng text every few seconds.
   const [currentSlide, setCurrentSlide] = useState(0);
   const [fade, setFade] = useState(true);

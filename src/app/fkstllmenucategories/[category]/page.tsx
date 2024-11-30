@@ -9,9 +9,19 @@ import { doc, getDoc, updateDoc, arrayRemove, arrayUnion } from "firebase/firest
 
 const hasSubCategories = true;
 
+interface SubCategoryMap {
+  category: string;
+  available: boolean; // or string depending on your Firestore data type
+}
+
+interface FormattedSubCategory {
+  category: string;
+  available: boolean; // or string depending on your Firestore data type
+}
+
 const AddMenuCategoryPage = () => {
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
-  const [subCategories, setSubCategories] = useState([]); // Store the full subcategory object
+  const [subCategories, setSubCategories] = useState<FormattedSubCategory[]>([]); // Store the full subcategory object
   const [categoryName, setCategoryName] = useState(""); // To store category name for title
   const [categorySlug, setCategorySlug] = useState(""); // To store the extracted category slug
   const [newSubCategory, setNewSubCategory] = useState("");
@@ -19,7 +29,7 @@ const AddMenuCategoryPage = () => {
   // Extract the category slug from the URL path
   useEffect(() => {
     const urlPath = window.location.pathname;
-    const slug = urlPath.split("/").pop(); // e.g., "drinksCategories"
+    const slug = urlPath.split("/").pop() || ''; // e.g., "drinksCategories"
     setCategorySlug(slug); // Update state with the extracted slug
 
     console.log("Category Slug:", slug); // Log slug for debugging
@@ -42,7 +52,7 @@ const AddMenuCategoryPage = () => {
           const categories = categoryData.categories || []; // Assuming categories is an array of maps
   
           // Map each subcategory to an object with 'category' and 'available' properties
-          const formattedSubCategories = categories.map(subCategoryMap => ({
+          const formattedSubCategories: FormattedSubCategory[] = categories.map((subCategoryMap: SubCategoryMap) => ({
             category: subCategoryMap.category.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase()), // Converts camelCase to Title Case
             available: subCategoryMap.available,
           }));
@@ -68,7 +78,7 @@ const AddMenuCategoryPage = () => {
   };
 
   // Helper function to convert camelCase to Title Case
-  const toTitleCase = (str) => {
+  const toTitleCase = (str: string): string => {
     return str
       .replace(/([A-Z])/g, " $1")  // Add space before capital letters
       .replace(/^./, (match) => match.toUpperCase())  // Capitalize the first letter
@@ -76,7 +86,7 @@ const AddMenuCategoryPage = () => {
   };
 
   // Helper function to convert Title Case to camelCase for Firestore
-  const toCamelCase = (str) => {
+  const toCamelCase = (str: string): string => {
     return str
       .replace(/\s(.)/g, (match, group1) => group1.toUpperCase()) // Convert space followed by a letter to uppercase
       .replace(/\s+/g, '') // Remove spaces
@@ -84,7 +94,7 @@ const AddMenuCategoryPage = () => {
   };
 
   // Delete subcategory from Firestore and local state
-  const handleDelete = async (subCategory) => {
+  const handleDelete = async (subCategory: SubCategoryMap) => {
     const categoryRef = doc(db, "menuCategories", categorySlug);
   
     try {
@@ -154,7 +164,7 @@ const AddMenuCategoryPage = () => {
     }
   };
 
-  const handleStatusChange = async (subCategory, newStatus) => {
+  const handleStatusChange = async (subCategory: SubCategoryMap, newStatus: 'active' | 'inactive') => {
     const categoryRef = doc(db, "menuCategories", categorySlug);
   
     try {
@@ -173,7 +183,7 @@ const AddMenuCategoryPage = () => {
       const formattedSubCategory = toCamelCase(subCategory.category);
   
       // Update the availability status in the categories array
-      const updatedCategories = categories.map(sub => 
+      const updatedCategories = categories.map((sub: SubCategoryMap) => 
         sub.category === formattedSubCategory
           ? { ...sub, available: newStatus === 'active' } // Update the availability
           : sub
@@ -253,7 +263,7 @@ const AddMenuCategoryPage = () => {
                       id=""
                       className="h-10 border-2 border-gray-100 shadow-md rounded-md text-center w-2/3 font-bold text-gray-500 cursor-pointer"
                       value={sub.available ? "active" : "inactive"}
-                      onChange={(e) => handleStatusChange(sub, e.target.value)}
+                      onChange={(e) => handleStatusChange(sub, e.target.value as 'active' | 'inactive')}
                     >
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>

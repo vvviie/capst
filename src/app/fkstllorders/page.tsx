@@ -22,6 +22,20 @@ import jsPDF from "jspdf";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 // #region Sample Data
+type Item = {
+  productTitle: string;
+  price: number;
+  itemQty: number;
+  note?: string;
+  selectedDrinkSize?: string;
+  slug: string;
+  id: string;
+  totalPrice: number;
+  additionals?: string[];
+  mainCourseOption?: string;
+  milkOption?: string;
+};
+
 type Order = {
   userName: string;
   userEmail: string;
@@ -42,12 +56,20 @@ type Order = {
   subtotal: number;
   cardIdImg?: string;
 };
+
+interface OrderItem {
+  productTitle: string;
+  totalPrice: number;
+  // Add any other properties that an item might have
+}
 // #endregion
 
 const AdminAndStaffOrdersPage = () => {
   const [reversePosition, setReversePosition] = useState(false);
   const [orderStatCat, setOrderStatCat] = useState<string>("ALL");
   const [enlargePicture, setEnlargePicture] = useState(false);
+  const [cardIdImageEnlarge, setCardIdImageEnlarge] = useState(false);
+  const [idPicEnlarge, setIdPicEnlarge] = useState(false)
   const [hasOrder, setHasOrder] = useState(false);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [applySrPWD, setApplySrPWD] = useState<{ [key: string]: boolean }>({});
@@ -74,58 +96,6 @@ const AdminAndStaffOrdersPage = () => {
   const [staffStatus, setStaffStatus] = useState<
     "activated" | "deactivated" | null
   >(null);
-
-  useEffect(() => {
-    console.log("useEffect triggered"); // Log when the useEffect runs
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userEmail = user.email;
-        console.log("User logged in:", userEmail);
-        setEmail(email); // Set the email state
-
-        if (userEmail) {
-          // Fetch the staff document from Firestore
-          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
-          const staffDocSnap = await getDoc(staffDocRef);
-
-          if (staffDocSnap.exists()) {
-            const data = staffDocSnap.data();
-            console.log("Staff document data:", data);
-
-            // Check and update the staffStatus
-            if (data.staffStatus === "activated") {
-              setStaffStatus("activated");
-              console.log("Staff status set to: activated");
-            } else if (data.staffStatus === "deactivated") {
-              setStaffStatus("deactivated");
-              console.log("Staff status set to: deactivated");
-            }
-          } else {
-            console.log("No staff document found for this user.");
-            setStaffStatus(null); // Reset if no document exists
-          }
-        }
-      } else {
-        console.log("No user logged in");
-        setEmail(null);
-        setStaffStatus(null); // Reset states if user is logged out
-      }
-    });
-
-    // Clean up the listener on component unmount
-    return () => {
-      console.log("Cleaning up listener");
-      unsubscribe();
-    };
-  }, [auth, db]); // Dependencies
-
-  // Fetch orders on component mount and when `orderStatCat` changes
-  useEffect(() => {
-    const unsubscribe = fetchCompletedOrders();
-
-    return () => unsubscribe();
-  }, [orderStatCat]);
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
@@ -160,111 +130,6 @@ const AdminAndStaffOrdersPage = () => {
 
     // Return formatted time
     return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
-  };
-
-  const fetchCompletedOrders = () => {
-    const unsubscribe = onSnapshot(
-      collection(db, "completedOrders"),
-      (querySnapshot) => {
-        const orders: Order[] = [];
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          let highestPricedItem = data.items[0]; // Initialize with the first item
-          let highestPrice = highestPricedItem.totalPrice;
-
-          // Find the highest-priced item in the current order
-          data.items.forEach((item: any) => {
-            if (item.totalPrice > highestPrice) {
-              highestPricedItem = item;
-              highestPrice = item.totalPrice;
-            }
-          });
-
-          const items = data.items.map((item: any) => {
-            let discountedPrice = item.totalPrice;
-
-            // Apply the discount only if this order's Sr/PWD discount is active
-            if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
-              discountedPrice = item.totalPrice * 0.8;
-            }
-
-            return {
-              title: item.productTitle,
-              price: discountedPrice,
-              qty: item.itemQty,
-              tags:
-                item.slug === "drinks"
-                  ? [item.selectedDrinkSize, item.note]
-                  : [item.note],
-            };
-          });
-
-          // Recalculate the total price
-          const totalPrice = items.reduce(
-            (total, item) => total + item.price,
-            0
-          );
-
-          const order: Order = {
-            id: doc.id,
-            userName: data.userName,
-            userEmail: data.user,
-            date: data.dateCreated,
-            time: formatTime(data.timeCreated),
-            price: totalPrice,
-            status: data.status,
-            where: data.selectedOption,
-            payment: data.modeOfPayment,
-            items: items,
-            pwdSenior: data.pwdSenior,
-            idPic: data.idImg,
-            pwdSeniorDiscountApplied: applySrPWD[doc.id],
-            sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
-            promo: data.promoDiscounted,
-            slug: data.slug,
-            subtotal: data.subtotal || totalPrice,
-            cardIdImg: data.cardIdImg,
-          };
-
-          // Add only if status matches selected category or if "ALL"
-          if (orderStatCat === "ALL" || order.status === orderStatCat) {
-            orders.push(order);
-          }
-        });
-
-        const convertTo24HourFormat = (timeStr) => {
-          const [time, modifier] = timeStr.split(" ");
-          let [hours, minutes] = time.split(":").map(Number);
-
-          if (modifier === "PM" && hours < 12) hours += 12;
-          if (modifier === "AM" && hours === 12) hours = 0;
-
-          return `${hours.toString().padStart(2, "0")}:${minutes
-            .toString()
-            .padStart(2, "0")}`;
-        };
-
-        // Sort the orders from latest to oldest by date and time
-        orders.sort((a, b) => {
-          // Compare dates first
-          if (a.date > b.date) return -1;
-          if (a.date < b.date) return 1;
-
-          // If dates are the same, compare converted times
-          const timeA = convertTo24HourFormat(a.time);
-          const timeB = convertTo24HourFormat(b.time);
-
-          return timeA > timeB ? -1 : 1;
-        });
-
-        // Update the orders state with the sorted data
-        setUserOrders(orders);
-        setHasOrder(orders.length > 0);
-      }
-    );
-
-    return unsubscribe;
   };
 
   // FOR OPENING NG POP UP
@@ -382,8 +247,8 @@ const AdminAndStaffOrdersPage = () => {
 
       // Fetch existing food and drink data
       const foodDrinkDoc = await getDoc(foodDrinkDataRef);
-      let existingFoodData = {};
-      let existingDrinkData = {};
+      let existingFoodData: { [key: string]: number } = {}; 
+      let existingDrinkData: { [key: string]: number } = {}; 
 
       if (foodDrinkDoc.exists()) {
         const foodDrinkData = foodDrinkDoc.data();
@@ -713,8 +578,8 @@ const AdminAndStaffOrdersPage = () => {
 
         // Fetch existing food and drink data
         const foodDrinkDoc = await getDoc(foodDrinkDataRef);
-        let existingFoodData = {};
-        let existingDrinkData = {};
+        let existingFoodData: { [key: string]: number } = {}; 
+        let existingDrinkData: { [key: string]: number } = {}; 
 
         if (foodDrinkDoc.exists()) {
           const foodDrinkData = foodDrinkDoc.data();
@@ -842,18 +707,11 @@ const AdminAndStaffOrdersPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text(`ORDER DETAILS - ${id}`, 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
@@ -894,7 +752,7 @@ const AdminAndStaffOrdersPage = () => {
         // Check if the discount applies and find the highest priced item
         if (order.pwdSenior) {
           // Find the highest priced item
-          const highestPricedItem = order.items.reduce((maxItem, item) =>
+          const highestPricedItem = order.items.reduce((maxItem: OrderItem, item: OrderItem) =>
             item.totalPrice > maxItem.totalPrice ? item : maxItem
           );
 
@@ -912,7 +770,7 @@ const AdminAndStaffOrdersPage = () => {
 
           // Optionally, update the total for the order (if you are recalculating it)
           const newSubtotal = order.items.reduce(
-            (total, item) => total + item.totalPrice,
+            (total: number, item: OrderItem) => total + item.totalPrice,
             0
           );
           order.subtotal = newSubtotal;
@@ -926,7 +784,7 @@ const AdminAndStaffOrdersPage = () => {
         yPosition += 10; // Move down to start printing product details
 
         // Loop through items and print each one
-        order.items.forEach((item) => {
+        order.items.forEach((item: Item) => {
           // Product title, quantity
           const productLine = `${item.productTitle} ${
             item.selectedDrinkSize ? `(${item.selectedDrinkSize})` : ""
@@ -1028,7 +886,7 @@ const AdminAndStaffOrdersPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
 
     // Adjust the visible page numbers if necessary
@@ -1060,6 +918,161 @@ const AdminAndStaffOrdersPage = () => {
       }
     }
   };
+
+  useEffect(() => {
+    console.log("useEffect triggered"); // Log when the useEffect runs
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userEmail = user.email;
+        console.log("User logged in:", userEmail);
+        setEmail(email); // Set the email state
+
+        if (userEmail) {
+          // Fetch the staff document from Firestore
+          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
+          const staffDocSnap = await getDoc(staffDocRef);
+
+          if (staffDocSnap.exists()) {
+            const data = staffDocSnap.data();
+            console.log("Staff document data:", data);
+
+            // Check and update the staffStatus
+            if (data.staffStatus === "activated") {
+              setStaffStatus("activated");
+              console.log("Staff status set to: activated");
+            } else if (data.staffStatus === "deactivated") {
+              setStaffStatus("deactivated");
+              console.log("Staff status set to: deactivated");
+            }
+          } else {
+            console.log("No staff document found for this user.");
+            setStaffStatus(null); // Reset if no document exists
+          }
+        }
+      } else {
+        console.log("No user logged in");
+        setEmail(null);
+        setStaffStatus(null); // Reset states if user is logged out
+      }
+    });
+
+    // Clean up the listener on component unmount
+    return () => {
+      console.log("Cleaning up listener");
+      unsubscribe();
+    };
+  }, [auth, email]); // Dependencies
+
+  // Fetch orders on component mount and when `orderStatCat` changes
+  useEffect(() => {
+    const fetchCompletedOrders = () => {
+      const unsubscribe = onSnapshot(
+        collection(db, "completedOrders"),
+        (querySnapshot) => {
+          const orders: Order[] = [];
+  
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            let highestPricedItem = data.items[0]; // Initialize with the first item
+            let highestPrice = highestPricedItem.totalPrice;
+  
+            // Find the highest-priced item in the current order
+            data.items.forEach((item: any) => {
+              if (item.totalPrice > highestPrice) {
+                highestPricedItem = item;
+                highestPrice = item.totalPrice;
+              }
+            });
+  
+            const items = data.items.map((item: Item) => {
+              let discountedPrice = item.totalPrice;
+  
+              // Apply the discount only if this order's Sr/PWD discount is active
+              if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
+                discountedPrice = item.totalPrice * 0.8;
+              }
+  
+              return {
+                title: item.productTitle,
+                price: discountedPrice,
+                qty: item.itemQty,
+                tags:
+                  item.slug === "drinks"
+                    ? [item.selectedDrinkSize, item.note]
+                    : [item.note],
+              };
+            });
+  
+            // Recalculate the total price
+            const totalPrice = items.reduce(
+              (total: number, item: { price: number }) => total + item.price,
+              0
+            );
+  
+            const order: Order = {
+              id: doc.id,
+              userName: data.userName,
+              userEmail: data.user,
+              date: data.dateCreated,
+              time: formatTime(data.timeCreated),
+              price: totalPrice,
+              status: data.status,
+              where: data.selectedOption,
+              payment: data.modeOfPayment,
+              items: items,
+              pwdSenior: data.pwdSenior,
+              idPic: data.idImg,
+              pwdSeniorDiscountApplied: applySrPWD[doc.id],
+              sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
+              promo: data.promoDiscounted,
+              slug: data.slug,
+              subtotal: data.subtotal || totalPrice,
+              cardIdImg: data.cardIdImg,
+            };
+  
+            // Add only if status matches selected category or if "ALL"
+            if (orderStatCat === "ALL" || order.status === orderStatCat) {
+              orders.push(order);
+            }
+          });
+  
+          const convertTo24HourFormat = (timeStr: string) => {
+            const [time, modifier] = timeStr.split(" ");
+            let [hours, minutes] = time.split(":").map(Number);
+  
+            if (modifier === "PM" && hours < 12) hours += 12;
+            if (modifier === "AM" && hours === 12) hours = 0;
+  
+            return `${hours.toString().padStart(2, "0")}:${minutes
+              .toString()
+              .padStart(2, "0")}`;
+          };
+  
+          // Sort the orders from latest to oldest by date and time
+          orders.sort((a, b) => {
+            // Compare dates first
+            if (a.date > b.date) return -1;
+            if (a.date < b.date) return 1;
+  
+            // If dates are the same, compare converted times
+            const timeA = convertTo24HourFormat(a.time);
+            const timeB = convertTo24HourFormat(b.time);
+  
+            return timeA > timeB ? -1 : 1;
+          });
+  
+          // Update the orders state with the sorted data
+          setUserOrders(orders);
+          setHasOrder(orders.length > 0);
+        }
+      );
+  
+      return unsubscribe;
+    };
+  
+    fetchCompletedOrders();
+  }, [orderStatCat, applySrPWD]);
   //#endregion
 
   return (
@@ -1135,20 +1148,25 @@ const AdminAndStaffOrdersPage = () => {
                         <div className="flex flex-col gap-1 w-5/6">
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center">
-                            <span className="font-bold text-orange-900">
-                              ID: {order.id}
-                            </span>
-                            <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
-                              PHP{" "}
-                              {order.status === "TO PAY"
-                                ? applySrPWD[order.id]
-                                  ? (
-                                      order.price -
-                                      order.sampleDiscountDeduction
-                                    ).toFixed(2)
-                                  : order.price.toFixed(2)
-                                : order.subtotal.toFixed(2)}
-                            </span>
+                          <span className="font-bold text-orange-900">
+                            ID: {order.id}
+                          </span>
+                          <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                            PHP{" "}
+                            {order.status === "TO PAY" // If order is "TO PAY"
+                              ? applySrPWD[order.id] // If PWD is applied for this order
+                                ? // Apply PWD after promo has been subtracted
+                                  Number(
+                                    (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
+                                  ).toFixed(2)
+                                : // If PWD is not applied, subtract promo if available
+                                  (order.promo && order.promo > 0
+                                    ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                      (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
+                                    : order.subtotal.toFixed(2)) // If no promo, show original subtotal
+                              : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                            }
+                          </span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -1218,7 +1236,7 @@ const AdminAndStaffOrdersPage = () => {
                                     className="object-cover"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEnlargePicture(true);
+                                      setCardIdImageEnlarge(true);
                                     }}
                                   />
                                 </div>
@@ -1226,7 +1244,7 @@ const AdminAndStaffOrdersPage = () => {
                                   Click the picture to enlarge.
                                 </p>
                               </div>
-                              {enlargePicture && (
+                              {cardIdImageEnlarge && (
                                 // ENLARGED IMAGE
                                 <div
                                   className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
@@ -1237,7 +1255,7 @@ const AdminAndStaffOrdersPage = () => {
                                       className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                                     absolute top-[8px] right-[8px] flex justify-center items-center z-10
                                     hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setEnlargePicture(false)}
+                                      onClick={() => setCardIdImageEnlarge(false)}
                                     >
                                       <span className="font-bold">X</span>
                                     </div>
@@ -1282,13 +1300,13 @@ const AdminAndStaffOrdersPage = () => {
                               <div className="w-full flex flex-col gap-1 justify-center items-center">
                                 <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                   <Image
-                                    src={order.idPic}
+                                    src={order.idPic ?? "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                     alt="idpic"
                                     layout="fill"
                                     className="object-cover"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      setEnlargePicture(true);
+                                      setIdPicEnlarge(true);
                                     }}
                                   />
                                 </div>
@@ -1296,7 +1314,7 @@ const AdminAndStaffOrdersPage = () => {
                                   Click the picture to enlarge.
                                 </p>
                               </div>
-                              {enlargePicture && (
+                              {idPicEnlarge && (
                                 // ENLARGED IMAGE
                                 <div
                                   className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
@@ -1307,12 +1325,12 @@ const AdminAndStaffOrdersPage = () => {
                                       className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                         absolute top-[8px] right-[8px] flex justify-center items-center z-10
                         hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setEnlargePicture(false)}
+                                      onClick={() => setIdPicEnlarge(false)}
                                     >
                                       <span className="font-bold">X</span>
                                     </div>
                                     <Image
-                                      src={order.idPic}
+                                      src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                       alt="idpic"
                                       fill
                                       className="object-cover"
@@ -1659,20 +1677,25 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="flex flex-col gap-1 w-5/6">
                               {/* HEADERS CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                                <span className="font-bold text-orange-900">
-                                  ID: {order.id}
-                                </span>
-                                <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
-                                  PHP{" "}
-                                  {order.status === "TO PAY"
-                                    ? applySrPWD[order.id]
-                                      ? (
-                                          order.price -
-                                          order.sampleDiscountDeduction
-                                        ).toFixed(2)
-                                      : order.price.toFixed(2)
-                                    : order.subtotal.toFixed(2)}
-                                </span>
+                              <span className="font-bold text-orange-900">
+                                ID: {order.id}
+                              </span>
+                              <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                                PHP{" "}
+                                {order.status === "TO PAY" // If order is "TO PAY"
+                                  ? applySrPWD[order.id] // If PWD is applied for this order
+                                    ? // Apply PWD after promo has been subtracted
+                                      Number(
+                                        (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
+                                      ).toFixed(2)
+                                    : // If PWD is not applied, subtract promo if available
+                                      (order.promo && order.promo > 0
+                                        ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                          (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
+                                        : order.subtotal.toFixed(2)) // If no promo, show original subtotal
+                                  : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                                }
+                              </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -1755,13 +1778,13 @@ const AdminAndStaffOrdersPage = () => {
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                       <Image
-                                        src={order.idPic}
+                                        src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                         alt="idpic"
                                         fill
                                         className="object-cover"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEnlargePicture(true);
+                                          setIdPicEnlarge(true);
                                         }}
                                       />
                                     </div>
@@ -1769,7 +1792,7 @@ const AdminAndStaffOrdersPage = () => {
                                       Click the picture to enlarge.
                                     </p>
                                   </div>
-                                  {enlargePicture && (
+                                  {idPicEnlarge && (
                                     // ENLARGED IMAGE
                                     <div
                                       className="absolute top-0 left-0 w-full h-[100vh] flex justify-center items-center"
@@ -1783,13 +1806,13 @@ const AdminAndStaffOrdersPage = () => {
                       absolute top-[8px] right-[8px] flex justify-center items-center z-10
                       hover:bg-gray-950 hover:scale-[1.02] duration-200"
                                           onClick={() =>
-                                            setEnlargePicture(false)
+                                            setIdPicEnlarge(false)
                                           }
                                         >
                                           <span className="font-bold">X</span>
                                         </div>
                                         <Image
-                                          src={order.idPic}
+                                          src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                           alt="idpic"
                                           fill
                                           className="object-cover"
@@ -2036,14 +2059,19 @@ const AdminAndStaffOrdersPage = () => {
                                 </span>
                                 <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
                                   PHP{" "}
-                                  {order.status === "TO PAY"
-                                    ? applySrPWD[order.id]
-                                      ? (
-                                          order.price -
-                                          order.sampleDiscountDeduction
+                                  {order.status === "TO PAY" // If order is "TO PAY"
+                                    ? applySrPWD[order.id] // If PWD is applied for this order
+                                      ? // Apply PWD after promo has been subtracted
+                                        Number(
+                                          (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
                                         ).toFixed(2)
-                                      : order.price.toFixed(2)
-                                    : order.subtotal.toFixed(2)}
+                                      : // If PWD is not applied, subtract promo if available
+                                        (order.promo && order.promo > 0
+                                          ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                            (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
+                                          : order.subtotal.toFixed(2)) // If no promo, show original subtotal
+                                    : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                                  }
                                 </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}
@@ -2114,7 +2142,7 @@ const AdminAndStaffOrdersPage = () => {
                                         className="object-cover"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEnlargePicture(true);
+                                          setCardIdImageEnlarge(true);
                                         }}
                                       />
                                     </div>
@@ -2122,7 +2150,7 @@ const AdminAndStaffOrdersPage = () => {
                                       Click the picture to enlarge.
                                     </p>
                                   </div>
-                                  {enlargePicture && (
+                                  {cardIdImageEnlarge && (
                                     // ENLARGED IMAGE
                                     <div
                                       className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
@@ -2136,7 +2164,7 @@ const AdminAndStaffOrdersPage = () => {
                                   absolute top-[8px] right-[8px] flex justify-center items-center z-10
                                   hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
                                           onClick={() =>
-                                            setEnlargePicture(false)
+                                            setCardIdImageEnlarge(false)
                                           }
                                         >
                                           <span className="font-bold">X</span>
@@ -2184,13 +2212,13 @@ const AdminAndStaffOrdersPage = () => {
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                       <Image
-                                        src={order.idPic}
+                                        src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                         alt="idpic"
                                         fill
                                         className="object-cover"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          setEnlargePicture(true);
+                                          setIdPicEnlarge(true);
                                         }}
                                       />
                                     </div>
@@ -2198,7 +2226,7 @@ const AdminAndStaffOrdersPage = () => {
                                       Click the picture to enlarge.
                                     </p>
                                   </div>
-                                  {enlargePicture && (
+                                  {idPicEnlarge && (
                                     // ENLARGED IMAGE
                                     <div
                                       className="absolute top-0 left-0 w-full h-[100vh] flex justify-center items-center"
@@ -2212,13 +2240,13 @@ const AdminAndStaffOrdersPage = () => {
                       absolute top-[8px] right-[8px] flex justify-center items-center z-10
                       hover:bg-gray-950 hover:scale-[1.02] duration-200"
                                           onClick={() =>
-                                            setEnlargePicture(false)
+                                            setIdPicEnlarge(false)
                                           }
                                         >
                                           <span className="font-bold">X</span>
                                         </div>
                                         <Image
-                                          src={order.idPic}
+                                          src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
                                           alt="idpic"
                                           fill
                                           className="object-cover"

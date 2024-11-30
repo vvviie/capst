@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../firebase'; // Adjust the path as needed
 import { Drinks } from '../data'; // Adjust the type as needed
@@ -35,8 +35,8 @@ const useDynamicCategoryFetch = () => {
     }
   };
 
-  // Fetch items (drinks or other collections) for available categories
-  const fetchItemsForCategories = async () => {
+  // Memoize fetchItemsForCategories to prevent unnecessary re-renders
+  const fetchItemsForCategories = useCallback(async () => {
     try {
       setLoading(true);
       const itemsData: Record<string, Drinks[]> = {};
@@ -61,17 +61,17 @@ const useDynamicCategoryFetch = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [menuCategories]); // Adding menuCategories as a dependency
 
   useEffect(() => {
     fetchCategoriesFromDB();
-  }, []);
+  }, []); // Only fetch categories on mount
 
   useEffect(() => {
     if (menuCategories.length > 0) {
       fetchItemsForCategories();
     }
-  }, [menuCategories]);
+  }, [menuCategories, fetchItemsForCategories]); // Adding fetchItemsForCategories to the dependency array
 
   return { menuCategories, itemsByCategory, loading, error };
 };

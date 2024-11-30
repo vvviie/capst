@@ -15,6 +15,13 @@ export const metadata: Metadata = {
     "Fikastalle, Fika Kafe, Silang restaurant, Tagaytay restaurant, Swedish fika, order online, pastries, coffee, meals in Cavite, Fikastalle online orders, Fikastalle menu, restaurants in Silang, Cavite cafes, food delivery Cavite, restaurants in Tagaytay, restaurants in Cavite,",
 };
 
+const safeContent = (content: any): string => {
+  if (Array.isArray(content)) {
+    return content.join(", "); // Join array elements into a single string if content is an array
+  }
+  return content || ''; // Default to an empty string if content is null or undefined
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,11 +31,11 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="icon" href="/icon.ico" />
-        <meta name="description" content={metadata.description} />
-        <meta name="keywords" content={metadata.keywords} />
+        <meta name="description" content={safeContent(metadata.description)} />
+        <meta name="keywords" content={safeContent(metadata.keywords)} />
         <meta name="author" content="Fikastalle by Fika Kafe" />
-        <meta property="og:title" content={metadata.title} />
-        <meta property="og:description" content={metadata.description} />
+        <meta property="og:title" content={safeContent(metadata.title)} />
+        <meta property="og:description" content={safeContent(metadata.description)} />
         <meta property="og:image" content="/path-to-image.jpg" />
         <meta property="og:url" content="" />
       </head>

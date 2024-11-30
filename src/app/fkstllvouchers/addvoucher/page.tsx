@@ -30,10 +30,10 @@ const AddVoucherPage = () => {
   const voucherDeductionValueRef = useRef<HTMLInputElement>(null);
   const voucherValidityDateRef = useRef<HTMLInputElement>(null);
   const voucherNumberOfUsesRef = useRef<HTMLInputElement>(null);
-  const voucherDescriptionRef = useRef<HTMLInputElement>(null);
+  const voucherDescriptionRef = useRef<HTMLTextAreaElement>(null);
   const voucherThresholdValueRef = useRef<HTMLInputElement>(null);
 
-  const toCamelCase = (str) => {
+  const toCamelCase = (str: string) => {
     return str
         .toLowerCase() // Convert the whole string to lowercase
         .split(' ') // Split the string into words

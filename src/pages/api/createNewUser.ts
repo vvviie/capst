@@ -1,3 +1,4 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
 import { ServiceAccount } from 'firebase-admin';
 
@@ -13,7 +14,7 @@ if (!admin.apps.length) {
     });
 }
 
-export default async (req, res) => {
+const createNewUser = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === "POST") {
         const { username, password } = req.body;
 
@@ -32,10 +33,15 @@ export default async (req, res) => {
 
             console.log("User created successfully:", userRecord.uid);
 
-            // Step 2: Send email verification
-            await admin.auth().generateEmailVerificationLink(userRecord.email);
+            // Step 2: Send email verification, only if email is available
+            if (userRecord.email) {
+                await admin.auth().generateEmailVerificationLink(userRecord.email);
 
-            console.log("Verification email sent to:", userRecord.email);
+                console.log("Verification email sent to:", userRecord.email);
+            } else {
+                console.error("Email is undefined, cannot send verification link.");
+                return res.status(500).json({ error: "Failed to send verification email. Email is undefined." });
+            }
 
             // Respond with user UID and email
             res.status(201).json({ uid: userRecord.uid, email: userRecord.email });
@@ -44,14 +50,16 @@ export default async (req, res) => {
             console.error("Error creating new user:", error);
 
             // Handle specific Firebase error for email already in use
-            if (error.code === 'auth/email-already-exists') {
+            if ((error as { code: string }).code === 'auth/email-already-exists') {
                 return res.status(409).json({ error: "The email address is already in use by another account." });
             }
 
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: (error as Error).message });
         }
     } else {
         res.setHeader("Allow", ["POST"]);
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 };
+
+export default createNewUser;

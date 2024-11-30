@@ -1,7 +1,7 @@
 "use client";
 
 //#region Import statements
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   getDocs,
   query,
@@ -17,7 +17,7 @@ import {
 import { db } from "@/app/firebase";
 import Link from "next/link";
 import Image from "next/image";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { User, getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/app/firebase";
 import RemoveItemNotif from "../components/RemoveItemNotif";
 import { useRouter } from "next/navigation";
@@ -39,13 +39,14 @@ type Vouch = {
   validityDate?: string;
   usageLimitType: string;
   numberOfUses?: number;
+  voucherDeduction?: number;
 };
 //#endregion
 
 const CartPage = () => {
   //#region Use State Variables
   const [isPopupVisible, setIsPopupVisible] = useState(false);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
   const [loading, setLoading] = useState(true); // Loading state
   const [vouchers, setVouchers] = useState<Vouch[]>([]);
@@ -62,7 +63,8 @@ const CartPage = () => {
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
   const [voucherForm, openVoucherForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLFormElement>(null); 
+  const modalRef2 = useRef<HTMLDivElement>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -76,7 +78,7 @@ const CartPage = () => {
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
-  const [notificationTimeout, setNotificationTimeout] = useState(null);
+  const [notificationTimeout, setNotificationTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [productId] = useState<string | undefined>(undefined);
   const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
@@ -95,8 +97,9 @@ const CartPage = () => {
   // For Image's File Name
   const [fileName, setFileName] = useState("");
   const [cardFileName, setCardFileName] = useState("");
-  const fileInputRef = useRef(null);
-  const cardInputRef = useRef(null);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cardInputRef = useRef<HTMLInputElement | null>(null);
 
   // For Firebase Image URL
   const [firebaseImageUrl, setFirebaseImageUrl] = useState("");
@@ -416,11 +419,11 @@ const CartPage = () => {
       if (voucherType === "percent") {
         calculatedDiscount = totalCartPrice * deduction;
         newTotalCartPrice -= calculatedDiscount;
-        setDiscountedVoucher(calculatedDiscount.toFixed(2));
+        setDiscountedVoucher(parseFloat(calculatedDiscount.toFixed(2)));
         //console.log(`Discount applied (percent): ${calculatedDiscount}`);
       } else if (voucherType === "minus") {
         newTotalCartPrice -= deduction;
-        setDiscountedVoucher(deduction.toFixed(2));
+        setDiscountedVoucher(parseFloat(deduction.toFixed(2)));
         //console.log(`Discount applied (minus): ${deduction}`);
       }
 
@@ -431,7 +434,9 @@ const CartPage = () => {
       showErrorPopup("Voucher successfully applied!");
       //console.log("Voucher successfully applied.");
 
-      setVoucherType(voucherType);
+      if (voucherType !== undefined) {
+        setVoucherType(voucherType); // No issue since voucherType is definitely a string
+      }
       setVoucherDeduction(deduction);
 
       openVoucherForm(false);
@@ -447,7 +452,9 @@ const CartPage = () => {
   const handleRemoveItem = async (itemId: string) => {
     try {
       setShowRemoveItemNotif(true);
-      clearTimeout(notificationTimeout);
+      if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+      }
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
@@ -502,7 +509,9 @@ const CartPage = () => {
 
     try {
       setShowRemoveItemNotif(true);
-      clearTimeout(notificationTimeout);
+      if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+      }
       const newTimeout = setTimeout(() => {
         clearTimeout(newTimeout);
         setShowRemoveItemNotif(false);
@@ -537,22 +546,22 @@ const CartPage = () => {
   //#endregion
 
   //#region Handling of Fetching of All Items
-  const fetchCartItems = async () => {
+  const fetchCartItems = useCallback(async () => {
     if (!userEmail) {
       setShowLoginModal(true);
       return;
     }
-
+  
     try {
       const tempOrdersRef = collection(db, "tempOrders");
       const querySnapshot = await getDocs(
         query(tempOrdersRef, where("user", "==", userEmail))
       );
-
+  
       let cartItems: any[] = [];
       let totalCartPrice = 0;
       let subtotal = 0;
-
+  
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         Object.keys(data).forEach((key) => {
@@ -563,7 +572,7 @@ const CartPage = () => {
           ) {
             const itemData = data[key];
             const slug = itemData.slug;
-
+  
             let tags = [];
             if (slug === "drinks") {
               tags = [
@@ -586,7 +595,7 @@ const CartPage = () => {
             } else if (slug === "pastries") {
               tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
             }
-
+  
             cartItems.push({
               id: key,
               title: itemData.productTitle,
@@ -596,16 +605,16 @@ const CartPage = () => {
               qtty: itemData.itemQty,
               price: itemData.totalPrice,
             });
-
+  
             subtotal += itemData.totalPrice;
           }
         });
         totalCartPrice = data.totalCartPrice;
       });
-
+  
       setTotalCartPrice(totalCartPrice);
       setSubtotal(subtotal);
-
+  
       if (cartItems.length > 0) {
         setAddedToCart(cartItems);
         setIsEmpty(false);
@@ -615,8 +624,38 @@ const CartPage = () => {
     } catch (error) {
       //console.error("Error fetching cart items:", error);
     }
-  };
+  }, [userEmail]);
   //#endregion
+
+  const calculateFinalTotal = () => {
+    let finalTotal = subtotal; // Start with the subtotal
+  
+    // Apply promo discount if applicable
+    if (promoApplied) {
+      let promoDiscount = 0; // Initialize promoDiscount
+      if (promoType === "percent") {
+        promoDiscount = subtotal * discountPercent; // Calculate percentage discount
+      } else {
+        promoDiscount = discountPercent; // Fixed discount amount
+      }
+      finalTotal -= promoDiscount; // Deduct promo discount from subtotal
+    }
+  
+    // Apply voucher discount if applicable
+    if (voucherApplied) {
+      if (voucherType === "percent") {
+        const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
+        finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
+      } else if (voucherType === "minus") {
+        finalTotal -= voucherDeduction; // Deduct the fixed amount
+      }
+    }
+  
+    finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
+    return finalTotal; // Return final total
+  };
+  
+  const finalTotal = calculateFinalTotal();
   useEffect(() => {
     const fetchUserDetails = async () => {
       if (!userEmail) return; // Exit if there's no user email
@@ -745,61 +784,84 @@ const CartPage = () => {
 
   const handleUploadClick = () => {
     // Trigger the file input click
-    fileInputRef.current.click();
+    fileInputRef.current?.click();
   };
-
+  
   const handleUpload2Click = () => {
     // Trigger the file input click
-    cardInputRef.current.click();
+    cardInputRef.current?.click();
   };
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+  
+    if (files && files.length > 0) {
+      const file = files[0];
       const validTypes = ["image/jpeg", "image/png"];
+  
       if (!validTypes.includes(file.type)) {
         console.error("Invalid file type. Please upload a PNG or JPEG.");
         return;
       }
+  
       setFileName(file.name);
       const previewUrl = URL.createObjectURL(file);
       setImageUrl(previewUrl);
-
+  
       try {
         // Upload the image and get the URL
-        const webpUrl = await uploadImageToStorage(file);
+        const webpUrl: string | null = await uploadImageToStorage(file);
         console.log("Uploaded image URL:", webpUrl);
-
-        // Update Firebase image URL in state
-        setFirebaseImageUrl(webpUrl);
+  
+        // Update Firebase image URL in state (only if it's a valid string)
+        if (webpUrl) {
+          setFirebaseImageUrl(webpUrl); // set only if webpUrl is a valid string
+        } else {
+          console.error("Error: webpUrl is null or invalid");
+        }
       } catch (error) {
         console.error("Error during image processing:", error);
       }
+    } else {
+      console.error("No file selected");
     }
   };
 
-  const handleCardPaymentChange = async (e) => {
-    const file = e.target.files[0];
-    if (file) {
+  const handleCardPaymentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files2 = e.target.files;
+    
+    // Ensure files is not null and contains at least one file
+    if (files2 && files2.length > 0) {
+      const file = files2[0];
       const validTypes = ["image/jpeg", "image/png"];
+      
+      // Check if the file type is valid
       if (!validTypes.includes(file.type)) {
         console.error("Invalid file type. Please upload a PNG or JPEG.");
         return;
       }
+  
+      // Set the file name and preview URL
       setCardFileName(file.name);
       const previewUrl2 = URL.createObjectURL(file);
       setCardUrl(previewUrl2);
-
+  
       try {
         // Upload the image and get the URL
-        const webpUrl = await uploadImageToStorage(file);
+        const webpUrl: string | null = await uploadImageToStorageCard(file);
         console.log("Uploaded image URL:", webpUrl);
-
-        // Update Firebase image URL in state
-        setCardImageUrl(webpUrl);
+  
+        // Update Firebase image URL in state only if webpUrl is not null
+        if (webpUrl) {
+          setCardImageUrl(webpUrl);
+        } else {
+          console.error("Error: webpUrl is null or invalid");
+        }
       } catch (error) {
         console.error("Error during image processing:", error);
       }
+    } else {
+      console.error("No file selected");
     }
   };
 
@@ -810,7 +872,12 @@ const CartPage = () => {
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        imgElement.src = e.target.result as string;
+        if (e.target) {
+          // Safely access e.target.result if e.target is not null
+          imgElement.src = e.target.result as string;
+        } else {
+          console.error("FileReader onload event target is null");
+        }
       };
 
       imgElement.onload = () => {
@@ -847,7 +914,7 @@ const CartPage = () => {
   };
 
   // Function to upload image to Firebase Storage
-  const uploadImageToStorage = async (file) => {
+  const uploadImageToStorage = async (file: File) => {
     const storage = getStorage();
     const storageRef = ref(
       storage,
@@ -875,8 +942,7 @@ const CartPage = () => {
     }
   };
 
-  // Function to upload image to Firebase Storage
-  const uploadCardImageToStorage = async (file) => {
+  const uploadImageToStorageCard = async (file: File) => {
     const storage = getStorage();
     const storageRef = ref(
       storage,
@@ -892,7 +958,7 @@ const CartPage = () => {
       // Create URL for the WebP Blob to preview
       const webpUrl = URL.createObjectURL(webpBlob);
       console.log("Converted to WebP:", webpUrl); // Log the WebP URL
-      setCardImageUrl(webpUrl); // Set this URL for preview, if needed
+      setCardUrl(webpUrl); // Set this URL for preview, if needed
 
       // Upload the WebP file
       await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
@@ -907,7 +973,21 @@ const CartPage = () => {
   const handleRemoveImage = () => {
     setImageUrl(""); // Remove the image preview
     setFileName(""); // Clear the file name
-    fileInputRef.current.value = ""; // Clear the file input
+  
+    // Check if fileInputRef.current is not null
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Clear the file input
+    }
+  };
+
+  const handleRemoveImageCard = () => {
+    setCardUrl(""); // Remove the image preview
+    setCardFileName(""); // Clear the file name
+  
+    // Check if fileInputRef.current is not null
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Clear the file input
+    }
   };
 
   //#region Handling of Completion of Orders
@@ -1176,6 +1256,7 @@ const CartPage = () => {
       showErrorPopup("Failed to complete order. Please try again.");
     }
   };
+  
   //#endregion
 
   //#endregion
@@ -1272,7 +1353,7 @@ const CartPage = () => {
   //#region Fetching of All Items in Cart
   useEffect(() => {
     fetchCartItems();
-  }, [userEmail]);
+  }, [userEmail, fetchCartItems]);
   //#endregion
 
   //#region Check All Existing Orders for Display
@@ -1354,6 +1435,28 @@ const CartPage = () => {
   }, [needsOrder, userEmail, productId]);
   //#endregion
 
+  useEffect(() => {
+    const fetchNumberOfUses = async () => {
+      if (selectedVoucher?.usageLimitType === "limited" && selectedVoucher?.id) {
+        const voucherCodesRef = collection(db, "vouchers");
+        const voucherQuery = query(
+          voucherCodesRef,
+          where("voucherID", "==", selectedVoucher.id)
+        );
+        const voucherSnapshot = await getDocs(voucherQuery);
+  
+        if (!voucherSnapshot.empty) {
+          const promoData = voucherSnapshot.docs[0].data();
+          setNumberOfUses(promoData?.numberOfUses ?? 0); // Set the fetched number of uses
+        } else {
+          setNumberOfUses(0); // Default to 0 if no document found
+        }
+      }
+    };
+  
+    fetchNumberOfUses();
+  }, [selectedVoucher?.id, selectedVoucher?.usageLimitType]);
+
   //#region Mark Voucher as Used
 
   //#endregion
@@ -1375,7 +1478,7 @@ const CartPage = () => {
           <div
             className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-            ref={modalRef}
+            ref={modalRef2}
             style={{ marginTop: "-8%" }}
           >
             <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
@@ -1418,7 +1521,7 @@ const CartPage = () => {
           <div
             className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-            ref={modalRef}
+            ref={modalRef2}
             style={{ marginTop: "-8%" }}
           >
             <h2 className="text-xl font-bold mb-4">Sign in required!</h2>
@@ -1475,7 +1578,7 @@ const CartPage = () => {
                     <div className="col-span-2 px-4">
                       <h1 className="font-bold text-lg">{items.title}</h1>
                       <div>
-                        {items.tags.map((tag, index) => (
+                      {items.tags.map((tag: string, index: number) => (
                           <p key={index} className="text-sm text-gray-600">
                             {tag}
                           </p>
@@ -1695,8 +1798,14 @@ const CartPage = () => {
                       src={imageUrl}
                       alt="ID"
                       fill
-                      className="object-cover"
+                      className="object-cover opacity-80 transition duration-300"
                     />
+                    <button
+                      onClick={handleRemoveImage}
+                      className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                    >
+                      X
+                    </button>
                   </div>
                 )}
 
@@ -1828,53 +1937,40 @@ const CartPage = () => {
               {selectedVoucher?.validityType === "expiration" && (
                 <p className="text-xs text-red-500 font-semibold mt-4">
                   {(() => {
-                  const today = new Date();
-                  const validityDate = new Date(selectedVoucher?.validityDate);
+                    const today = new Date();
+                    const validityDate = selectedVoucher?.validityDate ? new Date(selectedVoucher.validityDate) : null;
 
-                  // Reset hours, minutes, and seconds for date-only comparison
-                  today.setHours(0, 0, 0, 0);
-                  validityDate.setHours(0, 0, 0, 0);
+                    // Reset hours, minutes, and seconds for date-only comparison
+                    today.setHours(0, 0, 0, 0);
 
-                  const isExpired = validityDate < today;
+                    // Check if validityDate is not null before setting hours and comparing
+                    if (validityDate) {
+                      validityDate.setHours(0, 0, 0, 0);
 
-                  if (isExpired) {
-                    return "Voucher has expired.";
-                  } else {
-                    return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
-                  }
-                })()}
+                      const isExpired = validityDate < today;
+
+                      if (isExpired) {
+                        return "Voucher has expired.";
+                      } else {
+                        return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
+                      }
+                    } else {
+                      return "Invalid validity date.";
+                    }
+                  })()}
                 </p>
               )}
 
-              {selectedVoucher?.usageLimitType === "limited" && (
-                <>
-                  <p className="text-xs text-gray-700 font-semibold mt-4">
-                    {numberOfUses <= 0
-                      ? "Voucher has reached maximum number of uses."
-                      : `Uses remaining: ${numberOfUses}`}
-                  </p>
-                  {/* Fetch number of uses only when voucher is selected */}
-                  {(() => {
-                    const fetchNumberOfUses = async () => {
-                      const voucherCodesRef = collection(db, "vouchers");
-                      const voucherQuery = query(
-                        voucherCodesRef,
-                        where("voucherID", "==", selectedVoucher.id)
-                      );
-                      const voucherSnapshot = await getDocs(voucherQuery);
-
-                      if (!voucherSnapshot.empty) {
-                        const promoData = voucherSnapshot.docs[0].data();
-                        setNumberOfUses(promoData?.numberOfUses ?? 0); // Set the fetched number of uses
-                      } else {
-                        setNumberOfUses(0); // Default to 0 if no document found
-                      }
-                    };
-
-                    fetchNumberOfUses();
-                  })()}
-                </>
-              )}
+            {selectedVoucher?.usageLimitType === "limited" && (
+              <>
+                <p className="text-xs text-gray-700 font-semibold mt-4">
+                  {numberOfUses <= 0
+                    ? "Voucher has reached maximum number of uses."
+                    : `Uses remaining: ${numberOfUses}`}
+                </p>
+              </>
+            )}
+            
             </div>
             <hr className="my-4" />
           </>
@@ -1914,14 +2010,20 @@ const CartPage = () => {
           className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
           hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300 ${
             (selectedVoucher?.thresholdUse &&
+              selectedVoucher.thresholdCondition !== undefined && // Check for undefined
               selectedVoucher.thresholdCondition > subtotal) ||
             (selectedVoucher?.validityType === "expiration" &&
               (() => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const validityDate = new Date(selectedVoucher?.validityDate);
-                validityDate.setHours(0, 0, 0, 0);
-                return validityDate < today;
+                const validityDate = selectedVoucher?.validityDate ? new Date(selectedVoucher.validityDate) : null;
+                if (validityDate) {
+                  validityDate.setHours(0, 0, 0, 0);
+                  return validityDate < today;
+                } else {
+                  // Handle the case where validityDate is undefined
+                  return false; // or true, depending on your requirements
+                }
               })()) ||
             (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
               ? "opacity-50 cursor-not-allowed"
@@ -1930,16 +2032,20 @@ const CartPage = () => {
           onClick={handleVoucherSubmit}
           disabled={
             (selectedVoucher?.thresholdUse &&
+              selectedVoucher?.thresholdCondition !== undefined && 
               selectedVoucher.thresholdCondition > subtotal) ||
-            (selectedVoucher?.validityType === "expiration" &&
-              (() => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                const validityDate = new Date(selectedVoucher?.validityDate);
-                validityDate.setHours(0, 0, 0, 0);
-                return validityDate < today;
-              })()) ||
-            (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
+              (selectedVoucher?.validityType === "expiration" &&
+                (() => {
+                  if (selectedVoucher?.validityDate) {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    const validityDate = new Date(selectedVoucher.validityDate);
+                    validityDate.setHours(0, 0, 0, 0);
+                    return validityDate < today;
+                  }
+                  return false; // If validityDate is undefined, return false
+                })()) ||
+              (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
           }
         >        
             Apply Voucher
@@ -2068,6 +2174,12 @@ const CartPage = () => {
                         fill
                         className="object-cover"
                       />
+                      <button
+                      onClick={handleRemoveImage}
+                      className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                    >
+                      X
+                    </button>
                     </div>
                   )}
 
@@ -2119,37 +2231,7 @@ const CartPage = () => {
                 <span className="font-semibold text-lg">Total (VAT Inc.)</span>
                 <span className="font-bold text-lg text-gray-800 lg:text-2xl">
                   {"PHP "}
-                  {(() => {
-                    let finalTotal = subtotal; // Start with the subtotal
-
-                    /// Apply promo discount if applicable
-                    if (promoApplied) {
-                      let promoDiscount = 0; // Initialize promoDiscount
-                      if (promoType === "percent") {
-                        promoDiscount = subtotal * discountPercent; // Calculate percentage discount
-                      } else {
-                        promoDiscount = discountPercent; // Fixed discount amount
-                      }
-                      finalTotal -= promoDiscount; // Deduct promo discount from subtotal
-                      //console.log("Applied promo discount:", promoDiscount);
-                    }
-
-                    // Apply voucher discount if applicable
-                    if (voucherApplied) {
-                      if (voucherType === "percent") {
-                        const voucherDiscount = finalTotal * voucherDeduction; // Calculate voucher discount based on finalTotal after promo
-                        finalTotal -= voucherDiscount; // Deduct the calculated voucher discount
-                        //console.log("Applied voucher discount (percent):", voucherDiscount);
-                      } else if (voucherType === "minus") {
-                        finalTotal -= voucherDeduction; // Deduct the fixed amount
-                        //console.log("Applied voucher discount (minus):",voucherDeduction);
-                      }
-                    }
-
-                    finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
-
-                    return finalTotal.toFixed(2); // Return formatted total with two decimal places
-                  })()}
+                  {finalTotal.toFixed(2)} {/* Display the final total */}
                 </span>
               </div>
               {/* CHECKOUT BUTTON */}
@@ -2160,7 +2242,8 @@ const CartPage = () => {
                   handleCompleteOrder(
                     modeOfPayment,
                     selectedOption,
-                    selectedServeTime
+                    selectedServeTime,
+                    finalTotal
                   );
                   handleSubmitOrder();
                   handleSubmit();

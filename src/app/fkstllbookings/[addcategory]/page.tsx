@@ -22,13 +22,39 @@ import {
   getDoc,
 } from "firebase/firestore";
 
+interface PackageChoice {
+  id: string;
+  label: string;
+  price: number;
+}
+
+interface Item {
+  id: string;
+  label: string;
+  price: number;
+  items: string[];
+  title: string;
+}
+
+interface ChosenItem {
+  id: string;
+  label: string;
+  price: number;
+  items: string[];
+  title: string;
+}
+
+interface LimitsMap {
+  [key: string]: any; // You can replace `any` with the specific type of `data.limits` if known
+}
+
 const AdminReservationPage = () => {
   //#region Global Variables
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const modalRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
-  const slug = pathname.split("/").pop();
+  const slug = pathname ? pathname.split("/").pop()?.toLowerCase() || "" : "";
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [reservedByUser, setReservedByUser] = useState<string | null>(null);
@@ -65,9 +91,9 @@ const AdminReservationPage = () => {
 
   const packagePricePerPerson = 550; // Price per person
   const [selectedPackage, setSelectedPackage] = useState("A"); // Default to 'A'
-  const [chosenItems, setChosenItems] = useState([]);
-  const [packageChoices, setPackageChoices] = useState([]);
-  const [limits, setLimits] = useState({}); // To store limits for each category
+  const [chosenItems, setChosenItems] = useState<Item[]>([]);
+  const [packageChoices, setPackageChoices] = useState<PackageChoice[]>([]);
+  const [limits, setLimits] = useState<LimitsMap>({});
 
   const [remarks, setRemarks] = useState("");
   //#endregion
@@ -225,15 +251,17 @@ const AdminReservationPage = () => {
 
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
-      setError("Please fill in all required fields."); // Show error message
-      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      setError(true)
+      setErrorMessage("Please fill in all required fields."); // Show error message
+      setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
       return;
     }
 
     // Check for hour input of 0 specifically
     if (hourInput === 0) {
-      setError("Please enter a valid hour."); // Show error message for invalid hour
-      setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+      setError(true)
+      setErrorMessage("Please enter a valid hour."); // Show error message for invalid hour
+      setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
       return;
     }
 
@@ -258,8 +286,9 @@ const AdminReservationPage = () => {
       const userDoc = await getDoc(userDocRef);
 
       if (!userDoc.exists()) {
-        setError("Email given was invalid.");
-        setTimeout(() => setError(null), 3000); // Clear error after 3 seconds
+        setError(true)
+        setErrorMessage("Email given was invalid.");
+        setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
         return;
       }
     }
@@ -381,7 +410,7 @@ const AdminReservationPage = () => {
       try {
         const limitsCollection = collection(db, "packageOffers"); // Assuming limits are in the same collection
         const limitsSnapshot = await getDocs(limitsCollection);
-        const limitsMap = {};
+        const limitsMap: LimitsMap = {};
 
         limitsSnapshot.docs.forEach((doc) => {
           const data = doc.data();
@@ -473,7 +502,7 @@ const AdminReservationPage = () => {
     setTotalPrice(basePrice + excessCharge);
   }, [totalHours, selectedPackage, numberOfPersonsEvent]);
 
-  const handleFinalize = (chosenItemsArray) => {
+  const handleFinalize = (chosenItemsArray: Item[]) => {
     setChosenItems(chosenItemsArray);
   };
 
@@ -533,7 +562,7 @@ const AdminReservationPage = () => {
     }
     //#region Time StartEnd
     // Helper function to convert 12-hour format to 24-hour format for proper comparison
-    function convertTo24Hour(time) {
+    function convertTo24Hour(time: number): number {
       if (time === 12) return 12; // 12 PM is 12 in 24-hour format
       if (
         time === 1 ||
@@ -625,7 +654,7 @@ const AdminReservationPage = () => {
     //#endregion
 
     // Format the selected date
-    const formatDate = (date) => {
+    const formatDate = (date: Date): string => {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0"); // Month is 0-indexed
       const day = String(date.getDate()).padStart(2, "0");
@@ -640,10 +669,11 @@ const AdminReservationPage = () => {
         : selectedPackage === "B"
         ? "Package B"
         : "Package C";
-    const buffetChosen = chosenItems.reduce((acc, item) => {
-      acc[item.title] = item.items.join(", ");
-      return acc;
-    }, {});
+
+        const buffetChosen = chosenItems.reduce<{ [key: string]: string }>((acc, item) => {
+          acc[item.title] = item.items.join(", ");
+          return acc;
+        }, {});
 
     const orderId = Math.floor(
       1000000000 + Math.random() * 9000000000
@@ -677,7 +707,7 @@ const AdminReservationPage = () => {
         paymentType: paymentType,
         status: "REQUESTED",
         type: "Event",
-        reservedBy: userEmail,
+        reservedBy: reservedByUser,
         remarks: remarks || "None",
       });
       setIsPopupVisible(true);
@@ -817,14 +847,15 @@ const AdminReservationPage = () => {
                     max={19}
                     required
                     onInput={(e) => {
+                      const inputElement = e.target as HTMLInputElement; // Type assertion
                       // Limit to 2 digits and prevent values greater than 19
                       if (
-                        e.target.value.length > 2 ||
-                        parseInt(e.target.value) > 19
+                        inputElement.value.length > 2 ||
+                        parseInt(inputElement.value) > 19
                       ) {
-                        e.target.value = e.target.value.slice(0, 2); // Limit to 2 digits
-                        if (parseInt(e.target.value) > 19) {
-                          e.target.value = "19"; // Set to max value if exceeded
+                        inputElement.value = inputElement.value.slice(0, 2); // Limit to 2 digits
+                        if (parseInt(inputElement.value) > 19) {
+                          inputElement.value = "19"; // Set to max value if exceeded
                         }
                       }
                     }}
@@ -1158,17 +1189,24 @@ const AdminReservationPage = () => {
         </form>
         {/* IMAGE CONTAINER */}
         <div className="w-full aspect-video relative lg:aspect-auto lg:w-1/2 z-0">
-          <Image
-            src={
-              slug === "table"
-                ? Reserve[0].img
-                : slug === "event"
-                ? Reserve[1].img
-                : Reserve[2].img
-            }
-            fill
-            className="object-cover lg:h-full"
-          />
+        <Image
+          src={
+            slug === "table"
+              ? Reserve[0]?.img || "/fikaplace/3.jpg"
+              : slug === "event"
+              ? Reserve[1]?.img || "/fikaplace/1.jpg"
+              : Reserve[2]?.img || "/fikaplace/6.jpg"
+          }
+          alt={
+            slug === "table"
+              ? "Table setting image"
+              : slug === "event"
+              ? "Event image"
+              : "Default image"
+          }
+          fill
+          className="object-cover lg:h-full"
+        />
         </div>
       </div>
       {/* BOOKING MADE POP UP */}

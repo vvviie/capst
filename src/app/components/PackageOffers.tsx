@@ -3,29 +3,72 @@
 import React, { useState, useEffect, useRef } from "react";
 import { db } from "../firebase"; // Adjust the path as needed
 import { collection, getDocs } from "firebase/firestore";
+import { ChosenItem } from "../hooks/types";
 
-const PackageOffers = ({ selectedPackage, onFinalize }) => {
+type PackageOffersProps = {
+  selectedPackage: string;
+  onFinalize: (chosenItemsArray: ChosenItemInterface[]) => void; // Use ChosenItemInterface here
+  onPackageChange: () => void;
+};
+
+type BuffetItem = {
+  id: string;
+  title: string;
+  items: string[];
+  limits: Record<string, number>;
+};
+
+interface Item {
+  id: string;
+  label: string;
+  price: number;
+  items: string[];
+  title: string;
+}
+
+interface ChosenItemInterface {
+  id: string;
+  label: string;
+  price: number;
+  items: string[];
+  title: string;
+}
+
+  const PackageOffers: React.FC<PackageOffersProps> = ({
+    selectedPackage,
+    onFinalize,
+    onPackageChange,
+  }) => {
+
   const [open, setOpen] = useState(false);
   const formRef = useRef<HTMLFormElement | null>(null);
   const [prevSelectedPackage, setPrevSelectedPackage] = useState("");
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [buffet, setBuffet] = useState([]); // State to hold fetched buffet items
-  const [selectedItems, setSelectedItems] = useState({}); // State to track selected items per category
-  const [getLimits, setGetLimits] = useState({}); // State to hold limits
+  const [buffet, setBuffet] = useState<BuffetItem[]>([]); // State to hold fetched buffet items
+  const [selectedItems, setSelectedItems] = useState<{ [key: string]: string[] }>({}); // State to track selected items per category
+  const [getLimits, setGetLimits] = useState<Record<string, Record<string, number>>>({}); // State to hold limits
+
   useEffect(() => {
     const fetchBuffetData = async () => {
       const buffetCollection = collection(db, "packageOffers");
       const buffetSnapshot = await getDocs(buffetCollection);
       const buffetList = buffetSnapshot.docs
-        .map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter((item) => item.title && item.title !== "PackageChoices"); // Exclude PackageChoices document
+      .map((doc) => {
+        const data = doc.data() as BuffetItem; // Explicitly cast data to BuffetItem type
+        const { title, items, limits } = data; // Destructure data and avoid including `id` here
+        return {
+          id: doc.id, // Explicitly add the id
+          title,      // Add title, items, and limits manually
+          items,
+          limits,
+        };
+      })
+      .filter((item) => item.title && item.title !== "PackageChoices");
 
       // Assuming the structure of each document in the packageOffers collection has a title, items, and limits
-      const limits = {};
+      const limits: Record<string, Record<string, number>> = {}; // Define the type for limits
+
       buffetList.forEach((item) => {
         limits[item.title] = item.limits; // Store limits for each category
       });
@@ -33,7 +76,7 @@ const PackageOffers = ({ selectedPackage, onFinalize }) => {
       setBuffet(buffetList);
       setGetLimits(limits);
       // Initialize selectedItems based on fetched categories
-      const initialSelectedItems = {};
+      const initialSelectedItems: Record<string, any[]> = {};
       buffetList.forEach((item) => {
         initialSelectedItems[item.title] = [];
       });
@@ -45,34 +88,43 @@ const PackageOffers = ({ selectedPackage, onFinalize }) => {
 
   useEffect(() => {
     if (prevSelectedPackage !== selectedPackage) {
-      const resetSelectedItems = {};
+      const resetSelectedItems: Record<string, any[]> = {}; // Define the type for resetSelectedItems
+  
       buffet.forEach((item) => {
-        resetSelectedItems[item.title] = [];
+        resetSelectedItems[item.title] = []; // Initialize with an empty array for each title
       });
+  
       setSelectedItems(resetSelectedItems);
       setPrevSelectedPackage(selectedPackage);
+  
+      // Call the onPackageChange callback when the package changes
+      if (onPackageChange) {
+        onPackageChange(); // Updated callback to onPackageChange
+      }
     }
-  }, [selectedPackage, buffet, prevSelectedPackage]);
-
-  const handleClickOutside = (event) => {
-    if (formRef.current && !formRef.current.contains(event.target)) {
-      setOpen(false);
-    }
-  };
+  }, [selectedPackage, buffet, prevSelectedPackage, onPackageChange]);
 
   useEffect(() => {
+    // Event listener setup and teardown based on the 'open' state
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+  
     if (open) {
       document.addEventListener("mousedown", handleClickOutside);
     } else {
       document.removeEventListener("mousedown", handleClickOutside);
     }
-
+  
+    // Cleanup event listener on unmount or when 'open' changes
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [open]);
 
-  const handleItemSelect = (category, item) => {
+  const handleItemSelect = (category: string, item: string) => {
     setSelectedItems((prev) => {
       const currentSelection = prev[category];
 
@@ -101,18 +153,22 @@ const PackageOffers = ({ selectedPackage, onFinalize }) => {
       (category) =>
         selectedItems[category].length < getLimits[category][selectedPackage]
     );
-
+  
     if (unmetSelections.length > 0) {
       setShowErrorModal(true);
       setErrorMessage(
-        `Please complete your selection for: ${unmetSelections.join(", ")}`
+        `Please complete your selection for the following categories:\n- ${unmetSelections.join("\n- ")}`
       );
     } else {
-      const chosenItemsArray = Object.keys(selectedItems).map((category) => ({
-        title: category,
-        items: selectedItems[category],
+      const chosenItemsArray: ChosenItemInterface[] = Object.keys(selectedItems).map((category) => ({
+        id: category,
+        label: category, // You can derive label or assign a default
+        price: 0, // You can assign a default or fetch price from elsewhere
+        items: selectedItems[category], // Ensure items is of the correct type
+        title: category, // Add the title property from the category or something else
       }));
-      onFinalize(chosenItemsArray);
+  
+      onFinalize(chosenItemsArray); // Pass mapped items to onFinalize
       setOpen(false);
     }
   };

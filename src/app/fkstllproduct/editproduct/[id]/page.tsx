@@ -5,7 +5,7 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { mainCourseMenu, MenuItem } from "@/app/data";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { db } from "@/app/firebase";
 import {
   doc,
@@ -14,8 +14,9 @@ import {
   deleteField,
   deleteDoc,
   setDoc,
+  FieldValue
 } from "firebase/firestore";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where} from "firebase/firestore";
 import {
   getStorage,
   ref,
@@ -23,6 +24,14 @@ import {
   getDownloadURL,
   uploadBytes,
 } from "firebase/storage";
+
+interface ProductData {
+  img: string;
+}
+
+interface UpdateData {
+  [key: string]: string | number | boolean | string[] | null | FieldValue;
+}
 
 type ProductType = {
   name: string; // The name of the product
@@ -48,6 +57,10 @@ type Category = {
   title: string;
 };
 
+type Params = {
+  id: string; // Define the specific route parameters you expect
+};
+
 // Define the menuCategory array
 const menuCategory: Category[] = [
   { id: 1, prodCat: "drinks", title: "Drinks" },
@@ -60,7 +73,8 @@ const menuCategory: Category[] = [
 
 const EditProductPage = () => {
   const router = useRouter();
-  const { id } = useParams(); // Use `useParams` to retrieve the dynamic route parameter
+  const params = useParams() as Params; // Cast `params` to the expected type
+  const { id } = params; // Destructure `id` directly from `params`
   const [product, setProduct] = useState<ProductType>(null);
   const [loading, setLoading] = useState(true);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -94,7 +108,7 @@ const EditProductPage = () => {
 
   // For Image's File Name
   const [fileName, setFileName] = useState("");
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // // For Product IDs
   // const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>(
@@ -185,12 +199,48 @@ const EditProductPage = () => {
 
   const [existingIDs, setExistingIDs] = useState<string[]>([]); // Initialize existing IDs
   const existingIDsRef = useRef<string[]>([]); // Create a ref to store existing IDs
-  const itemNameRef = useRef(null);
-  const itemPriceRef = useRef(null);
-  const drinkSizeRef = useRef(null);
-  const drinkUpsizeRef = useRef(null);
-  const drinkUpsizePriceRef = useRef(null);
-  const descriptionRef = useRef(null);
+  const itemNameRef = useRef<HTMLInputElement | null>(null);
+  const itemPriceRef = useRef<HTMLInputElement | null>(null);
+  const drinkSizeRef = useRef<HTMLInputElement | null>(null);
+  const drinkUpsizeRef = useRef<HTMLInputElement | null>(null);
+  const drinkUpsizePriceRef = useRef<HTMLInputElement | null>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement | null>(null); // Update the type
+
+    // Function to generate a new product ID
+    const generateNewID = (
+      ids: string[],
+      drinkType: keyof typeof drinkTypePrefixes | null
+    ) => {
+      const prefix =
+        selectedCat === "drinks" && drinkType
+          ? drinkTypePrefixes[drinkType]
+          : `${extractedCategory}`;
+  
+      if (!prefix) {
+        console.error("Cannot generate ID: invalid prefix", {
+          selectedCat,
+          drinkType,
+        });
+        return; // Early return if no prefix is available
+      }
+  
+      // Generate the new ID
+      const newID =
+        ids.length === 0
+          ? `${prefix}1`
+          : `${prefix}${
+              Math.max(
+                ...ids.map(
+                  (id) =>
+                    parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) ||
+                    0
+                )
+              ) + 1
+            }`;
+  
+      setNewProdID(newID);
+      console.log("Generated new product ID:", newID);
+    };
 
   // Effect to update extractedCategory when selectedCat changes
   useEffect(() => {
@@ -218,12 +268,7 @@ const EditProductPage = () => {
   ]);
 
   // Effect to generate a new ID based on existing IDs //
-  useEffect(() => {
-    const drinkType =
-      selectedCat === "drinks" ? selectedDrinkType : passableSelectedDrinkType;
-    generateNewID(existingIDsRef.current, drinkType); // Call with the current value of existing IDs
-  }, [existingIDs]);
-
+  
   useEffect(() => {
     // Handle drinkSize bounds
     if (drinkSize !== null && drinkSize !== "") {
@@ -258,42 +303,6 @@ const EditProductPage = () => {
     console.log("Selected type:", selectedValue); // Log the selected type for debugging
   };
 
-  // Function to generate a new product ID
-  const generateNewID = (
-    ids: string[],
-    drinkType: keyof typeof drinkTypePrefixes | null
-  ) => {
-    const prefix =
-      selectedCat === "drinks" && drinkType
-        ? drinkTypePrefixes[drinkType]
-        : `${extractedCategory}`;
-
-    if (!prefix) {
-      console.error("Cannot generate ID: invalid prefix", {
-        selectedCat,
-        drinkType,
-      });
-      return; // Early return if no prefix is available
-    }
-
-    // Generate the new ID
-    const newID =
-      ids.length === 0
-        ? `${prefix}1`
-        : `${prefix}${
-            Math.max(
-              ...ids.map(
-                (id) =>
-                  parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) ||
-                  0
-              )
-            ) + 1
-          }`;
-
-    setNewProdID(newID);
-    console.log("Generated new product ID:", newID);
-  };
-
   const handleAvailabilityChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
@@ -314,9 +323,11 @@ const EditProductPage = () => {
   };
 
   const handleUploadClick = () => {
-    // Trigger the file input click
-    fileInputRef.current.click();
-  };
+    if (fileInputRef.current) {
+        // Trigger the file input click
+        fileInputRef.current.click();
+        }
+    };
 
   // Handler for input change
   const handleItemPriceChange = (
@@ -403,8 +414,8 @@ const EditProductPage = () => {
 
   //#region Image Hooks
 
-  const handleFileChange = async (e) => {
-    const file = e.target.files[0]; // Get the uploaded file
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];// Get the uploaded file
     if (file) {
       const validTypes = ["image/jpeg", "image/png"];
       if (!validTypes.includes(file.type)) {
@@ -432,7 +443,11 @@ const EditProductPage = () => {
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        imgElement.src = e.target.result as string;
+        if (e.target) { // Check if e.target is not null
+            imgElement.src = e.target.result as string;
+        } else {
+            reject(new Error("FileReader target is null."));
+        }
       };
 
       imgElement.onload = () => {
@@ -469,7 +484,7 @@ const EditProductPage = () => {
   };
 
   // Function to upload image to Firebase Storage
-  const uploadImageToStorage = async (file) => {
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
     const storage = getStorage();
     const storageRef = ref(
       storage,
@@ -500,7 +515,9 @@ const EditProductPage = () => {
   const handleRemoveImage = () => {
     setImageUrl(""); // Remove the image preview
     setFileName(""); // Clear the file name
-    fileInputRef.current.value = ""; // Clear the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Clear the file input
+    }
   };
 
   const fetchPlaceholderImageUrl = async () => {
@@ -521,7 +538,7 @@ const EditProductPage = () => {
   //#endregion
 
   // Fetch product from Firestore
-  const fetchProduct = async (collectionRef) => {
+  const fetchProduct = useCallback(async (collectionRef: string) => {
     if (typeof id === "string") {
       const docRef = doc(db, collectionRef, id);
       console.log(`Document ID: ${id}`);
@@ -538,17 +555,14 @@ const EditProductPage = () => {
           const data = docSnap.data();
           console.log("Document Data:", data); // Log entire document data for inspection
   
-          // Extract allergens and ensure it's an array
           const fetchedAllergens = Array.isArray(data.contains) ? data.contains : [];
           console.log("Fetched Allergens:", fetchedAllergens);
   
-          // Extract the size and convert it to a number
-          const sizeWithUnit = data.currSize || "0oz"; // Fallback to '0oz' if undefined
-          const sizeValue = parseFloat(sizeWithUnit); // Extract numeric part
-          const upsizeWithUnit = data.upsizeSize || "0oz"; // Fallback to '0oz' if undefined
-          const upsizeValue = parseFloat(upsizeWithUnit); // Extract numeric part for display
+          const sizeWithUnit = data.currSize || "0oz";
+          const sizeValue = parseFloat(sizeWithUnit);
+          const upsizeWithUnit = data.upsizeSize || "0oz";
+          const upsizeValue = parseFloat(upsizeWithUnit);
   
-          // Ensure the data matches the ProductType structure
           const fetchedProduct = {
             name: data.title,
             category: data.prodCategory,
@@ -567,10 +581,9 @@ const EditProductPage = () => {
             allergens: fetchedAllergens,
           };
   
-          console.log("Fetched Product Object:", fetchedProduct); // Log the entire product object
+          console.log("Fetched Product Object:", fetchedProduct);
   
-          // Determine selected category based on itemId
-          let determinedCategory = "drinks"; // Default category
+          let determinedCategory = "drinks";
           if (fetchedProduct.itemId.includes("drink")) {
             determinedCategory = "drinks";
           } else if (fetchedProduct.itemId.includes("mainCourse")) {
@@ -587,11 +600,21 @@ const EditProductPage = () => {
   
           console.log("Determined Category:", determinedCategory);
   
-          // Set state with fetched product data
           setAaa(fetchedProduct.itemCategory);
           setProduct(fetchedProduct);
           setImageUrl(fetchedProduct.imageUrl);
-          setFileName(decodeURIComponent(fetchedProduct.imageUrl.split("/").pop().split("?")[0]).split('/').pop());
+  
+          if (fetchedProduct.imageUrl) {
+            const decodedFileName = decodeURIComponent(
+              fetchedProduct.imageUrl.split("/").pop()?.split("?")[0] || ""
+            ).split("/").pop() || "defaultFileName";
+            
+            setFileName(decodedFileName);
+          } else {
+            console.error("Image URL is undefined!");
+            setFileName("defaultFileName");
+          }
+          
           setSelectedAvailability(fetchedProduct.availability);
           setProdID(fetchedProduct.itemId);
           setItemName(fetchedProduct.name);
@@ -606,7 +629,6 @@ const EditProductPage = () => {
           setSelectedAllergens(fetchedAllergens.filter((allergen) => allergen !== ""));
           setDesc(fetchedProduct.itemDescription);
   
-          // Use the determined category directly
           setSelectedCat(determinedCategory);
         } else {
           console.error("No such document!");
@@ -620,42 +642,32 @@ const EditProductPage = () => {
       console.error("Invalid document ID");
       setLoading(false);
     }
-  };  
+  }, [id, setAaa, setProduct, setImageUrl, setFileName, setSelectedAvailability, setProdID, setItemName, setCalorie, setItemPrice, setPassableSelectedDrinkType, setDrinkSize, setUpsize, setUpsizeSize, setUpsizePrice, setSelectedDrinkType, setSelectedAllergens, setDesc, setSelectedCat]);  
   
-  // useEffect to log `aaa` after it changes
-  useEffect(() => {
-    console.log("Updated aaa:", aaa);
-  }, [aaa]);  // This will run every time `aaa` changes
-  
-    // useEffect to log `aaa` after it changes
-    useEffect(() => {
-      console.log("Updated bbb:", passableSelectedDrinkType);
-    }, [aaa]);  // This will run every time `aaa` changes
-
   // Fetching all collections
   useEffect(() => {
     fetchProduct("drinks");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("mainCourse");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("snacks");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("pastries");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("sandwiches");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("pasta");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   const passableSelectedDrinkTypeRef = useRef(passableSelectedDrinkType);
   useEffect(() => {
@@ -701,7 +713,7 @@ const EditProductPage = () => {
 
     // Upload the image if it exists
     let finalImageUrl;
-    if (fileInputRef.current.files[0]) {
+    if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files[0]) {
       const file = fileInputRef.current.files[0]; // Get the uploaded file
       try {
         finalImageUrl = await uploadImageToStorage(file); // Upload the image and get the URL
@@ -717,12 +729,12 @@ const EditProductPage = () => {
       //  If no image is uploaded method
 
       // Fetch the existing document to get the current image if no new file is uploaded
-      let existingDocumentData = {};
+      let existingDocumentData: ProductData = {} as ProductData;
       try {
         const docRef = doc(db, extractedCategory, id);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
-          existingDocumentData = docSnap.data();
+          existingDocumentData = docSnap.data() as ProductData; // Cast the fetched data to the ProductData type
           finalImageUrl = existingDocumentData.img; // Use existing image URL
         }
       } catch (error) {
@@ -734,18 +746,6 @@ const EditProductPage = () => {
         finalImageUrl = await fetchPlaceholderImageUrl(); // Fallback if no image is found
       }
     }
-
-    function toCamelCase(str) {
-      return str
-          .toLowerCase() // Convert the entire string to lowercase
-          .split(" ") // Split the string by spaces
-          .map((word, index) => 
-              index === 0 
-                  ? word // Keep the first word lowercase
-                  : word.charAt(0).toUpperCase() + word.slice(1) // Capitalize the first letter of subsequent words
-          )
-          .join(""); // Join the words back together
-  }
 
   const documentData = {
     prodCategory: passableSelectedDrinkType,
@@ -812,7 +812,7 @@ const EditProductPage = () => {
     }
 
     // Create a new object for the update
-    const updateData = { ...filteredDocumentData };
+    const updateData: UpdateData = { ...filteredDocumentData };
 
     // Check for fields to remove
     for (const key in existingDocumentData) {
@@ -833,98 +833,94 @@ const EditProductPage = () => {
     }
   };
 
-  const toCamelCase = (str) => {
+  const toCamelCase = (str: string) => {
     if (!str) return ""; // Return an empty string if str is null or undefined
     return str
       .toLowerCase()
       .replace(/[^a-zA-Z0-9]+(.)/g, (_, char) => char.toUpperCase());
   };
 
-  const toReadable = (str) => {
+  const toReadable = (str: string) => {
     if (!str) return ""; // Return an empty string if str is null or undefined
     return str.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (char) => char.toUpperCase());
   };
 
    // Fetch categories from the database based on selected main category
-  const fetchCategoriesFromDB = async (mainCategory: string) => {
-    try {
-        // Reference to the menuCategories collection
+const fetchCategoriesFromDB = useCallback(
+    async (mainCategory: string) => {
+      try {
         const menuCategoriesRef = collection(db, "menuCategories");
-
-        // Determine the document based on the selected main category
+  
         let categoriesDoc = null;
         switch (mainCategory) {
-            case "drinks":
-                categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
-                break;
-            case "mainCourseMenu":
-                categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
-                break;
-            case "pastriesMenu":
-                categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
-                break;
-            case "snacksMenu":
-                categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
-                break;
-            case "sandwichesMenu":
-                categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
-                break;
-            case "pastaMenu":
-                categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
-                break;
-            default:
-                categoriesDoc = null; // Default case, in case no main category is selected
-                break;
+          case "drinks":
+            categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
+            break;
+          case "mainCourseMenu":
+            categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
+            break;
+          case "pastriesMenu":
+            categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
+            break;
+          case "snacksMenu":
+            categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
+            break;
+          case "sandwichesMenu":
+            categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
+            break;
+          case "pastaMenu":
+            categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
+            break;
+          default:
+            categoriesDoc = null;
+            break;
         }
-
+  
         console.log("Categories document reference:", categoriesDoc);
-
+  
         if (!categoriesDoc) return;
-
-        // Get the document snapshot
+  
         const docSnapshot = await getDoc(categoriesDoc);
-        
+  
         console.log("Document snapshot:", docSnapshot);
-
-        // If the document exists, extract the categories
+  
         if (docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            console.log("Document data:", data);
-
-            let allCategories: string[] = [];
-            if (data.categories && Array.isArray(data.categories)) {
-                // Extract categories from the document
-                allCategories = data.categories
-                    .filter((item) => item.category) // Filter out any items without a category
-                    .map((item) => item.category); // Extract the category names
-            }
-
-            console.log("All categories:", allCategories);
-
-            // Format categories for display: Convert category names to a human-readable format
-            const formattedCategories = allCategories.map((category) =>
-                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
-            );
-
-            console.log("Formatted categories:", formattedCategories);
-
-            setMenuCategories(formattedCategories);
-
-            // Reset selectedCategory if it's not a valid option
-            if (!formattedCategories.includes(selectedCategory)) {
-                setSelectedCategory(formattedCategories[0] || null); // Default to first category
-            }
+          const data = docSnapshot.data();
+          console.log("Document data:", data);
+  
+          let allCategories: string[] = [];
+          if (data.categories && Array.isArray(data.categories)) {
+            allCategories = data.categories
+              .filter((item) => item.category)
+              .map((item) => item.category);
+          }
+  
+          console.log("All categories:", allCategories);
+  
+          const formattedCategories = allCategories.map((category) =>
+            category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+          );
+  
+          console.log("Formatted categories:", formattedCategories);
+  
+          setMenuCategories(formattedCategories);
+  
+          if (!selectedCategory || !formattedCategories.includes(selectedCategory)) {
+            setSelectedCategory(formattedCategories[0] || "defaultCategory");
+          }
         } else {
-            console.log("No such document!");
+          console.log("No such document!");
         }
-    } catch (error) {
+      } catch (error) {
         console.error("Error fetching categories from database:", error);
-    }
-};
+      }
+    },
+    [selectedCategory] // Add dependencies here
+  );
 
 useEffect(() => {
     fetchCategoriesFromDB(selectedCat);
-}, [selectedCat]);
+}, [selectedCat, fetchCategoriesFromDB]);
 
   if (loading) return <p>Loading...</p>;
 

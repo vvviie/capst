@@ -1,3 +1,4 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
 
 // Initialize Firebase Admin SDK
@@ -8,7 +9,7 @@ if (!admin.apps.length) {
     });
 }
 
-export default async (req, res) => {
+const createNewStaff = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === "POST") {
         const { username, password } = req.body;
 
@@ -30,14 +31,16 @@ export default async (req, res) => {
             console.error("Error creating new user:", error);
 
             // Handle specific error for email already in use
-            if (error.code === 'auth/email-already-exists') {
+            if ((error as { code: string }).code === 'auth/email-already-exists') {
                 return res.status(409).json({ error: "The email address is already in use by another account." });
             }
 
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: (error as Error).message });
         }
     } else {
         res.setHeader("Allow", ["POST"]);
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 };
+
+export default createNewStaff;

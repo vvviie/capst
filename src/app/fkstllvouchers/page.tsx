@@ -70,38 +70,38 @@ const VoucherListPage = () => {
   };
 
   // Function to fetch vouchers based on selected type
-  const fetchItems = () => {
-    const collectionRef = collection(db, selectedType);
-
-    // Use onSnapshot for real-time updates
-    const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
-      const itemsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        available: doc.data().available === true,
-      }));
-
-      if (selectedType === "vouchers") {
-        setVouchers(itemsData as voucherType[]);
-        setPromos([]); // Clear promos if vouchers are selected
-      } else if (selectedType === "promoCodes") {
-        setPromos(itemsData as promoType[]);
-        setVouchers([]); // Clear vouchers if promos are selected
-      }
-    });
-
-    return unsubscribe; // Return unsubscribe function
-  };
-
   useEffect(() => {
+    const fetchItems = () => {
+      const collectionRef = collection(db, selectedType);
+  
+      // Use onSnapshot for real-time updates
+      const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+        const itemsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          available: doc.data().available === true,
+        }));
+  
+        if (selectedType === "vouchers") {
+          setVouchers(itemsData as voucherType[]); 
+          setPromos([]); // Clear promos if vouchers are selected
+        } else if (selectedType === "promoCodes") {
+          setPromos(itemsData as promoType[]); 
+          setVouchers([]); // Clear vouchers if promos are selected
+        }
+      });
+  
+      return unsubscribe; // Return unsubscribe function
+    };
+  
     // Call fetchItems to set up the listener
     const unsubscribe = fetchItems();
-
+  
     // Cleanup function to unsubscribe from the listener
     return () => {
       unsubscribe(); // Clean up the listener when the component unmounts
     };
-  }, [selectedType]); // Add selectedType as a dependency
+  }, [selectedType]);
 
   // Function to handle availability change
   const handleAvailabilityChange = async (itemId: string, newValue: string) => {
@@ -164,14 +164,25 @@ const VoucherListPage = () => {
     await deleteDoc(voucherRef);
   };
 
+  function isVoucherType(item: voucherType | promoType): item is voucherType {
+    return (item as voucherType).voucherID !== undefined;
+  }
+
   // Filter vouchers and promos based on search input
-  const filteredResults = filteredItems.filter(
-    (item) =>
-      (selectedType === "vouchers" ? item.voucherID : item.promoID) && // Check if ID exists
-      (selectedType === "vouchers" ? item.voucherID : item.promoID)
-        .toLowerCase()
-        .startsWith(searchInput.toLowerCase())
-  );
+  const filteredResults = filteredItems.filter((item) => {
+  if (selectedType === "vouchers") {
+    // Check if item is of type 'voucherType' before accessing 'voucherID'
+    if (isVoucherType(item)) {
+      return item.voucherID && item.voucherID.toLowerCase().startsWith(searchInput.toLowerCase());
+    }
+  } else {
+    // Check if item is of type 'promoType' before accessing 'promoID'
+    if (!isVoucherType(item)) {
+      return item.promoID && item.promoID.toLowerCase().startsWith(searchInput.toLowerCase());
+    }
+  }
+  return false;
+});
 
   // Function to get the appropriate text based on the selected type
   const getActionText = () => {
@@ -296,14 +307,13 @@ const VoucherListPage = () => {
               {/* VOUCHER ICON */}
               <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
               {/* PRODUCT TITLE - Changed to display voucherID */}
+              
               <h1 className="text-center text-orange-950 lg:text-lg font-semibold md:text-xl px-6">
-                {selectedType === "vouchers" ? items.voucherID : items.promoID}
+                {isVoucherType(items) ? items.voucherID : items.promoID}
               </h1>
               {/* VOUCHER DESCRIPTION */}
               <p className="text-center text-gray-600 text-xs lg:text-sm">
-                {selectedType === "vouchers"
-                  ? items.voucherDescription
-                  : items.promoDescription}
+                {isVoucherType(items) ? items.voucherDescription : items.promoDescription}
               </p>
 
               {/* OPTIONS TO SET AVAILABILITY, UPDATE, AND DELETE */}
@@ -337,7 +347,7 @@ const VoucherListPage = () => {
                     font-semibold text-amber-900 hover:bg-orange-100 hover:scale-[.98] duration-200 text-sm
                     min-h-10"
                       onClick={(e) => {
-                        setSelectedVoucher(items); // Set the selected voucher
+                        setSelectedVoucher(items as voucherType); // Set the selected voucher
                         setIsFormOpen(true);
                         e.stopPropagation();
                         //toggleForm();
@@ -349,8 +359,8 @@ const VoucherListPage = () => {
                   <Link
                     href={
                       selectedType === "promoCodes"
-                        ? `/fkstllvouchers/editpromo/${items.promoID}`
-                        : `/fkstllvouchers/editvoucher/${items.voucherID}`
+                        ? `/fkstllvouchers/editpromo/${(items as promoType).promoID}` // Type assertion here
+                        : `/fkstllvouchers/editvoucher/${(items as voucherType).voucherID}` // Type assertion here
                     }
                     className="rounded-sm shadow-md border-gray-100 border-2 bg-white w-2/3 text-center
                     font-semibold text-gray-600 hover:bg-gray-100 hover:scale-[.98] duration-200 text-sm

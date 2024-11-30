@@ -36,7 +36,10 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  items: { title: string; price: number; tags: string[] }[];
+  voucher: string;
+  items: {
+    qty: number; title: string; price: number; tags: string[] 
+}[];
   id: string;
   pwdSenior: boolean;
   idPic?: string;
@@ -46,6 +49,21 @@ type Order = {
   subtotal: number;
 };
 
+interface OrderItem {
+  totalPrice: number;
+  id: string;
+  productTitle: string;
+  productImg: string;
+  note?: string;
+  itemQty: number;
+  selectedDrinkSize?: string;
+  milkOption?: string;
+  slug?: string;
+  tags?: string[];
+  additionals?: string[];
+  mainCourseOption?: string;
+}
+
 type Orders = Order[];
 
 const OrdersPage = () => {
@@ -54,7 +72,7 @@ const OrdersPage = () => {
   const [comment, setComment] = useState<string>("");
   const [selected, setSelected] = useState<"like" | "dislike" | null>(null);
   const [userOrders, setUserOrders] = useState<Orders>([]);
-  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
@@ -142,36 +160,40 @@ const OrdersPage = () => {
 
   useEffect(() => {
     if (!userEmail) return;
-
+  
     const unsubscribe = onSnapshot(
       query(collection(db, "completedOrders"), where("user", "==", userEmail)),
       (querySnapshot) => {
-        const orders = [];
-
+        const orders: Orders = [];  
+  
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-
+  
+          // Remove this declaration: const items: Orders[] = data.items || [];
+          const items: OrderItem[] = data.items || []; // Declare 'items' once with the correct type
+          
           // Initialize with the first item to determine the highest-priced item
-          let highestPricedItem = data.items[0];
+          let highestPricedItem = items[0];
           let highestPrice = highestPricedItem?.totalPrice || 0;
-
+  
           // Find the highest-priced item in the current order
-          data.items.forEach((item) => {
+          items.forEach((item: OrderItem) => {
             if (item.totalPrice > highestPrice) {
               highestPricedItem = item;
               highestPrice = item.totalPrice;
             }
           });
-
-          const items = (data.items || []).map((item) => {
+  
+          // Use 'items' after mapping them
+          const mappedItems = items.map((item: OrderItem) => {
             let discountedPrice = item.totalPrice;
-
+          
             // Apply Sr/PWD discount if active for the order and it's the highest-priced item
             if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
               discountedPrice = item.totalPrice * 0.8;
             }
-
-            let tags = [];
+          
+            let tags: string[] = [];  // Ensure tags is of type string[]
             switch (item.slug) {
               case "drinks":
                 tags = [
@@ -179,24 +201,25 @@ const OrdersPage = () => {
                   ...(item.additionals || []),
                   item.milkOption || "Fresh Milk",
                   item.note && `"${item.note}"`,
-                ].filter(Boolean);
+                ].filter(Boolean) as string[]; // Explicitly filter out undefined values
                 break;
               case "maincourse":
                 tags = [
                   item.mainCourseOption || "Rice",
                   item.note && `"${item.note}"`,
-                ].filter(Boolean);
+                ].filter(Boolean) as string[];
                 break;
               case "pasta":
               case "pastries":
               case "snacks":
               case "sandwiches":
-                tags = [item.note && `"${item.note}"`].filter(Boolean);
+                tags = [item.note && `"${item.note}"`].filter(Boolean) as string[];
                 break;
               default:
-                tags = item.tags?.length > 0 ? item.tags : ["No tags"];
+                tags = (item.tags?.length ? item.tags : ["No tags"]) || ["No tags"];
             }
-
+          
+            // Return the mapped item with a valid tags array of type string[]
             return {
               title: item.productTitle || "",
               price: discountedPrice,
@@ -206,17 +229,17 @@ const OrdersPage = () => {
               size: item.selectedDrinkSize || "N/A",
               milkOption: item.milkOption || "N/A",
               slug: item.slug || "",
-              tags: tags.length > 0 ? tags : ["No tags"], // Handle empty tags
+              tags: tags.length > 0 ? tags : ["No tags"], // Ensure tags is always an array of strings
             };
           });
-
+  
           // Recalculate the total price after applying any discounts
-          const totalPrice = items.reduce(
+          const totalPrice = mappedItems.reduce(
             (total, item) => total + item.price,
             0
           );
-
-          const orderInfo = {
+  
+          const orderInfo: Order = {
             id: doc.id,
             price: totalPrice,
             status: data.status || "TO PAY",
@@ -226,43 +249,47 @@ const OrdersPage = () => {
             payment: data.modeOfPayment || "N/A",
             promo: (data.promoDiscounted || 0).toFixed(2),
             voucher: (data.voucherDiscounted || 0).toFixed(2),
-            items: items,
+            items: mappedItems,
             pwdSeniorDiscountApplied: applySrPWD[doc.id],
             sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
             pwdSenior: data.pwdSenior,
             subtotal: data.subtotal || totalPrice,
+            // Add the missing properties here
+            userName: data.userName || "", // Provide a default value or extract from data
+            userEmail: data.userEmail || "", // Provide a default value or extract from data
+            slug: data.slug || "", // Provide a default value or extract from data
           };
-
+  
           // Add the current order to the orders array
           orders.push(orderInfo);
         });
-
+  
         // Helper function to convert 12-hour time with AM/PM to 24-hour format for sorting
-        const convertTo24HourFormat = (timeStr) => {
+        const convertTo24HourFormat = (timeStr: string): string => {
           const [time, modifier] = timeStr.split(" ");
           let [hours, minutes] = time.split(":").map(Number);
-
+  
           if (modifier === "PM" && hours < 12) hours += 12;
           if (modifier === "AM" && hours === 12) hours = 0;
-
+  
           return `${hours.toString().padStart(2, "0")}:${minutes
             .toString()
             .padStart(2, "0")}`;
         };
-
+  
         // Sort the orders from latest to oldest by date and time
         orders.sort((a, b) => {
           // Compare dates first
           if (a.date > b.date) return -1;
           if (a.date < b.date) return 1;
-
+  
           // If dates are the same, compare converted times
           const timeA = convertTo24HourFormat(a.time);
           const timeB = convertTo24HourFormat(b.time);
-
+  
           return timeA > timeB ? -1 : 1;
         });
-
+  
         // Update the orders state
         setUserOrders(orders);
         setHasOrder(orders.length > 0);
@@ -271,10 +298,11 @@ const OrdersPage = () => {
         console.error("Error fetching orders:", error);
       }
     );
-
+  
     // Cleanup function to unsubscribe from onSnapshot when component unmounts or userEmail changes
     return () => unsubscribe();
-  }, [userEmail]);
+  }, [userEmail, applySrPWD]);
+  
 
   // Check orders length on state change
   useEffect(() => {
@@ -295,7 +323,7 @@ const OrdersPage = () => {
         );
 
         let allRated = true;
-        let firstUnratedOrder = null;
+        let firstUnratedOrder: string | null = null;
 
         // Log the data received to make sure it's being fetched correctly
         console.log(
@@ -362,7 +390,7 @@ const OrdersPage = () => {
     }
   }, [showLoginModal]);
 
-  const handleDeleteOrder = async (orderId) => {
+  const handleDeleteOrder = async (orderId: string) => { 
     try {
       await deleteDoc(doc(db, "completedOrders", orderId));
       setUserOrders(userOrders.filter((order) => order.id !== orderId));
@@ -466,7 +494,7 @@ const OrdersPage = () => {
       );
 
       let allRated = true;
-      let nextUnratedOrder = null;
+      let nextUnratedOrder: string | null = null;
 
       ordersSnapshot.forEach((doc) => {
         const order = doc.data();
@@ -516,18 +544,11 @@ const OrdersPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text(`ORDER DETAILS - ${id}`, 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
@@ -568,7 +589,7 @@ const OrdersPage = () => {
         // Check if the discount applies and find the highest priced item
         if (order.pwdSenior) {
           // Find the highest priced item
-          const highestPricedItem = order.items.reduce((maxItem, item) =>
+          const highestPricedItem = order.items.reduce((maxItem: OrderItem, item: OrderItem) =>
             item.totalPrice > maxItem.totalPrice ? item : maxItem
           );
 
@@ -586,7 +607,7 @@ const OrdersPage = () => {
 
           // Optionally, update the total for the order (if you are recalculating it)
           const newSubtotal = order.items.reduce(
-            (total, item) => total + item.totalPrice,
+            (total: number, item: OrderItem) => total + item.totalPrice,
             0
           );
           order.subtotal = newSubtotal;
@@ -600,7 +621,7 @@ const OrdersPage = () => {
         yPosition += 10; // Move down to start printing product details
 
         // Loop through items and print each one
-        order.items.forEach((item) => {
+        order.items.forEach((item: OrderItem) => {
           // Product title, quantity
           const productLine = `${item.productTitle} ${
             item.selectedDrinkSize ? `(${item.selectedDrinkSize})` : ""
@@ -701,7 +722,7 @@ const OrdersPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
 
     // Adjust the visible page numbers if necessary
@@ -938,9 +959,9 @@ const OrdersPage = () => {
                             {order.status !== "TO PAY"
                               ? order.pwdSenior
                                 ? (
-                                    order.price - order.sampleDiscountDeduction
+                                    (order.price - (order.sampleDiscountDeduction ?? 0))
                                   ).toFixed(2)
-                                : order.price.toFixed(2)
+                                : order.subtotal.toFixed(2)
                               : order.subtotal.toFixed(2)}
                           </span>
                         </div>
@@ -995,7 +1016,7 @@ const OrdersPage = () => {
                         <div className="font-bold text-sm flex justify-between items-center">
                           <span className="font-semibold">
                             {order.status !== "TO PAY"
-                              ? "Senior Citizen / PWD Discount Given?"
+                              ? "Senior Citizen/PWD Discount Given?"
                               : "Applied for Senior/PWD?"}
                           </span>
                           <span>{order.pwdSenior ? "Yes" : "No"}</span>
@@ -1016,17 +1037,12 @@ const OrdersPage = () => {
                           </div>
                         )}
                         {/* PROMO, IF THERE IS ONE */}
-                        {(order.promo || order.promo === 0) &&
-                          order.promo !== null &&
-                          order.promo !== undefined &&
-                          order.promo !== 0 && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Promo discount
-                              </span>
-                              <span>PHP {order.promo}</span>
-                            </div>
-                          )}
+                        {(order.promo && order.promo > 0 || order.promo === 0) && order.promo !== null && order.promo !== undefined && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">Promo discount</span>
+                            <span>PHP {order.promo}</span>
+                          </div>
+                        )}
                         {/* Iterate through order items */}
                         {order.items.map((item, index) => {
                           // Find the highest price in the order items
@@ -1220,7 +1236,7 @@ const OrdersPage = () => {
                 <button
                   className="w-24 py-2 rounded-md shadow-md bg-white font-bold border-2 border-gray-50 text-gray-500
                   hover:scale-[1.05] duration-300 hover:bg-gray-50"
-                  onClick={() => handleDeleteOrder(orderToCancel)}
+                  onClick={() => handleDeleteOrder(orderToCancel || "")}
                 >
                   Yes
                 </button>

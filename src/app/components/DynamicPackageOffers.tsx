@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { db } from "../firebase"; // Adjust the path as necessary
 import {
   collection,
@@ -11,10 +11,15 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 
+interface PackageOffer {
+  id: string;
+  title?: string; // Add other fields if applicable
+  items?: string[]; // Adjust types based on your actual data structure
+  limits?: Record<string, number>; // Adjust the type of `limits` if necessary
+}
+
 const DynamicPackageOffers = () => {
-  const [categories, setCategories] = useState<
-    { id: string; title: string; items: string[] }[]
-  >([]);
+  const [categories, setCategories] = useState<PackageOffer[]>([]);
   const [newCategoryTitle, setNewCategoryTitle] = useState("");
   const [foodItemInput, setFoodItemInput] = useState<{ [key: string]: string }>(
     {}
@@ -27,52 +32,58 @@ const DynamicPackageOffers = () => {
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const packageOffersRef = collection(db, "packageOffers");
   const [selectedLimits, setSelectedLimits] = useState<{
-    [key: string]: { key: string; value: string };
+    [key: string]: { key: string; value: string | number };
   }>({});
 
   const modalRef = useRef<HTMLDivElement | null>(null); // Create a ref for the modal
 
-  const handleClickOutside = (event: MouseEvent) => {
-    if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-      closeModal(); // Close the modal if the click is outside
-    }
-  };
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = useCallback(() => setIsModalOpen(false), []);
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
+        closeModal(); // Close the modal if the click is outside
+      }
+    };
+  
     // Add event listener for clicks
     document.addEventListener("mousedown", handleClickOutside);
-
+  
     // Clean up the event listener on component unmount
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [closeModal]); // The effect now depends on closeModal, which is stable
 
+  const hasLimits = (category: PackageOffer): category is PackageOffer & { limits: Record<string, number> } => {
+    return category.limits !== undefined;
+  };
+  
   useEffect(() => {
     const fetchCategories = async () => {
       const snapshot = await getDocs(packageOffersRef);
+  
       const data = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
-        .filter((category) => category.limits); // Filter out categories without limits
-
-      // Sort categories by the keys of their limits in ascending order
-      const sortedData = data.map((category) => {
-        // Create a sorted version of the limits object
-        const sortedLimits = Object.keys(category.limits)
-          .sort() // Sort the keys in ascending order
-          .reduce((acc, key) => {
-            acc[key] = category.limits[key];
-            return acc;
-          }, {});
-
-        return { ...category, limits: sortedLimits }; // Return the category with sorted limits
-      });
-
-      setCategories(sortedData);
+        .map((doc) => ({ id: doc.id, ...doc.data() } as PackageOffer))
+        .filter(hasLimits) // Use the type guard to filter only categories with limits
+        .map((category) => {
+          // Sort the limits object keys
+          const sortedLimits = Object.keys(category.limits)
+            .sort()
+            .reduce((acc, key) => {
+              acc[key] = category.limits[key];
+              return acc;
+            }, {} as Record<string, number>);
+  
+          return { ...category, limits: sortedLimits }; // Return the category with sorted limits
+        });
+  
+      setCategories(data);
     };
-
+  
     fetchCategories();
-  }, []);
+  }, [packageOffersRef]);
 
   const handleAddCategory = async () => {
     if (newCategoryTitle) {
@@ -102,13 +113,17 @@ const DynamicPackageOffers = () => {
     }
   };
 
-  const handleSetLimit = async (categoryId, limitKey, limitValue) => {
+  const handleSetLimit = async (
+    categoryId: string,
+    limitKey: string,
+    limitValue: string | number
+  ) => {
     if (limitKey && limitValue) {
       const categoryRef = doc(packageOffersRef, categoryId);
       await updateDoc(categoryRef, {
         [`limits.${limitKey}`]: Number(limitValue), // Update the specific limit
       });
-
+  
       // Update the local state
       setCategories(
         categories.map((cat) =>
@@ -131,7 +146,7 @@ const DynamicPackageOffers = () => {
     if (foodItem) {
       const category = categories.find((cat) => cat.id === categoryId);
       if (category) {
-        const updatedItems = [...category.items, foodItem];
+        const updatedItems = [...(category.items ?? []), foodItem];
         await updateDoc(doc(packageOffersRef, categoryId), {
           items: updatedItems,
         });
@@ -155,7 +170,7 @@ const DynamicPackageOffers = () => {
   const handleDeleteFoodItem = async (categoryId: string, foodItem: string) => {
     const category = categories.find((cat) => cat.id === categoryId);
     if (category) {
-      const updatedItems = category.items.filter((item) => item !== foodItem);
+      const updatedItems = (category.items ?? []).filter((item) => item !== foodItem);
       await updateDoc(doc(packageOffersRef, categoryId), {
         items: updatedItems,
       });
@@ -174,9 +189,6 @@ const DynamicPackageOffers = () => {
     });
   };
 
-  const openModal = () => setIsModalOpen(true);
-  const closeModal = () => setIsModalOpen(false);
-
   return (
     <div className="">
       <button
@@ -190,12 +202,17 @@ const DynamicPackageOffers = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div ref={modalRef} className="bg-white rounded-md p-4 w-full max-w-sm mx-4 z-50 max-h-[80vh] overflow-y-auto">
+          <div
+            ref={modalRef}
+            className="bg-white rounded-md p-6 w-full max-w-xl mx-4 z-50 max-h-[80vh] overflow-y-auto"
+          >
             {" "}
             {/* max-w-sm for mobile */}
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-center flex-1
-              text-orange-950">
+              <h2
+                className="text-xl font-bold text-center flex-1
+              text-orange-950"
+              >
                 Manage Package Offers
               </h2>
               <button
@@ -256,21 +273,25 @@ const DynamicPackageOffers = () => {
                         <select
                           className="border border-gray-300 rounded-md p-2 w-full max-w-32
                           text-sm font-semibold text-gray-600"
+                          value={selectedLimits[category.id]?.key || ""} // Set selected value based on state
                           onChange={(e) => {
                             const limitKey = e.target.value;
-                            setSelectedLimits({
-                              ...selectedLimits,
-                              [category.id]: {
-                                key: limitKey,
-                                value: category.limits[limitKey] || "",
-                              },
-                            });
+
+                            if (category.limits) {
+                              setSelectedLimits({
+                                ...selectedLimits,
+                                [category.id]: {
+                                  key: limitKey,
+                                  value: String(category.limits[limitKey] || ""), // Safely access limits
+                                },
+                              });
+                            }
                           }}
                         >
                           <option value="">Select Limit</option>
-                          {Object.keys(category.limits).map((key) => (
+                          {Object.keys(category.limits ?? {}).map((key) => (
                             <option key={key} value={key}>
-                              {key} - {category.limits[key]}
+                              {key} - {category.limits?.[key]}
                             </option>
                           ))}
                         </select>
@@ -279,15 +300,15 @@ const DynamicPackageOffers = () => {
                         <input
                           type="number"
                           value={selectedLimits[category.id]?.value || ""}
-                          onChange={(e) =>
+                          onChange={(e) => {
                             setSelectedLimits({
                               ...selectedLimits,
                               [category.id]: {
                                 ...selectedLimits[category.id],
                                 value: e.target.value,
                               },
-                            })
-                          }
+                            });
+                          }}
                           className="border border-gray-300 rounded-md aspect-square w-10 focus:outline-none focus:ring-2 focus:ring-orange-500 transition duration-200
                           text-center font-semibold pl-2"
                           min={0}
@@ -313,7 +334,7 @@ const DynamicPackageOffers = () => {
 
                     {/* Food Items List */}
                     <ul className="space-y-2 mt-4">
-                      {category.items.map((foodItem, foodIndex) => (
+                      {category.items?.map((foodItem, foodIndex) => (
                         <li
                           key={foodIndex}
                           className="flex justify-between items-center p-2 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors duration-200"
@@ -335,7 +356,7 @@ const DynamicPackageOffers = () => {
 
                   {/* Confirmation Modal for Deletion */}
                   {isConfirmDeleteOpen && (
-                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+                    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-10 z-50">
                       <div className="bg-white rounded-md p-4 w-full max-w-sm mx-4 z-50">
                         <h2 className="text-lg font-bold mb-4 text-center">
                           Are you sure you want to delete this category?

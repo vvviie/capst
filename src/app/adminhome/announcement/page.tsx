@@ -12,18 +12,18 @@ const MakeAnnouncementPage = () => {
   const [isUser, setIsUser] = useState(false);
    // Handle changes in the subject input
 // Handle changes in the subject input (textbox)
-  const handleSubjectChange = (event) => {
-    const newSubject = event.target.value; // Corrected 'e' to 'event'
-    setSubject(newSubject);
-  };
+const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const newSubject = e.target.value;
+  setSubject(newSubject);
+};
 
   // Handle changes in the body input (textarea)
-  const handleBodyChange = (event) => {
-    const newBody = event.target.value; // Corrected 'e' to 'event'
+  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newBody = e.target.value; // Corrected 'e' to 'event'
     setBody(newBody);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevent form submission from reloading the page
   
     // Log the inputted information
@@ -74,7 +74,7 @@ const MakeAnnouncementPage = () => {
           // Get the current notifications (if any)
           const userSnapshot = await getDoc(userDocRef);
           const userData = userSnapshot.data();
-          const existingNotifications = userData.notifications || {};
+          const existingNotifications = userData?.notifications || {};
 
           // Generate a unique key for the new notification
           const notificationKey = `notif_${Date.now()}`; // Use timestamp for unique key
@@ -106,10 +106,15 @@ const MakeAnnouncementPage = () => {
         // Clear the form inputs
         setSubject("");
         setBody("");
-    } catch (error) {
-      console.error("Error adding notification:", error);
-      console.log("Error details:", error.message);  // Log the exact error message for debugging
-    }
+      } catch (error) {
+        // Narrowing error to Error type
+        if (error instanceof Error) {
+          console.error("Error adding notification:", error);
+          console.log("Error details:", error.message); // Accessing error.message safely
+        } else {
+          console.error("Unexpected error:", error);
+        }
+      }
 };
 
   useEffect(() => {
