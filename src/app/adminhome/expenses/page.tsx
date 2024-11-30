@@ -232,6 +232,11 @@ const ExpensesPage = () => {
     null
   );
 
+  useEffect(() => {
+    // Reset editing index when the selected date changes or when expenses are updated
+    setEditingIndex(null);
+  }, [selectedDate]);
+
   // Assuming ExpenseDocument is the correct type for doc
   const handleDateClick = (doc: ExpenseDocument) => {
     setSelectedDate(doc);
@@ -267,27 +272,25 @@ const ExpensesPage = () => {
         updatedExpenses[index].expenseAmount =
           editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
 
-        // Recalculate totalExpenses based on the updated list of expenses
-        const newTotalExpenses = updatedExpenses.reduce(
-          (sum, expense) => sum + expense.expenseAmount,
-          0
-        );
+        // Calculate the difference
+        const difference =
+          updatedExpenses[index].expenseAmount - oldExpenseAmount;
 
         // Update the document in Firestore
         await updateDoc(expenseDocRef, {
           addedExpenses: updatedExpenses,
-          totalExpenses: newTotalExpenses,
+          totalExpenses: currentTotalExpenses + difference, // Update totalExpenses based on difference
         });
 
         // Update the selectedDate in local state
         setSelectedDate({
           ...selectedDate,
           addedExpenses: updatedExpenses,
-          totalExpenses: newTotalExpenses, // Update totalExpenses
+          totalExpenses: currentTotalExpenses + difference, // Update totalExpenses here as well
         });
 
         // Update the local totalExpenses state
-        setTotalExpenses(newTotalExpenses); // Update local state for totalExpenses
+        setTotalExpenses((prevTotal) => prevTotal + difference); // Adjust totalExpenses based on the difference
         setEditingIndex(null);
 
         // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
@@ -302,7 +305,7 @@ const ExpensesPage = () => {
         const expensesData = {
           Expenses: {
             data: {
-              [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+              [formattedDate]: currentTotalExpenses + difference, // Use the updated total expenses for the formatted date
             },
           },
         };
@@ -380,6 +383,7 @@ const ExpensesPage = () => {
       } catch (error) {
         console.error("Error updating sales data: ", error);
       }
+      setEditingIndex(null);
     } else {
       console.error("No expense document is selected.");
     }
@@ -665,7 +669,9 @@ const ExpensesPage = () => {
                       {/* Adjusted width */}
                       <span className="w-1/4 text-right mr-4">Amount</span>{" "}
                       {/* Adjusted width */}
-                      <span className="w-1/4 text-right mr-3">Actions</span>{" "}
+                      <span className="w-1/4 text-right mr-3">
+                        Actions
+                      </span>{" "}
                       {/* New Actions column */}
                     </div>
                     {/* Expense Items */}
