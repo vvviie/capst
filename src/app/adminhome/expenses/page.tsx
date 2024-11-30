@@ -6,6 +6,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   setDoc,
   updateDoc,
@@ -212,25 +213,30 @@ const ExpensesPage = () => {
   const handleSaveClick = async (index: number) => {
     // Check if selectedDate is not null
     if (selectedDate) {
-      const updatedExpenses = [...selectedDate.addedExpenses];
-
-      // Get the old expense amount for the specific index
-      const oldExpenseAmount = updatedExpenses[index].expenseAmount;
-
-      // Update the specific expenseAmount
-      updatedExpenses[index].expenseAmount =
-        editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
-
-      // Calculate the difference between the new and old expense amounts
-      const difference =
-        updatedExpenses[index].expenseAmount - oldExpenseAmount;
-
-      // Update the totalExpenses by adding the difference
-      const newTotalExpenses = totalExpenses + difference;
-
       const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
 
       try {
+        // Fetch the current totalExpenses from Firestore
+        const expenseDoc = await getDoc(expenseDocRef);
+        const currentTotalExpenses = expenseDoc.exists()
+          ? expenseDoc.data().totalExpenses
+          : 0;
+
+        const updatedExpenses = [...selectedDate.addedExpenses];
+
+        // Get the old expense amount for the specific index
+        const oldExpenseAmount = updatedExpenses[index].expenseAmount;
+
+        // Update the specific expenseAmount
+        updatedExpenses[index].expenseAmount =
+          editedAmount !== null ? editedAmount : 0; // Default to 0 or any other value
+
+        // Recalculate totalExpenses based on the updated list of expenses
+        const newTotalExpenses = updatedExpenses.reduce(
+          (sum, expense) => sum + expense.expenseAmount,
+          0
+        );
+
         // Update the document in Firestore
         await updateDoc(expenseDocRef, {
           addedExpenses: updatedExpenses,
@@ -247,32 +253,32 @@ const ExpensesPage = () => {
         // Update the local totalExpenses state
         setTotalExpenses(newTotalExpenses); // Update local state for totalExpenses
         setEditingIndex(null);
+
+        // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
+        const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
+        const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+
+        // Submit to salesData collection
+        const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+        const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+        // Update the salesData document
+        const expensesData = {
+          Expenses: {
+            data: {
+              [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+            },
+          },
+        };
+
+        // Merge the new expenses data with the existing document
+        try {
+          await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+        } catch (error) {
+          console.error("Error updating sales data: ", error);
+        }
       } catch (error) {
         console.error("Error updating document: ", error);
-      }
-
-      // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
-      const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
-      const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
-
-      // Submit to salesData collection
-      const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
-      const salesDataRef = doc(db, "salesData", salesDocumentId);
-
-      // Update the salesData document
-      const expensesData = {
-        Expenses: {
-          data: {
-            [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
-          },
-        },
-      };
-
-      // Merge the new expenses data with the existing document
-      try {
-        await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
-      } catch (error) {
-        console.error("Error updating sales data: ", error);
       }
     } else {
       console.error("No expense document is selected.");
@@ -599,57 +605,76 @@ const ExpensesPage = () => {
                     <hr className="mb-1" />
                   </div>
                   {/* LIST OF EXPENSES */}
-                  <div className="flex flex-col gap-2 w-full">
+                  <div className="flex flex-col w-full">
+                    {/* Header Row */}
+                    <div className="flex bg-gray-200 font-bold text-gray-700 py-2 px-4 rounded-md mb-2">
+                      <span className="w-1/3">Expense Label</span>
+                      <span className="w-1/3 text-center">Time</span>
+                      <span className="w-1/3 text-right">Amount</span>
+                    </div>
+
+                    {/* Expense Items */}
                     {selectedDate.addedExpenses.map((expense, index) => (
                       <div
-                        className="flex items-center justify-between bg-white border-2 border-gray-100 shadow-md py-1 px-2 sm:px-4"
+                        className="flex items-center justify-between bg-white border-2 border-gray-100 shadow-md py-2 px-4 sm:px-6 rounded-md mb-1"
                         key={index}
                       >
                         {/* EXPENSE LABEL */}
-                        <span className="text-gray-600 font-bold text-sm">
+                        <span className="text-gray-600 font-bold text-sm w-1/3">
                           {expense.expenseLabel}
                         </span>
-                        {editingIndex === index ? (
-                          <input
-                            type="number"
-                            min={1}
-                            className="border-2 rounded-md max-w-20 pl-2 text-sm h-8 text-red-500 font-bold"
-                            placeholder="Amount"
-                            value={editedAmount !== null ? editedAmount : ""} // Use empty string if editedAmount is null
-                            onChange={(e) =>
-                              setEditedAmount(Number(e.target.value))
-                            }
-                          />
-                        ) : (
-                          <span className="text-red-500 font-bold text-sm">
-                            PHP {expense.expenseAmount.toFixed(2)}
-                          </span>
-                        )}
-                        <div className="flex gap-2 items-center">
+
+                        {/* TIME FIELD */}
+                        <span className="text-gray-500 font-bold text-sm w-1/3 text-center">
+                          {expense.time} {/* Display time */}
+                        </span>
+
+                        {/* EXPENSE AMOUNT OR INPUT FIELD */}
+                        <div className="flex items-center w-1/3 justify-end">
+                          {" "}
+                          {/* Adjusted to create space */}
                           {editingIndex === index ? (
-                            <button
-                              onClick={() => handleSaveClick(index)}
-                              className="text-sm font-bold bg-orange-300 h-8 px-4 rounded-md text-white hover:bg-orange-200 hover:scale-[1.02] duration-200"
-                            >
-                              Save
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() =>
-                                handleEditClick(index, expense.expenseAmount)
+                            <input
+                              type="number"
+                              min={1}
+                              className="border-2 rounded-md max-w-20 pl-2 text-sm h-8 text-red-500 font-bold mr-2" // Added margin to the right
+                              placeholder="Amount"
+                              value={editedAmount !== null ? editedAmount : ""} // Use empty string if editedAmount is null
+                              onChange={(e) =>
+                                setEditedAmount(Number(e.target.value))
                               }
-                              className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200"
-                            >
-                              Edit
-                            </button>
+                            />
+                          ) : (
+                            <span className="text-red-500 font-bold text-sm text-right">
+                              PHP {expense.expenseAmount.toFixed(2)}
+                            </span>
                           )}
-                          {/* REMOVE ITEM BUTTON */}
-                          <button
-                            onClick={() => handleRemove(index)}
-                            className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
-                          >
-                            x
-                          </button>
+                          <div className="flex gap-2 items-center">
+                            {editingIndex === index ? (
+                              <button
+                                onClick={() => handleSaveClick(index)}
+                                className="text-sm font-bold bg-orange-300 h-8 px-4 rounded-md text-white hover:bg-orange-200 hover:scale-[1.02] duration-200"
+                              >
+                                Save
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  handleEditClick(index, expense.expenseAmount)
+                                }
+                                className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                              >
+                                Edit
+                              </button>
+                            )}
+                            {/* REMOVE ITEM BUTTON */}
+                            <button
+                              onClick={() => handleRemove(index)}
+                              className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
+                            >
+                              x
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
