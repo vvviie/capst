@@ -1416,3 +1416,202 @@ export const category:menuCates = [
 export const subCategories = [
   "Sub Category 1", "Sub Category 2", "Sub Category 3", 
 ]
+
+type Expense = {
+  expenseAmount: number;
+  expenseLabel: string;
+  time: string;
+};
+
+type ExpenseDocument = {
+  docID: string;
+  addedExpenses: Expense[];
+  date: string;
+  totalExpenses: number;
+};
+
+type ExpenseDocuments = ExpenseDocument[];
+
+export const ExpenseDocs: ExpenseDocuments = [
+  {
+    "docID": "2024-11-27",
+    "addedExpenses": [
+      {
+        "expenseAmount": 123,
+        "expenseLabel": "label11",
+        "time": "19:25"
+      },
+      {
+        "expenseAmount": 213,
+        "expenseLabel": "label12",
+        "time": "19:25"
+      },
+      {
+        "expenseAmount": 321,
+        "expenseLabel": "label13",
+        "time": "19:25"
+      },
+      {
+        "expenseAmount": 361,
+        "expenseLabel": "label122",
+        "time": "11:25"
+      },
+      {
+        "expenseAmount": 341,
+        "expenseLabel": "label1112",
+        "time": "11:25"
+      },
+    ],
+    "date": "2024-11-27",
+    "totalExpenses": 657
+  },
+  {
+    "docID": "2024-11-28",
+    "addedExpenses": [
+      {
+        "expenseAmount": 150,
+        "expenseLabel": "label21",
+        "time": "10:30"
+      },
+      {
+        "expenseAmount": 275,
+        "expenseLabel": "label22",
+        "time": "11:45"
+      },
+      {
+        "expenseAmount": 310,
+        "expenseLabel": "label23",
+        "time": "14:15"
+      }
+    ],
+    "date": "2024-11-28",
+    "totalExpenses": 735
+  },
+  {
+    "docID": "2024-11-29",
+    "addedExpenses": [
+      {
+        "expenseAmount": 400,
+        "expenseLabel": "label31",
+        "time": "08:00"
+      },
+      {
+        "expenseAmount": 220,
+        "expenseLabel": "label32",
+        "time": "13:20"
+      },
+      {
+        "expenseAmount": 130,
+        "expenseLabel": "label33",
+        "time": "17:50"
+      }
+    ],
+    "date": "2024-11-29",
+    "totalExpenses": 750
+  },
+  {
+    "docID": "2024-11-30",
+    "addedExpenses": [
+      {
+        "expenseAmount": 95,
+        "expenseLabel": "label41",
+        "time": "09:10"
+      },
+      {
+        "expenseAmount": 150,
+        "expenseLabel": "label42",
+        "time": "12:45"
+      },
+      {
+        "expenseAmount": 210,
+        "expenseLabel": "label43",
+        "time": "18:25"
+      }
+    ],
+    "date": "2024-11-30",
+    "totalExpenses": 455
+  },
+  {
+    "docID": "2024-12-01",
+    "addedExpenses": [
+      {
+        "expenseAmount": 180,
+        "expenseLabel": "label51",
+        "time": "08:20"
+      },
+      {
+        "expenseAmount": 120,
+        "expenseLabel": "label52",
+        "time": "14:40"
+      },
+      {
+        "expenseAmount": 160,
+        "expenseLabel": "label53",
+        "time": "20:10"
+      }
+    ],
+    "date": "2024-12-01",
+    "totalExpenses": 460
+  },
+  {
+    "docID": "2024-12-02",
+    "addedExpenses": [
+      {
+        "expenseAmount": 300,
+        "expenseLabel": "label61",
+        "time": "09:00"
+      },
+      {
+        "expenseAmount": 220,
+        "expenseLabel": "label62",
+        "time": "15:15"
+      },
+      {
+        "expenseAmount": 180,
+        "expenseLabel": "label63",
+        "time": "18:30"
+      }
+    ],
+    "date": "2024-12-02",
+    "totalExpenses": 700
+  },
+  {
+    "docID": "2024-12-03",
+    "addedExpenses": [
+      {
+        "expenseAmount": 140,
+        "expenseLabel": "label71",
+        "time": "08:45"
+      },
+      {
+        "expenseAmount": 185,
+        "expenseLabel": "label72",
+        "time": "13:50"
+      },
+      {
+        "expenseAmount": 250,
+        "expenseLabel": "label73",
+        "time": "19:10"
+      }
+    ],
+    "date": "2024-12-03",
+    "totalExpenses": 575
+  },
+];
+
+
+export const months = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+  "----Show All----",
+];
