@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
 import {
@@ -86,6 +86,62 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
   const [voucherNotifs, setVoucherNotifs] = useState<VoucherNotification[]>([]);
   //#endregion
 
+  const fetchTableReservations = useCallback(
+    (existingNotifications: deets[]) => {
+      if (!userEmail) return;
+  
+      const tempReservationsRef = collection(db, "tableReservations");
+      const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
+  
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const newNotifications: notifs = []; // Temporary array for updated notifications
+  
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (!data.isNotifDeleted) { // Check for deletion before adding
+            const notification = {
+              id: doc.id,
+              type: "Table Reservation",
+              subject: `New Booking for: ${data.type || "Unknown"}`,
+              details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
+                data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
+              }.`,
+              time: data.timeReserved || "N/A",
+              date: data.dateReserved || "N/A",
+              read: data.isRead || false, // Ensure this is fetched
+            };
+            newNotifications.push(notification);
+          }
+        });
+  
+        // Update the notifItems state with the latest reservations, avoiding duplicates
+        setNotifItems((prevNotifItems) => {
+          const existingIds = new Set(prevNotifItems.map((item) => item.id));
+  
+          const allNotifications = [
+            ...newNotifications.filter((notification) => !existingIds.has(notification.id)),
+            ...prevNotifItems,
+          ];
+  
+          allNotifications.sort((a, b) => {
+            const dateA = new Date(`${a.date} ${a.time}`);
+            const dateB = new Date(`${b.date} ${b.time}`);
+            return dateB.getTime() - dateA.getTime(); // Descending order
+          });
+  
+          return allNotifications;
+        });
+  
+        // Check for unread notifications
+        setHasUnreadNotifs((prev) => newNotifications.some((notif) => !notif.read) || prev);
+      });
+  
+      // Return the unsubscribe function to clean up the listener
+      return unsubscribe;
+    },
+    [userEmail, setNotifItems] // Add relevant dependencies
+  );
+  
   //#region Fetching of All Vouchers
   useEffect(() => {
     const fetchVouchers = () => {
@@ -256,61 +312,9 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
     };
   
     fetchOrders();
-  }, [userEmail, voucherNotifs]);
+  }, [userEmail, voucherNotifs, fetchTableReservations]);
 //#endregion
 
-const fetchTableReservations = (existingNotifications: deets[]) => {
-  if (!userEmail) return;
-
-  const tempReservationsRef = collection(db, "tableReservations");
-  const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
-
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const newNotifications: notifs = []; // Temporary array for updated notifications
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (!data.isNotifDeleted) { // Check for deletion before adding
-        const notification = {
-          id: doc.id,
-          type: "Table Reservation",
-          subject: `New Booking for: ${data.type || "Unknown"}`,
-          details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
-            data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
-          }.`,
-          time: data.timeReserved || "N/A",
-          date: data.dateReserved || "N/A",
-          read: data.isRead || false, // Ensure this is fetched
-        };
-        newNotifications.push(notification);
-      }
-    });
-
-    // Update the notifItems state with the latest reservations, avoiding duplicates
-    setNotifItems((prevNotifItems) => {
-      const existingIds = new Set(prevNotifItems.map((item) => item.id));
-
-      const allNotifications = [
-        ...newNotifications.filter((notification) => !existingIds.has(notification.id)),
-        ...prevNotifItems,
-      ];
-
-      allNotifications.sort((a, b) => {
-        const dateA = new Date(`${a.date} ${a.time}`);
-        const dateB = new Date(`${b.date} ${b.time}`);
-        return dateB.getTime() - dateA.getTime(); // Descending order
-      });
-
-      return allNotifications;
-    });
-
-    // Check for unread notifications
-    setHasUnreadNotifs((prev) => newNotifications.some((notif) => !notif.read) || prev);
-  });
-
-  // Return the unsubscribe function to clean up the listener
-  return unsubscribe;
-};
 //#endregion
 
 //#region Mark Notification as Read and Unread

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import AdminStaffFilter from "../components/AdminStaffFilter";
 import UsersFilter from "../components/UsersFilter";
 import { auth, db } from "../firebase";
@@ -132,14 +132,14 @@ const AccountsListPage = () => {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       // Ensure there is an authenticated user
       const currentUser = auth.currentUser;
       if (!currentUser) {
         throw new Error("User is not authenticated");
       }
-
+  
       const usersCollection = collection(db, "users");
       const q = query(usersCollection, where("role", "==", "user"));
       const userSnapshot = await getDocs(q);
@@ -166,19 +166,19 @@ const AccountsListPage = () => {
         console.error("An unexpected error occurred:", error);
       }
     }
-  };
+  }, [auth.currentUser]);
 
   // Function to fetch staff data with real-time updates
-  const fetchStaff = () => {
+  const fetchStaff = useCallback(() => {
     try {
       // Ensure there is an authenticated user
       const currentUser = auth.currentUser;
       if (!currentUser) {
         throw new Error("User is not authenticated");
       }
-
+  
       const staffCollection = collection(db, "staff");
-
+  
       // Subscribe to changes in the staff collection
       const unsubscribe = onSnapshot(staffCollection, (snapshot) => {
         const staff = snapshot.docs.map((doc) => ({
@@ -189,15 +189,15 @@ const AccountsListPage = () => {
           status: doc.data().staffStatus,
           uid: doc.data().uid,
         }));
-
+  
         // Filter out the staff with role "admin"
         const filteredStaff = staff.filter(
           (staffMember) => staffMember.role !== "admin"
         );
-
+  
         setStaffAccounts(filteredStaff); // Update state with the filtered staff data
       });
-
+  
       // Return the unsubscribe function for cleanup
       return unsubscribe;
     } catch (error: unknown) {
@@ -213,7 +213,7 @@ const AccountsListPage = () => {
         console.error("An unexpected error occurred:", error);
       }
     }
-  };
+  }, [auth.currentUser]);
 
   useEffect(() => {
     if (accountType === "staff") {
@@ -239,7 +239,7 @@ const AccountsListPage = () => {
 
     // Cleanup for auth listener
     return () => unsubscribeAuth();
-  }, [router]);
+  }, [router, auth, fetchStaff]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -258,7 +258,7 @@ const AccountsListPage = () => {
     } else if (accountType === "staff") {
       fetchStaff();
     }
-  }, [accountType]);
+  }, [accountType, fetchUsers, fetchStaff]);
 
   const statusInfo = status.find((s) => s.value === filteredStatus); // Move this outside
 

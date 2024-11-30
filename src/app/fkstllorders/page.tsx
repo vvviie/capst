@@ -97,58 +97,6 @@ const AdminAndStaffOrdersPage = () => {
     "activated" | "deactivated" | null
   >(null);
 
-  useEffect(() => {
-    console.log("useEffect triggered"); // Log when the useEffect runs
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const userEmail = user.email;
-        console.log("User logged in:", userEmail);
-        setEmail(email); // Set the email state
-
-        if (userEmail) {
-          // Fetch the staff document from Firestore
-          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
-          const staffDocSnap = await getDoc(staffDocRef);
-
-          if (staffDocSnap.exists()) {
-            const data = staffDocSnap.data();
-            console.log("Staff document data:", data);
-
-            // Check and update the staffStatus
-            if (data.staffStatus === "activated") {
-              setStaffStatus("activated");
-              console.log("Staff status set to: activated");
-            } else if (data.staffStatus === "deactivated") {
-              setStaffStatus("deactivated");
-              console.log("Staff status set to: deactivated");
-            }
-          } else {
-            console.log("No staff document found for this user.");
-            setStaffStatus(null); // Reset if no document exists
-          }
-        }
-      } else {
-        console.log("No user logged in");
-        setEmail(null);
-        setStaffStatus(null); // Reset states if user is logged out
-      }
-    });
-
-    // Clean up the listener on component unmount
-    return () => {
-      console.log("Cleaning up listener");
-      unsubscribe();
-    };
-  }, [auth, db]); // Dependencies
-
-  // Fetch orders on component mount and when `orderStatCat` changes
-  useEffect(() => {
-    const unsubscribe = fetchCompletedOrders();
-
-    return () => unsubscribe();
-  }, [orderStatCat]);
-
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
       ...prev,
@@ -182,111 +130,6 @@ const AdminAndStaffOrdersPage = () => {
 
     // Return formatted time
     return `${formattedHour}:${String(minute).padStart(2, "0")} ${period}`;
-  };
-
-  const fetchCompletedOrders = () => {
-    const unsubscribe = onSnapshot(
-      collection(db, "completedOrders"),
-      (querySnapshot) => {
-        const orders: Order[] = [];
-
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          let highestPricedItem = data.items[0]; // Initialize with the first item
-          let highestPrice = highestPricedItem.totalPrice;
-
-          // Find the highest-priced item in the current order
-          data.items.forEach((item: any) => {
-            if (item.totalPrice > highestPrice) {
-              highestPricedItem = item;
-              highestPrice = item.totalPrice;
-            }
-          });
-
-          const items = data.items.map((item: Item) => {
-            let discountedPrice = item.totalPrice;
-
-            // Apply the discount only if this order's Sr/PWD discount is active
-            if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
-              discountedPrice = item.totalPrice * 0.8;
-            }
-
-            return {
-              title: item.productTitle,
-              price: discountedPrice,
-              qty: item.itemQty,
-              tags:
-                item.slug === "drinks"
-                  ? [item.selectedDrinkSize, item.note]
-                  : [item.note],
-            };
-          });
-
-          // Recalculate the total price
-          const totalPrice = items.reduce(
-            (total: number, item: { price: number }) => total + item.price,  // Explicitly type total and item
-            0
-          );
-
-          const order: Order = {
-            id: doc.id,
-            userName: data.userName,
-            userEmail: data.user,
-            date: data.dateCreated,
-            time: formatTime(data.timeCreated),
-            price: totalPrice,
-            status: data.status,
-            where: data.selectedOption,
-            payment: data.modeOfPayment,
-            items: items,
-            pwdSenior: data.pwdSenior,
-            idPic: data.idImg,
-            pwdSeniorDiscountApplied: applySrPWD[doc.id],
-            sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
-            promo: data.promoDiscounted,
-            slug: data.slug,
-            subtotal: data.subtotal || totalPrice,
-            cardIdImg: data.cardIdImg,
-          };
-
-          // Add only if status matches selected category or if "ALL"
-          if (orderStatCat === "ALL" || order.status === orderStatCat) {
-            orders.push(order);
-          }
-        });
-
-        const convertTo24HourFormat = (timeStr: string) => {
-          const [time, modifier] = timeStr.split(" ");
-          let [hours, minutes] = time.split(":").map(Number);
-
-          if (modifier === "PM" && hours < 12) hours += 12;
-          if (modifier === "AM" && hours === 12) hours = 0;
-
-          return `${hours.toString().padStart(2, "0")}:${minutes
-            .toString()
-            .padStart(2, "0")}`;
-        };
-
-        // Sort the orders from latest to oldest by date and time
-        orders.sort((a, b) => {
-          // Compare dates first
-          if (a.date > b.date) return -1;
-          if (a.date < b.date) return 1;
-
-          // If dates are the same, compare converted times
-          const timeA = convertTo24HourFormat(a.time);
-          const timeB = convertTo24HourFormat(b.time);
-
-          return timeA > timeB ? -1 : 1;
-        });
-
-        // Update the orders state with the sorted data
-        setUserOrders(orders);
-        setHasOrder(orders.length > 0);
-      }
-    );
-
-    return unsubscribe;
   };
 
   // FOR OPENING NG POP UP
@@ -1075,6 +918,161 @@ const AdminAndStaffOrdersPage = () => {
       }
     }
   };
+
+  useEffect(() => {
+    console.log("useEffect triggered"); // Log when the useEffect runs
+
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userEmail = user.email;
+        console.log("User logged in:", userEmail);
+        setEmail(email); // Set the email state
+
+        if (userEmail) {
+          // Fetch the staff document from Firestore
+          const staffDocRef = doc(db, "staff", userEmail); // Document ID is the email
+          const staffDocSnap = await getDoc(staffDocRef);
+
+          if (staffDocSnap.exists()) {
+            const data = staffDocSnap.data();
+            console.log("Staff document data:", data);
+
+            // Check and update the staffStatus
+            if (data.staffStatus === "activated") {
+              setStaffStatus("activated");
+              console.log("Staff status set to: activated");
+            } else if (data.staffStatus === "deactivated") {
+              setStaffStatus("deactivated");
+              console.log("Staff status set to: deactivated");
+            }
+          } else {
+            console.log("No staff document found for this user.");
+            setStaffStatus(null); // Reset if no document exists
+          }
+        }
+      } else {
+        console.log("No user logged in");
+        setEmail(null);
+        setStaffStatus(null); // Reset states if user is logged out
+      }
+    });
+
+    // Clean up the listener on component unmount
+    return () => {
+      console.log("Cleaning up listener");
+      unsubscribe();
+    };
+  }, [auth, email]); // Dependencies
+
+  // Fetch orders on component mount and when `orderStatCat` changes
+  useEffect(() => {
+    const fetchCompletedOrders = () => {
+      const unsubscribe = onSnapshot(
+        collection(db, "completedOrders"),
+        (querySnapshot) => {
+          const orders: Order[] = [];
+  
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            let highestPricedItem = data.items[0]; // Initialize with the first item
+            let highestPrice = highestPricedItem.totalPrice;
+  
+            // Find the highest-priced item in the current order
+            data.items.forEach((item: any) => {
+              if (item.totalPrice > highestPrice) {
+                highestPricedItem = item;
+                highestPrice = item.totalPrice;
+              }
+            });
+  
+            const items = data.items.map((item: Item) => {
+              let discountedPrice = item.totalPrice;
+  
+              // Apply the discount only if this order's Sr/PWD discount is active
+              if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
+                discountedPrice = item.totalPrice * 0.8;
+              }
+  
+              return {
+                title: item.productTitle,
+                price: discountedPrice,
+                qty: item.itemQty,
+                tags:
+                  item.slug === "drinks"
+                    ? [item.selectedDrinkSize, item.note]
+                    : [item.note],
+              };
+            });
+  
+            // Recalculate the total price
+            const totalPrice = items.reduce(
+              (total: number, item: { price: number }) => total + item.price,
+              0
+            );
+  
+            const order: Order = {
+              id: doc.id,
+              userName: data.userName,
+              userEmail: data.user,
+              date: data.dateCreated,
+              time: formatTime(data.timeCreated),
+              price: totalPrice,
+              status: data.status,
+              where: data.selectedOption,
+              payment: data.modeOfPayment,
+              items: items,
+              pwdSenior: data.pwdSenior,
+              idPic: data.idImg,
+              pwdSeniorDiscountApplied: applySrPWD[doc.id],
+              sampleDiscountDeduction: highestPricedItem.totalPrice * 0.2,
+              promo: data.promoDiscounted,
+              slug: data.slug,
+              subtotal: data.subtotal || totalPrice,
+              cardIdImg: data.cardIdImg,
+            };
+  
+            // Add only if status matches selected category or if "ALL"
+            if (orderStatCat === "ALL" || order.status === orderStatCat) {
+              orders.push(order);
+            }
+          });
+  
+          const convertTo24HourFormat = (timeStr: string) => {
+            const [time, modifier] = timeStr.split(" ");
+            let [hours, minutes] = time.split(":").map(Number);
+  
+            if (modifier === "PM" && hours < 12) hours += 12;
+            if (modifier === "AM" && hours === 12) hours = 0;
+  
+            return `${hours.toString().padStart(2, "0")}:${minutes
+              .toString()
+              .padStart(2, "0")}`;
+          };
+  
+          // Sort the orders from latest to oldest by date and time
+          orders.sort((a, b) => {
+            // Compare dates first
+            if (a.date > b.date) return -1;
+            if (a.date < b.date) return 1;
+  
+            // If dates are the same, compare converted times
+            const timeA = convertTo24HourFormat(a.time);
+            const timeB = convertTo24HourFormat(b.time);
+  
+            return timeA > timeB ? -1 : 1;
+          });
+  
+          // Update the orders state with the sorted data
+          setUserOrders(orders);
+          setHasOrder(orders.length > 0);
+        }
+      );
+  
+      return unsubscribe;
+    };
+  
+    fetchCompletedOrders();
+  }, [orderStatCat, applySrPWD]);
   //#endregion
 
   return (
