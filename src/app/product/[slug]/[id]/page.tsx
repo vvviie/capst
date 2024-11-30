@@ -21,13 +21,55 @@ import { db } from "@/app/firebase";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import CartUpdateNotif from "@/app/components/CartUpdateNotif";
 
+interface ProductData {
+  selectedDrinkSize: string;
+  additionalCost: number;
+  milkOption: string; // Adjust type based on actual data
+  additionals: string[]; // Adjust type based on actual data
+}
+
+interface OrderData {
+  slug: string;
+  productImg: string;
+  productTitle: string;
+  description: string;
+  note: string;
+  itemQty: number;
+  pricePerItem: number;
+  totalPrice: number;
+  calorie: number;
+  availability: string;
+  currSize?: string;
+  upsizable?: boolean;
+  upsizeSize?: string;
+  upsizePrice?: number;
+  selectedDrinkSize?: string;
+  additionalCost?: number;
+  milkOption?: string;
+  additionals?: string[];
+  mainCourseOption?: string;
+  options: {
+    addEspresso: number;
+    addSyrup: number;
+    milkAlmond: number;
+    milkOat: number;
+    addVanilla?: number;
+  };
+}
+
+interface OrderItem {
+  itemQty?: number;
+  totalPrice?: number;
+  [key: string]: any; // Include any other potential properties
+}
+
 const ProductPage: React.FC = () => {
   //#region Const Variables
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const isComingFromCartPage = searchParams.get("edit") === "true";
-  const parts = pathname.split("/");
+  const isComingFromCartPage = searchParams?.get("edit") === "true";
+  const parts = pathname?.split("/") ?? [];
   const slug = parts.length > 1 ? parts[parts.length - 2] : undefined;
   const productId = parts.length > 1 ? parts[parts.length - 1] : undefined;
   const [productData, setProductData] = useState<any>(null);
@@ -249,20 +291,13 @@ const ProductPage: React.FC = () => {
 
         // If we find the product, set the state to update the UI
         if (specificProduct) {
-          setProductData(
-            specificProduct as {
-              selectedDrinkSize: string;
-              additionalCost: number;
-            }
-          );
-          setSelectedDrinkSize(
-            (specificProduct as { selectedDrinkSize: string }).selectedDrinkSize
-          );
-          setAdditionalCost(
-            (specificProduct as { additionalCost: number }).additionalCost
-          );
-          setSelectedMilkOption(specificProduct.milkOption); // Update milk option
-          setSelectedAdditionals(specificProduct.additionals); // Update additionals
+          const product = specificProduct as ProductData;
+        
+          setProductData(product);
+          setSelectedDrinkSize(product.selectedDrinkSize);
+          setAdditionalCost(product.additionalCost);
+          setSelectedMilkOption(product.milkOption); // Update milk option
+          setSelectedAdditionals(product.additionals); // Update additional
         } else {
           //console.error("No matching product found");
         }
@@ -338,17 +373,17 @@ const ProductPage: React.FC = () => {
     // Log productData to verify its structure and content
     //console.log('Product Data:', productData);
 
-    let orderData = {
-      slug: productData.slug || "", // needed
-      productImg: productData.productImg || productData.img || "", // needed
-      productTitle: productData.productTitle || title, // needed
-      description: productData.description || desc, // needed
-      note: document.querySelector("textarea")?.value || "none", // needed
-      itemQty: qtyPerItem, // needed
-      pricePerItem: productData.pricePerItem || price, // needed
-      totalPrice: parseFloat(totalPrice.toFixed(2)), // needed
-      calorie: productData.calorie || 0, // needed
-      availability: productData.availability || "", // needed
+    let orderData: OrderData = {
+      slug: productData.slug || "",
+      productImg: productData.productImg || productData.img || "",
+      productTitle: productData.productTitle || title,
+      description: productData.description || desc,
+      note: document.querySelector("textarea")?.value || "none",
+      itemQty: qtyPerItem,
+      pricePerItem: productData.pricePerItem || price,
+      totalPrice: parseFloat(totalPrice.toFixed(2)),
+      calorie: productData.calorie || 0,
+      availability: productData.availability || "",
       ...(slug === "drinks" && {
         currSize: productData.currSize || "",
         upsizable: productData.upsizable,
@@ -362,7 +397,7 @@ const ProductPage: React.FC = () => {
         addSyrup: 30,
         milkAlmond: 30,
         milkOat: 40,
-        ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}), // Check for undefined explicitly
+        ...(productData.addVanilla !== undefined ? { addVanilla: 25 } : {}),
       },
     };
 
@@ -408,7 +443,7 @@ const ProductPage: React.FC = () => {
       );
 
       let existingOrderDocId: string | null = null;
-      let existingOrderData: any = {};
+      let existingOrderData: Record<string, any> = {};
 
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -459,7 +494,9 @@ const ProductPage: React.FC = () => {
 
     setShowCartUpdateNotif(true);
 
-    clearTimeout(notificationTimeoutRef.current);
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current as unknown as number);
+    }
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
@@ -501,7 +538,7 @@ const ProductPage: React.FC = () => {
           )}`;
 
     // Prepare order data for drinks or other products
-    let orderData = {
+    let orderData: OrderData = {
       slug: productData.slug || "", // needed
       productImg: productData.productImg || productData.img || "", // needed
       productTitle: productData.productTitle || title, // needed
@@ -582,10 +619,9 @@ const ProductPage: React.FC = () => {
       });
 
       if (existingOrderDocId) {
-        // Check if the product already exists in the cart
         let existingProductKey: string | null = null;
         for (const key in existingOrderData) {
-          if (key.startsWith(productId)) {
+          if (productId && key.startsWith(productId)) { // Check that productId is defined
             existingProductKey = key;
             break;
           }
@@ -605,12 +641,13 @@ const ProductPage: React.FC = () => {
           );
           const updatedOrderDataValues = updatedOrderData.data();
 
-          const totalItems = Object.values(updatedOrderDataValues)
+          const totalItems = updatedOrderDataValues ? Object.values(updatedOrderDataValues)
             .filter((item) => typeof item === "object" && item.itemQty)
-            .reduce((acc, item) => acc + (item.itemQty || 0), 0);
-          const totalCartPrice = Object.values(updatedOrderDataValues)
+            .reduce((acc, item) => acc + (item.itemQty || 0), 0) : 0;
+
+          const totalCartPrice = updatedOrderDataValues ? Object.values(updatedOrderDataValues)
             .filter((item) => typeof item === "object" && item.totalPrice)
-            .reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+            .reduce((acc, item) => acc + (item.totalPrice || 0), 0) : 0;
 
           await updateDoc(doc(db, "tempOrders", existingOrderDocId), {
             totalItems,
@@ -627,11 +664,12 @@ const ProductPage: React.FC = () => {
 
           // Recalculate totalItems and totalCartPrice
           const totalItems = Object.values(updatedOrderData)
-            .filter((item) => typeof item === "object" && item.itemQty)
-            .reduce((acc, item) => acc + (item.itemQty || 0), 0);
+            .filter((item) => typeof item === "object" && (item as OrderItem).itemQty)
+            .reduce((acc: number, item) => acc + ((item as OrderItem).itemQty || 0), 0);
+
           const totalCartPrice = Object.values(updatedOrderData)
-            .filter((item) => typeof item === "object" && item.totalPrice)
-            .reduce((acc, item) => acc + (item.totalPrice || 0), 0);
+            .filter((item) => typeof item === "object" && (item as OrderItem).totalPrice)
+            .reduce((acc: number, item) => acc + ((item as OrderItem).totalPrice || 0), 0);
 
           updatedOrderData.totalItems = totalItems;
           updatedOrderData.totalCartPrice = totalCartPrice;
@@ -650,7 +688,10 @@ const ProductPage: React.FC = () => {
           totalItems: qtyPerItem,
           totalCartPrice: parseFloat(totalPrice.toFixed(2)),
         };
-        await setDoc(doc(db, "tempOrders", existingOrderDocId), newOrderData);
+      
+        // Create a new document reference with auto-generated ID
+        const newOrderDocRef = doc(db, "tempOrders");  // Automatically generates a new document ID
+        await setDoc(newOrderDocRef, newOrderData);
         //console.log("Order added to tempOrders collection!");
       }
     } catch (error) {
@@ -659,7 +700,9 @@ const ProductPage: React.FC = () => {
 
     setShowCartUpdateNotif(true);
 
-    clearTimeout(notificationTimeoutRef.current);
+    if (notificationTimeoutRef.current) {
+      clearTimeout(notificationTimeoutRef.current as unknown as number);
+    }
 
     notificationTimeoutRef.current = setTimeout(() => {
       setShowCartUpdateNotif(false);
