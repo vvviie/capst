@@ -17,7 +17,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
   const [activeExpenseIndex, setActiveExpenseIndex] = useState(null); // State to track the active expense
 
   const handleExpenseClick = (index) => {
-    setInput("today");
+    //setInput("today");
     setActiveExpenseIndex(index); // Set the clicked expense as active
   };
 
@@ -82,7 +82,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     );
 
     // Reset active expense index if necessary
-    setActiveExpenseIndex(null);
+    //setActiveExpenseIndex(null);
   };
 
   const handleSubmit = async (event) => {

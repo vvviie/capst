@@ -325,42 +325,54 @@ const ExpensesPage = () => {
   };
 
   const handleRemove = async (index: number) => {
-    // Check if selectedDate is not null
     if (selectedDate) {
-      const updatedExpenses = [...selectedDate.addedExpenses];
-
-      // Get the amount of the expense to be deleted
-      const deletedExpenseAmount = updatedExpenses[index].expenseAmount;
-
-      // Remove the expense from the array
-      updatedExpenses.splice(index, 1);
-
-      // Update the totalExpenses
-      const newTotalExpenses = totalExpenses - deletedExpenseAmount;
-
       const expenseDocRef = doc(db, "cafeExpenses", selectedDate.docID);
 
       try {
+        // Create a copy of the addedExpenses array
+        const updatedExpenses = [...selectedDate.addedExpenses];
+
+        // Get the amount of the expense to be removed for total calculation
+        const removedExpenseAmount = updatedExpenses[index].expenseAmount;
+
+        // Remove the specific expense from the array
+        updatedExpenses.splice(index, 1); // Remove the expense at the specified index
+
         // Update the document in Firestore
         await updateDoc(expenseDocRef, {
           addedExpenses: updatedExpenses,
-          totalExpenses: newTotalExpenses,
+          totalExpenses: selectedDate.totalExpenses - removedExpenseAmount, // Update totalExpenses accordingly
         });
 
-        // Update the selectedDate in local state
+        // Update the selectedDate in local state immediately
+        const updatedTotalExpenses =
+          selectedDate.totalExpenses - removedExpenseAmount;
         setSelectedDate({
           ...selectedDate,
           addedExpenses: updatedExpenses,
-          totalExpenses: newTotalExpenses,
+          totalExpenses: updatedTotalExpenses,
         });
 
         // Update the local totalExpenses state
-        setTotalExpenses(newTotalExpenses);
-      } catch (error) {
-        console.error("Error deleting expense: ", error);
-      }
+        setTotalExpenses((prevTotal) => prevTotal - removedExpenseAmount); // Adjust totalExpenses based on the removed amount
 
-      // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
+        // Update ExpenseDocs to reflect the change
+        setExpenseDocs((prevDocs) => {
+          return prevDocs.map((doc) => {
+            if (doc.docID === selectedDate.docID) {
+              return {
+                ...doc,
+                addedExpenses: updatedExpenses,
+                totalExpenses: updatedTotalExpenses,
+              };
+            }
+            return doc;
+          });
+        });
+
+        console.log("Expense removed successfully");
+      
+        // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
       const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
       const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
 
@@ -372,13 +384,11 @@ const ExpensesPage = () => {
       const expensesData = {
         Expenses: {
           data: {
-            [formattedDate]: newTotalExpenses, // Use the current total expenses for the formatted date
+            [formattedDate]: updatedTotalExpenses, // Use the current total expenses for the formatted date
           },
         },
       };
 
-      // Merge the new expenses data with the existing document
-      try {
         await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
       } catch (error) {
         console.error("Error updating sales data: ", error);
