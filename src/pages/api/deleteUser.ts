@@ -1,11 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import admin from "firebase-admin";
-import serviceAccount from "../../app/adminsettings/adminsettings.json";
+import serviceAccount from '../../app/adminsettings/adminsettings.json';
 
-// Initialize Firebase Admin only once
 if (!admin.apps.length) {
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "testingcapstonejg",
     });
 }
 
