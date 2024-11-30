@@ -2,8 +2,8 @@ import React from 'react';
 
 const Spinner: React.FC = () => {
   return (
-    <div className="flex justify-center items-center">
-      <div className="animate-spin rounded-full border-t-4 border-b-4 border-orange-500 h-12 w-12"></div>
+    <div className="flex justify-center items-center h-screen">
+      <div className="animate-spin rounded-full border-4 border-t-4 border-orange-500 border-t-transparent h-16 w-16"></div>
     </div>
   );
 };
