@@ -208,6 +208,12 @@ const ExpensesPage = () => {
 
   const handleYearChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedYear(Number(event.target.value));
+    setSelectedDate(null);
+  };
+
+  const handleMonthChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedMonth(event.target.value);
+    setSelectedDate(null); // Reset selectedDate to null
   };
 
   //const [selectedDate, setSelectedDate] = useState(ExpenseDocs[0]);
@@ -441,7 +447,10 @@ const ExpensesPage = () => {
               name="selectMonth"
               id="selectMonth"
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value); // Set the selected month
+                setSelectedDate(null); // Reset selected date to null
+              }}
               className="border-2 pl-2 pr-4 py-1 rounded-md text-gray-500 w-2/3 text-center border-gray-200"
             >
               {months.map((month) => (
@@ -472,7 +481,9 @@ const ExpensesPage = () => {
               </span>
             ) : (
               <span className="text-gray-500 text-sm">
-                No expenses for the selected month.
+                {selectedMonth === "----Show All----"
+                  ? "No expenses for this year."
+                  : "No expenses for the selected month."}
               </span>
             )}
           </div>
