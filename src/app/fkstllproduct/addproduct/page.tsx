@@ -4,7 +4,7 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { mainCourseMenu } from "@/app/data";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { db } from "@/app/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where, getDoc } from 'firebase/firestore';
@@ -68,12 +68,6 @@ const AddProductPage = () => {
 
     // For Product IDs
     const [selectedDrinkType, setSelectedDrinkType] = useState<string | null>("Iced Drinks");
-
-    const drinkTypePrefixes: {
-        drink: string;
-    } = {
-        drink: "drink", // Use 'drink' as the universal prefix
-    };
 
     const [newProdID, setNewProdID] = useState("");
 
@@ -146,6 +140,40 @@ const AddProductPage = () => {
     const drinkUpsizeRef = useRef<HTMLInputElement | null>(null);
     const drinkUpsizePriceRef = useRef<HTMLInputElement | null>(null);
     const descriptionRef = useRef<HTMLTextAreaElement | null>(null); // Update the type
+
+    const generateNewID = useCallback((ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
+
+        const drinkTypePrefixes = {
+            drink: "drink", // Use 'drink' as the universal prefix
+        };
+
+        const prefix = selectedCat === "drinks" ? drinkTypePrefixes.drink : `${extractedCategory}`;
+    
+        if (!prefix) {
+            console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
+            return;
+        }
+    
+        const newID = ids.length === 0
+            ? `${prefix}1`
+            : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
+    
+        setNewProdID(newID);
+        console.log("Generated new product ID:", newID);
+    }, [selectedCat, extractedCategory]);
+    
+    useEffect(() => {
+        let drinkType: "drink" | null = null;
+        if (selectedCat === "drinks") {
+            drinkType = selectedDrinkType === "drink" ? "drink" : null;
+        } else {
+            drinkType = passableSelectedDrinkType === "drink" ? "drink" : null;
+        }
+    
+        generateNewID(existingIDsRef.current, drinkType);
+    }, [generateNewID, passableSelectedDrinkType, selectedCat, selectedDrinkType, existingIDsRef]);
+    
+
     // Effect to update extractedCategory when selectedCat changes
     useEffect(() => {
         const category = selectedCat.replace("Menu", "");
@@ -208,7 +236,7 @@ const AddProductPage = () => {
         }
     
         generateNewID(existingIDsRef.current, drinkType);
-    }, [existingIDs]);
+    }, [generateNewID, passableSelectedDrinkType, selectedCat, selectedDrinkType]);
 
     useEffect(() => {
         // Handle drinkSize bounds
@@ -267,25 +295,6 @@ const AddProductPage = () => {
         } catch (error) {
             console.error("Error fetching existing IDs: ", error);
         }
-    };
-
-    // Function to generate a new product ID
-    const generateNewID = (ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
-        // Use 'drink' as the prefix for drinks, regardless of the drink type
-        const prefix = selectedCat === "drinks" ? drinkTypePrefixes.drink : `${extractedCategory}`;
-
-        if (!prefix) {
-            console.error("Cannot generate ID: invalid prefix", { selectedCat, drinkType });
-            return; // Early return if no prefix is available
-        }
-
-        // Generate the new ID
-        const newID = ids.length === 0
-            ? `${prefix}1`
-            : `${prefix}${Math.max(...ids.map(id => parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) || 0)) + 1}`;
-
-        setNewProdID(newID);
-        console.log("Generated new product ID:", newID);
     };
 
     const handleAvailabilityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -645,11 +654,11 @@ const AddProductPage = () => {
     };
 
     // Fetch categories from the database based on selected main category
-    const fetchCategoriesFromDB = async (mainCategory: string) => {
+    const fetchCategoriesFromDB = useCallback(async (mainCategory: string) => {
         try {
             // Reference to the menuCategories collection
             const menuCategoriesRef = collection(db, "menuCategories");
-
+    
             // Determine the document based on the selected main category
             let categoriesDoc = null;
             switch (mainCategory) {
@@ -675,21 +684,21 @@ const AddProductPage = () => {
                     categoriesDoc = null; // Default case, in case no main category is selected
                     break;
             }
-
+    
             console.log("Categories document reference:", categoriesDoc);
-
+    
             if (!categoriesDoc) return;
-
+    
             // Get the document snapshot
             const docSnapshot = await getDoc(categoriesDoc);
-
+    
             console.log("Document snapshot:", docSnapshot);
-
+    
             // If the document exists, extract the categories
             if (docSnapshot.exists()) {
                 const data = docSnapshot.data();
                 console.log("Document data:", data);
-
+    
                 let allCategories: string[] = [];
                 if (data.categories && Array.isArray(data.categories)) {
                     // Extract categories from the document
@@ -697,18 +706,18 @@ const AddProductPage = () => {
                         .filter((item) => item.category) // Filter out any items without a category
                         .map((item) => item.category); // Extract the category names
                 }
-
+    
                 console.log("All categories:", allCategories);
-
+    
                 // Format categories for display: Convert category names to a human-readable format
                 const formattedCategories = allCategories.map((category) =>
                     category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
                 );
-
+    
                 console.log("Formatted categories:", formattedCategories);
-
+    
                 setMenuCategories(formattedCategories);
-
+    
                 // Reset selectedCategory if it's not a valid option
                 if (!selectedCategory || !formattedCategories.includes(selectedCategory)) {
                     setSelectedCategory(formattedCategories[0] || "defaultCategory"); // Use default category if no match
@@ -719,12 +728,12 @@ const AddProductPage = () => {
         } catch (error) {
             console.error("Error fetching categories from database:", error);
         }
-    };
-
-
+    }, [selectedCategory]); // Add selectedCategory as a dependency
+    
+    // Call the function inside useEffect
     useEffect(() => {
         fetchCategoriesFromDB(selectedCat);
-    }, [selectedCat]);
+    }, [selectedCat, fetchCategoriesFromDB]);
 
     return (
         <div

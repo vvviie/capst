@@ -70,38 +70,38 @@ const VoucherListPage = () => {
   };
 
   // Function to fetch vouchers based on selected type
-  const fetchItems = () => {
-    const collectionRef = collection(db, selectedType);
-
-    // Use onSnapshot for real-time updates
-    const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
-      const itemsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        available: doc.data().available === true,
-      }));
-
-      if (selectedType === "vouchers") {
-        setVouchers(itemsData as voucherType[]);
-        setPromos([]); // Clear promos if vouchers are selected
-      } else if (selectedType === "promoCodes") {
-        setPromos(itemsData as promoType[]);
-        setVouchers([]); // Clear vouchers if promos are selected
-      }
-    });
-
-    return unsubscribe; // Return unsubscribe function
-  };
-
   useEffect(() => {
+    const fetchItems = () => {
+      const collectionRef = collection(db, selectedType);
+  
+      // Use onSnapshot for real-time updates
+      const unsubscribe = onSnapshot(collectionRef, (snapshot) => {
+        const itemsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          available: doc.data().available === true,
+        }));
+  
+        if (selectedType === "vouchers") {
+          setVouchers(itemsData as voucherType[]); 
+          setPromos([]); // Clear promos if vouchers are selected
+        } else if (selectedType === "promoCodes") {
+          setPromos(itemsData as promoType[]); 
+          setVouchers([]); // Clear vouchers if promos are selected
+        }
+      });
+  
+      return unsubscribe; // Return unsubscribe function
+    };
+  
     // Call fetchItems to set up the listener
     const unsubscribe = fetchItems();
-
+  
     // Cleanup function to unsubscribe from the listener
     return () => {
       unsubscribe(); // Clean up the listener when the component unmounts
     };
-  }, [selectedType]); // Add selectedType as a dependency
+  }, [selectedType]);
 
   // Function to handle availability change
   const handleAvailabilityChange = async (itemId: string, newValue: string) => {

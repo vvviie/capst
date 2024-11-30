@@ -107,7 +107,7 @@ const EditPromoPage = () => {
         };
 
         fetchPromo();
-    }, [promoId]);
+    }, [promoId, promoCode]);
 
     useEffect(() => {
         console.log("deductionValue updated:", deductionValue); // Log changes to deductionValue

@@ -5,7 +5,7 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { mainCourseMenu, MenuItem } from "@/app/data";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import { db } from "@/app/firebase";
 import {
   doc,
@@ -206,6 +206,42 @@ const EditProductPage = () => {
   const drinkUpsizePriceRef = useRef<HTMLInputElement | null>(null);
   const descriptionRef = useRef<HTMLTextAreaElement | null>(null); // Update the type
 
+    // Function to generate a new product ID
+    const generateNewID = (
+      ids: string[],
+      drinkType: keyof typeof drinkTypePrefixes | null
+    ) => {
+      const prefix =
+        selectedCat === "drinks" && drinkType
+          ? drinkTypePrefixes[drinkType]
+          : `${extractedCategory}`;
+  
+      if (!prefix) {
+        console.error("Cannot generate ID: invalid prefix", {
+          selectedCat,
+          drinkType,
+        });
+        return; // Early return if no prefix is available
+      }
+  
+      // Generate the new ID
+      const newID =
+        ids.length === 0
+          ? `${prefix}1`
+          : `${prefix}${
+              Math.max(
+                ...ids.map(
+                  (id) =>
+                    parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) ||
+                    0
+                )
+              ) + 1
+            }`;
+  
+      setNewProdID(newID);
+      console.log("Generated new product ID:", newID);
+    };
+
   // Effect to update extractedCategory when selectedCat changes
   useEffect(() => {
     const category = selectedCat.replace("Menu", "");
@@ -232,15 +268,7 @@ const EditProductPage = () => {
   ]);
 
   // Effect to generate a new ID based on existing IDs //
-  useEffect(() => {
-    const drinkType =
-      selectedCat === "drinks"
-        ? (selectedDrinkType as "hotDrinks" | "icedDrinks" | "blendedDrinks" | "affogatoDrinks" | null)
-        : (passableSelectedDrinkType as "hotDrinks" | "icedDrinks" | "blendedDrinks" | "affogatoDrinks" | null);
   
-    generateNewID(existingIDsRef.current, drinkType);
-  }, [existingIDs]);
-
   useEffect(() => {
     // Handle drinkSize bounds
     if (drinkSize !== null && drinkSize !== "") {
@@ -273,42 +301,6 @@ const EditProductPage = () => {
     const selectedValue = e.target.value;
     setSelectedDrinkType(selectedValue); // Update the state with the new selection
     console.log("Selected type:", selectedValue); // Log the selected type for debugging
-  };
-
-  // Function to generate a new product ID
-  const generateNewID = (
-    ids: string[],
-    drinkType: keyof typeof drinkTypePrefixes | null
-  ) => {
-    const prefix =
-      selectedCat === "drinks" && drinkType
-        ? drinkTypePrefixes[drinkType]
-        : `${extractedCategory}`;
-
-    if (!prefix) {
-      console.error("Cannot generate ID: invalid prefix", {
-        selectedCat,
-        drinkType,
-      });
-      return; // Early return if no prefix is available
-    }
-
-    // Generate the new ID
-    const newID =
-      ids.length === 0
-        ? `${prefix}1`
-        : `${prefix}${
-            Math.max(
-              ...ids.map(
-                (id) =>
-                  parseInt(id.replace(new RegExp(`^${prefix}`, "i"), ""), 10) ||
-                  0
-              )
-            ) + 1
-          }`;
-
-    setNewProdID(newID);
-    console.log("Generated new product ID:", newID);
   };
 
   const handleAvailabilityChange = (
@@ -546,7 +538,7 @@ const EditProductPage = () => {
   //#endregion
 
   // Fetch product from Firestore
-  const fetchProduct = async (collectionRef: string) => {
+  const fetchProduct = useCallback(async (collectionRef: string) => {
     if (typeof id === "string") {
       const docRef = doc(db, collectionRef, id);
       console.log(`Document ID: ${id}`);
@@ -563,17 +555,14 @@ const EditProductPage = () => {
           const data = docSnap.data();
           console.log("Document Data:", data); // Log entire document data for inspection
   
-          // Extract allergens and ensure it's an array
           const fetchedAllergens = Array.isArray(data.contains) ? data.contains : [];
           console.log("Fetched Allergens:", fetchedAllergens);
   
-          // Extract the size and convert it to a number
-          const sizeWithUnit = data.currSize || "0oz"; // Fallback to '0oz' if undefined
-          const sizeValue = parseFloat(sizeWithUnit); // Extract numeric part
-          const upsizeWithUnit = data.upsizeSize || "0oz"; // Fallback to '0oz' if undefined
-          const upsizeValue = parseFloat(upsizeWithUnit); // Extract numeric part for display
+          const sizeWithUnit = data.currSize || "0oz";
+          const sizeValue = parseFloat(sizeWithUnit);
+          const upsizeWithUnit = data.upsizeSize || "0oz";
+          const upsizeValue = parseFloat(upsizeWithUnit);
   
-          // Ensure the data matches the ProductType structure
           const fetchedProduct = {
             name: data.title,
             category: data.prodCategory,
@@ -592,10 +581,9 @@ const EditProductPage = () => {
             allergens: fetchedAllergens,
           };
   
-          console.log("Fetched Product Object:", fetchedProduct); // Log the entire product object
+          console.log("Fetched Product Object:", fetchedProduct);
   
-          // Determine selected category based on itemId
-          let determinedCategory = "drinks"; // Default category
+          let determinedCategory = "drinks";
           if (fetchedProduct.itemId.includes("drink")) {
             determinedCategory = "drinks";
           } else if (fetchedProduct.itemId.includes("mainCourse")) {
@@ -612,20 +600,19 @@ const EditProductPage = () => {
   
           console.log("Determined Category:", determinedCategory);
   
-          // Set state with fetched product data
           setAaa(fetchedProduct.itemCategory);
           setProduct(fetchedProduct);
           setImageUrl(fetchedProduct.imageUrl);
-
+  
           if (fetchedProduct.imageUrl) {
             const decodedFileName = decodeURIComponent(
               fetchedProduct.imageUrl.split("/").pop()?.split("?")[0] || ""
-            ).split("/").pop() || "defaultFileName"; // Fallback to 'defaultFileName' if undefined
+            ).split("/").pop() || "defaultFileName";
             
             setFileName(decodedFileName);
           } else {
             console.error("Image URL is undefined!");
-            setFileName("defaultFileName"); // Use a default value if `imageUrl` is missing
+            setFileName("defaultFileName");
           }
           
           setSelectedAvailability(fetchedProduct.availability);
@@ -642,7 +629,6 @@ const EditProductPage = () => {
           setSelectedAllergens(fetchedAllergens.filter((allergen) => allergen !== ""));
           setDesc(fetchedProduct.itemDescription);
   
-          // Use the determined category directly
           setSelectedCat(determinedCategory);
         } else {
           console.error("No such document!");
@@ -656,42 +642,32 @@ const EditProductPage = () => {
       console.error("Invalid document ID");
       setLoading(false);
     }
-  };  
+  }, [id, setAaa, setProduct, setImageUrl, setFileName, setSelectedAvailability, setProdID, setItemName, setCalorie, setItemPrice, setPassableSelectedDrinkType, setDrinkSize, setUpsize, setUpsizeSize, setUpsizePrice, setSelectedDrinkType, setSelectedAllergens, setDesc, setSelectedCat]);  
   
-  // useEffect to log `aaa` after it changes
-  useEffect(() => {
-    console.log("Updated aaa:", aaa);
-  }, [aaa]);  // This will run every time `aaa` changes
-  
-    // useEffect to log `aaa` after it changes
-    useEffect(() => {
-      console.log("Updated bbb:", passableSelectedDrinkType);
-    }, [aaa]);  // This will run every time `aaa` changes
-
   // Fetching all collections
   useEffect(() => {
     fetchProduct("drinks");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("mainCourse");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("snacks");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("pastries");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("sandwiches");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   useEffect(() => {
     fetchProduct("pasta");
-  }, [id]);
+  }, [id, fetchProduct]);
 
   const passableSelectedDrinkTypeRef = useRef(passableSelectedDrinkType);
   useEffect(() => {
@@ -870,85 +846,81 @@ const EditProductPage = () => {
   };
 
    // Fetch categories from the database based on selected main category
-  const fetchCategoriesFromDB = async (mainCategory: string) => {
-    try {
-        // Reference to the menuCategories collection
+const fetchCategoriesFromDB = useCallback(
+    async (mainCategory: string) => {
+      try {
         const menuCategoriesRef = collection(db, "menuCategories");
-
-        // Determine the document based on the selected main category
+  
         let categoriesDoc = null;
         switch (mainCategory) {
-            case "drinks":
-                categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
-                break;
-            case "mainCourseMenu":
-                categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
-                break;
-            case "pastriesMenu":
-                categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
-                break;
-            case "snacksMenu":
-                categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
-                break;
-            case "sandwichesMenu":
-                categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
-                break;
-            case "pastaMenu":
-                categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
-                break;
-            default:
-                categoriesDoc = null; // Default case, in case no main category is selected
-                break;
+          case "drinks":
+            categoriesDoc = doc(menuCategoriesRef, "drinksCategories");
+            break;
+          case "mainCourseMenu":
+            categoriesDoc = doc(menuCategoriesRef, "mainCourseCategories");
+            break;
+          case "pastriesMenu":
+            categoriesDoc = doc(menuCategoriesRef, "pastriesCategories");
+            break;
+          case "snacksMenu":
+            categoriesDoc = doc(menuCategoriesRef, "snacksCategories");
+            break;
+          case "sandwichesMenu":
+            categoriesDoc = doc(menuCategoriesRef, "sandwichesCategories");
+            break;
+          case "pastaMenu":
+            categoriesDoc = doc(menuCategoriesRef, "pastaCategories");
+            break;
+          default:
+            categoriesDoc = null;
+            break;
         }
-
+  
         console.log("Categories document reference:", categoriesDoc);
-
+  
         if (!categoriesDoc) return;
-
-        // Get the document snapshot
+  
         const docSnapshot = await getDoc(categoriesDoc);
-        
+  
         console.log("Document snapshot:", docSnapshot);
-
-        // If the document exists, extract the categories
+  
         if (docSnapshot.exists()) {
-            const data = docSnapshot.data();
-            console.log("Document data:", data);
-
-            let allCategories: string[] = [];
-            if (data.categories && Array.isArray(data.categories)) {
-                // Extract categories from the document
-                allCategories = data.categories
-                    .filter((item) => item.category) // Filter out any items without a category
-                    .map((item) => item.category); // Extract the category names
-            }
-
-            console.log("All categories:", allCategories);
-
-            // Format categories for display: Convert category names to a human-readable format
-            const formattedCategories = allCategories.map((category) =>
-                category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
-            );
-
-            console.log("Formatted categories:", formattedCategories);
-
-            setMenuCategories(formattedCategories);
-
-            // Reset selectedCategory if it's not a valid option
-            if (!selectedCategory || !formattedCategories.includes(selectedCategory)) {
-              setSelectedCategory(formattedCategories[0] || "defaultCategory"); // Use default category if no match
+          const data = docSnapshot.data();
+          console.log("Document data:", data);
+  
+          let allCategories: string[] = [];
+          if (data.categories && Array.isArray(data.categories)) {
+            allCategories = data.categories
+              .filter((item) => item.category)
+              .map((item) => item.category);
+          }
+  
+          console.log("All categories:", allCategories);
+  
+          const formattedCategories = allCategories.map((category) =>
+            category.replace(/([A-Z])/g, " $1").replace(/^./, (str) => str.toUpperCase())
+          );
+  
+          console.log("Formatted categories:", formattedCategories);
+  
+          setMenuCategories(formattedCategories);
+  
+          if (!selectedCategory || !formattedCategories.includes(selectedCategory)) {
+            setSelectedCategory(formattedCategories[0] || "defaultCategory");
           }
         } else {
-            console.log("No such document!");
+          console.log("No such document!");
         }
-    } catch (error) {
+      } catch (error) {
         console.error("Error fetching categories from database:", error);
-    }
-};
+      }
+    },
+    [selectedCategory] // Add dependencies here
+  );
 
 useEffect(() => {
     fetchCategoriesFromDB(selectedCat);
-}, [selectedCat]);
+}, [selectedCat, fetchCategoriesFromDB]);
 
   if (loading) return <p>Loading...</p>;
 
