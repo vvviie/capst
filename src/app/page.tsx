@@ -2,8 +2,7 @@ import { LandingSec } from "./components/LandingSec";
 import FeaturedItems from "./components/FeaturedItems";
 import AboutUs from "./components/AboutUs";
 import NewsSubscription from "./components/NewsSubscription";
-import { fetchFeaturedItems, fetchFooterData } from './lib/firebaseUtil.js'; // Adjust the import based on your file structure
-
+import { fetchFeaturedItems, fetchFooterData } from './lib/firebaseUtil';
 
 export default async function Home() {
   try {
