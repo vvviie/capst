@@ -654,14 +654,20 @@ const ExpensesPage = () => {
                     <hr className="mb-1" />
                   </div>
                   {/* LIST OF EXPENSES */}
-                  <div className="flex flex-col w-full">
+                  <div className="flex flex-col w-full max-w-4xl mx-auto">
+                    {" "}
+                    {/* Adjust the max width here */}
                     {/* Header Row */}
                     <div className="flex bg-gray-200 font-bold text-gray-700 py-2 px-4 rounded-md mb-2">
-                      <span className="w-1/3">Title</span>
-                      <span className="w-1/3 text-center">Time</span>
-                      <span className="w-1/3 text-right">Amount</span>
+                      <span className="w-1/4 mr-4">Title</span>{" "}
+                      {/* Adjusted width */}
+                      <span className="w-1/4 text-center ">Time</span>{" "}
+                      {/* Adjusted width */}
+                      <span className="w-1/4 text-right mr-4">Amount</span>{" "}
+                      {/* Adjusted width */}
+                      <span className="w-1/4 text-right mr-3">Actions</span>{" "}
+                      {/* New Actions column */}
                     </div>
-
                     {/* Expense Items */}
                     {selectedDate.addedExpenses.map((expense, index) => (
                       <div
@@ -669,19 +675,17 @@ const ExpensesPage = () => {
                         key={index}
                       >
                         {/* EXPENSE LABEL */}
-                        <span className="text-gray-600 font-bold text-sm w-1/3">
+                        <span className="text-gray-600 font-bold text-sm w-1/4">
                           {expense.expenseLabel}
                         </span>
 
                         {/* TIME FIELD */}
-                        <span className="text-gray-500 font-bold text-sm w-1/3 text-center">
+                        <span className="text-gray-500 font-bold text-sm w-1/4 text-center">
                           {expense.time} {/* Display time */}
                         </span>
 
                         {/* EXPENSE AMOUNT OR INPUT FIELD */}
-                        <div className="flex items-center w-1/3 justify-end">
-                          {" "}
-                          {/* Adjusted to create space */}
+                        <span className="text-red-500 font-bold text-sm text-right w-1/4">
                           {editingIndex === index ? (
                             <input
                               type="number"
@@ -694,36 +698,40 @@ const ExpensesPage = () => {
                               }
                             />
                           ) : (
-                            <span className="text-red-500 font-bold text-sm text-right">
-                              PHP {expense.expenseAmount.toFixed(2)}
-                            </span>
+                            `PHP ${expense.expenseAmount.toFixed(2)}`
                           )}
-                          <div className="flex gap-2 items-center">
-                            {editingIndex === index ? (
+                        </span>
+
+                        {/* ACTIONS */}
+                        <div className="flex items-center w-1/4 justify-end gap-2">
+                          {editingIndex === index ? (
+                            <>
                               <button
                                 onClick={() => handleSaveClick(index)}
-                                className="text-sm font-bold bg-orange-300 h-8 px-4 rounded-md text-white hover:bg-orange-200 hover:scale-[1.02] duration-200"
+                                className="text-sm font-bold bg-orange-300 h-8 w-8 rounded-md text-white hover:bg-orange-200 hover:scale-[1.02] duration-200 flex items-center justify-center"
                               >
-                                Save
+                                <i className="fas fa-check"></i>{" "}
+                                {/* Font Awesome Check Icon */}
                               </button>
-                            ) : (
+
+                              {/* REMOVE ITEM BUTTON - Only visible in edit mode */}
                               <button
-                                onClick={() =>
-                                  handleEditClick(index, expense.expenseAmount)
-                                }
-                                className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                                onClick={() => handleRemove(index)}
+                                className="h-8 w-8 text-white bg-gray-300 rounded-md text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center flex items-center justify-center"
                               >
-                                Edit
+                                DEL
                               </button>
-                            )}
-                            {/* REMOVE ITEM BUTTON */}
+                            </>
+                          ) : (
                             <button
-                              onClick={() => handleRemove(index)}
-                              className="h-5 w-5 text-white bg-gray-300 rounded-full text-xs font-bold hover:bg-gray-400 hover:scale-[1.01] duration-200 text-center"
+                              onClick={() =>
+                                handleEditClick(index, expense.expenseAmount)
+                              }
+                              className="text-sm font-bold bg-white border-2 border-gray-100 h-8 px-4 rounded-md text-gray-500 hover:bg-gray-50 hover:scale-[1.02] duration-200"
                             >
-                              x
+                              Edit
                             </button>
-                          </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -732,7 +740,7 @@ const ExpensesPage = () => {
                     <hr />
                     <div className="flex justify-between gap-2">
                       <span className="text-gray-700 text-sm font-bold">
-                        Total
+                        Total Expenses for the day:
                       </span>
                       <span className="text-white bg-red-500 font-semibold text-xs px-2 py-1 rounded-full">
                         PHP{" "}
