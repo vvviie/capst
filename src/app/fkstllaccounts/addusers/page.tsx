@@ -167,7 +167,7 @@ const AddUsersAccountPage = () => {
                 const { uid, email } = responseData;
     
                 // Step 2: Notify user about verification email
-                setVerificationMessage(`A verification email has been sent to ${email}. Please verify your email.`);
+                setVerificationMessage(`The account of ${email} was successfully created.`);
                 setTimeout(() => {
                     setVerificationMessage("");
                 }, 3000);
