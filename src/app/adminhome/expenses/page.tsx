@@ -35,6 +35,7 @@ const ExpensesPage = () => {
   const [selectedMonth, setSelectedMonth] = useState(
     months[new Date().getMonth()]
   ); // Default to current month
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   // Function to get the month index from month name
   const getMonthIndex = (monthName: string) => {
@@ -47,11 +48,28 @@ const ExpensesPage = () => {
         setLoading(true);
         const querySnapshot = await getDocs(collection(db, "cafeExpenses"));
         const expenses: ExpenseDocument[] = [];
+
         querySnapshot.forEach((doc) => {
-          expenses.push({ docID: doc.id, ...doc.data() } as ExpenseDocument);
+          const expenseData = {
+            docID: doc.id,
+            ...doc.data(),
+          } as ExpenseDocument;
+          const expenseDate = new Date(expenseData.date);
+          const expenseMonth = expenseDate.toLocaleString("default", {
+            month: "long",
+          }); // Get month name
+          const expenseYear = expenseDate.getFullYear(); // Get year
+
+          // Check if the expense matches the selected month and year
+          if (
+            (selectedMonth === "----Show All----" && expenseYear === selectedYear) ||
+            (expenseMonth === selectedMonth && expenseYear === selectedYear)
+          ) {
+            expenses.push(expenseData);
+          }
         });
 
-        // Assuming the date field is in a format that can be compared, e.g., a timestamp or a Date object
+        // Sort expenses in descending order by date
         expenses.sort((a, b) => {
           return new Date(b.date).getTime() - new Date(a.date).getTime(); // Sort in descending order
         });
@@ -64,8 +82,11 @@ const ExpensesPage = () => {
       }
     };
 
-    fetchCafeExpenses();
-  }, []);
+    // Fetch expenses only if both month and year are selected
+    if (selectedYear !== null) {
+      fetchCafeExpenses();
+    }
+  }, [selectedMonth, selectedYear]);
 
   // totalExpenses of all the docz
   //  // Calculate the total expenses when the component mounts or when ExpenseDocs changes
@@ -83,7 +104,7 @@ const ExpensesPage = () => {
   // }, [ExpenseDocs]);
 
   // Calculate the total expenses when the component mounts or when ExpenseDocs changes
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   useEffect(() => {
     const total = ExpenseDocs.reduce((sum, doc) => {
       const expenseDate = new Date(doc.date);
@@ -123,7 +144,9 @@ const ExpensesPage = () => {
     }, 0);
 
     setTotalExpenses(total);
-  }, [ExpenseDocs, selectedMonth, selectedYear]); //#region PAGES CODE
+  }, [ExpenseDocs, selectedMonth, selectedYear]);
+
+  //#region PAGES CODE
   const [currentPage, setCurrentPage] = useState(1);
   const [pageWindowStart, setPageWindowStart] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(3);
@@ -371,23 +394,23 @@ const ExpensesPage = () => {
         });
 
         console.log("Expense removed successfully");
-      
+
         // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
-      const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
-      const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+        const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
+        const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
 
-      // Submit to salesData collection
-      const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
-      const salesDataRef = doc(db, "salesData", salesDocumentId);
+        // Submit to salesData collection
+        const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+        const salesDataRef = doc(db, "salesData", salesDocumentId);
 
-      // Update the salesData document
-      const expensesData = {
-        Expenses: {
-          data: {
-            [formattedDate]: updatedTotalExpenses, // Use the current total expenses for the formatted date
+        // Update the salesData document
+        const expensesData = {
+          Expenses: {
+            data: {
+              [formattedDate]: updatedTotalExpenses, // Use the current total expenses for the formatted date
+            },
           },
-        },
-      };
+        };
 
         await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
       } catch (error) {
