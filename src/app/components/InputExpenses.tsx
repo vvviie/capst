@@ -169,7 +169,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     setDate("");
     setExpenseLabel("");
     setExpenseAmount(0);
-    setInput("today");
+    //setInput("today");
 
 
     // Submit to salesData collection

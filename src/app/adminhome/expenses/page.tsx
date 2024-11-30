@@ -151,6 +151,13 @@ const ExpensesPage = () => {
     setCurrentExp(filteredExpenses.slice(0, itemsPerPage));
   }, [ExpenseDocs, selectedMonth, selectedYear, itemsPerPage]);
 
+  // For pages 
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setCurrentExp(ExpenseDocs.slice(startIndex, endIndex));
+  }, [currentPage, itemsPerPage, ExpenseDocs]);
+
   const visiblePages = Array.from(
     { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
     (_, index) => pageWindowStart + index
