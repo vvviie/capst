@@ -2,6 +2,7 @@
 import { months } from "@/app/data"; // Import months from your data file
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
+import Spinner from "@/app/components/Spinner";
 import {
   collection,
   deleteDoc,
@@ -27,6 +28,7 @@ type ExpenseDocument = {
 };
 
 const ExpensesPage = () => {
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [ExpenseDocs, setExpenseDocs] = useState<ExpenseDocument[]>([]);
@@ -42,6 +44,7 @@ const ExpensesPage = () => {
   useEffect(() => {
     const fetchCafeExpenses = async () => {
       try {
+        setLoading(true);
         const querySnapshot = await getDocs(collection(db, "cafeExpenses"));
         const expenses: ExpenseDocument[] = [];
         querySnapshot.forEach((doc) => {
@@ -55,6 +58,7 @@ const ExpensesPage = () => {
 
         setExpenseDocs(expenses);
         console.log(expenses);
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching cafeExpenses: ", error);
       }
@@ -151,7 +155,7 @@ const ExpensesPage = () => {
     setCurrentExp(filteredExpenses.slice(0, itemsPerPage));
   }, [ExpenseDocs, selectedMonth, selectedYear, itemsPerPage]);
 
-  // For pages 
+  // For pages
   useEffect(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -524,13 +528,21 @@ const ExpensesPage = () => {
               <hr />
               {/* DATE LIST */}
               <div className="flex flex-col gap-2 justify-center">
-                {currentExp.length === 0 ? (
-                  <p>There is no recorded expense this month.</p>
+                {loading ? (
+                  <div className="flex justify-center items-center h-32">
+                    {" "}
+                    {/* Center spinner vertically */}
+                    <Spinner /> {/* Display spinner while loading */}
+                  </div>
+                ) : currentExp.length === 0 ? (
+                  <p className="text-center text-gray-600">
+                    There is no recorded expense this month.
+                  </p>
                 ) : (
                   <>
                     {currentExp.map((exp) => (
                       <div
-                        className={`w-full border-2 py-1 px-2 rounded-md shadow-md text-gray-600 cursor-pointer ${
+                        className={`w-full border-2 py-2 px-4 rounded-md shadow-md text-gray-600 cursor-pointer transition duration-300 ease-in-out ${
                           selectedDate?.docID === exp.docID
                             ? "bg-orange-300 border-orange-300 text-white"
                             : "bg-white border-gray-100 hover:bg-orange-100 hover:text-orange-500 hover:border-orange-100"
