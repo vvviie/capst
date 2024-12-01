@@ -63,7 +63,33 @@ type ChartData = WeeklyData | YearlyData | { labels: string[]; datasets: { label
 
 const FoodDrinkSalesGraph: React.FC<FoodDrinkSalesGraphProps> = ({ timeFrame }) => {
   const [foodDrinkSalesData, setFoodDrinkSalesData] = useState<DocumentData | null>(null);
-  const options = {};
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top" as const, // Valid position
+      },
+      tooltip: {
+        mode: "index" as const, // Cast to a valid mode type
+        intersect: false,
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: false,
+          text: "Time Frame", // Customize text
+        },
+      },
+      y: {
+        title: {
+          display: false,
+          text: "Amount (PHP)", // Customize text
+        },
+      },
+    },
+  };
+
 
   useEffect(() => {
     const docRef = doc(db, "salesData", "foodDrinkSold");

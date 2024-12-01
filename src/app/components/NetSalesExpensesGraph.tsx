@@ -68,9 +68,36 @@ interface YearlyChartData {
   totalExpenses: number; // Ensure totalExpenses is part of the return type
 }
 
-const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame }) => {
+const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
+  timeFrame,
+}) => {
   const [salesExpensesToday, setSalesExpensesToday] = useState<any>(null);
-  const options = {};
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: "top" as const, // Valid position
+      },
+      tooltip: {
+        mode: "index" as const, // Cast to a valid mode type
+        intersect: false,
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: false,
+          text: "Time Frame", // Customize text
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: "Amount (PHP)", // Customize text
+        },
+      },
+    },
+  };
 
   useEffect(() => {
     const docRef = doc(db, "salesData", "salesExpensesToday");
@@ -97,24 +124,24 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
 
   const getLatestData = (data: SalesData | null) => {
     if (!data) return null;
-  
+
     const today = new Date().toLocaleDateString(); // Format today's date
     const dates = Object.keys(data.NetSales.data);
-  
+
     // Sort dates in descending order
     dates.sort((a, b) => {
       const dateA = new Date(a);
       const dateB = new Date(b);
       return dateB.getTime() - dateA.getTime(); // Use getTime() to compare numeric values
     });
-  
+
     // Check for today's data
     const latestNetSales = data.NetSales.data[today] || 0; // Default to 0 if no data for today
     const latestExpenses = data.Expenses.data[today] || 0; // Default to 0 if no data for today
-  
+
     // Prepare the label for today's report
     const label = `${today} - Today's Report`;
-  
+
     return {
       labels: [label], // Use the formatted label
       datasets: [
@@ -123,7 +150,6 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
           borderColor: data.NetSales.color || "#60A66F", // Fallback color if not found
           data: [latestNetSales], // Use 0 if no data
           label: data.NetSales.labels || "Net Sales", // Use the fetched label for Net Sales
-          
         },
         {
           backgroundColor: data.Expenses.color || "#F0565F", // Fallback color if not found
@@ -140,17 +166,25 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
     const datesOfWeek = [];
     const weeklySales = [];
     const weeklyExpenses = [];
-  
+
     const sales = salesData.NetSales.data;
     const expenses = salesData.Expenses.data;
-  
+
     const todayFormatted = today.toLocaleDateString();
     datesOfWeek.push(todayFormatted);
     weeklySales.push(sales[todayFormatted] || 0);
     weeklyExpenses.push(expenses[todayFormatted] || 0);
-  
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  
+
+    const dayNames = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+
     for (let i = 1; i <= 6; i++) {
       const currentDay = new Date(today);
       currentDay.setDate(today.getDate() - i);
@@ -159,23 +193,23 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
       weeklySales.unshift(sales[formattedDate] || 0);
       weeklyExpenses.unshift(expenses[formattedDate] || 0);
     }
-  
+
     const dayLabels = datesOfWeek.map((date) => {
       const dayIndex = new Date(date).getDay();
       const dayName = dayNames[dayIndex];
       return `${dayName}\n(${date})`;
     });
-  
+
     const dayOfWeek = today.getDay();
-  
+
     // Set additionalLabel based on the week context
-    let additionalLabel = '';
+    let additionalLabel = "";
     if (dayOfWeek === 0) {
-      additionalLabel = 'It’s Sunday! Start your week strong!';
+      additionalLabel = "It’s Sunday! Start your week strong!";
     } else if (dayOfWeek === 6) {
-      additionalLabel = 'It’s Saturday! Wrap up your week!';
+      additionalLabel = "It’s Saturday! Wrap up your week!";
     }
-  
+
     return {
       labels: dayLabels,
       datasets: [
@@ -194,40 +228,53 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
       ],
       additionalLabel, // Include additionalLabel in the returned object
     };
-  };  
+  };
 
   const getYearlyData = (salesData: SalesData): YearlyChartData => {
     const monthlySales = new Array(12).fill(0); // Array to hold sales totals for each month
     const monthlyExpenses = new Array(12).fill(0); // Array to hold expenses totals for each month
     let totalSales = 0; // Initialize total sales
     let totalExpenses = 0; // Initialize total expenses
-  
+
     // Loop through Net Sales data and aggregate by month
     for (const [dateString, sales] of Object.entries(salesData.NetSales.data)) {
       const date = new Date(dateString);
       const month = date.getMonth(); // Get month (0-11)
-  
+
       if (!isNaN(month)) {
         monthlySales[month] += sales; // Sum sales for the month
         totalSales += sales; // Add to total sales
       }
     }
-  
+
     // Loop through Expenses data and aggregate by month
-    for (const [dateString, expenses] of Object.entries(salesData.Expenses.data)) {
+    for (const [dateString, expenses] of Object.entries(
+      salesData.Expenses.data
+    )) {
       const date = new Date(dateString);
       const month = date.getMonth(); // Get month (0-11)
-  
+
       if (!isNaN(month)) {
         monthlyExpenses[month] += expenses; // Sum expenses for the month
         totalExpenses += expenses; // Add to total expenses
       }
     }
-  
+
     // Prepare the chart data
     return {
       labels: [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
       ],
       datasets: [
         {
@@ -249,15 +296,15 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
   };
 
   const chartData =
-  timeFrame === "today" && salesExpensesToday
-    ? getLatestData(salesExpensesToday)
-    : timeFrame === "week" && salesExpensesToday
-    ? getWeeklyData(salesExpensesToday)
-    : timeFrame === "year" && salesExpensesToday
-    ? getYearlyData(salesExpensesToday) // Ensure this function is being used for yearly data
-    : salesExpensesYear;
+    timeFrame === "today" && salesExpensesToday
+      ? getLatestData(salesExpensesToday)
+      : timeFrame === "week" && salesExpensesToday
+      ? getWeeklyData(salesExpensesToday)
+      : timeFrame === "year" && salesExpensesToday
+      ? getYearlyData(salesExpensesToday) // Ensure this function is being used for yearly data
+      : salesExpensesYear;
 
-// Type assertion to ensure the data conforms to the expected type
+  // Type assertion to ensure the data conforms to the expected type
   const yearlyChartData = chartData as YearlyChartData;
   const weeklyChartData = chartData as WeeklyChartData;
 
@@ -269,12 +316,18 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({ timeFrame
             <div className="flex items-center">
               <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
               <span className="ml-2">
-                PHP {yearlyChartData.totalSales.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                PHP{" "}
+                {yearlyChartData.totalSales
+                  .toFixed(2)
+                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
               </span>
               <span className="mx-2">|</span>
               <span className="text-[#F0565F] font-bold">Total Expenses:</span>
               <span className="ml-2">
-                PHP {yearlyChartData.totalExpenses.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                PHP{" "}
+                {yearlyChartData.totalExpenses
+                  .toFixed(2)
+                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
               </span>
             </div>
           )}

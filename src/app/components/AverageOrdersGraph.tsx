@@ -132,6 +132,31 @@ const AverageOrdersGraph = () => {
         display: true,
         text: "Average Orders Per Day",
       },
+      tooltip: {
+        mode: "index" as const, // Show tooltip for all datasets at the hovered index
+        intersect: false, // Allow tooltip to display even when not intersecting the line
+        callbacks: {
+          label: (context: any) => {
+            const value = context.raw as number;
+            return `Orders: ${value}`; // Customize the tooltip label
+          },
+        },
+      },
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: "Date",
+        },
+      },
+      y: {
+        title: {
+          display: true,
+          text: "Number of Orders",
+        },
+        suggestedMin: 0, // Ensure the y-axis starts at zero
+      },
     },
   };
 
