@@ -27,7 +27,7 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
   const [activeExpenseIndex, setActiveExpenseIndex] = useState<number | null>(null);
 
   const handleExpenseClick = (index: number) => {
-    setInput("today");
+    //setInput("today");
     setActiveExpenseIndex(index); // Set the clicked expense as active
   };
 
@@ -92,7 +92,7 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
     );
 
     // Reset active expense index if necessary
-    setActiveExpenseIndex(null);
+    //setActiveExpenseIndex(null);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -179,7 +179,7 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
     setDate("");
     setExpenseLabel("");
     setExpenseAmount(0);
-    setInput("today");
+    //setInput("today");
 
 
     // Submit to salesData collection
@@ -213,7 +213,7 @@ const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => 
     // Hide the popup and toggle the form after a delay
     setTimeout(() => {
       setIsPopUpVisible(false);
-      toggleForm(); // Close the form
+      ///toggleForm(); // Close the form
     }, 750);
   };
 
