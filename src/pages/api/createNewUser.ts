@@ -1,16 +1,12 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
-import { ServiceAccount } from 'firebase-admin';
+import serviceAccount from '../../app/adminsettings/adminsettings.json';
 
-// Import and cast adminsettings.json as ServiceAccount
-import adminsettings from '../../app/adminsettings/adminsettings.json';
-const serviceAccount = adminsettings as ServiceAccount;
-
-// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
         databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "testingcapstonejg",
     });
 }
 
