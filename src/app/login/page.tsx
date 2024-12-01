@@ -158,16 +158,16 @@ const LoginPage = () => {
         // Now use the role to redirect the user
         if (role === "admin") {
           Cookies.set("admin", user.refreshToken);
-          router.push("/adminhome");
+          window.location.href = "/adminhome"; // Navigate and reload the page
         } else if (role === "bar") {
           Cookies.set("bar", user.refreshToken);
-          router.push("/fkstllorders");
+          window.location.href = "/fkstllorders"; // Navigate and reload the page
         } else if (role === "kitchen") {
           Cookies.set("kitchen", user.refreshToken);
-          router.push("/fkstllorders");
+          window.location.href = "/fkstllorders"; // Navigate and reload the page
         } else {
           Cookies.set("user", user.refreshToken);
-          router.push("/");
+          window.location.href = "/"; // Navigate and reload the page
         }
       } else {
         // Handle case where role is undefined or not fetched
