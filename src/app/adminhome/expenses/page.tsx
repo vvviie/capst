@@ -62,7 +62,8 @@ const ExpensesPage = () => {
 
           // Check if the expense matches the selected month and year
           if (
-            (selectedMonth === "----Show All----" && expenseYear === selectedYear) ||
+            (selectedMonth === "----Show All----" &&
+              expenseYear === selectedYear) ||
             (expenseMonth === selectedMonth && expenseYear === selectedYear)
           ) {
             expenses.push(expenseData);
@@ -316,31 +317,44 @@ const ExpensesPage = () => {
         setTotalExpenses((prevTotal) => prevTotal + difference); // Adjust totalExpenses based on the difference
         setEditingIndex(null);
 
-        // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
-        const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
-        const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+        // Format the date for `salesExpensesToday` (strip leading zeroes for M/D/YYYY format)
+        const now = new Date();
+        const formattedDate =
+          selectedDate.docID === now.toISOString().split("T")[0]
+            ? `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}` // Today: MM/DD/YYYY
+            : `${parseInt(selectedDate.docID.split("-")[1], 10)}/${parseInt(
+                selectedDate.docID.split("-")[2],
+                10
+              )}/${selectedDate.docID.split("-")[0]}`; // Selected date: MM/DD/YYYY
 
         // Submit to salesData collection
-        const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
+        const salesDocumentId = "salesExpensesToday"; // Fixed document ID for sales data
         const salesDataRef = doc(db, "salesData", salesDocumentId);
+
+        // Fetch and merge existing sales data for the specific date
+        const salesDocSnap = await getDoc(salesDataRef);
+        let existingExpenses = 0;
+        if (
+          salesDocSnap.exists() &&
+          salesDocSnap.data().Expenses?.data?.[formattedDate]
+        ) {
+          existingExpenses = salesDocSnap.data().Expenses.data[formattedDate];
+        }
 
         // Update the salesData document
         const expensesData = {
           Expenses: {
             data: {
-              [formattedDate]: currentTotalExpenses + difference, // Use the updated total expenses for the formatted date
+              [formattedDate]: existingExpenses + difference, // Update based on the difference
             },
           },
         };
 
-        // Merge the new expenses data with the existing document
-        try {
-          await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
-        } catch (error) {
-          console.error("Error updating sales data: ", error);
-        }
+        await setDoc(salesDataRef, expensesData, { merge: true }); // Merge to avoid overwriting other fields
+
+        console.log(`Successfully updated ${formattedDate} in salesData!`);
       } catch (error) {
-        console.error("Error updating document: ", error);
+        console.error("Error updating document or sales data:", error);
       }
     } else {
       console.error("No expense document is selected.");
@@ -361,15 +375,17 @@ const ExpensesPage = () => {
         // Remove the specific expense from the array
         updatedExpenses.splice(index, 1); // Remove the expense at the specified index
 
+        // Calculate the updated total expenses
+        const updatedTotalExpenses =
+          selectedDate.totalExpenses - removedExpenseAmount;
+
         // Update the document in Firestore
         await updateDoc(expenseDocRef, {
           addedExpenses: updatedExpenses,
-          totalExpenses: selectedDate.totalExpenses - removedExpenseAmount, // Update totalExpenses accordingly
+          totalExpenses: updatedTotalExpenses, // Update totalExpenses accordingly
         });
 
         // Update the selectedDate in local state immediately
-        const updatedTotalExpenses =
-          selectedDate.totalExpenses - removedExpenseAmount;
         setSelectedDate({
           ...selectedDate,
           addedExpenses: updatedExpenses,
@@ -395,9 +411,15 @@ const ExpensesPage = () => {
 
         console.log("Expense removed successfully");
 
-        // Format the date from selectedDate.docID (which is assumed to be in YYYY-MM-DD format)
-        const dateParts = selectedDate.docID.split("-"); // Split the date string into parts
-        const formattedDate = `${dateParts[1]}/${dateParts[2]}/${dateParts[0]}`; // Format as MM/DD/YYYY
+        // Format the date for salesData (strip leading zeroes for M/D/YYYY format)
+        const now = new Date();
+        const formattedDate =
+          selectedDate.docID === now.toISOString().split("T")[0]
+            ? `${now.getMonth() + 1}/${now.getDate()}/${now.getFullYear()}` // Today: MM/DD/YYYY
+            : `${parseInt(selectedDate.docID.split("-")[1], 10)}/${parseInt(
+                selectedDate.docID.split("-")[2],
+                10
+              )}/${selectedDate.docID.split("-")[0]}`; // Selected date: MM/DD/YYYY
 
         // Submit to salesData collection
         const salesDocumentId = "salesExpensesToday"; // Use a fixed document ID for today
@@ -412,9 +434,12 @@ const ExpensesPage = () => {
           },
         };
 
-        await setDoc(salesDataRef, expensesData, { merge: true }); // Use merge to avoid overwriting other fields
+        // Merge the new expenses data with the existing document
+        await setDoc(salesDataRef, expensesData, { merge: true });
+
+        console.log(`Sales data for ${formattedDate} updated successfully.`);
       } catch (error) {
-        console.error("Error updating sales data: ", error);
+        console.error("Error updating sales data:", error);
       }
       setEditingIndex(null);
     } else {
@@ -425,6 +450,7 @@ const ExpensesPage = () => {
   const handleDelete = async () => {
     if (selectedDate) {
       try {
+        // Delete the selected document from the "cafeExpenses" collection
         await deleteDoc(doc(db, "cafeExpenses", selectedDate.docID));
 
         setExpenseDocs((prevDocs) => {
@@ -442,7 +468,39 @@ const ExpensesPage = () => {
         // Reset selected date after deletion
         setSelectedDate(null);
 
-        console.log("Document deleted successfully");
+        // Delete the corresponding date in "salesData" collection
+        const salesDocumentId = "salesExpensesToday";
+        const salesDataRef = doc(db, "salesData", salesDocumentId);
+        const salesDataSnap = await getDoc(salesDataRef);
+
+        if (salesDataSnap.exists()) {
+          const salesData = salesDataSnap.data();
+
+          // Format the date to match "salesData" keys
+          const dateParts = selectedDate.docID.split("-");
+          const formattedDate = `${parseInt(dateParts[1], 10)}/${parseInt(
+            dateParts[2],
+            10
+          )}/${dateParts[0]}`; // M/D/YYYY format
+
+          if (salesData.Expenses?.data?.[formattedDate]) {
+            const updatedSalesData = { ...salesData.Expenses.data };
+            delete updatedSalesData[formattedDate]; // Remove the specific date
+
+            // Update the salesData document
+            await updateDoc(salesDataRef, {
+              "Expenses.data": updatedSalesData,
+            });
+
+            console.log(`Date ${formattedDate} removed from salesData.`);
+          } else {
+            console.warn(`Date ${formattedDate} not found in salesData.`);
+          }
+        } else {
+          console.warn("Sales data document does not exist.");
+        }
+
+        console.log("Document and related sales data deleted successfully.");
       } catch (error) {
         console.error("Error deleting document:", error);
       }
