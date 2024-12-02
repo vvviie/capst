@@ -106,11 +106,11 @@ const ViewVouchers = () => {
         {selectedVoucher ? (
           <>
             {/* VOUCHER TITLE */}
-            <h1 className="font-bold text-orange-950 text-xl">
+            <h1 className="font-bold text-orange-950 text-xs">
               {selectedVoucher.title}
             </h1>
             {/* VOUCHER DESCRIPTION */}
-            <p className="text-sm">{selectedVoucher.desc}</p>
+            <p className="text-sm text-center">{selectedVoucher.desc}</p>
 
             {/* Render threshold message if thresholdUse is true */}
             {selectedVoucher?.thresholdUse && (
