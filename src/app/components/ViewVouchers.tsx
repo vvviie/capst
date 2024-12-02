@@ -175,7 +175,7 @@ const ViewVouchers = () => {
             Select a voucher
           </h1>
           {/* VOUCHERS CONTAINER */}
-          <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-clip lg:grid-cols-3">
             {vouchers.map((vouch) => (
               // VOUCHERS
               <span
@@ -185,7 +185,7 @@ const ViewVouchers = () => {
                   selectedVoucher?.id === vouch.id
                     ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
                     : "bg-white text-gray-700 hover:bg-gray-50"
-                } font-bold text-center
+                } font-bold text-center text-xs
                                 rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
               >
                 {vouch.title}
