@@ -335,11 +335,24 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
                   font-size: 2.2em; /* Larger font size for labels */
                 }
                 img {
-                  width: 2000px; /* Larger width for the chart image */
+                  width: 1000px; /* Adjusted width for the chart image */
                   height: auto; /* Maintain aspect ratio */
                 }
                 hr {
                   margin: 20px 0; /* Add spacing around the horizontal rule */
+                }
+                table {
+                  margin: 0 auto;
+                  border-collapse: collapse;
+                  width: 80%;
+                }
+                th, td {
+                  border: 1px solid #ddd;
+                  padding: 8px;
+                  text-align: center;
+                }
+                th {
+                  background-color: #f2f2f2;
                 }
               </style>
             </head>
@@ -352,7 +365,7 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
                     ? "Weekly Sales and Expenses"
                     : "Yearly Sales and Expenses"
                 }</h3>
-                
+  
                 ${
                   timeFrame === "today"
                     ? `<p>Sales: PHP ${chartData?.datasets[0]?.data[0]
@@ -390,10 +403,72 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
                     ? `<p>${weeklyChartData.additionalLabel}</p>`
                     : ""
                 }
-                
               </div>
+  
               <img src="${chartImage}" alt="Sales and Expenses Chart" />
               <hr />
+              <table>
+                <thead>
+                  <tr>
+                    <th>${
+                      timeFrame === "today"
+                        ? "Item"
+                        : timeFrame === "week"
+                        ? "Day"
+                        : "Month"
+                    }</th>
+                    <th>Sales (PHP)</th>
+                    <th>Expenses (PHP)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${
+                    timeFrame === "today"
+                      ? `<tr>
+                          <td>Today</td>
+                          <td>${chartData?.datasets[0]?.data[0]
+                            .toFixed(2)
+                            .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          <td>${chartData?.datasets[1]?.data[0]
+                            .toFixed(2)
+                            .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                        </tr>`
+                      : timeFrame === "week"
+                      ? weeklyChartData.datasets[0].data
+                          .map(
+                            (sales, index) => `
+                          <tr>
+                            <td>Day ${index + 1}</td>
+                            <td>${sales
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                            <td>${weeklyChartData.datasets[1].data[index]
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          </tr>
+                        `
+                          )
+                          .join("")
+                      : yearlyChartData.labels
+                          .map(
+                            (month, index) => `
+                          <tr>
+                            <td>${month}</td>
+                            <td>${yearlyChartData.datasets[0].data[index]
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                            <td>${yearlyChartData.datasets[1].data[index]
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          </tr>
+                        `
+                          )
+                          .join("")
+                  }
+                </tbody>
+              </table>
+  
               <p style="font-size: 30px;">Printed on: ${currentDateTime}</p>
               <script>
                 window.onload = () => { setTimeout(() => window.print(), 500); };
