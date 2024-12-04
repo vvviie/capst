@@ -490,32 +490,10 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
         <>
           {timeFrame === "today" && salesExpensesToday && (
             <div className="flex flex-col items-center">
-              <div className="flex items-center mb-4">
-                <span className="text-[#60A66F] font-bold">
-                Today&apos;s Net Sales:
-                </span>
-                <span className="ml-2">
-                  PHP{" "}
-                  {chartData?.datasets[0]?.data[0]
-                    .toFixed(2)
-                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                </span>
-                <span className="mx-2">|</span>
-                <span className="text-[#F0565F] font-bold">
-                  Today&apos;s Expenses:
-                </span>
-                <span className="ml-2">
-                  PHP{" "}
-                  {chartData?.datasets[1]?.data[0]
-                    .toFixed(2)
-                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-                </span>
-              </div>
-
               {/* Print button for today */}
               <button
                 onClick={handlePrint}
-                className="font-bold h-10 bg-[#7C2D12] max-w-[170px] w-full text-white duration-200
+                className="font-bold h-10 bg-[#7C2D12] max-w-[180px] w-full text-white duration-200
           rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:scale-[1.02] py-2 px-4"
               >
                 Print Chart Data
@@ -550,7 +528,7 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
               {/* Print button for year */}
               <button
                 onClick={handlePrint}
-                className="font-bold h-10 bg-[#7C2D12] max-w-[170px] w-full text-white duration-200
+                className="font-bold h-10 bg-[#7C2D12] max-w-[180px] w-full text-white duration-200
           rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:scale-[1.02] py-2 px-4"
               >
                 Print Chart Data
@@ -590,7 +568,7 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
               {/* Print button for week */}
               <button
                 onClick={handlePrint}
-                className="font-bold h-10 bg-[#7C2D12] max-w-[170px] w-full text-white duration-200
+                className="font-bold h-10 bg-[#7C2D12] max-w-[180px] w-full text-white duration-200
           rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:scale-[1.02] py-2 px-4"
               >
                 Print Chart Data
