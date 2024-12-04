@@ -14,7 +14,7 @@ const statusOptions: FilterOption[] = [
   { id: 4, name: "TO PAY", value: "TO PAY" },
   { id: 5, name: "PAID", value: "PAID" },
   { id: 6, name: "REJECTED", value: "REJECTED" },
-  { id: 7, name: "CANCELED", value: "CANCELED" },
+  { id: 7, name: "CANCELLED", value: "CANCELLED" },
   { id: 8, name: "DONE", value: "DONE" },
 ];
 

@@ -54,6 +54,7 @@ const AdminHomePage = () => {
     TopSpendingCustomer[]
   >([]);
   const [isOrderingEnabled, setIsOrderingEnabled] = useState(true);
+  const [exportedData, setExportedData] = useState<any>(null);
 
   // Fetch the current foodCartAvailable value when component mounts
   useEffect(() => {
@@ -93,6 +94,19 @@ const AdminHomePage = () => {
       setIsOrderingEnabled(newFoodCartAvailable);
     } catch (error) {
       console.error("Error updating document:", error);
+    }
+  };
+
+  const handleExportData = (data: any) => {
+    setExportedData(data); // Save the chart data
+  };
+
+  const handlePrintData = () => {
+    if (exportedData) {
+      console.log("Labels:", exportedData.labels);
+      console.log("Data:", exportedData.datasets.map((d: any) => d.data));
+    } else {
+      console.log("No data to print");
     }
   };
 
@@ -281,7 +295,7 @@ const AdminHomePage = () => {
               Net Sales and Expenses -{" "}
               {timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)}
             </h1>
-            <NetSalesExpensesGraph timeFrame={timeFrame} />
+            <NetSalesExpensesGraph timeFrame={timeFrame}/>
           </div>
 
           {/* FOODS AND DRINKS SOLD SECTION */}

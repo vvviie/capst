@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -29,7 +29,8 @@ ChartJS.register(
 );
 
 interface NetSalesExpensesGraphProps {
-  timeFrame: string; // Adjust the type based on your actual data (e.g., 'string', 'number', or a union type).
+  timeFrame: string;
+  onExportImage?: (image: string) => void; // Add a callback to pass the chart image
 }
 
 interface SalesData {
@@ -70,7 +71,9 @@ interface YearlyChartData {
 
 const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
   timeFrame,
+  onExportImage,
 }) => {
+  const chartRef = useRef<any>(null);
   const [salesExpensesToday, setSalesExpensesToday] = useState<any>(null);
   const options = {
     responsive: true,
@@ -308,42 +311,294 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
   const yearlyChartData = chartData as YearlyChartData;
   const weeklyChartData = chartData as WeeklyChartData;
 
+  const handlePrint = () => {
+    if (chartRef.current?.toBase64Image) {
+      const chartImage = chartRef.current.toBase64Image();
+
+      const printWindow = window.open("", "_blank");
+      if (printWindow) {
+        // Get the current date and time
+        const currentDateTime = new Date().toLocaleString();
+
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Print Chart</title>
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  text-align: center;
+                }
+                .labels {
+                  margin-top: 20px;
+                  margin-bottom: 20px;
+                  font-size: 2.2em; /* Larger font size for labels */
+                }
+                img {
+                  width: 1000px; /* Adjusted width for the chart image */
+                  height: auto; /* Maintain aspect ratio */
+                }
+                hr {
+                  margin: 20px 0; /* Add spacing around the horizontal rule */
+                }
+                table {
+                  margin: 0 auto;
+                  border-collapse: collapse;
+                  width: 80%;
+                }
+                th, td {
+                  border: 1px solid #ddd;
+                  padding: 8px;
+                  text-align: center;
+                }
+                th {
+                  background-color: #f2f2f2;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="labels">
+                <h3>${
+                  timeFrame === "today"
+                    ? "Today's Sales and Expenses"
+                    : timeFrame === "week"
+                    ? "Weekly Sales and Expenses"
+                    : "Yearly Sales and Expenses"
+                }</h3>
+  
+                ${
+                  timeFrame === "today"
+                    ? `<p>Sales: PHP ${chartData?.datasets[0]?.data[0]
+                        .toFixed(2)
+                        .replace(
+                          /\B(?=(\d{3})+(?!\d))/g,
+                          ","
+                        )} | Expenses: PHP ${chartData?.datasets[1]?.data[0]
+                        .toFixed(2)
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</p>`
+                    : timeFrame === "week"
+                    ? `<p>Total Weekly Sales: PHP ${weeklyChartData.datasets[0].data
+                        .reduce((a, b) => a + b, 0)
+                        .toFixed(2)
+                        .replace(
+                          /\B(?=(\d{3})+(?!\d))/g,
+                          ","
+                        )} | Total Weekly Expenses: PHP ${weeklyChartData.datasets[1].data
+                        .reduce((a, b) => a + b, 0)
+                        .toFixed(2)
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</p>`
+                    : timeFrame === "year"
+                    ? `<p>Total Sales: PHP ${yearlyChartData.totalSales
+                        .toFixed(2)
+                        .replace(
+                          /\B(?=(\d{3})+(?!\d))/g,
+                          ","
+                        )} | Total Expenses: PHP ${yearlyChartData.totalExpenses
+                        .toFixed(2)
+                        .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</p>`
+                    : ""
+                }
+                ${
+                  timeFrame === "week" && weeklyChartData.additionalLabel
+                    ? `<p>${weeklyChartData.additionalLabel}</p>`
+                    : ""
+                }
+              </div>
+  
+              <img src="${chartImage}" alt="Sales and Expenses Chart" />
+              <hr />
+              <table>
+                <thead>
+                  <tr>
+                    <th>${
+                      timeFrame === "today"
+                        ? "Day"
+                        : timeFrame === "week"
+                        ? "Day"
+                        : "Month"
+                    }</th>
+                    <th>Sales (PHP)</th>
+                    <th>Expenses (PHP)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${
+                    timeFrame === "today"
+                      ? `<tr>
+                          <td>Today</td>
+                          <td>${chartData?.datasets[0]?.data[0]
+                            .toFixed(2)
+                            .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          <td>${chartData?.datasets[1]?.data[0]
+                            .toFixed(2)
+                            .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                        </tr>`
+                      : timeFrame === "week"
+                      ? weeklyChartData.datasets[0].data
+                          .map(
+                            (sales, index) => `
+                          <tr>
+                            <td>Day ${index + 1}</td>
+                            <td>${sales
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                            <td>${weeklyChartData.datasets[1].data[index]
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          </tr>
+                        `
+                          )
+                          .join("")
+                      : yearlyChartData.labels
+                          .map(
+                            (month, index) => `
+                          <tr>
+                            <td>${month}</td>
+                            <td>${yearlyChartData.datasets[0].data[index]
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                            <td>${yearlyChartData.datasets[1].data[index]
+                              .toFixed(2)
+                              .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}</td>
+                          </tr>
+                        `
+                          )
+                          .join("")
+                  }
+                </tbody>
+              </table>
+  
+              <p style="font-size: 30px;">Printed on: ${currentDateTime}</p>
+              <script>
+                window.onload = () => { setTimeout(() => window.print(), 500); };
+              </script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    } else {
+      console.error("Chart reference is null");
+    }
+  };
+
+  const chartInstance = chartRef.current;
+
   return (
     <>
       {chartData && (
         <>
+          {timeFrame === "today" && salesExpensesToday && (
+            <div className="flex flex-col items-center">
+              <div className="flex items-center mb-4">
+                <span className="text-[#60A66F] font-bold">
+                  Today's Net Sales:
+                </span>
+                <span className="ml-2">
+                  PHP{" "}
+                  {chartData?.datasets[0]?.data[0]
+                    .toFixed(2)
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </span>
+                <span className="mx-2">|</span>
+                <span className="text-[#F0565F] font-bold">
+                  Today's Expenses:
+                </span>
+                <span className="ml-2">
+                  PHP{" "}
+                  {chartData?.datasets[1]?.data[0]
+                    .toFixed(2)
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </span>
+              </div>
+
+              {/* Print button for today */}
+              <button
+                onClick={handlePrint}
+                className="font-bold h-10 bg-[#7C2D12] max-w-[170px] w-full text-white duration-200
+          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:scale-[1.02] py-2 px-4"
+              >
+                Print Chart Data
+              </button>
+            </div>
+          )}
+
           {timeFrame === "year" && (
-            <div className="flex items-center">
-              <span className="text-[#60A66F] font-bold">Total Net Sales:</span>
-              <span className="ml-2">
-                PHP{" "}
-                {yearlyChartData.totalSales
-                  .toFixed(2)
-                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </span>
-              <span className="mx-2">|</span>
-              <span className="text-[#F0565F] font-bold">Total Expenses:</span>
-              <span className="ml-2">
-                PHP{" "}
-                {yearlyChartData.totalExpenses
-                  .toFixed(2)
-                  .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
-              </span>
+            <div className="flex flex-col items-center">
+              <div className="flex items-center mb-4">
+                <span className="text-[#60A66F] font-bold">
+                  Total Net Sales:
+                </span>
+                <span className="ml-2">
+                  PHP{" "}
+                  {yearlyChartData.totalSales
+                    .toFixed(2)
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </span>
+                <span className="mx-2">|</span>
+                <span className="text-[#F0565F] font-bold">
+                  Total Expenses:
+                </span>
+                <span className="ml-2">
+                  PHP{" "}
+                  {yearlyChartData.totalExpenses
+                    .toFixed(2)
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </span>
+              </div>
+
+              {/* Print button for year */}
+              <button
+                onClick={handlePrint}
+                className="font-bold h-10 bg-[#7C2D12] max-w-[170px] w-full text-white duration-200
+          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:scale-[1.02] py-2 px-4"
+              >
+                Print Chart Data
+              </button>
             </div>
           )}
 
           {timeFrame === "week" && (
-            <>
+            <div className="flex flex-col items-center">
               {weeklyChartData.additionalLabel && (
                 <div className="text-center font-bold mb-2">
                   {weeklyChartData.additionalLabel}
                 </div>
               )}
-              {/* No total sales or expenses displayed for week */}
-            </>
+              <div className="flex items-center mb-4">
+                <span className="text-[#60A66F] font-bold">Weekly Sales:</span>
+                <span className="ml-2">
+                  PHP{" "}
+                  {weeklyChartData.datasets[0].data
+                    .reduce((a, b) => a + b, 0)
+                    .toFixed(2)
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </span>
+                <span className="mx-2">|</span>
+                <span className="text-[#F0565F] font-bold">
+                  Weekly Expenses:
+                </span>
+                <span className="ml-2">
+                  PHP{" "}
+                  {weeklyChartData.datasets[1].data
+                    .reduce((a, b) => a + b, 0)
+                    .toFixed(2)
+                    .replace(/\B(?=(\d{3})+(?!\d))/g, ",")}
+                </span>
+              </div>
+
+              {/* Print button for week */}
+              <button
+                onClick={handlePrint}
+                className="font-bold h-10 bg-[#7C2D12] max-w-[170px] w-full text-white duration-200
+          rounded-md shadow-md text-sm sm:text-base sm:max-w-[200px] hover:scale-[1.02] py-2 px-4"
+              >
+                Print Chart Data
+              </button>
+            </div>
           )}
 
-          <Bar options={options} data={chartData} />
+          <Bar ref={chartRef} options={options} data={chartData} />
         </>
       )}
     </>
