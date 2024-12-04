@@ -492,7 +492,7 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
             <div className="flex flex-col items-center">
               <div className="flex items-center mb-4">
                 <span className="text-[#60A66F] font-bold">
-                  Today's Net Sales:
+                Today&apos;s Net Sales:
                 </span>
                 <span className="ml-2">
                   PHP{" "}
@@ -502,7 +502,7 @@ const NetSalesExpensesGraph: React.FC<NetSalesExpensesGraphProps> = ({
                 </span>
                 <span className="mx-2">|</span>
                 <span className="text-[#F0565F] font-bold">
-                  Today's Expenses:
+                  Today&apos;s Expenses:
                 </span>
                 <span className="ml-2">
                   PHP{" "}
