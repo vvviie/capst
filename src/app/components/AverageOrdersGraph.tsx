@@ -64,7 +64,6 @@ const AverageOrdersGraph = () => {
         const ordersData: OrdersData = {};
 
         querySnapshot.forEach((doc) => {
-          // Cast the document data to OrderData type
           const data = doc.data() as OrderData;
           ordersData[doc.id] = data; // Store the data using the document ID as the key
         });
@@ -241,7 +240,7 @@ const AverageOrdersGraph = () => {
       x: {
         title: {
           display: true,
-          text: "Date",
+          text: "List of Dates",
         },
       },
       y: {

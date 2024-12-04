@@ -201,10 +201,10 @@ const FoodDrinkSalesGraph: React.FC<FoodDrinkSalesGraphProps> = ({
     const dayLabels = datesOfWeek.map((date) => {
       const dayIndex = new Date(date).getDay();
       const dayName = dayNames[dayIndex];
-      return `${dayName}\n(${date})`;
+      return dayName;
     });
 
-    const additionalLabel = `Weekly Report: ${dayLabels[0]} to ${dayLabels[6]}`;
+    const additionalLabel = `${dayLabels[0]} to ${dayLabels[6]}`;
 
     return {
       labels: dayLabels,
@@ -500,12 +500,18 @@ const FoodDrinkSalesGraph: React.FC<FoodDrinkSalesGraphProps> = ({
             chartData &&
             "additionalLabel" in chartData &&
             chartData.additionalLabel && (
-              <div className="text-center font-bold mb-2">
+              <div className="text-center mb-2">
+                Weekly Report: From
+                <span className="font-medium text-green-600">{" "}(Last) </span>{" "}
+                {/* Style for "Last" */}
                 {chartData.additionalLabel}
+                <span className="font-semibold text-red-500">
+                {" "}(Today)
+                </span>{" "}
+                {/* Style for "Today" */}
               </div>
             )}
 
-          
           {/* Print button for week */}
           <button
             onClick={handlePrint}
