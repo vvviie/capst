@@ -192,9 +192,3 @@ The Fikastalle Restaurant Management System simplifies and enhances restaurant o
 3. Explore menus, place orders, and manage bookings seamlessly.  
 
 ---
-
-## License  
-
-This project is licensed under [MIT License](https://opensource.org/licenses/MIT).  
-
----
