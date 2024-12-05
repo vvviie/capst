@@ -548,7 +548,7 @@ const OrdersPage = () => {
         doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
+        doc.text("ORDER DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
