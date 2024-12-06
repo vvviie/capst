@@ -608,7 +608,7 @@ const AccountsListPage = () => {
                       </p>
                     </div>
                     {/* ACTIONS */}
-                    <div className="w-full flex gap-2 items-center">
+                    <div className="w-full flex gap-2 items-center justify-end">
                       {/* EDIT BUTTON */}
                       {/* <Link
                         href={`/fkstllaccounts/editusers/${users.username}`}
@@ -617,7 +617,7 @@ const AccountsListPage = () => {
                     >
                         Edit
                     </Link> */}
-                      {/* GIVE VOUCHER BUTTON */}
+                      {/* GIVE VOUCHER BUTTON
                       <button
                         className="h-10 w-2/3 bg-white border-2 border-gray-100 font-bold rounded-md shadow-md
                                     hover:bg-gray-50 hover:scale-[1.02] duration-200 mt-2 text-gray-500"
@@ -628,7 +628,7 @@ const AccountsListPage = () => {
                         }}
                       >
                         Send Discount
-                      </button>
+                      </button> */}
                       {/* DELETE BUTTON */}
                       <button
                         className="h-10 w-1/3 bg-red-500 font-bold text-white rounded-md shadow-md

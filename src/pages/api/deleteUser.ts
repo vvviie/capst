@@ -21,7 +21,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         try {
-            // Fetch user document based on the username
             const userQuery = await admin.firestore().collection("users").where("username", "==", username).get();
 
             console.log("Documents found:", userQuery.size);
@@ -31,38 +30,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 return res.status(404).json({ error: "User not found" });
             }
 
-            // Assuming the username is unique and will return one user
             const userDoc = userQuery.docs[0];
-
-            // Get the UID from Firebase Authentication using the username (email)
             const userRecord = await admin.auth().getUserByEmail(username);
+            const userId = userRecord.uid;
 
-            // Log the UID of the user
-            const userId = userRecord.uid; // Correct UID from Firebase Auth
             console.log(`User UID: ${userId}`);
 
-            // Delete user from Firebase Auth
             await admin.auth().deleteUser(userId);
-            // Delete user from Firestore
-            await admin.firestore().collection("users").doc(userDoc.id).delete();
+            console.log(`Auth user ${userId} deleted successfully.`);
 
-            console.log(`User with UID: ${userId} deleted successfully.`); // Log successful deletion
+            await admin.firestore().collection("users").doc(userDoc.id).delete();
+            console.log(`Firestore user document ${userDoc.id} deleted successfully.`);
+
             return res.status(200).json({ message: "User deleted successfully" });
         } catch (error: unknown) {
             console.error("Error deleting user:", error);
 
-            // Check if error is an instance of Error and has a code property
+            if (typeof error === "string") {
+                return res.status(500).json({ error });
+            }
+
             if (error instanceof Error) {
-                // Handle Firebase error codes
+                console.error("Error details:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+
                 if ((error as any).code === 'auth/user-not-found') {
                     return res.status(404).json({ error: "User not found" });
                 }
 
-                // Generic error handling for other cases
                 return res.status(500).json({ error: error.message || "Failed to delete user" });
             }
 
-            // Fallback for unknown error types
             return res.status(500).json({ error: "An unknown error occurred" });
         }
     } else {
