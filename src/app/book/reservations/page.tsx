@@ -110,16 +110,16 @@ const ReservationsPage = () => {
   useEffect(() => {
     const fetchReservations = async () => {
       if (!userEmail) return;
-
+  
       try {
         const reservationsRef = collection(db, "tableReservations");
         const querySnapshot = await getDocs(
           query(reservationsRef, where("reservedBy", "==", userEmail))
         );
-
+  
         const fetchedReservations = querySnapshot.docs.map((doc) => {
           const data = doc.data();
-
+  
           // Parse buffetChosen from the stored object with comma-separated values
           const buffetChosen: BuffetItem[] = Object.entries(data.buffetChosen || {}).map(
             ([title, foods]: [string, unknown]) => ({
@@ -127,14 +127,12 @@ const ReservationsPage = () => {
               foods: (foods as string).split(",").map((food) => food.trim()),
             })
           );
-
+  
           return {
             id: doc.id,
             type: data.type,
-            dateReserved: new Date(data.dateReserved).toLocaleDateString(),
-            dateToBeReserved: new Date(
-              data.dateToBeReserved
-            ).toLocaleDateString(),
+            dateReserved: parseDate(data.dateReserved), // Convert to Date object
+            dateToBeReserved: parseDate(data.dateToBeReserved), // Convert to Date object
             timeReserved: data.timeReserved || "N/A",
             timeToBeReserved: data.timeToBeReserved || "N/A",
             numberOfPersons: data.numberOfPersons || 1,
@@ -149,14 +147,32 @@ const ReservationsPage = () => {
             remarks: data.remarks || "None",
           };
         });
-
-        setReservations(fetchedReservations);
-        setHasReservation(fetchedReservations.length > 0);
+  
+        // Sort fetchedReservations by dateToBeReserved in descending order
+        fetchedReservations.sort((a, b) => {
+          return b.dateToBeReserved.getTime() - a.dateToBeReserved.getTime(); // Compare Date objects using getTime()
+        });
+  
+        // Convert dates to locale strings for display
+        const formattedReservations = fetchedReservations.map(reservation => ({
+          ...reservation,
+          dateReserved: reservation.dateReserved.toLocaleDateString(),
+          dateToBeReserved: reservation.dateToBeReserved.toLocaleDateString(),
+        }));
+  
+        setReservations(formattedReservations);
+        setHasReservation(formattedReservations.length > 0);
       } catch (error) {
         console.error("Error fetching reservations:", error);
       }
     };
-
+  
+    // Helper function to parse date strings in "MM/DD/YYYY" format
+    const parseDate = (dateString: string) => {
+      const [month, day, year] = dateString.split("/").map(Number);
+      return new Date(year, month - 1, day); // Month is 0-indexed in JavaScript
+    };
+  
     fetchReservations();
   }, [userEmail]);
 
