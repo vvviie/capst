@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import admin from "firebase-admin";
 import serviceAccount from '../../app/adminsettings/adminsettings.json';
 
+// working fine
 // Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     admin.initializeApp({
