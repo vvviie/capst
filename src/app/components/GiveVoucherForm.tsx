@@ -51,20 +51,24 @@ interface GiveVoucherFormProps {
 interface User {
   id: string;
   totalPaid: number;
-  vouchers: { [key: string]: any };  // Add the vouchers property here
+  vouchers: { [key: string]: any }; // Add the vouchers property here
 }
 
-
-const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({ isOpen, toggleForm, selectedVoucher }) => {
+const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({
+  isOpen,
+  toggleForm,
+  selectedVoucher,
+}) => {
   const formRef = useRef<HTMLFormElement>(null);
   const [type, setType] = useState("user"); // Set the initial value to match the first option
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
   const [email, setEmail] = useState("");
-  const [recipients, setRecipients] = useState<string[]>([]); 
+  const [recipients, setRecipients] = useState<string[]>([]);
   const [activeRecipient, setActiveRecipient] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [tierError, setTierError] = useState("");
   const db = getFirestore();
+  const [voucherError, setVoucherError] = useState("");
 
   // Log selected voucher when the component renders or when it opens
   const handlePopUp = async (id: string) => {
@@ -146,7 +150,7 @@ const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({ isOpen, toggleForm, s
       return;
     }
     checkUserExists(email);
-
+    setEmail("");
     setTimeout(() => {
       setError("");
     }, 4000);
@@ -170,195 +174,226 @@ const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({ isOpen, toggleForm, s
   }, [isOpen, selectedVoucher]);
 
   const sendVoucherToRecipients = async () => {
-  if (type === "user") {
-    // Handle sending voucher to users
+    if (type === "user") {
+      // Handle sending voucher to users
 
-    if (recipients.length === 0) {
-      setError("Please add a recipient.");
-      setTimeout(() => setError(""), 4000);
-      return;
-    }
-
-    try {
-      for (const recipient of recipients) {
-        const now = new Date();
-        const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}/${now.getFullYear()}`;
-        const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-
-        const userDocRef = doc(db, "users", recipient);
-        const userDoc = await getDoc(userDocRef);
-        const userData = userDoc.data();
-        const userVouchers = userData?.vouchers || {};
-
-        const voucherKey = selectedVoucher.id;
-        console.log("Selected Voucher Key:", voucherKey);
-
-        if (!selectedVoucher || !voucherKey || !selectedVoucher.voucherName) {
-          console.error("Selected voucher is missing required properties.");
-          setError("Selected voucher is missing required properties.");
-          continue;
-        }
-
-        const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey));
-        const voucherData = voucherDoc.data();
-
-        if (!voucherData) {
-          console.error(`Voucher with key ${voucherKey} does not exist.`);
-          setError(`Voucher not found: ${voucherKey}`);
-          continue;
-        }
-
-        const voucherToAssign = {
-          used: false,
-          isRead: false,
-          isNotifDeleted: false,
-          dateCreated: date,
-          timeCreated: time,
-          available: voucherData.available,
-          deductionType: voucherData.deductionType,
-          thresholdCondition: voucherData.thresholdCondition || null,
-          thresholdUse: voucherData.thresholdUse,
-          usageLimitType: voucherData.usageLimitType,
-          validityType: voucherData.validityType,
-          validityDate: voucherData.validityDate || null,
-          voucherDeduction: voucherData.voucherDeduction,
-          voucherDescription: voucherData.voucherDescription,
-          voucherID: voucherData.voucherID,
-          voucherName: voucherData.voucherName,
-        };
-
-        // Only assign the voucher if not already assigned
-        if (!userVouchers[voucherKey]) {
-          userVouchers[voucherKey] = voucherToAssign;
-          await updateDoc(userDocRef, { vouchers: userVouchers });
-          console.log(`Voucher assigned to ${recipient}`);
-        } else {
-          console.log(`Voucher already assigned to ${recipient}`);
-        }
+      if (recipients.length === 0) {
+        setError("Please add a recipient.");
+        setTimeout(() => setError(""), 4000);
+        return;
       }
 
-      setIsPopUpVisible(true);
-      setTimeout(() => {
-        setIsPopUpVisible(false);
-        toggleForm();
-      }, 750);
+      let voucherAssigned = false; // Track if any voucher was assigned
 
-      // Reset input and recipient states
-      setEmail("");
-      setRecipients([]);
-    } catch (error) {
-      console.error("Error sending voucher:", error);
-      setError("Failed to send voucher. Please try again.");
-    }
-  } else if (type === "tier") {
-    // Handle sending voucher to tiers
-    const selectedTiers = tierList.filter(tier => {
-      const checkbox = document.getElementById(`input${tier.value}`) as HTMLInputElement;
-      return checkbox && checkbox.checked;
-    });
+      try {
+        for (const recipient of recipients) {
+          const now = new Date();
+          const date = `${String(now.getMonth() + 1).padStart(2, "0")}/${String(
+            now.getDate()
+          ).padStart(2, "0")}/${now.getFullYear()}`;
+          const time = `${String(now.getHours()).padStart(2, "0")}:${String(
+            now.getMinutes()
+          ).padStart(2, "0")}`;
 
-    if (selectedTiers.length === 0) {
-      setTierError("Please select at least one tier.");
-      return;
-    }
+          const userDocRef = doc(db, "users", recipient);
+          const userDoc = await getDoc(userDocRef);
+          const userData = userDoc.data();
+          const userVouchers = userData?.vouchers || {};
 
-    setTierError(""); // Clear error if at least one tier is selected
+          const voucherKey = selectedVoucher.id;
+          console.log("Selected Voucher Key:", voucherKey);
 
-    try {
-      const usersSnapshot = await getDocs(collection(db, "users"));
-      const users = usersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      for (const tier of selectedTiers) {
-        for (const user of users) {
-          let shouldSendVoucher = false;
-
-          const typedUser = user as User;
-
-          // Determine if user qualifies for the tier
-          switch (tier.value) {
-            case "Regular":
-              if (typedUser.totalPaid < 1000) shouldSendVoucher = true;
-              break;
-            case "Bronze":
-              if (typedUser.totalPaid >= 1000 && typedUser.totalPaid < 5000) shouldSendVoucher = true;
-              break;
-            case "Silver":
-              if (typedUser.totalPaid >= 5000 && typedUser.totalPaid < 10000) shouldSendVoucher = true;
-              break;
-            case "Gold":
-              if (typedUser.totalPaid >= 10000 && typedUser.totalPaid < 20000) shouldSendVoucher = true;
-              break;
-            case "Diamond":
-              if (typedUser.totalPaid >= 20000) shouldSendVoucher = true;
-              break;
-            default:
-              break;
+          if (!selectedVoucher || !voucherKey || !selectedVoucher.voucherName) {
+            console.error("Selected voucher is missing required properties.");
+            setError("Selected voucher is missing required properties.");
+            continue;
           }
 
-          // If user qualifies, assign voucher
-          if (shouldSendVoucher) {
-            const userDocRef = doc(db, "users", typedUser.id);
-            const userVouchers = typedUser.vouchers || {};
+          const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey));
+          const voucherData = voucherDoc.data();
 
-            const voucherKey = selectedVoucher.id;
+          if (!voucherData) {
+            console.error(`Voucher with key ${voucherKey} does not exist.`);
+            setError(`Voucher not found: ${voucherKey}`);
+            continue;
+          }
 
-            if (!selectedVoucher || !voucherKey || !selectedVoucher.voucherName) {
-              console.error("Selected voucher is missing required properties.");
-              continue;
+          const voucherToAssign = {
+            used: false,
+            isRead: false,
+            isNotifDeleted: false,
+            dateCreated: date,
+            timeCreated: time,
+            available: voucherData.available,
+            deductionType: voucherData.deductionType,
+            thresholdCondition: voucherData.thresholdCondition || null,
+            thresholdUse: voucherData.thresholdUse,
+            usageLimitType: voucherData.usageLimitType,
+            validityType: voucherData.validityType,
+            validityDate: voucherData.validityDate || null,
+            voucherDeduction: voucherData.voucherDeduction,
+            voucherDescription: voucherData.voucherDescription,
+            voucherID: voucherData.voucherID,
+            voucherName: voucherData.voucherName,
+          };
+
+          // Only assign the voucher if not already assigned
+          if (!userVouchers[voucherKey]) {
+            userVouchers[voucherKey] = voucherToAssign;
+            await updateDoc(userDocRef, { vouchers: userVouchers });
+            console.log(`Voucher assigned to ${recipient}`);
+            voucherAssigned = true; // Mark that a voucher was assigned
+          } else {
+            console.log(`Voucher already assigned to ${recipient}`);
+            setVoucherError("Voucher has already been given to the user!");
+            setTimeout(() => setVoucherError(""), 3000); // Clear the error after 3 seconds
+            continue; // Skip to the next recipient
+          }
+        }
+
+        // Show popup only if at least one voucher was assigned
+        if (voucherAssigned) {
+          setIsPopUpVisible(true);
+          setTimeout(() => {
+            setIsPopUpVisible(false);
+            toggleForm();
+          }, 750);
+        }
+
+        // Reset input and recipient states
+        setEmail("");
+        setRecipients([]);
+      } catch (error) {
+        console.error("Error sending voucher:", error);
+        setError("Failed to send voucher. Please try again.");
+      }
+    } else if (type === "tier") {
+      // Handle sending voucher to tiers
+      const selectedTiers = tierList.filter((tier) => {
+        const checkbox = document.getElementById(
+          `input${tier.value}`
+        ) as HTMLInputElement;
+        return checkbox && checkbox.checked;
+      });
+
+      if (selectedTiers.length === 0) {
+        setTierError("Please select at least one tier.");
+        return;
+      }
+
+      setTierError(""); // Clear error if at least one tier is selected
+
+      try {
+        const usersSnapshot = await getDocs(collection(db, "users"));
+        const users = usersSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        let voucherAssigned = false; // Track if any voucher was assigned
+
+        for (const tier of selectedTiers) {
+          for (const user of users) {
+            let shouldSendVoucher = false;
+
+            const typedUser = user as User;
+
+            // Determine if user qualifies for the tier
+            switch (tier.value) {
+              case "Regular":
+                if (typedUser.totalPaid < 1000) shouldSendVoucher = true;
+                break;
+              case "Bronze":
+                if (typedUser.totalPaid >= 1000 && typedUser.totalPaid < 5000)
+                  shouldSendVoucher = true;
+                break;
+              case "Silver":
+                if (typedUser.totalPaid >= 5000 && typedUser.totalPaid < 10000)
+                  shouldSendVoucher = true;
+                break;
+              case "Gold":
+                if (typedUser.totalPaid >= 10000 && typedUser.totalPaid < 20000)
+                  shouldSendVoucher = true;
+                break;
+              case "Diamond":
+                if (typedUser.totalPaid >= 20000) shouldSendVoucher = true;
+                break;
+              default:
+                break;
             }
 
-            const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey));
-            const voucherData = voucherDoc.data();
+            // If user qualifies, assign voucher
+            if (shouldSendVoucher) {
+              const userDocRef = doc(db, "users", typedUser.id);
+              const userVouchers = typedUser.vouchers || {};
 
-            if (!voucherData) {
-              console.error(`Voucher with key ${voucherKey} does not exist.`);
-              continue;
-            }
+              const voucherKey = selectedVoucher.id;
 
-            const voucherToAssign = {
-              used: false,
-              isRead: false,
-              isNotifDeleted: false,
-              dateCreated: new Date().toLocaleDateString(),
-              timeCreated: new Date().toLocaleTimeString(),
-              available: voucherData.available,
-              deductionType: voucherData.deductionType,
-              thresholdCondition: voucherData.thresholdCondition || null,
-              thresholdUse: voucherData.thresholdUse,
-              usageLimitType: voucherData.usageLimitType,
-              validityType: voucherData.validityType,
-              voucherDeduction: voucherData.voucherDeduction,
-              voucherDescription: voucherData.voucherDescription,
-              voucherID: voucherData.voucherID,
-              voucherName: voucherData.voucherName,
-            };
+              if (
+                !selectedVoucher ||
+                !voucherKey ||
+                !selectedVoucher.voucherName
+              ) {
+                console.error(
+                  "Selected voucher is missing required properties."
+                );
+                continue;
+              }
 
-            if (!userVouchers[voucherKey]) {
-              userVouchers[voucherKey] = voucherToAssign;
-              await updateDoc(userDocRef, { vouchers: userVouchers });
-              console.log(`Voucher assigned to ${user.id} for tier ${tier.value}`);
-            } else {
-              console.log(`Voucher already assigned to ${user.id}`);
+              const voucherDoc = await getDoc(doc(db, "vouchers", voucherKey));
+              const voucherData = voucherDoc.data();
+
+              if (!voucherData) {
+                console.error(`Voucher with key ${voucherKey} does not exist.`);
+                continue;
+              }
+
+              const voucherToAssign = {
+                used: false,
+                isRead: false,
+                isNotifDeleted: false,
+                dateCreated: new Date().toLocaleDateString(),
+                timeCreated: new Date().toLocaleTimeString(),
+                available: voucherData.available,
+                deductionType: voucherData.deductionType,
+                thresholdCondition: voucherData.thresholdCondition || null,
+                thresholdUse: voucherData.thresholdUse,
+                usageLimitType: voucherData.usageLimitType,
+                validityType: voucherData.validityType,
+                voucherDeduction: voucherData.voucherDeduction,
+                voucherDescription: voucherData.voucherDescription,
+                voucherID: voucherData.voucherID,
+                voucherName: voucherData.voucherName,
+              };
+
+              if (!userVouchers[voucherKey]) {
+                userVouchers[voucherKey] = voucherToAssign;
+                await updateDoc(userDocRef, { vouchers: userVouchers });
+                console.log(
+                  `Voucher assigned to ${user.id} for tier ${tier.value}`
+                );
+                voucherAssigned = true; // Mark that a voucher was assigned
+              } else {
+                console.log(`Voucher already assigned to ${user.id}`);
+              }
             }
           }
         }
+
+        // Show popup only if at least one voucher was assigned
+        if (voucherAssigned) {
+          setIsPopUpVisible(true);
+          setTimeout(() => {
+            setIsPopUpVisible(false);
+            toggleForm();
+          }, 750);
+        }
+      } catch (error) {
+        console.error("Error sending vouchers to tiers:", error);
+        setError("Failed to send vouchers to tiers. Please try again.");
       }
-
-      setIsPopUpVisible(true);
-      setTimeout(() => {
-        setIsPopUpVisible(false);
-        toggleForm();
-      }, 750);
-    } catch (error) {
-      console.error("Error sending vouchers to tiers:", error);
-      setError("Failed to send vouchers to tiers. Please try again.");
     }
-  }
-};
-
+  };
 
   //
   if (!isOpen) return null; // Only render if form is open
@@ -502,6 +537,14 @@ const GiveVoucherForm: React.FC<GiveVoucherFormProps> = ({ isOpen, toggleForm, s
             ))}
           </div>
         )}
+
+        {/* Error Message for Voucher */}
+        {voucherError && (
+          <div className="text-red-600 text-sm text-center mb-[-8px]">
+            {voucherError}
+          </div>
+        )}
+
         <button
           className="w-full bg-orange-950 h-10 font-bold text-white rounded-md shadow-md
           hover:bg-orange-900 hover:scale-[1.02] duration-200 mb-1"
