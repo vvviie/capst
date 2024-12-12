@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -15,7 +17,7 @@ const toCamelCase = (str: string): string => {
 
 const AdminMenuCategories = () => {
   const router = useRouter(); // Initialize useRouter
-  
+
   useEffect(() => {
     // Check if the cookie 'user' exists
     const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
