@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import { db } from "@/app/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useRouter } from "next/navigation";
 
 interface Slide {
   // Define the expected fields in the slide data
@@ -21,6 +22,7 @@ interface SlideData extends Slide {
 }
 
 const AdminLandingPageMaintenance = () => {
+  const router = useRouter();
   const [addSlideClicked, setAddSlideClicked] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -33,6 +35,20 @@ const AdminLandingPageMaintenance = () => {
   const [slidesData, setSlidesData] = useState<SlideData[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null); // Store the selected file
 
+  useEffect(() => {
+    // Get all cookies
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    
+    // Check if a cookie named 'user' exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    // Allow access only if the cookie is not 'user' and some other cookie exists
+    if (!userCookie && cookies.length === 0) {
+      // Redirect to '/' if no cookies exist or if 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
+  
   useEffect(() => {
     const fetchSlides = async () => {
       const docRef = doc(db, "webContent", "landing_heroSection"); // Reference to the specific document

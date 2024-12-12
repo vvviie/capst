@@ -4,12 +4,14 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, setDoc, doc, query, where, getDocs, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 const MakeAnnouncementPage = () => {
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isUser, setIsUser] = useState(false);
+  const router = useRouter();
    // Handle changes in the subject input
 // Handle changes in the subject input (textbox)
 const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,6 +118,20 @@ const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         }
       }
 };
+
+  useEffect(() => {
+    // Get all cookies
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    
+    // Check if a cookie named 'user' exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+
+    // Allow access only if the cookie is not 'user' and some other cookie exists
+    if (!userCookie && cookies.length === 0) {
+      // Redirect to '/' if no cookies exist or if 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const checkUserRole = () => {

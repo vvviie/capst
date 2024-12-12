@@ -58,11 +58,15 @@ const AdminHomePage = () => {
   const [exportedData, setExportedData] = useState<any>(null);
 
   useEffect(() => {
-    // Check if the cookie 'user' exists
-    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
-
-    if (userCookie || !userCookie) {
-      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    // Get all cookies
+    const cookies = document.cookie.split(';').map(cookie => cookie.trim());
+    
+    // Check if a cookie named 'user' exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    // Allow access only if the cookie is not 'user' and some other cookie exists
+    if (!userCookie && cookies.length === 0) {
+      // Redirect to '/' if no cookies exist or if 'user' cookie exists
       router.push('/');
     }
   }, [router]);
