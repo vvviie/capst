@@ -14,7 +14,7 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-
+import { useRouter } from "next/navigation";
 type ConfirmationModalProps = {
   isVisible: boolean;
   message: string;
@@ -40,6 +40,7 @@ interface Data {
 const AdminLandingPageMaintenance = () => {
   const [editTabOpen, setEditTabOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
+  const router = useRouter(); // Initialize useRouter
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [aboutUsText, setAboutUsText] = useState("");
   const [data, setData] = useState<Data>({
@@ -84,6 +85,16 @@ const AdminLandingPageMaintenance = () => {
     setIsModalVisible(false);
     setImageToDelete(null);
   };
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
 
   useEffect(() => {
     const fetchData = async () => {

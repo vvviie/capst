@@ -6,6 +6,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { db } from "@/app/firebase";
 import { doc, getDoc, updateDoc, arrayRemove, arrayUnion } from "firebase/firestore";
+import { useRouter } from "next/navigation";
 
 const hasSubCategories = true;
 
@@ -25,6 +26,17 @@ const AddMenuCategoryPage = () => {
   const [categoryName, setCategoryName] = useState(""); // To store category name for title
   const [categorySlug, setCategorySlug] = useState(""); // To store the extracted category slug
   const [newSubCategory, setNewSubCategory] = useState("");
+  const router = useRouter(); // Initialize useRouter
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
 
   // Extract the category slug from the URL path
   useEffect(() => {

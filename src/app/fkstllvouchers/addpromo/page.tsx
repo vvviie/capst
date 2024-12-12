@@ -4,8 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { db } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 const AddPromoPage = () => {
+    const router = useRouter();
     const [validity, setValidity] = useState(false);
     const [limitUse, setLimitUse] = useState(false);
     const [thresholdUse, setThresholdUse] = useState(false);
@@ -230,6 +232,16 @@ const AddPromoPage = () => {
         console.log("Promo Description:", event.target.value); // Log the entered description
     };
 
+    useEffect(() => {
+        // Check if the cookie 'user' exists
+        const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+    
+        if (userCookie || !userCookie) {
+          // Redirect to '/' if the cookie 'user' exists or doesn't exist
+        router.push('/');
+        }
+    }, [router]);
+    
     // Effect to enforce min/max values
     useEffect(() => {
         if (deductionValue === "") return;

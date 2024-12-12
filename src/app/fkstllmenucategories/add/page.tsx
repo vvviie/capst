@@ -6,10 +6,12 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 const AddMenuCategoryPage = () => {
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
   const [subCategories, setSubCategories] = useState([]);
+  const router = useRouter(); // Initialize useRouter
 
   const handleSubmit = () => {
     setIsPopUpVisible(true);
@@ -24,6 +26,16 @@ const AddMenuCategoryPage = () => {
       .replace(/([A-Z])/g, " $1") // Add space before uppercase letters
       .replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()); // Capitalize the first letter
   };
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
 
   useEffect(() => {
     const fetchSubCategories = async () => {

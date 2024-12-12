@@ -5,6 +5,7 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { db } from "@/app/firebase";
 import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { usePathname } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 type Voucher = {
   voucherID: string;
@@ -22,6 +23,7 @@ type Voucher = {
 };
 
 const EditVoucherPage = () => {
+  const router = useRouter();
   const [validity, setValidity] = useState(false);
   const [limitUse, setLimitUse] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -56,6 +58,16 @@ const EditVoucherPage = () => {
     const yyyy = parts[2];
     return `${yyyy}-${mm}-${dd}`; // Convert from 'MM/DD/YYYY' to 'YYYY-MM-DD'
   };
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
 
   useEffect(() => {
     const fetchVoucher = async () => {

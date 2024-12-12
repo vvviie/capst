@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
 import DynamicPackageOffers from "../components/DynamicPackageOffers";
+import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 
 type res = {
@@ -76,6 +77,7 @@ const AdminCheckReservationsPage = () => {
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
+  const router = useRouter(); // Initialize useRouter
   const [isToPaymentVisible, setIsToPaymentVisible] = useState(false);
   const [isRejectedVisible, setIsRejectedVisible] = useState(false);
   const [isMarkAsDoneVisible, setIsMarkAsDoneVisible] = useState(false);
@@ -436,6 +438,16 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(

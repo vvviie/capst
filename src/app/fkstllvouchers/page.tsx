@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore"; // Import updateDoc and doc
 import { Availability } from "../data"; // Adjust import as necessary
 import GiveVoucherForm from "../components/GiveVoucherForm";
+import { useRouter } from "next/navigation";
 
 // Voucher Array
 type voucherType = {
@@ -46,6 +47,7 @@ let voucherTypesSelection = [
 ];
 
 const VoucherListPage = () => {
+  const router = useRouter();
   const [activeItem, setActiveItem] = useState<string | null>(null);
   const [vouchers, setVouchers] = useState<voucherType[]>([]); // Updated state type
   const [promos, setPromos] = useState<promoType[]>([]); // Updated state type
@@ -68,6 +70,16 @@ const VoucherListPage = () => {
   const handleOptionsClick = () => {
     setActiveItem(null);
   };
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
 
   // Function to fetch vouchers based on selected type
   useEffect(() => {

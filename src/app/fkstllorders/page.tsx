@@ -20,6 +20,7 @@ import {
 } from "firebase/firestore";
 import jsPDF from "jspdf";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 // #region Sample Data
 type Item = {
@@ -93,6 +94,7 @@ const AdminAndStaffOrdersPage = () => {
   const [email, setEmail] = useState(null); // State to store the email
   const auth = getAuth(); // Get Firebase Auth instance
 
+  const router = useRouter(); // Initialize useRouter
   const [staffStatus, setStaffStatus] = useState<
     "activated" | "deactivated" | null
   >(null);
@@ -850,6 +852,16 @@ const AdminAndStaffOrdersPage = () => {
     }
   };
 
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+      router.push('/');
+    }
+  }, [router]);
+  
   useEffect(() => {
     const cookies = Cookies.get(); // Retrieve all cookies
 

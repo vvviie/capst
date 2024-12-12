@@ -1,6 +1,19 @@
-import React from "react";
+import React, {useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const AdminAndStaffLoginPage = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
+
   return (
     <div className="min-h-[calc(100vh-56px)] mt-14 px-10">
       <form className="w-full flex flex-1 items-center justify-center">

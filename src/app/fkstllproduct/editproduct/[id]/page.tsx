@@ -242,6 +242,16 @@ const EditProductPage = () => {
       console.log("Generated new product ID:", newID);
     };
 
+    useEffect(() => {
+      // Check if the cookie 'user' exists
+      const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+  
+      if (userCookie || !userCookie) {
+        // Redirect to '/' if the cookie 'user' exists or doesn't exist
+      router.push('/');
+      }
+  }, [router]);
+  
   // Effect to update extractedCategory when selectedCat changes
   useEffect(() => {
     const category = selectedCat.replace("Menu", "");

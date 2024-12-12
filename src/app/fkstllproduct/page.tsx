@@ -35,6 +35,8 @@ import usePastriesByCategory from "../hooks/usePastriesByCategory";
 import useSnacksByCategory from "../hooks/useSnacksByCategory";
 import useSandwichesByCategory from "../hooks/useSandwichesByCategory";
 
+import { useRouter } from "next/navigation";
+
 interface FeaturedItem {
   id: string;
   // Add other fields if necessary
@@ -42,6 +44,7 @@ interface FeaturedItem {
 }
 
 const CRUDProductPage = () => {
+  const router = useRouter();
   const [mainCategory, setMainCategory] = useState<string>("Drinks");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [activeItem, setActiveItem] = useState<string | null>(null);
@@ -207,6 +210,16 @@ const CRUDProductPage = () => {
     },
     [selectedCategory] // Dependencies for useCallback
   );
+
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
 
   useEffect(() => {
     if (mainCategory) {

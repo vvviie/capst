@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import { useState, useEffect } from "react";
 import { category } from "../data";
+import { useRouter } from "next/navigation";
 
 const toCamelCase = (str: string): string => {
   return str
@@ -13,6 +14,18 @@ const toCamelCase = (str: string): string => {
 };
 
 const AdminMenuCategories = () => {
+  const router = useRouter(); // Initialize useRouter
+  
+  useEffect(() => {
+    // Check if the cookie 'user' exists
+    const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+
+    if (userCookie || !userCookie) {
+      // Redirect to '/' if the cookie 'user' exists or doesn't exist
+    router.push('/');
+    }
+}, [router]);
+
   return (
     <div
       className="min-h-[69.37vh] mt-14 px-10 pt-6 pb-20 md:px-24 xl:px-56 w-full flex 

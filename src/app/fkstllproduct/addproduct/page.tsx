@@ -10,6 +10,7 @@ import { doc, setDoc } from "firebase/firestore";
 import { collection, getDocs, query, where, getDoc } from 'firebase/firestore';
 import { getStorage, ref, listAll, getDownloadURL, uploadBytes } from "firebase/storage";
 import useMenuCategories from "@/app/hooks/useMenuCategories";
+import { useRouter } from "next/navigation";
 
 // MENU CATEGORY
 type Category = {
@@ -141,6 +142,8 @@ const AddProductPage = () => {
     const drinkUpsizePriceRef = useRef<HTMLInputElement | null>(null);
     const descriptionRef = useRef<HTMLTextAreaElement | null>(null); // Update the type
 
+    const router = useRouter(); // Initialize useRouter
+
     const generateNewID = useCallback((ids: string[], drinkType: keyof typeof drinkTypePrefixes | null) => {
 
         const drinkTypePrefixes = {
@@ -173,6 +176,15 @@ const AddProductPage = () => {
         generateNewID(existingIDsRef.current, drinkType);
     }, [generateNewID, passableSelectedDrinkType, selectedCat, selectedDrinkType, existingIDsRef]);
     
+    useEffect(() => {
+        // Check if the cookie 'user' exists
+        const userCookie = document.cookie.split(';').find(cookie => cookie.trim().startsWith('user='));
+    
+        if (userCookie || !userCookie) {
+          // Redirect to '/' if the cookie 'user' exists or doesn't exist
+        router.push('/');
+        }
+    }, [router]);
 
     // Effect to update extractedCategory when selectedCat changes
     useEffect(() => {
