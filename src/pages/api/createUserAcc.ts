@@ -48,6 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             firstTimeVoucher: {
               available: firstTimeVoucher.available,
               voucherDeduction: firstTimeVoucher.voucherDeduction,
+              deductionType:firstTimeVoucher.deductionType,
               voucherDescription: firstTimeVoucher.voucherDescription,
               voucherID: firstTimeVoucher.voucherID,
               voucherType: firstTimeVoucher.deductionType,
