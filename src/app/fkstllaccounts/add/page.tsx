@@ -122,7 +122,7 @@ const AddStaffAccountPage = () => {
         //console.log("Selected status:", selectedStatus); // Console log the selected status
     };
 
-    const displayError = (message) => {
+    const displayError = (message: string) => {
         setErrorMessage(message);
         setTimeout(() => {
             setErrorMessage("");

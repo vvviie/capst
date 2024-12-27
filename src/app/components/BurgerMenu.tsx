@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { auth, db } from "../firebase"; // Update with the correct path
+import { User } from "firebase/auth";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   collection,
@@ -12,6 +13,8 @@ import {
   onSnapshot,
   updateDoc,
   getDocs,
+  QuerySnapshot, 
+  Unsubscribe
 } from "firebase/firestore";
 import Cookies from "js-cookie";
 import NotificationBell from "./NotificationBell";
@@ -58,7 +61,7 @@ const adminLinks = [
 ];
 
 const BurgerMenu = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState("");
   const [role, setRole] = useState(""); // New state for role
   const [totalItems, setTotalItems] = useState(0);
@@ -69,14 +72,53 @@ const BurgerMenu = () => {
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Vouchers>({});
 
-  const unsubscribeAuthRef = useRef(null);
-  const unsubscribeCartRef = useRef(null);
-  const unsubscribeDocRef = useRef(null);
+  const unsubscribeCartRef = useRef<(() => void) | null>(null);
+  const unsubscribeDocRef = useRef<(() => void) | null>(null);
+
+  const handleLogout = useCallback(
+    async (event: React.MouseEvent | React.FormEvent | null = null) => {
+      if (event) event.preventDefault(); // Prevent default if the event is present
+      
+      try {
+        const allCookies = Cookies.get();
+        Object.keys(allCookies).forEach((cookieName) => {
+          Cookies.remove(cookieName);
+        });
+      
+        if (unsubscribeCartRef.current) {
+          unsubscribeCartRef.current(); // Call the unsubscribe function
+          unsubscribeCartRef.current = null; // Reset the ref
+        }
+        if (unsubscribeDocRef.current) {
+          unsubscribeDocRef.current(); // Call the unsubscribe function
+          unsubscribeDocRef.current = null; // Reset the ref
+        }
+      
+        await signOut(auth); // Sign out from Firebase
+        setIsLoggedIn(false); // Update the login state
+        router.push("/"); // Redirect to the home page
+      } catch (error) {
+        console.error("Error during logout:", error);
+      }
+    },
+    [router] // Only include router in the dependency array
+  );
+  
+  const checkCookiesAndLogout = useCallback(
+    async (event?: React.MouseEvent) => {
+      const allCookies = Cookies.get();
+      if (Object.keys(allCookies).length === 0) {
+        // If event is provided, pass it to handleLogout, otherwise pass null
+        await handleLogout(event || null);
+      }
+    },
+    [handleLogout] // Include handleLogout in the dependency array
+  );
 
   useEffect(() => {
-    let unsubscribeAuth;
-    let unsubscribeCartListener;
-    let unsubscribeTempOrderDoc;
+    let unsubscribeAuth: Unsubscribe | null = null;
+    let unsubscribeCartListener: Unsubscribe | null = null;
+    let unsubscribeTempOrderDoc: Unsubscribe | null = null;
 
     // Real-time listener for foodCartAvailable
     const unsubscribeFoodCart = onSnapshot(
@@ -97,7 +139,7 @@ const BurgerMenu = () => {
 
     // Authentication state listener
     unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-      if (authUser) {
+      if (authUser && authUser.email) {
         setIsLoggedIn(true); // User is logged in
         // Check if the email belongs to a staff member
         const isStaff = authUser.email.endsWith("@fikastallestaff.com");
@@ -198,9 +240,6 @@ const BurgerMenu = () => {
       }
     });
 
-    // Check for cookies when the component mounts
-    checkCookiesAndLogout();
-
     // Cleanup
     return () => {
       if (unsubscribeFoodCart) unsubscribeFoodCart();
@@ -208,50 +247,7 @@ const BurgerMenu = () => {
       if (unsubscribeCartListener) unsubscribeCartListener();
       if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
     };
-  }, []); // Only run once, when the component mounts
-
-  const cleanUpListeners = () => {
-    if (unsubscribeCartRef.current) {
-      unsubscribeCartRef.current();
-      unsubscribeCartRef.current = null;
-    }
-    if (unsubscribeDocRef.current) {
-      unsubscribeDocRef.current();
-      unsubscribeDocRef.current = null;
-    }
-  };
-
-  const checkCookiesAndLogout = async () => {
-    const allCookies = Cookies.get();
-    if (Object.keys(allCookies).length === 0) {
-      await handleLogout();
-    }
-  };
-
-  const handleLogout = async (event) => {
-    if (event) event.preventDefault();
-    try {
-      const allCookies = Cookies.get();
-      Object.keys(allCookies).forEach((cookieName) => {
-        Cookies.remove(cookieName);
-      });
-
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
-
-      await signOut(auth);
-      setIsLoggedIn(false); // Update login state
-      router.push("/");
-    } catch (error) {
-      console.error("Error during logout:", error);
-    }
-  };
+  }, [checkCookiesAndLogout]); // Only run once, when the component mounts
 
   return (
     <div className="cursor-pointer">
@@ -328,7 +324,7 @@ const BurgerMenu = () => {
               </Link>
             ))}
 
-          {(role === "bar" || role === "staff") &&
+          {(role === "bar" || role === "kitchen") &&
             staffLinks.map((item) => (
               <Link
                 href={item.url}

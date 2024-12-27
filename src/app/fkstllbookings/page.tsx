@@ -17,9 +17,9 @@ import {
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
 import DynamicPackageOffers from "../components/DynamicPackageOffers";
+import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 
-//#region Sample Data
 type res = {
   id: string;
   dateReserved: string;
@@ -40,19 +40,44 @@ type res = {
   totalPrice?: number;
   paymentType: string;
   downpayment: number;
+  remarks?: string;
 };
 
-type resList = res[];
+interface PaymentResponse {
+  paymentType: "downpayment" | "fullpayment";
+  id: string; // Adjust type based on your actual data (string, number, etc.)
+  totalPrice: number;
+  downpayment?: number; // Optional because not all payments have a downpayment
+}
 
-//#endregion
+interface Reservation {
+  numberOfPersons: number;
+  totalPrice: number | null;
+}
+
+type ResType = "event" | "table";
+
+type Item = {
+  name: string;
+  id: number;
+};
+
+type BuffetChosen = {
+  [category: string]: string | string[]; // Each category maps to a string or an array of strings
+};
+
+const res: { buffetChosen?: BuffetChosen } = {
+  buffetChosen: {} // You can test this as an empty object or undefined to simulate no data
+};
 
 const AdminCheckReservationsPage = () => {
   const [reservations, setReservations] = useState<res[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [resType, setResType] = useState("table");
+  const [resType, setResType] = useState<ResType>("table");
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
+  const router = useRouter(); // Initialize useRouter
   const [isToPaymentVisible, setIsToPaymentVisible] = useState(false);
   const [isRejectedVisible, setIsRejectedVisible] = useState(false);
   const [isMarkAsDoneVisible, setIsMarkAsDoneVisible] = useState(false);
@@ -63,7 +88,7 @@ const AdminCheckReservationsPage = () => {
   const [filterDate, setFilterDate] = useState<string>("");
   const [isFilterClicked, setIsFilterClicked] = useState<boolean>(false);
   const [selectedFilterDate, setSelectedFilterDate] = useState<string>("");
-
+  const itemsArray: Item[] = [];
   const handleToPayment = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
@@ -94,7 +119,7 @@ const AdminCheckReservationsPage = () => {
     }
   };
 
-  const handlePayment = (res) => {
+  const handlePayment = (res: PaymentResponse) => {
     if (res.paymentType === "downpayment") {
       handlePaid(res.id, res.totalPrice, res.downpayment); // Pass downpayment
     } else if (res.paymentType === "fullpayment") {
@@ -260,18 +285,11 @@ const AdminCheckReservationsPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
@@ -323,7 +341,7 @@ const AdminCheckReservationsPage = () => {
     setIsFilterClicked(true); // Trigger the filter action (which will be used in useEffect)
   };
 
-  const handleDateChange = (e) => {
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedDate = e.target.value;
     console.log("Selected date:", selectedDate); // Log the selected date
 
@@ -345,18 +363,11 @@ const AdminCheckReservationsPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for general content text to 14px, normal, left-aligned
         doc.setFontSize(12);
@@ -427,6 +438,26 @@ const AdminCheckReservationsPage = () => {
       console.error("Error handling reservation details:", error);
     }
   };
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
@@ -521,8 +552,8 @@ const AdminCheckReservationsPage = () => {
   }, [selectedFilterDate]); // Trigger useEffect when selectedFilterDate changes
 
   //#region PAGES CODE
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(1); 
+  const [pageWindowStart, setPageWindowStart] = useState<number>(1); 
   const itemsPerPage = 5;
   const pagesToShow = 5;
 
@@ -564,7 +595,7 @@ const AdminCheckReservationsPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
 
     // Adjust the visible page numbers if necessary
@@ -694,19 +725,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             {/* NUMBER OF PERSONS + PRICE CONTAINER */}
                             <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                               <i className="fa-solid fa-people-group text-sm"></i>
-                              {resType === "event" ? (
+                              {resType && (
                                 <span>{`${res.numberOfPersons} PAX - PHP ${
-                                  res.totalPrice
-                                    ? res.totalPrice.toFixed(2)
-                                    : "0.00"
+                                  res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"
                                 }`}</span>
-                              ) : resType === "table" ? (
-                                <span>{`${res.numberOfPersons} PAX - PHP ${
-                                  res.totalPrice
-                                    ? res.totalPrice.toFixed(2)
-                                    : "0.00"
-                                }`}</span>
-                              ) : null}
+                              )}
                             </p>
                             <p
                               className={`text-sm font-semibold text-${
@@ -742,7 +765,6 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
-                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
 
                             {/* BUTTON CONTAINER */}
                             {res.status === "PENDING" ? (
@@ -811,11 +833,24 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               <div className="flex gap-2 items-center w-full mt-1">
                                 <button
                                   className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
-    border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                    border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => {
-                                    handlePaid(res.id, res.totalPrice);
-                                    handlePayment(res);
-                                  }} // Pass the totalPrice from the reservation
+                                    // Ensure totalPrice is a number (default to 0 if undefined)
+                                    const totalPrice = res.totalPrice ?? 0;
+                                    
+                                    // Ensure paymentType is either "downpayment" or "fullpayment"
+                                    const paymentType: "downpayment" | "fullpayment" = res.paymentType === "downpayment" || res.paymentType === "fullpayment" 
+                                      ? res.paymentType 
+                                      : "downpayment";  // Default to "downpayment" if invalid
+
+                                    handlePaid(res.id, totalPrice);  // Pass totalPrice as a valid number
+                                    handlePayment({
+                                      paymentType,  // Ensure it's either "downpayment" or "fullpayment"
+                                      id: res.id,
+                                      totalPrice,
+                                      downpayment: res.downpayment  // Include downpayment if available
+                                    });
+                                  }}
                                 >
                                   <i className="fa-solid fa-money-bill"></i>
                                   <span>Mark as Paid</span>
@@ -924,15 +959,17 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
-                          <p className="text-xs select-none text-gray-400">{`Payment Type: ${res.paymentType}`}</p>
+                          <p className="text-xs select-none text-gray-400">
+                            {`Payment Type: ${res.paymentType.charAt(0).toUpperCase() + res.paymentType.slice(1)}`}
+                          </p>
 
                           {/* Conditional rendering for Downpayment Amount or Balance label */}
                           {res.paymentType !== "fullpayment" && (
                             <p className="text-xs select-none text-gray-400">
                               {res.status === "DOWNPAYMENT PAID"
                                 ? "Balance:"
-                                : "Downpayment Amount:"}{" "}
-                              {res.downpayment}
+                                : "Downpayment Amount: "}PHP{" "}
+                              {res.downpayment.toFixed(2)}
                             </p>
                           )}
 
@@ -943,7 +980,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           <div className="flex flex-col gap-4">
                             {res.buffetChosen &&
                               Object.entries(res.buffetChosen).map(
-                                ([category, items], index) => {
+                                ([category, items]: [string, string | string[]], index: number) => {
                                   console.log(
                                     "Buffet Category:",
                                     category,
@@ -952,11 +989,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   ); // Log each buffet category and its items
 
                                   // Ensure items is a string and split it into an array if needed
-                                  let itemsArray = [];
+                                  let itemsArray: string[] = [];
                                   if (typeof items === "string") {
                                     itemsArray = items
                                       .split(",")
-                                      .map((item) => item.trim()); // Split by commas and trim extra spaces
+                                      .map((item: string) => item.trim()); // Split by commas and trim extra spaces
                                   } else if (Array.isArray(items)) {
                                     itemsArray = items; // If it's already an array, use it directly
                                   } else {
@@ -967,15 +1004,12 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   }
 
                                   return (
-                                    <div
-                                      key={index}
-                                      className="pl-2 w-full flex flex-col gap-2"
-                                    >
+                                    <div key={index} className="pl-2 w-full flex flex-col gap-2">
                                       <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
                                         {category}
                                       </h1>
                                       <div className="w-full flex flex-wrap gap-1">
-                                        {itemsArray.map((item, itemIndex) => (
+                                        {itemsArray.map((item: string, itemIndex: number) => (
                                           <span
                                             key={itemIndex}
                                             className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
@@ -1056,15 +1090,26 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
-            border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                 onClick={() => {
-                                  handlePaid(res.id, res.totalPrice);
-                                  handlePayment(res);
-                                }} // Pass the totalPrice from the reservation
+                                  // Ensure res.id and res.totalPrice are numbers
+                                  if (res.id && res.totalPrice !== undefined) {
+                                    handlePaid(res.id, res.totalPrice); // Call handlePaid with numbers
+                                  } else {
+                                    console.error('Invalid reservation data: id or totalPrice is missing');
+                                  }
+                          
+                                  // Ensure paymentType is valid (either "downpayment" or "fullpayment")
+                                  if (res.paymentType === "downpayment" || res.paymentType === "fullpayment") {
+                                    handlePayment(res as PaymentResponse); // Assert res as PaymentResponse type
+                                  } else {
+                                    console.error('Invalid paymentType:', res.paymentType);
+                                  }
+                                }}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
-                              </button>
+                              </button> {/* Correctly close the button tag here */}
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-red-400 hover:scale-[1.02] duration-200"
@@ -1186,7 +1231,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                       res.status === "PAID" && (
                         <div
                           className={`w-full bg-white border-2 border-gray-100 shadow-md rounded-md p-2
-                 flex flex-col justify-center gap-2`}
+                  flex flex-col justify-center gap-2`}
                           key={res.id}
                           onClick={() => toggleOrder(res.id)}
                         >
@@ -1212,11 +1257,9 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               {/* USER PERSONS AND PRICE CONTAINER */}
                               <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                                 <i className="fa-solid fa-people-group text-sm"></i>
-                                {resType === "event" ? (
+                                {resType as ResType === "event" ? (
                                   <span>{`${res.numberOfPersons} PAX - PHP ${
-                                    res.totalPrice
-                                      ? res.totalPrice.toFixed(2)
-                                      : "0.00"
+                                    res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"
                                   }`}</span>
                                 ) : resType === "table" ? (
                                   <span>{`${res.numberOfPersons} PAX`}</span>
@@ -1245,7 +1288,6 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
-                            <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                                 {/* BUTTON CONTAINER */}
                                 <div className="flex gap-2 items-center w-full mt-1">
                                   <button
@@ -1345,7 +1387,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <div className="flex flex-col gap-4">
                               {res.buffetChosen &&
                                 Object.entries(res.buffetChosen).map(
-                                  ([category, items], index) => {
+                                  ([category, items]: [string, string | string[]], index: number) => {
                                     console.log(
                                       "Buffet Category:",
                                       category,
@@ -1354,12 +1396,12 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                     ); // Log each buffet category and its items
 
                                     // Ensure items is a string and split it into an array if needed
-                                    let itemsArray = [];
-                                    if (typeof items === "string") {
-                                      itemsArray = items
-                                        .split(",")
-                                        .map((item) => item.trim()); // Split by commas and trim extra spaces
-                                    } else if (Array.isArray(items)) {
+                                    let itemsArray: string[] = [];
+                                  if (typeof items === "string") {
+                                    itemsArray = items
+                                      .split(",")
+                                      .map((item: string) => item.trim()); // Split by commas and trim extra spaces
+                                  } else if (Array.isArray(items)) {
                                       itemsArray = items; // If it's already an array, use it directly
                                     } else {
                                       console.warn(
@@ -1377,7 +1419,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                           {category}
                                         </h1>
                                         <div className="w-full flex flex-wrap gap-1">
-                                          {itemsArray.map((item, itemIndex) => (
+                                          {itemsArray.map((item: string, itemIndex: number) => (
                                             <span
                                               key={itemIndex}
                                               className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"

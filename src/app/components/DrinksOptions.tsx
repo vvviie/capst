@@ -131,7 +131,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
             <span className="ml-2"> (+{addSyrup.toFixed(2)})</span>
           </div>
           {/* ADDITIONAL VANILLA */}
-          {addVanilla > 0 && ( // Conditionally render if addVanilla exists and is greater than 0
+          {(addVanilla ?? 0) > 0 && ( // Conditionally render if addVanilla exists and is greater than 0
             <div
               className={`flex items-center text-orange-900 text-lg px-4 border-solid border-2 border-gray-50 py-2 ${
                 selectedAdditionalsState.includes("Vanilla")
@@ -148,7 +148,7 @@ const DrinksOptions: React.FC<DrinksOptionsProps> = ({
                 checked={selectedAdditionalsState.includes("Vanilla")}
               />
               <span className="ml-4 font-semibold">Vanilla</span>
-              <span className="ml-2"> (+{addVanilla.toFixed(2)})</span>
+              <span className="ml-2"> (+{(addVanilla ?? 0).toFixed(2)})</span>
             </div>
           )}
         </div>

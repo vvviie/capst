@@ -6,10 +6,12 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import Image from "next/image";
 import Link from "next/link";
 import { db } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 const AddMenuCategoryPage = () => {
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
   const [subCategories, setSubCategories] = useState([]);
+  const router = useRouter(); // Initialize useRouter
 
   const handleSubmit = () => {
     setIsPopUpVisible(true);
@@ -19,18 +21,44 @@ const AddMenuCategoryPage = () => {
   };
 
   // Format camelCase to human-readable strings
-  const formatCamelCase = (str) => {
+  const formatCamelCase = (str: string): string => {
     return str
       .replace(/([A-Z])/g, " $1") // Add space before uppercase letters
       .replace(/(^\w|\s\w)/g, (m) => m.toUpperCase()); // Capitalize the first letter
   };
 
   useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
+
+  useEffect(() => {
     const fetchSubCategories = async () => {
       const slug = window.location.pathname.split("/").pop(); // Get the last part of the URL
-      const docRef = doc(db, "menuCategories", slug);
+      
+      if (!slug) {
+        console.error("Slug is undefined!");
+        return;
+      }
+  
+      const docRef = doc(db, "menuCategories", slug); // Only call doc() if slug is defined
       const docSnap = await getDoc(docRef);
-
+  
       if (docSnap.exists()) {
         const data = docSnap.data();
         setSubCategories(data.categories || []);
@@ -38,7 +66,7 @@ const AddMenuCategoryPage = () => {
         console.error("Document not found!");
       }
     };
-
+  
     fetchSubCategories();
   }, []);
 

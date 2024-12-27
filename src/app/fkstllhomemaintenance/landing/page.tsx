@@ -7,14 +7,53 @@ import React, { useEffect, useState } from "react";
 import { db } from "@/app/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useRouter } from "next/navigation";
+
+interface Slide {
+  // Define the expected fields in the slide data
+  title: string;
+  desc: string;
+  img: string;
+  // Add any other fields that may exist in the slide data
+}
+
+interface SlideData extends Slide {
+  id: number;
+}
 
 const AdminLandingPageMaintenance = () => {
+  const router = useRouter();
   const [addSlideClicked, setAddSlideClicked] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
-  const [newSlide, setNewSlide] = useState({ title: "", desc: "", img: "" });
-  const [slidesData, setSlidesData] = useState([]); // Initialize as empty array
-  const [imageFile, setImageFile] = useState(null); // Store the selected file
+  const [newSlide, setNewSlide] = useState<SlideData>({
+    id: 0,
+    title: "",
+    desc: "",
+    img: "",
+  });
+  const [slidesData, setSlidesData] = useState<SlideData[]>([]);
+  const [imageFile, setImageFile] = useState<File | null>(null); // Store the selected file
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const fetchSlides = async () => {
@@ -23,9 +62,10 @@ const AdminLandingPageMaintenance = () => {
 
       if (docSnapshot.exists()) {
         const data = docSnapshot.data(); // Get the document data
-        const slidesList = data.slides || []; // Access the 'slides' field, default to empty array if it doesn't exist
+        const slidesList: Slide[] = data.slides || []; // Access the 'slides' field, default to empty array if it doesn't exist
+        
         setSlidesData(
-          slidesList.map((slide, index) => ({
+          slidesList.map((slide: Slide, index: number) => ({
             id: index + 1, // Optionally generate an ID if not present in the slide data
             ...slide,
           }))
@@ -39,13 +79,19 @@ const AdminLandingPageMaintenance = () => {
   }, []);
 
   //
-  const convertImageToWebP = (file) => {
+  const convertImageToWebP = (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const imgElement = new window.Image();
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        imgElement.src = e.target.result;
+        // Ensure e.target is not null and that result is a string
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+          imgElement.src = result;  // Set the image source to the data URL
+        } else {
+          reject(new Error("FileReader result is not a valid string."));
+        }
       };
 
       imgElement.onload = () => {
@@ -74,10 +120,12 @@ const AdminLandingPageMaintenance = () => {
     });
   };
 
-  const handleImageSelect = async (event) => {
-    const file = event.target.files[0];
+  const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Safely check if files are not null
+    const file = event.target.files?.[0];
+    
     if (file) {
-      setImageFile(file);
+      setImageFile(file); // Update state with the selected file
       const webpBlob = await convertImageToWebP(file);
       const objectURL = URL.createObjectURL(webpBlob);
       setNewSlide({ ...newSlide, img: objectURL });
@@ -86,7 +134,7 @@ const AdminLandingPageMaintenance = () => {
 
   //
 
-  const handleRemoveSlide = async (slideId) => {
+  const handleRemoveSlide = async (slideId: number | string) => {
     const updatedSlides = slidesData.filter((slide) => slide.id !== slideId);
     setSlidesData(updatedSlides);
     const docRef = doc(db, "webContent", "landing_heroSection");
@@ -153,14 +201,14 @@ const AdminLandingPageMaintenance = () => {
   const handleAddClick = () => {
     setIsEditMode(false);
     setAddSlideClicked(true);
-    setNewSlide({ title: "", desc: "", img: "" }); // Reset new slide form
+    setNewSlide({ title: "", desc: "", img: "", id: 0 });  // Default 'id' value
   };
 
-  const handleEditClick = (slide) => {
-    setIsEditMode(true);
-    setAddSlideClicked(true);
-    setNewSlide(slide); // Load the slide details into the form for editing
-  };
+  const handleEditClick = (slide: SlideData) => {
+  setIsEditMode(true);
+  setAddSlideClicked(true);
+  setNewSlide(slide); // Load the slide details into the form for editing
+};
 
   return (
     <div

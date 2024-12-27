@@ -106,11 +106,11 @@ const ViewVouchers = () => {
         {selectedVoucher ? (
           <>
             {/* VOUCHER TITLE */}
-            <h1 className="font-bold text-orange-950 text-xl">
+            <h1 className="font-bold text-orange-950 text-xs">
               {selectedVoucher.title}
             </h1>
             {/* VOUCHER DESCRIPTION */}
-            <p className="text-sm">{selectedVoucher.desc}</p>
+            <p className="text-sm text-center">{selectedVoucher.desc}</p>
 
             {/* Render threshold message if thresholdUse is true */}
             {selectedVoucher?.thresholdUse && (
@@ -129,16 +129,22 @@ const ViewVouchers = () => {
 
                   // Set time to 00:00:00 for a date-only comparison
                   today.setHours(0, 0, 0, 0);
-                  const validityDate = new Date(selectedVoucher?.validityDate);
-                  validityDate.setHours(0, 0, 0, 0);
 
-                  // Check expiration (excluding today's date)
-                  if (validityDate < today) {
-                    return "Voucher has expired.";
-                  } else if (validityDate.getTime() === today.getTime()) {
-                    return `Voucher valid today: ${formattedToday}`;
+                  // Ensure validityDate is defined before creating a Date object
+                  if (selectedVoucher?.validityDate) {
+                    const validityDate = new Date(selectedVoucher.validityDate);
+                    validityDate.setHours(0, 0, 0, 0);
+
+                    // Check expiration (excluding today's date)
+                    if (validityDate < today) {
+                      return "Voucher has expired.";
+                    } else if (validityDate.getTime() === today.getTime()) {
+                      return `Voucher valid today: ${formattedToday}`;
+                    } else {
+                      return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
+                    }
                   } else {
-                    return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
+                    return "Voucher validity date is not available.";
                   }
                 })()}
               </p>
@@ -169,7 +175,7 @@ const ViewVouchers = () => {
             Select a voucher
           </h1>
           {/* VOUCHERS CONTAINER */}
-          <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto lg:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-clip lg:grid-cols-3">
             {vouchers.map((vouch) => (
               // VOUCHERS
               <span
@@ -179,7 +185,7 @@ const ViewVouchers = () => {
                   selectedVoucher?.id === vouch.id
                     ? "bg-orange-100 text-orange-900 hover:bg-gray-200" // color
                     : "bg-white text-gray-700 hover:bg-gray-50"
-                } font-bold text-center
+                } font-bold text-center text-xs
                                 rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
               >
                 {vouch.title}

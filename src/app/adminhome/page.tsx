@@ -17,6 +17,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useRouter } from "next/navigation";
 
 type User = {
   uid: string;
@@ -37,14 +38,46 @@ type TopSpendingCustomer = {
   amount: number;
 };
 
+type Review = {
+  name: string;
+  dateAdded: string;
+  timeAdded: string;
+  userEmail: string;
+  [key: string]: any; // Allow for other properties that may exist in review data
+};
+
 const AdminHomePage = () => {
   const [timeFrame, setTimeFrame] = useState("today");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [latestReviews, setLatestReviews] = useState([]);
+  const [latestReviews, setLatestReviews] = useState<Review[]>([]);
+  const router = useRouter(); // Initialize useRouter
   const [topSpendingCustomers, setTopSpendingCustomers] = useState<
     TopSpendingCustomer[]
   >([]);
   const [isOrderingEnabled, setIsOrderingEnabled] = useState(true);
+  const [exportedData, setExportedData] = useState<any>(null);
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie
+      ? document.cookie.split(";").map((cookie) => cookie.trim())
+      : [];
+
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push("/");
+      return;
+    }
+
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find((cookie) => cookie.startsWith("user="));
+
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push("/");
+    }
+  }, [router]);
 
   // Fetch the current foodCartAvailable value when component mounts
   useEffect(() => {
@@ -84,6 +117,22 @@ const AdminHomePage = () => {
       setIsOrderingEnabled(newFoodCartAvailable);
     } catch (error) {
       console.error("Error updating document:", error);
+    }
+  };
+
+  const handleExportData = (data: any) => {
+    setExportedData(data); // Save the chart data
+  };
+
+  const handlePrintData = () => {
+    if (exportedData) {
+      console.log("Labels:", exportedData.labels);
+      console.log(
+        "Data:",
+        exportedData.datasets.map((d: any) => d.data)
+      );
+    } else {
+      console.log("No data to print");
     }
   };
 
@@ -137,8 +186,8 @@ const AdminHomePage = () => {
     setIsFormOpen((prev) => !prev);
   };
 
-  const handleTimeFrameChange = (event) => {
-    setTimeFrame(event.target.value);
+  const handleTimeFrameChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTimeFrame(e.target.value);
   };
 
   // GETS THE FIVE LATEST REVIEWS TO DISPLAY
@@ -149,11 +198,12 @@ const AdminHomePage = () => {
         const reviewsSnapshot = await getDocs(
           collection(db, "customerFeedbacks")
         );
-        const reviewsData = [];
+
+        const reviewsData: Review[] = [];
 
         // Step 2: Fetch user info for each review
         for (const reviewDoc of reviewsSnapshot.docs) {
-          const review = reviewDoc.data();
+          const review = reviewDoc.data() as Review;
           const userEmail = review.userEmail;
 
           // Ensure the userEmail exists and is valid
@@ -192,7 +242,7 @@ const AdminHomePage = () => {
         const sortedReviews = reviewsData.sort((a, b) => {
           const dateA = new Date(`${a.dateAdded} ${a.timeAdded}`);
           const dateB = new Date(`${b.dateAdded} ${b.timeAdded}`);
-          return dateB - dateA; // Sort in descending order
+          return dateB.getTime() - dateA.getTime(); // Sort in descending order
         });
 
         // Step 4: Get the latest 5 reviews
@@ -203,7 +253,7 @@ const AdminHomePage = () => {
     };
 
     fetchReviews();
-  }, []);
+  }, []); // Empty dependency array ensures this effect runs only once
 
   return (
     <div className="mt-14 min-h-[calc(100vh-56px)] w-full px-10 md:px-24 2xl:px-56">
@@ -222,6 +272,7 @@ const AdminHomePage = () => {
             <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
           </div>
         </div>
+        <div className="flex flex-row-reverse w-full items-center justify-between mb-4"></div>
         <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
           <Link
             href={`/adminhome/announcement`}

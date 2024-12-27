@@ -5,6 +5,7 @@ import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { db } from "@/app/firebase";
 import { collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { usePathname } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
 type Voucher = {
   voucherID: string;
@@ -22,6 +23,7 @@ type Voucher = {
 };
 
 const EditVoucherPage = () => {
+  const router = useRouter();
   const [validity, setValidity] = useState(false);
   const [limitUse, setLimitUse] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -41,12 +43,12 @@ const EditVoucherPage = () => {
   const [voucherDescription, setVoucherDescription] = useState("");
   const today = new Date().toISOString().split("T")[0];
   const pathname = usePathname();
-  const voucherId = pathname.split("/").pop();
+  const voucherId = pathname ? pathname.split("/").pop() : null;
   const [showMessage, setShowMessage] = useState(false);
   const voucherDeductionValueRef = useRef<HTMLInputElement>(null);
   const voucherValidityDateRef = useRef<HTMLInputElement>(null);
   const voucherNumberOfUsesRef = useRef<HTMLInputElement>(null);
-  const voucherDescriptionRef = useRef<HTMLInputElement>(null);
+  const voucherDescriptionRef = useRef<HTMLTextAreaElement>(null);
   const voucherThresholdValueRef = useRef<HTMLInputElement>(null);
   
   const formatDate = (dateString: string): string => {
@@ -56,6 +58,26 @@ const EditVoucherPage = () => {
     const yyyy = parts[2];
     return `${yyyy}-${mm}-${dd}`; // Convert from 'MM/DD/YYYY' to 'YYYY-MM-DD'
   };
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const fetchVoucher = async () => {
@@ -169,7 +191,7 @@ const EditVoucherPage = () => {
     // Avoid altering the underlying value on type switch
     if (selectedType === "percent" && deductionType === "minus") {
         // Convert to percent display format when switching to "percent"
-        setVoucherDeduction(prev => prev / 100);
+        setVoucherDeduction(prev => typeof prev === "number" ? prev / 100 : 0);
     } else if (selectedType === "minus" && deductionType === "percent") {
         // Keep voucherDeduction as is when switching to "minus"
         setVoucherDeduction(prev => prev); 
@@ -199,7 +221,7 @@ const EditVoucherPage = () => {
     }
   };
 
-  const handleNumberOfUsesChange = (e) => {
+  const handleNumberOfUsesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value === "" ? "" : Number(e.target.value); // Allow empty string or convert to number
     setNumberOfUses(value); // Update state
     console.log("Number of Uses set to:", value); // Log the value

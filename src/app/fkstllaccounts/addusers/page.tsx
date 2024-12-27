@@ -167,7 +167,7 @@ const AddUsersAccountPage = () => {
                 const { uid, email } = responseData;
     
                 // Step 2: Notify user about verification email
-                setVerificationMessage(`A verification email has been sent to ${email}. Please verify your email.`);
+                setVerificationMessage(`The account of ${email} was successfully created.`);
                 setTimeout(() => {
                     setVerificationMessage("");
                 }, 3000);
@@ -220,13 +220,23 @@ const AddUsersAccountPage = () => {
                         }, 3000);
                     }, 3000);
                 } catch (firestoreError) {
-                    console.error("Error writing document to Firestore:", firestoreError);
-                    throw new Error(`Firestore Error: ${firestoreError.message}`);
+                    if (firestoreError instanceof Error) {
+                        console.error("Error writing document to Firestore:", firestoreError);
+                        throw new Error(`Firestore Error: ${firestoreError.message}`);
+                    } else {
+                        console.error("Unknown error occurred:", firestoreError);
+                        throw new Error("An unknown error occurred while writing to Firestore.");
+                    }
                 }
     
             } catch (error) {
-                console.error("Error during email verification or Firestore update:", error);
-                setErrorMessage(`${error.message}`);
+                if (error instanceof Error) {
+                    console.error("Error during email verification or Firestore update:", error);
+                    setErrorMessage(error.message);
+                } else {
+                    console.error("Unknown error during email verification or Firestore update:", error);
+                    setErrorMessage("An unexpected error occurred.");
+                }
                 setTimeout(() => {
                     setErrorMessage("");
                 }, 5000);

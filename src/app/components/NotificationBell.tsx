@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "@/app/firebase";
 import {
@@ -14,7 +14,6 @@ import {
   onSnapshot
 } from "firebase/firestore";
 
-
 //#region Variable Arrays for Retrieving Purposes
 type deets = {
   id: string;
@@ -24,6 +23,7 @@ type deets = {
   time: string;
   date: string;
   read: boolean;
+  [key: string]: any;
 };
 
 type notifs = deets[];
@@ -44,11 +44,39 @@ type VoucherNotification = {
   time: string;
   date: string;
   read: boolean;
-  deleted: boolean;
+  isNotifDeleted?: boolean;  // Add the isNotifDeleted property
+};
+
+interface NotificationBellProps {
+  foodCartAvailable: boolean;
+}
+
+interface OrderItem {
+  isRead: boolean;
+  [key: string]: any;  // For flexibility if there are other dynamic fields
+}
+
+type Notification = {
+  id: string;
+  type: "Voucher" | "Order Item" | "Table Reservation";
+  voucherID?: string; // Only for "Voucher"
+};
+
+type Voucher = {
+  voucherID: string;
+  isNotifDeleted?: boolean;
+};
+
+type UserNotifications = {
+  [key: string]: {
+    voucherID?: string;
+    isNotifDeleted?: boolean;
+    [key: string]: any;
+  };
 };
 //#endregion
 
-const NotificationBell = () => {
+const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }) => {
   //#region Constant Variables
   const [open, setOpen] = useState(false);
   const [notifItems, setNotifItems] = useState<notifs>([]);
@@ -58,6 +86,62 @@ const NotificationBell = () => {
   const [voucherNotifs, setVoucherNotifs] = useState<VoucherNotification[]>([]);
   //#endregion
 
+  const fetchTableReservations = useCallback(
+    (existingNotifications: deets[]) => {
+      if (!userEmail) return;
+  
+      const tempReservationsRef = collection(db, "tableReservations");
+      const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
+  
+      const unsubscribe = onSnapshot(q, (querySnapshot) => {
+        const newNotifications: notifs = []; // Temporary array for updated notifications
+  
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          if (!data.isNotifDeleted) { // Check for deletion before adding
+            const notification = {
+              id: doc.id,
+              type: "Table Reservation",
+              subject: `New Booking for: ${data.type || "Unknown"}`,
+              details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
+                data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
+              }.`,
+              time: data.timeReserved || "N/A",
+              date: data.dateReserved || "N/A",
+              read: data.isRead || false, // Ensure this is fetched
+            };
+            newNotifications.push(notification);
+          }
+        });
+  
+        // Update the notifItems state with the latest reservations, avoiding duplicates
+        setNotifItems((prevNotifItems) => {
+          const existingIds = new Set(prevNotifItems.map((item) => item.id));
+  
+          const allNotifications = [
+            ...newNotifications.filter((notification) => !existingIds.has(notification.id)),
+            ...prevNotifItems,
+          ];
+  
+          allNotifications.sort((a, b) => {
+            const dateA = new Date(`${a.date} ${a.time}`);
+            const dateB = new Date(`${b.date} ${b.time}`);
+            return dateB.getTime() - dateA.getTime(); // Descending order
+          });
+  
+          return allNotifications;
+        });
+  
+        // Check for unread notifications
+        setHasUnreadNotifs((prev) => newNotifications.some((notif) => !notif.read) || prev);
+      });
+  
+      // Return the unsubscribe function to clean up the listener
+      return unsubscribe;
+    },
+    [userEmail, setNotifItems] // Add relevant dependencies
+  );
+  
   //#region Fetching of All Vouchers
   useEffect(() => {
     const fetchVouchers = () => {
@@ -131,7 +215,7 @@ const NotificationBell = () => {
       const tempOrdersRef = collection(db, "completedOrders");
       const q = query(tempOrdersRef, where("user", "==", userEmail));
   
-      const fetchedNotificationsMap = new Map<string, notifs>(); // Use Map to track unique notifications
+      const fetchedNotificationsMap = new Map<string, deets>(); // Map to track unique notifications (not an array)
   
       const unsubscribe = onSnapshot(q, async (querySnapshot) => {
         // Fetch order notifications
@@ -148,7 +232,7 @@ const NotificationBell = () => {
               data.subtotal > 0 &&
               data.status
             ) {
-              const notification = {
+              const notification: deets = {
                 id: notificationId,
                 type: "Order Item",
                 subject: `Order Status: ${data.status || "Unknown"}`,
@@ -165,7 +249,7 @@ const NotificationBell = () => {
         // Add voucher notifications
         voucherNotifs.forEach((voucher) => {
           if (!fetchedNotificationsMap.has(voucher.id)) {
-            const voucherNotification = {
+            const voucherNotification: deets = {
               id: voucher.id,
               type: "Voucher",
               subject: "New Voucher Claimed",
@@ -190,7 +274,7 @@ const NotificationBell = () => {
             if (!fetchedNotificationsMap.has(notifId)) {
               const notifData = notificationsMap[notifId];
               if (!notifData.isNotifDeleted) {
-                const userNotification = {
+                const userNotification: deets = {
                   id: notifId,
                   type: "Notification",
                   subject: notifData.subject || "No Subject",
@@ -205,6 +289,7 @@ const NotificationBell = () => {
           });
         }
   
+        
         // Fetch table reservations and append to notifications
         await fetchTableReservations(Array.from(fetchedNotificationsMap.values()));
   
@@ -227,131 +312,16 @@ const NotificationBell = () => {
     };
   
     fetchOrders();
-  }, [userEmail, voucherNotifs]);
+  }, [userEmail, voucherNotifs, fetchTableReservations]);
 //#endregion
 
-// Define fetchNotifications before useEffect
-const fetchNotifications = () => {
-  if (!userEmail) {
-    console.log('No user email found.');
-    return;
-  }
-
-  const notifRef = doc(db, "users", userEmail); // Get the user document
-  const unsubscribe = onSnapshot(notifRef, (docSnapshot) => {
-    const data = docSnapshot.data();
-    if (!data || !data.notifications) {
-      console.log('No notifications found.');
-      return;
-    }
-
-    const notificationsMap = data.notifications; // Access the notifications map
-    const newNotifications: notifs = [];
-
-    Object.keys(notificationsMap).forEach((notifId) => {
-      const notifData = notificationsMap[notifId];
-      if (!notifData.isNotifDeleted) { // Check for deletion before adding
-        const notification = {
-          id: notifId,
-          type: "Notification",
-          subject: notifData.subject || "No Subject",
-          details: notifData.body || "No Details",
-          time: notifData.timeCreated || "N/A",
-          date: notifData.dateCreated || "N/A",
-          read: notifData.isRead || false,
-        };
-        newNotifications.push(notification);
-      }
-    });
-
-    // Combine new notifications with existing notifications
-    setNotifItems((prevNotifItems) => {
-      const existingIds = new Set(prevNotifItems.map((item) => item.id));
-
-      // Merge new and previous notifications while avoiding duplicates
-      const allNotifications = [
-        ...newNotifications.filter((notification) => !existingIds.has(notification.id)),
-        ...prevNotifItems,
-      ];
-
-      // Sort notifications by date and time in descending order
-      allNotifications.sort((a, b) => {
-        const dateA = new Date(`${a.date} ${a.time}`);
-        const dateB = new Date(`${b.date} ${b.time}`);
-        return dateB.getTime() - dateA.getTime();
-      });
-
-      return allNotifications;
-    });
-  });
-
-  return unsubscribe;
-};
-//#region Fetching of Table Reservations
-
-const fetchTableReservations = () => {
-  if (!userEmail) return;
-
-  const tempReservationsRef = collection(db, "tableReservations");
-  const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
-
-  const unsubscribe = onSnapshot(q, (querySnapshot) => {
-    const newNotifications: notifs = []; // Temporary array for updated notifications
-
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      if (!data.isNotifDeleted) { // Check for deletion before adding
-        const notification = {
-          id: doc.id,
-          type: "Table Reservation",
-          subject: `New Booking for: ${data.type || "Unknown"}`,
-          details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
-            data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
-          }.`,
-          time: data.timeReserved || "N/A",
-          date: data.dateReserved || "N/A",
-          read: data.isRead || false,
-        };
-        newNotifications.push(notification);
-      }
-    });
-
-    // Update the notifItems state with the latest reservations, avoiding duplicates
-    setNotifItems((prevNotifItems) => {
-      // Create a map to filter unique notifications based on their IDs
-      const existingIds = new Set(prevNotifItems.map((item) => item.id));
-      
-      // Combine new and existing notifications while avoiding duplicates
-      const allNotifications = [
-        ...newNotifications.filter((notification) => !existingIds.has(notification.id)),
-        ...prevNotifItems,
-      ];
-
-      // Sort notifications by date and time in descending order
-      allNotifications.sort((a, b) => {
-        const dateA = new Date(`${a.date} ${a.time}`);
-        const dateB = new Date(`${b.date} ${b.time}`);
-        return dateB.getTime() - dateA.getTime(); // Descending order
-      });
-
-      // Return the updated notifications
-      return allNotifications;
-    });
-
-    // Check for unread notifications
-    setHasUnreadNotifs((prev) => newNotifications.some((notif) => !notif.read) || prev);
-  });
-
-  // Return the unsubscribe function to clean up the listener
-  return unsubscribe;
-};
 //#endregion
 
 //#region Mark Notification as Read and Unread
 const toggleReadStatus = async (notificationId: string, currentReadStatus: boolean) => {
   try {
     if (!userEmail) {
-      console.error('User email is null or undefined.');
+      console.error("User email is null or undefined.");
       return;
     }
 
@@ -359,31 +329,27 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
     const userDoc = await getDoc(userDocRef);
 
     if (!userDoc.exists()) {
-      console.error('User document not found in Firestore.');
+      console.error("User document not found in Firestore.");
       return;
     }
 
-    // Check if the notification is a user notification
-    const userNotifications = userDoc.data().notifications || {};
-    const notificationKey = Object.keys(userNotifications).find(
-      (key) => key === notificationId
-    );
+    const userData = userDoc.data();
+    const userNotifications = userData.notifications || {};
+    const userVouchers = userData.vouchers || {};
+    const notificationKey = Object.keys(userNotifications).find((key) => key === notificationId);
 
+    // Handle user notification
     if (notificationKey) {
-      // It's a user notification, update read status
-      console.log('Updating user notification...');
-      
+      console.log("Updating user notification...");
       const updatedNotification = {
         ...userNotifications[notificationKey],
-        isRead: !currentReadStatus,  // Toggle the read status
+        isRead: !currentReadStatus, // Toggle the read status
       };
 
-      // Update Firestore with updated notification status
       await updateDoc(userDocRef, {
-        [`notifications.${notificationKey}`]: updatedNotification, // Update the specific notification
+        [`notifications.${notificationKey}`]: updatedNotification,
       });
 
-      // Update local state for notifications
       setNotifItems((prevNotifs) =>
         prevNotifs.map((notif) =>
           notif.id === notificationId
@@ -394,50 +360,65 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
       return; // Exit after processing user notification
     }
 
-    // Check if it's a voucher notification
-    const voucherIndex = voucherNotifs.findIndex(
-      (voucher) => voucher.id === notificationId
+    // Handle voucher notifications
+    const voucherKey = Object.keys(userVouchers).find(
+      (key) => key === notificationId || userVouchers[key].voucherID === notificationId
     );
 
-    if (voucherIndex > -1) {
-      // It's a voucher notification
-      const updatedVouchers = [...voucherNotifs];
-      const updatedReadStatus = !currentReadStatus;
-      
-      updatedVouchers[voucherIndex] = {
-        ...updatedVouchers[voucherIndex],
-        read: updatedReadStatus,
+    if (voucherKey) {
+      console.log("Found voucherKey:", voucherKey);
+      console.log("Voucher details:", userVouchers[voucherKey]);
+
+      const updatedVoucher = {
+        ...userVouchers[voucherKey],
+        isRead: !currentReadStatus, // Toggle the read status
       };
-      setVoucherNotifs(updatedVouchers);
 
-      // Update Firestore for voucher
-      const userVouchers = userDoc.data().vouchers || {};
-      const voucherKey = Object.keys(userVouchers).find(
-        (key) => userVouchers[key].voucherID === notificationId
+      await updateDoc(userDocRef, {
+        [`vouchers.${voucherKey}`]: updatedVoucher,
+      });
+
+      setNotifItems((prevNotifs) =>
+        prevNotifs.map((notif) =>
+          notif.id === notificationId
+            ? { ...notif, read: !currentReadStatus }
+            : notif
+        )
       );
-
-      if (voucherKey) {
-        // Only update the `isRead` status for the specific voucher
-        const updatedVouchersState = {
-          ...userVouchers,
-          [voucherKey]: {
-            ...userVouchers[voucherKey],
-            isRead: updatedReadStatus,
-          },
-        };
-        await updateDoc(userDocRef, { vouchers: updatedVouchersState });
-      }
       return; // Exit after processing voucher notification
     }
 
-    // If it's not a user or voucher notification, assume it's an order notification
-    const [docId, itemIndex] = notificationId.split('-');
+    // Handle table reservation notification
+    const tableReservationRef = doc(db, "tableReservations", notificationId);
+    const tableDoc = await getDoc(tableReservationRef);
+
+    if (tableDoc.exists()) {
+      const tableData = tableDoc.data();
+      const updatedReadStatus = !currentReadStatus;
+
+      await updateDoc(tableReservationRef, {
+        isRead: updatedReadStatus, // Toggle the read status in Firestore
+      });
+
+      // Update local state for the table reservation notification
+      setNotifItems((prevNotifs) =>
+        prevNotifs.map((notif) =>
+          notif.id === notificationId
+            ? { ...notif, read: updatedReadStatus }
+            : notif
+        )
+      );
+      return; // Exit after processing table reservation notification
+    }
+
+    // Handle order notifications
+    const [docId, itemIndex] = notificationId.split("-");
     const orderDocRef = doc(db, "completedOrders", docId);
     const orderDoc = await getDoc(orderDocRef);
 
     if (orderDoc.exists()) {
       const orderData = orderDoc.data();
-      const updatedItems = orderData.items.map((item, index) => {
+      const updatedItems = orderData.items.map((item: any, index: number) => {
         if (index === parseInt(itemIndex)) {
           return { ...item, isRead: !currentReadStatus }; // Toggle the read status for the specific item
         }
@@ -457,11 +438,12 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
         )
       );
     }
-
   } catch (error) {
     console.error("Error updating notification status:", error);
   }
 };
+
+
 //#endregion
 
 //#region Delete a Notification
@@ -491,7 +473,7 @@ const deleteNotification = async (notificationId: string) => {
 
       const updatedNotification = {
         ...userNotifications[notificationKey],
-        isNotifDeleted: true,  // Set the notification as deleted
+        isNotifDeleted: true, // Set the notification as deleted
       };
 
       // Update Firestore with updated notification status
@@ -501,46 +483,33 @@ const deleteNotification = async (notificationId: string) => {
 
       // Update local state for notifications
       setNotifItems((prevNotifs) =>
-        prevNotifs.map((notif) =>
-          notif.id === notificationId
-            ? { ...notif, isNotifDeleted: true }
-            : notif
-        )
+        prevNotifs.filter((notif) => notif.id !== notificationId)
       );
       return; // Exit after processing user notification
     }
 
     // Handle voucher notification
-    const voucherIndex = voucherNotifs.findIndex(
-      (voucher) => voucher.id === notificationId
+    const userVouchers = userDoc.data().vouchers || {};
+    const voucherKey = Object.keys(userVouchers).find(
+      (key) => userVouchers[key].voucherID === notificationId
     );
 
-    if (voucherIndex > -1) {
-      // It's a voucher notification, mark it as deleted
-      const updatedVouchers = [...voucherNotifs];
-      updatedVouchers[voucherIndex] = {
-        ...updatedVouchers[voucherIndex],
-        isNotifDeleted: true,
+    if (voucherKey) {
+      console.log('Marking voucher notification as deleted...');
+
+      const updatedVoucher = {
+        ...userVouchers[voucherKey],
+        isNotifDeleted: true, // Set the voucher as deleted
       };
-      setVoucherNotifs(updatedVouchers);
 
-      // Update Firestore for voucher
-      const userVouchers = userDoc.data().vouchers || {};
-      const voucherKey = Object.keys(userVouchers).find(
-        (key) => userVouchers[key].voucherID === notificationId
+      await updateDoc(userDocRef, {
+        [`vouchers.${voucherKey}`]: updatedVoucher, // Update Firestore
+      });
+
+      // Update local state for voucher notifications
+      setNotifItems((prevNotifs) =>
+        prevNotifs.filter((notif) => notif.id !== notificationId)
       );
-
-      if (voucherKey) {
-        // Only update the `isNotifDeleted` status for the specific voucher
-        const updatedVouchersState = {
-          ...userVouchers,
-          [voucherKey]: {
-            ...userVouchers[voucherKey],
-            isNotifDeleted: true,
-          },
-        };
-        await updateDoc(userDocRef, { vouchers: updatedVouchersState });
-      }
       return; // Exit after processing voucher notification
     }
 
@@ -550,8 +519,10 @@ const deleteNotification = async (notificationId: string) => {
     const orderDoc = await getDoc(orderDocRef);
 
     if (orderDoc.exists()) {
+      console.log('Marking order notification as deleted...');
+      
       const orderData = orderDoc.data();
-      const updatedItems = orderData.items.map((item, index) => {
+      const updatedItems = orderData.items.map((item: OrderItem, index: number) => {
         if (index === parseInt(itemIndex)) {
           return { ...item, isNotifDeleted: true }; // Mark the item as deleted
         }
@@ -564,12 +535,9 @@ const deleteNotification = async (notificationId: string) => {
 
       // Update local state for order notifications
       setNotifItems((prevNotifs) =>
-        prevNotifs.map((notif) =>
-          notif.id === notificationId
-            ? { ...notif, isNotifDeleted: true }
-            : notif
-        )
+        prevNotifs.filter((notif) => notif.id !== notificationId)
       );
+      return; // Exit after processing order notification
     }
 
     // Handle table reservation notification
@@ -577,24 +545,22 @@ const deleteNotification = async (notificationId: string) => {
     const reservationDoc = await getDoc(reservationRef);
 
     if (reservationDoc.exists()) {
+      console.log('Marking table reservation notification as deleted...');
+      
       // Update Firestore document to mark as deleted
       await updateDoc(reservationRef, { isNotifDeleted: true });
 
       // Update local state for table reservation notifications
       setNotifItems((prevNotifs) =>
-        prevNotifs.map((notif) =>
-          notif.id === notificationId
-            ? { ...notif, isNotifDeleted: true }
-            : notif
-        )
+        prevNotifs.filter((notif) => notif.id !== notificationId)
       );
     }
-
   } catch (error) {
     console.error("Error deleting notification:", error);
   }
 };
-//#endregion  
+
+//#endregion
 
 //#region Mark All As Read
 const markAllAsRead = async () => {
@@ -614,12 +580,13 @@ const markAllAsRead = async () => {
 
     const userData = userDoc.data();
     const userNotifications = userData.notifications || {};
+    const userVouchers = userData.vouchers || {};
 
     // Mark all user notifications as read
     const updatedUserNotifications = Object.fromEntries(
       Object.entries(userNotifications).map(([key, value]) => [
         key,
-        { ...value, isRead: true },
+        { ...(value as deets), read: true }, // Cast value as deets type
       ])
     );
 
@@ -638,20 +605,18 @@ const markAllAsRead = async () => {
       notifItems.map(async (notif) => {
         switch (notif.type) {
           case "Voucher": {
-            const userVouchers = userData.vouchers || {};
-            const updatedVouchers = Object.fromEntries(
-              Object.entries(userVouchers).map(([key, value]) => [
-                key,
-                value.voucherID === notif.id ? { ...value, isRead: true } : value,
-              ])
+            const voucherKey = Object.keys(userVouchers).find(
+              (key) => userVouchers[key].voucherID === notif.id
             );
-
-            await updateDoc(userDocRef, { vouchers: updatedVouchers });
-            setVoucherNotifs((prev) =>
-              prev.map((voucher) =>
-                voucher.id === notif.id ? { ...voucher, read: true } : voucher
-              )
-            );
+            if (voucherKey) {
+              // Update Firestore to mark the voucher as read
+              await updateDoc(userDocRef, {
+                [`vouchers.${voucherKey}`]: {
+                  ...userVouchers[voucherKey],
+                  read: true,
+                },
+              });
+            }
             break;
           }
           case "Order Item": {
@@ -661,15 +626,18 @@ const markAllAsRead = async () => {
 
             if (orderDoc.exists()) {
               const orderData = orderDoc.data();
-              const updatedItems = orderData.items.map((item, index) =>
+              const updatedItems = orderData.items.map((item: OrderItem, index: number) =>
                 index === parseInt(itemIndex) ? { ...item, isRead: true } : item
               );
+
+              // Update Firestore with updated order items
               await updateDoc(completedOrderRef, { items: updatedItems });
             }
             break;
           }
           case "Table Reservation": {
             const reservationRef = doc(db, "tableReservations", notif.id);
+            // Mark the table reservation as read
             await updateDoc(reservationRef, { isRead: true });
             break;
           }
@@ -686,9 +654,11 @@ const markAllAsRead = async () => {
     console.error("Error marking all notifications as read:", error);
   }
 };
+
 //#endregion
 
 //#region Delete All Notifications
+
 const deleteAllNotifs = async () => {
   try {
     if (!userEmail) {
@@ -696,6 +666,7 @@ const deleteAllNotifs = async () => {
       return;
     }
 
+    // Get user document reference
     const userDocRef = doc(db, "users", userEmail);
     const userDoc = await getDoc(userDocRef);
 
@@ -704,26 +675,38 @@ const deleteAllNotifs = async () => {
       return;
     }
 
-    const userData = userDoc.data();
-    const userNotifications = userData.notifications || {};
+    const userData = userDoc.data() as {
+      notifications: UserNotifications;
+      vouchers: { [key: string]: Voucher };
+    };
 
+    const userNotifications = userData.notifications || {};
+    const userVouchers = userData.vouchers || {};
+
+    // Use Promise.all to handle multiple async tasks
     await Promise.all(
-      notifItems.map(async (notif) => {
+      notifItems.map(async (notif: deets) => {
         switch (notif.type) {
           case "Voucher": {
-            const userVouchers = userData.vouchers || {};
-            const updatedVouchers = Object.entries(userVouchers).map(
-              ([key, value]) =>
-                value.voucherID === notif.id
-                  ? { ...value, isNotifDeleted: true }
-                  : value
+            // Update vouchers in Firestore
+            const updatedVouchers = Object.entries(userVouchers).reduce(
+              (acc, [key, value]) => {
+                acc[key] =
+                  value.voucherID === notif.id
+                    ? { ...value, isNotifDeleted: true }
+                    : value;
+                return acc;
+              },
+              {} as { [key: string]: Voucher }
             );
 
             await updateDoc(userDocRef, { vouchers: updatedVouchers });
 
+            // Update corresponding notification in Firestore
             const notificationKey = Object.keys(userNotifications).find(
               (key) => userNotifications[key].voucherID === notif.id
             );
+
             if (notificationKey) {
               await updateDoc(userDocRef, {
                 [`notifications.${notificationKey}`]: {
@@ -738,6 +721,7 @@ const deleteAllNotifs = async () => {
             );
             break;
           }
+
           case "Order Item": {
             const [docId, itemIndex] = notif.id.split("-");
             const completedOrderRef = doc(db, "completedOrders", docId);
@@ -745,32 +729,38 @@ const deleteAllNotifs = async () => {
 
             if (orderDoc.exists()) {
               const orderData = orderDoc.data();
-              const updatedItems = [...orderData.items];
-              updatedItems[itemIndex] = {
-                ...updatedItems[itemIndex],
-                isNotifDeleted: true,
-              };
+              const updatedItems = orderData.items.map((item: OrderItem, index: number) =>
+                index === parseInt(itemIndex)
+                  ? { ...item, isNotifDeleted: true }
+                  : item
+              );
+
+              // Update Firestore with the updated items
               await updateDoc(completedOrderRef, { items: updatedItems });
             }
 
+            // Remove the specific order notification locally
             setNotifItems((prev) =>
-              prev.filter((notif) => notif.id !== notif.id)
+              prev.filter((notifItem) => notifItem.id !== notif.id)
             );
             break;
           }
+
           case "Table Reservation": {
             const reservationRef = doc(db, "tableReservations", notif.id);
+            // Mark the reservation notification as deleted
             await updateDoc(reservationRef, { isNotifDeleted: true });
             setNotifItems((prev) =>
-              prev.filter((notif) => notif.id !== notif.id)
+              prev.filter((notifItem) => notifItem.id !== notif.id)
             );
             break;
           }
+
           default:
             break;
         }
 
-        // Remove notification from Firestore `notifications` map
+        // Remove the notification from Firestore `notifications` map
         const notificationKey = Object.keys(userNotifications).find(
           (key) => key === notif.id
         );
@@ -787,13 +777,13 @@ const deleteAllNotifs = async () => {
     );
 
     // Clear all notifications in local state
+    setHasUnreadNotifs(false);
     setNotifItems([]);
   } catch (error) {
     console.error("Error deleting all notifications:", error);
   }
 };
 //#endregion
-
 
   return (
     <div className="cursor-pointer">

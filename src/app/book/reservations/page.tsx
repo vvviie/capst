@@ -17,11 +17,35 @@ import Cookies from "js-cookie"; // Import js-cookie
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 
+interface BuffetItem {
+  title: string;
+  foods: string[]; // Array of food items
+}
+
+interface Reservation {
+  id: string;
+  type: string;
+  dateReserved: string;
+  dateToBeReserved: string;
+  timeReserved: string;
+  timeToBeReserved: string;
+  numberOfPersons: number;
+  reservedBy: string;
+  status: string;
+  package: string;
+  buffet: BuffetItem[];
+  price: number;
+  paymentType: string;
+  downpayment: number;
+  balance: number;
+  remarks: string;
+}
+
 const ReservationsPage = () => {
   const [expandedRes, setExpandedRes] = useState<Record<string, boolean>>({});
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [reservations, setReservations] = useState([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [hasReservation, setHasReservation] = useState(false);
   const [selectedReservationId, setSelectedReservationId] = useState<
     string | null
@@ -86,31 +110,29 @@ const ReservationsPage = () => {
   useEffect(() => {
     const fetchReservations = async () => {
       if (!userEmail) return;
-
+  
       try {
         const reservationsRef = collection(db, "tableReservations");
         const querySnapshot = await getDocs(
           query(reservationsRef, where("reservedBy", "==", userEmail))
         );
-
+  
         const fetchedReservations = querySnapshot.docs.map((doc) => {
           const data = doc.data();
-
+  
           // Parse buffetChosen from the stored object with comma-separated values
-          const buffetChosen = Object.entries(data.buffetChosen || {}).map(
-            ([title, foods]) => ({
+          const buffetChosen: BuffetItem[] = Object.entries(data.buffetChosen || {}).map(
+            ([title, foods]: [string, unknown]) => ({
               title,
-              foods: foods.split(",").map((food) => food.trim()),
+              foods: (foods as string).split(",").map((food) => food.trim()),
             })
           );
-
+  
           return {
             id: doc.id,
             type: data.type,
-            dateReserved: new Date(data.dateReserved).toLocaleDateString(),
-            dateToBeReserved: new Date(
-              data.dateToBeReserved
-            ).toLocaleDateString(),
+            dateReserved: parseDate(data.dateReserved), // Convert to Date object
+            dateToBeReserved: parseDate(data.dateToBeReserved), // Convert to Date object
             timeReserved: data.timeReserved || "N/A",
             timeToBeReserved: data.timeToBeReserved || "N/A",
             numberOfPersons: data.numberOfPersons || 1,
@@ -125,14 +147,32 @@ const ReservationsPage = () => {
             remarks: data.remarks || "None",
           };
         });
-
-        setReservations(fetchedReservations);
-        setHasReservation(fetchedReservations.length > 0);
+  
+        // Sort fetchedReservations by dateToBeReserved in descending order
+        fetchedReservations.sort((a, b) => {
+          return b.dateToBeReserved.getTime() - a.dateToBeReserved.getTime(); // Compare Date objects using getTime()
+        });
+  
+        // Convert dates to locale strings for display
+        const formattedReservations = fetchedReservations.map(reservation => ({
+          ...reservation,
+          dateReserved: reservation.dateReserved.toLocaleDateString(),
+          dateToBeReserved: reservation.dateToBeReserved.toLocaleDateString(),
+        }));
+  
+        setReservations(formattedReservations);
+        setHasReservation(formattedReservations.length > 0);
       } catch (error) {
         console.error("Error fetching reservations:", error);
       }
     };
-
+  
+    // Helper function to parse date strings in "MM/DD/YYYY" format
+    const parseDate = (dateString: string) => {
+      const [month, day, year] = dateString.split("/").map(Number);
+      return new Date(year, month - 1, day); // Month is 0-indexed in JavaScript
+    };
+  
     fetchReservations();
   }, [userEmail]);
 
@@ -187,18 +227,11 @@ const ReservationsPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for content text to 14px and justified
         doc.setFontSize(12);
@@ -233,18 +266,11 @@ const ReservationsPage = () => {
         doc.setFontSize(14);
 
         // Title and address - Centered
-        doc.text("fikaställe by fika kafé", 105, 20, null, null, "center");
-        doc.text(
-          "Brgy. Iba, Silang, Cavite, 4118",
-          105,
-          30,
-          null,
-          null,
-          "center"
-        );
+        doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
 
         // Add spacing
-        doc.text("BOOKING DETAILS", 105, 50, null, null, "center");
+        doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
 
         // Set font for general content text to 14px, normal, left-aligned
         doc.setFontSize(12);
@@ -337,9 +363,9 @@ const ReservationsPage = () => {
   );
 
   // Handle page change
-  const goToPage = (pageNumber) => {
+  const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
-
+  
     // Adjust the visible page numbers if necessary
     if (pageNumber >= pageWindowStart + pagesToShow) {
       setPageWindowStart(pageWindowStart + 1);

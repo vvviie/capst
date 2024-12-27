@@ -2,12 +2,19 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-  import { db } from "@/app/firebase"; // Adjust the import based on your file structure
-  import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+import { db } from "@/app/firebase"; // Adjust the import based on your file structure
+import { doc, getDoc } from "firebase/firestore"; // Import Firestore functions
+
+interface SocialMedia {
+  active: boolean;
+  name: string;
+  url: string;
+  icon: string; // Assuming the icon class is a string (like a FontAwesome class)
+}
 
   const Footer = () => {
     const [tel, setTel] = useState("");
-    const [socials, setSocials] = useState([]);
+    const [socials, setSocials] = useState<SocialMedia[]>([]);
 
     // Fetch footer data from Firestore on component mount
     useEffect(() => {

@@ -1,8 +1,9 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import BurgerMenu from "./BurgerMenu";
 import { auth, db } from "../firebase"; // Update with the correct path
+import { User } from "firebase/auth";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import {
   collection,
@@ -13,6 +14,8 @@ import {
   onSnapshot,
   updateDoc,
   getDocs,
+  Unsubscribe,
+  DocumentSnapshot
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -36,7 +39,7 @@ interface Vouchers {
 }
 
 const Navbar = () => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState("");
   const [role, setRole] = useState(""); // New state for role
   const [totalItems, setTotalItems] = useState(0);
@@ -45,10 +48,41 @@ const Navbar = () => {
   const router = useRouter();
   const [vouchers, setVouchers] = useState<Vouchers>({});
   const [hasUserCookie, setHasUserCookie] = useState(false);
+  
+  const unsubscribeCartRef = useRef<(() => void) | null>(null);
+  const unsubscribeDocRef = useRef<(() => void) | null>(null);
 
-  const unsubscribeAuthRef = useRef(null);
-  const unsubscribeCartRef = useRef(null);
-  const unsubscribeDocRef = useRef(null);
+  const handleLogout = useCallback(async (event: React.MouseEvent | React.FormEvent | null = null) => {
+    if (event) event.preventDefault(); // Prevent default if the event is present
+  
+    try {
+      const allCookies = Cookies.get();
+      Object.keys(allCookies).forEach((cookieName) => {
+        Cookies.remove(cookieName);
+      });
+  
+      if (unsubscribeCartRef.current) {
+        unsubscribeCartRef.current(); // Call the unsubscribe function
+        unsubscribeCartRef.current = null; // Reset the ref
+      }
+      if (unsubscribeDocRef.current) {
+        unsubscribeDocRef.current(); // Call the unsubscribe function
+        unsubscribeDocRef.current = null; // Reset the ref
+      }
+  
+      await signOut(auth); // Sign out from Firebase
+      router.push("/"); // Redirect to the home page
+    } catch (error) {
+      console.error("Error during logout:", error);
+    }
+  }, [router]); // Only include `router` in the dependency array
+
+  const checkCookiesAndLogout = useCallback(async (event?: React.MouseEvent) => {
+    const allCookies = Cookies.get();
+    if (Object.keys(allCookies).length === 0) {
+      await handleLogout(event || null);
+    }
+  }, [handleLogout]);
 
   useEffect(() => {
     const unsubscribeFoodCart = onSnapshot(
@@ -73,9 +107,10 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
-    let unsubscribeAuth;
-    let unsubscribeCartListener;
-    let unsubscribeTempOrderDoc;
+
+    let unsubscribeAuth: Unsubscribe | null = null;
+    let unsubscribeCartListener: Unsubscribe | null = null;
+    let unsubscribeTempOrderDoc: Unsubscribe | null = null;
 
     // Real-time listener for foodCartAvailable
     const unsubscribeFoodCart = onSnapshot(
@@ -96,7 +131,7 @@ const Navbar = () => {
 
     // Authentication state listener
     unsubscribeAuth = onAuthStateChanged(auth, (authUser) => {
-      if (authUser) {
+      if (authUser && authUser.email) {
         // Check if the email belongs to a staff member
         const isStaff = authUser.email.endsWith("@fikastallestaff.com");
         const collectionName = isStaff ? "staff" : "users";
@@ -195,9 +230,6 @@ const Navbar = () => {
       }
     });
 
-    // Check for cookies when the component mounts
-    checkCookiesAndLogout();
-
     // Cleanup
     return () => {
       unsubscribeFoodCart();
@@ -205,61 +237,19 @@ const Navbar = () => {
       if (unsubscribeCartListener) unsubscribeCartListener();
       if (unsubscribeTempOrderDoc) unsubscribeTempOrderDoc();
     };
-  }, []); // Only run once, when the component mounts
-
-  const cleanUpListeners = () => {
-    if (unsubscribeCartRef.current) {
-      unsubscribeCartRef.current();
-      unsubscribeCartRef.current = null;
-    }
-    if (unsubscribeDocRef.current) {
-      unsubscribeDocRef.current();
-      unsubscribeDocRef.current = null;
-    }
-  };
-
-  const checkCookiesAndLogout = async () => {
-    const allCookies = Cookies.get();
-    if (Object.keys(allCookies).length === 0) {
-      await handleLogout();
-    }
-  };
-
-  const handleLogout = async (event) => {
-    if (event) event.preventDefault();
-    try {
-      const allCookies = Cookies.get();
-      Object.keys(allCookies).forEach((cookieName) => {
-        Cookies.remove(cookieName);
-      });
-
-      if (unsubscribeCartRef.current) {
-        unsubscribeCartRef.current();
-        unsubscribeCartRef.current = null;
-      }
-      if (unsubscribeDocRef.current) {
-        unsubscribeDocRef.current();
-        unsubscribeDocRef.current = null;
-      }
-
-      await signOut(auth);
-      router.push("/");
-    } catch (error) {
-      // Handle any errors during sign-out
-    }
-  };
+  }, [checkCookiesAndLogout]); // Only run once, when the component mounts
 
   // Fetch voucher configurations from Firestore
-  const fetchVoucherConfig = async () => {
+  const fetchVoucherConfig = async (): Promise<Vouchers> => {
     const voucherConfigRef = collection(db, "vouchers");
     const voucherSnapshot = await getDocs(voucherConfigRef);
-
+  
     const voucherConfig: Vouchers = {}; // Initialize as Vouchers type
-
+  
     voucherSnapshot.forEach((doc) => {
       const data = doc.data();
       const key = doc.id;
-
+  
       // Ensure only vouchers from the static voucherConfig are included
       voucherConfig[key] = {
         thresholdCondition: data.thresholdCondition,
@@ -274,12 +264,15 @@ const Navbar = () => {
         voucherName: data.voucherName,
       };
     });
-
-    setVouchers(voucherConfig); // Store the fetched voucher config in state
+  
+    return voucherConfig; // Explicitly return the voucherConfig object
   };
 
-  const checkAndAssignVouchers = async (userDoc, totalPaid) => {
-    const userVouchers = userDoc.data().vouchers || {}; // Fetch existing vouchers or initialize as empty object
+    const checkAndAssignVouchers = async (
+    userDoc: DocumentSnapshot, // Firestore DocumentSnapshot type
+    totalPaid: number           // totalPaid is a number
+  ) => {
+    const userVouchers = userDoc.data()?.vouchers || {}; // Fetch existing vouchers or initialize as empty object
 
     // Define the thresholds and the corresponding voucher keys
     const thresholds = [
@@ -332,33 +325,37 @@ const Navbar = () => {
     await updateDoc(doc(db, "users", userDoc.id), { vouchers: userVouchers });
   };
 
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
-        // Fetch the voucher config from Firestore
-        const fetchedVoucherConfig = await fetchVoucherConfig();
+        try {
+          // Fetch the voucher config from Firestore
+          const fetchedVoucherConfig = await fetchVoucherConfig();
+          setVouchers(fetchedVoucherConfig);
 
-        // Set the fetched voucher config to state (you may want to store it in state)
-        setVouchers(fetchedVoucherConfig);
+          if (authUser.email) {
+            // Use authUser.email to fetch the user document from Firestore
+            const userDoc = await getDoc(doc(db, "users", authUser.email));
+            if (userDoc.exists()) {
+              const userData = userDoc.data();
+              const totalPaid = userData.totalPaid || 0;
 
-        const fetchUserData = async () => {
-          // Use authUser.email to fetch the user document from Firestore
-          const userDoc = await getDoc(doc(db, "users", authUser.email));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const totalPaid = userData.totalPaid || 0; // Fetch totalPaid from Firestore
-
-            // Call the function to check and assign vouchers, passing only the required arguments
-            await checkAndAssignVouchers(userDoc, totalPaid);
+              // Check and assign vouchers
+              await checkAndAssignVouchers(userDoc, totalPaid);
+            }
           }
-        };
-        fetchUserData();
+        } catch (error) {
+          console.error("Error fetching data or assigning vouchers:", error);
+        }
+      } else {
+        // Handle unauthenticated state if needed
+        console.log("No user is signed in.");
       }
     });
 
-    // Cleanup function to unsubscribe from the auth state listener when the component unmounts or the user changes
     return () => unsubscribe();
-  }, [user]); // This will run when the `user` state changes
+  }, [user]);
 
   useEffect(() => {
     if (typeof document !== "undefined") {

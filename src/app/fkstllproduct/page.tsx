@@ -1,7 +1,7 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   menuCategory,
   Availability,
@@ -35,6 +35,8 @@ import usePastriesByCategory from "../hooks/usePastriesByCategory";
 import useSnacksByCategory from "../hooks/useSnacksByCategory";
 import useSandwichesByCategory from "../hooks/useSandwichesByCategory";
 
+import { useRouter } from "next/navigation";
+
 interface FeaturedItem {
   id: string;
   // Add other fields if necessary
@@ -42,6 +44,7 @@ interface FeaturedItem {
 }
 
 const CRUDProductPage = () => {
+  const router = useRouter();
   const [mainCategory, setMainCategory] = useState<string>("Drinks");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
   const [activeItem, setActiveItem] = useState<string | null>(null);
@@ -118,7 +121,7 @@ const CRUDProductPage = () => {
       console.log("Cleaning up listener");
       unsubscribe();
     };
-  }, [auth, db]); // Dependencies
+  }, [auth, email]); // Dependencies
 
   const handleItemClick = (id: string) => {
     setActiveItem(activeItem === id ? null : id);
@@ -135,83 +138,104 @@ const CRUDProductPage = () => {
   };
 
   // Fetch categories from the database
-  const fetchCategoriesFromDB = async (mainCategory) => {
-    try {
-      // Determine the collection based on the selected main category
-      let categoriesCollection = "";
-      switch (mainCategory) {
-        case "Drinks":
-          categoriesCollection = "drinksCategories";
-          break;
-        case "Main Course":
-          categoriesCollection = "mainCourseCategories";
-          break;
-        case "Pastries":
-          categoriesCollection = "pastriesCategories";
-          break;
-        case "Snacks":
-          categoriesCollection = "snacksCategories";
-          break;
-        case "Sandwiches":
-          categoriesCollection = "sandwichesCategories";
-          break;
-        case "Pasta":
-          categoriesCollection = "pastaCategories";
-          break;
-        default:
-          categoriesCollection = ""; // Default case, in case no main category is selected
-          break;
-      }
-
-      // If no category collection is selected, return early
-      if (!categoriesCollection) return;
-
-      // Fetch categories from the selected collection
-      const querySnapshot = await getDocs(collection(db, categoriesCollection));
-
-      let allCategories: any[] = [];
-      querySnapshot.forEach((doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          // Assuming each category item is in the format of { category: "someCategory" }
-          if (data.categories && Array.isArray(data.categories)) {
-            const categoriesFromMaps = data.categories
-              .filter((item) => item.category) // Filter out any items without a category
-              .map((item) => item.category); // Extract the category names
-            allCategories = allCategories.concat(categoriesFromMaps);
-          }
+  const fetchCategoriesFromDB = useCallback(
+    async (mainCategory: string) => {
+      try {
+        // Determine the collection based on the selected main category
+        let categoriesCollection = "";
+        switch (mainCategory) {
+          case "Drinks":
+            categoriesCollection = "drinksCategories";
+            break;
+          case "Main Course":
+            categoriesCollection = "mainCourseCategories";
+            break;
+          case "Pastries":
+            categoriesCollection = "pastriesCategories";
+            break;
+          case "Snacks":
+            categoriesCollection = "snacksCategories";
+            break;
+          case "Sandwiches":
+            categoriesCollection = "sandwichesCategories";
+            break;
+          case "Pasta":
+            categoriesCollection = "pastaCategories";
+            break;
+          default:
+            categoriesCollection = ""; // Default case, in case no main category is selected
+            break;
         }
-      });
 
-      // Format categories for display (if needed)
-      const formattedCategories = allCategories.map((category) =>
-        category
-          .replace(/([A-Z])/g, " $1")
-          .replace(/^./, (str) => str.toUpperCase())
-      );
+        // If no category collection is selected, return early
+        if (!categoriesCollection) return;
 
-      setMenuCategories(formattedCategories);
+        // Fetch categories from the selected collection
+        const querySnapshot = await getDocs(collection(db, categoriesCollection));
 
-      // Only set the selectedCategory if it's a valid option in the new categories list
-      if (formattedCategories.includes(selectedCategory)) {
-        // Don't reset selectedCategory if it's already a valid category
-        return;
+        let allCategories: any[] = [];
+        querySnapshot.forEach((doc) => {
+          if (doc.exists()) {
+            const data = doc.data();
+            // Assuming each category item is in the format of { category: "someCategory" }
+            if (data.categories && Array.isArray(data.categories)) {
+              const categoriesFromMaps = data.categories
+                .filter((item) => item.category) // Filter out any items without a category
+                .map((item) => item.category); // Extract the category names
+              allCategories = allCategories.concat(categoriesFromMaps);
+            }
+          }
+        });
+
+        // Format categories for display (if needed)
+        const formattedCategories = allCategories.map((category) =>
+          category
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (str: string) => str.toUpperCase()) // Explicitly type 'str' as a string
+        );
+
+        // Only set the selectedCategory if it's a valid option in the new categories list
+        if (formattedCategories.includes(selectedCategory)) {
+          // Don't reset selectedCategory if it's already a valid category
+          return;
+        }
+
+        // If selectedCategory is not valid anymore (e.g., it was part of "Pastries" and now we're in "Drinks"), reset it to the first available category
+        if (formattedCategories.length > 0) {
+          setSelectedCategory(formattedCategories[0]); // Optionally, set the first category as the default
+        }
+      } catch (error) {
+        console.error("Error fetching categories from database:", error);
       }
+    },
+    [selectedCategory] // Dependencies for useCallback
+  );
 
-      // If selectedCategory is not valid anymore (e.g., it was part of "Pastries" and now we're in "Drinks"), reset it to the first available category
-      if (formattedCategories.length > 0) {
-        setSelectedCategory(formattedCategories[0]); // Optionally, set the first category as the default
-      }
-    } catch (error) {
-      console.error("Error fetching categories from database:", error);
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
     }
-  };
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     if (mainCategory) {
       fetchCategoriesFromDB(mainCategory); // Fetch categories based on selected main category
     }
-  }, [mainCategory]);
+  }, [mainCategory, fetchCategoriesFromDB]);
 
   useEffect(() => {
     if (
@@ -221,7 +245,7 @@ const CRUDProductPage = () => {
       // If the current selectedCategory is not in the new menuCategories, reset to the first category
       setSelectedCategory(menuCategories[0]);
     }
-  }, [menuCategories]); // Run when menuCategories changes
+  }, [menuCategories, selectedCategory]); // Run when menuCategories changes
 
   const filteredDrinks = useMemo(() => {
     return drinks.filter((drink) =>
@@ -272,7 +296,7 @@ const CRUDProductPage = () => {
         sandwiches: "sandwiches",
       };
 
-      const collectionName = collectionMap[category];
+      const collectionName = collectionMap[category as keyof typeof collectionMap];
       if (!collectionName) {
         console.error("Invalid category");
         return;
@@ -299,63 +323,8 @@ const CRUDProductPage = () => {
         `Availability for item ${id} in ${collectionName} updated to ${newAvailability}`
       );
 
-      // Optionally, update local state directly to avoid re-fetching data
-      updateLocalStateAvailability(collectionName, id, newAvailability);
     } catch (error) {
       console.error(`Error updating availability in ${collectionName}:`, error);
-    }
-  };
-
-  const updateLocalStateAvailability = (
-    collectionName: string,
-    id: string,
-    newAvailability: string
-  ) => {
-    switch (collectionName) {
-      case "drinks":
-        setDrinks((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "mainCourse":
-        setMainCourses((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "pasta":
-        setPasta((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "pastries":
-        setPastries((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "snacks":
-        setSnacks((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      case "sandwiches":
-        setSandwiches((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, availability: newAvailability } : item
-          )
-        );
-        break;
-      default:
-        console.warn("Unknown collection name:", collectionName);
     }
   };
 
@@ -559,17 +528,20 @@ const CRUDProductPage = () => {
 
                 {/* AVAILABILITY INDICATOR */}
                 <div className="absolute top-4 left-4 w-32 py-1 bg-white border-2 shadow-md rounded-full px-2
-                flex items-center gap-2">
+                flex items-center gap-2 justify-start">
                   <span
-                  className={`w-4 h-4 rounded-full ${
-                    item.availability === "available"
-                      ? "bg-green-600"
-                      : "bg-gray-500"
-                  }`}
-                ></span>
-                <span className={`font-bold ${item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"}
-                text-sm`}>
-                  {item.availability === "available" ? "Available" : "Unavailable"}
+                    className={`w-4 h-4 rounded-full ${
+                      item.availability === "available"
+                        ? "bg-green-600"
+                        : "bg-gray-500"
+                    }`}
+                  ></span>
+                  <span
+                    className={`font-bold ${
+                      item.availability === "available" ? "text-green-600 pl-2" : "text-gray-500"
+                    } text-sm`}
+                  >
+                    {item.availability === "available" ? "Available" : "Unavailable"}
                   </span>
                 </div>
 

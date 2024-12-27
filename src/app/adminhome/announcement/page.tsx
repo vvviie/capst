@@ -4,26 +4,28 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, setDoc, doc, query, where, getDocs, getDoc, updateDoc } from "firebase/firestore";
 import { db, auth } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 const MakeAnnouncementPage = () => {
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [isUser, setIsUser] = useState(false);
+  const router = useRouter();
    // Handle changes in the subject input
 // Handle changes in the subject input (textbox)
-  const handleSubjectChange = (event) => {
-    const newSubject = event.target.value; // Corrected 'e' to 'event'
-    setSubject(newSubject);
-  };
+const handleSubjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const newSubject = e.target.value;
+  setSubject(newSubject);
+};
 
   // Handle changes in the body input (textarea)
-  const handleBodyChange = (event) => {
-    const newBody = event.target.value; // Corrected 'e' to 'event'
+  const handleBodyChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newBody = e.target.value; // Corrected 'e' to 'event'
     setBody(newBody);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); // Prevent form submission from reloading the page
   
     // Log the inputted information
@@ -74,7 +76,7 @@ const MakeAnnouncementPage = () => {
           // Get the current notifications (if any)
           const userSnapshot = await getDoc(userDocRef);
           const userData = userSnapshot.data();
-          const existingNotifications = userData.notifications || {};
+          const existingNotifications = userData?.notifications || {};
 
           // Generate a unique key for the new notification
           const notificationKey = `notif_${Date.now()}`; // Use timestamp for unique key
@@ -106,11 +108,36 @@ const MakeAnnouncementPage = () => {
         // Clear the form inputs
         setSubject("");
         setBody("");
-    } catch (error) {
-      console.error("Error adding notification:", error);
-      console.log("Error details:", error.message);  // Log the exact error message for debugging
-    }
+      } catch (error) {
+        // Narrowing error to Error type
+        if (error instanceof Error) {
+          console.error("Error adding notification:", error);
+          console.log("Error details:", error.message); // Accessing error.message safely
+        } else {
+          console.error("Unexpected error:", error);
+        }
+      }
 };
+
+useEffect(() => {
+  // Get all cookies as an array
+  const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+
+  // Check if no cookies exist
+  if (cookies.length === 0) {
+    // Redirect if no cookies exist
+    router.push('/');
+    return;
+  }
+
+  // Check if the 'user' cookie exists
+  const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+
+  if (userCookie) {
+    // Redirect if the 'user' cookie exists
+    router.push('/');
+  }
+}, [router]);
 
   useEffect(() => {
     const checkUserRole = () => {

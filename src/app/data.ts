@@ -8,6 +8,7 @@ export type Drinks = {
   availability: string;
   calorie: string;
   contains: string[];
+  prodID: string;
 };
 
 export type Pastries = {
@@ -20,6 +21,7 @@ export type Pastries = {
   availability: string;
   calorie: string;
   contains: string[];
+  prodID: string;
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -32,6 +34,8 @@ export type Pasta = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -44,6 +48,8 @@ export type Sandwiches = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -56,6 +62,8 @@ export type MainCourse = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -68,6 +76,8 @@ export type Snacks = {
   price: number;
   availability: string;
   calorie: string;
+  prodID: string;
+  contains: string[];
   //options?: { title: string; additionalPrice: number }[];
 };
 
@@ -1405,8 +1415,7 @@ export const category:menuCates = [
 
 export const subCategories = [
   "Sub Category 1", "Sub Category 2", "Sub Category 3", 
-];
-
+]
 
 type Expense = {
   expenseAmount: number;
@@ -1603,5 +1612,6 @@ export const months = [
   "September",
   "October",
   "November",
-  "December"
+  "December",
+  "----Show All----",
 ];

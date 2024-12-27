@@ -5,11 +5,17 @@ import Link from "next/link";
 import { db } from "@/app/firebase"; // Update the path based on your setup
 import { doc, getDoc } from "firebase/firestore";
 
+type SlideData = {
+  title: string;
+  desc: string;
+  img: string;
+};
+
 export const LandingSec = () => {
   // Block of code para sa transition at change ng text every few seconds.
   const [currentSlide, setCurrentSlide] = useState(0);
   const [fade, setFade] = useState(true);
-  const [slidesData, setSlidesData] = useState([]);
+  const [slidesData, setSlidesData] = useState<SlideData[]>([]);
 
   // Fetch slides data from Firestore
   useEffect(() => {

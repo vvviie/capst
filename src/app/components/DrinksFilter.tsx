@@ -5,119 +5,66 @@ import { usePathname } from "next/navigation";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../firebase";
 
-// Define a unified filter array with categories
-const Filters = {
+// Define the valid keys of Filters as a union type
+type FilterCategory = 'drinks' | 'pasta' | 'maincourse' | 'snacks' | 'pastries' | 'sandwiches';
+
+// Define the structure of a single filter item
+interface FilterItem {
+  name: string;
+  id: string;
+  onChange: string;
+  title: string;
+}
+
+// Define the structure of Filters, which is an object with the FilterCategory keys
+interface FiltersObject {
+  drinks: FilterItem[];
+  pasta: FilterItem[];
+  maincourse: FilterItem[];
+  snacks: FilterItem[];
+  pastries: FilterItem[];
+  sandwiches: FilterItem[];
+}
+
+// Filters object, typed correctly
+const Filters: FiltersObject = {
   drinks: [
     { name: "drinktype", id: "radioAllDrinks", onChange: "all", title: "All" },
-    {
-      name: "drinktype",
-      id: "radioCoffee",
-      onChange: "Coffee",
-      title: "Coffee",
-    },
-    {
-      name: "drinktype",
-      id: "radioNonCoffee",
-      onChange: "Non-Coffee",
-      title: "Non-Coffee",
-    },
+    { name: "drinktype", id: "radioCoffee", onChange: "Coffee", title: "Coffee" },
+    { name: "drinktype", id: "radioNonCoffee", onChange: "Non-Coffee", title: "Non-Coffee" },
   ],
   pasta: [
-    {
-      name: "pastatype",
-      id: "radioAllPasta",
-      onChange: "all",
-      title: "All Pasta",
-    },
+    { name: "pastatype", id: "radioAllPasta", onChange: "all", title: "All Pasta" },
     { name: "pastatype", id: "radioPesto", onChange: "Pesto", title: "Pesto" },
-    {
-      name: "pastatype",
-      id: "radioNonPesto",
-      onChange: "Non-Pesto",
-      title: "Non-Pesto",
-    },
+    { name: "pastatype", id: "radioNonPesto", onChange: "Non-Pesto", title: "Non-Pesto" },
   ],
   maincourse: [
-    {
-      name: "maincoursetype",
-      id: "radioAllMainCourse",
-      onChange: "all",
-      title: "All",
-    },
-    {
-      name: "maincoursetype",
-      id: "radioMeat",
-      onChange: "Meat",
-      title: "Meat",
-    },
-    {
-      name: "maincoursetype",
-      id: "radioSeaFood",
-      onChange: "Seafood",
-      title: "Sea Food",
-    },
-    {
-      name: "maincoursetype",
-      id: "radioVegetables",
-      onChange: "Veggies",
-      title: "Vegetables",
-    },
+    { name: "maincoursetype", id: "radioAllMainCourse", onChange: "all", title: "All" },
+    { name: "maincoursetype", id: "radioMeat", onChange: "Meat", title: "Meat" },
+    { name: "maincoursetype", id: "radioSeaFood", onChange: "Seafood", title: "Sea Food" },
+    { name: "maincoursetype", id: "radioVegetables", onChange: "Veggies", title: "Vegetables" },
   ],
   snacks: [
     { name: "snacktype", id: "radioAllSnacks", onChange: "all", title: "All" },
     { name: "snacktype", id: "radioFries", onChange: "Fries", title: "Fries" },
-    {
-      name: "snacktype",
-      id: "radioChicken",
-      onChange: "Chicken",
-      title: "Chicken",
-    },
-    {
-      name: "snacktype",
-      id: "radioNachos",
-      onChange: "Nachos",
-      title: "Nachos",
-    },
-    {
-      name: "snacktype",
-      id: "radioSeafood",
-      onChange: "Seafood",
-      title: "Sea Food",
-    },
+    { name: "snacktype", id: "radioChicken", onChange: "Chicken", title: "Chicken" },
+    { name: "snacktype", id: "radioNachos", onChange: "Nachos", title: "Nachos" },
+    { name: "snacktype", id: "radioSeafood", onChange: "Seafood", title: "Sea Food" },
   ],
   pastries: [
-    {
-      name: "pastrytype",
-      id: "radioAllPastries",
-      onChange: "all",
-      title: "All",
-    },
+    { name: "pastrytype", id: "radioAllPastries", onChange: "all", title: "All" },
     { name: "pastrytype", id: "radioCake", onChange: "Cake", title: "Cake" },
-    {
-      name: "pastrytype",
-      id: "radioCookie",
-      onChange: "Cookie",
-      title: "Cookie",
-    },
+    { name: "pastrytype", id: "radioCookie", onChange: "Cookie", title: "Cookie" },
     { name: "pastrytype", id: "radioTart", onChange: "Tart", title: "Tart" },
   ],
   sandwiches: [
-    {
-      name: "sandwichtype",
-      id: "radioAllSandwiches",
-      onChange: "all",
-      title: "All",
-    },
+    { name: "sandwichtype", id: "radioAllSandwiches", onChange: "all", title: "All" },
     { name: "sandwichtype", id: "radioMeat", onChange: "Meat", title: "Meat" },
     { name: "sandwichtype", id: "radioFish", onChange: "Fish", title: "Fish" },
-    {
-      name: "sandwichtype",
-      id: "radioVeggie",
-      onChange: "Veggie",
-      title: "Veggie",
-    },
+    { name: "sandwichtype", id: "radioVeggie", onChange: "Veggie", title: "Veggie" },
   ],
 };
+
 
 const FilterCalories = [
   { name: "caloriecount", id: "radioAll", onChange: "all", title: "All" },
@@ -129,14 +76,15 @@ const FilterCalories = [
 const DrinksFilter: React.FC<{
   onFilterChange: (filter: string) => void;
   onCalorieChange: (calorie: string) => void;
-  onAllergyChange: (selectedAllergies: string[]) => void; // New prop for allergy changes
+  onAllergyChange: (selectedAllergies: string[]) => void; 
 }> = ({ onFilterChange, onCalorieChange, onAllergyChange }) => {
+
   const [open, setOpen] = useState(false);
   const [selectedDrinkType, setSelectedDrinkType] = useState<string>("all");
   const [selectedCalorie, setSelectedCalorie] = useState<string>("all");
   const formRef = useRef<HTMLFormElement | null>(null);
   const pathname = usePathname();
-  const slug = pathname.split("/").pop()?.toLowerCase() || "";
+  const slug = pathname ? pathname.split("/").pop()?.toLowerCase() || "" : "";
 
   const [allergies, setAllergies] = useState<string[]>([]);
   const [selectedAllergies, setSelectedAllergies] = useState<string[]>([]);
@@ -260,7 +208,8 @@ const DrinksFilter: React.FC<{
     fetchAllergies();
   }, [slug]);
 
-  const currentFilters = Filters[slug] || [];
+  
+  const currentFilters = Filters[slug as FilterCategory] || [];
 
   return (
     <div className="relative w-6 h-6 cursor-pointer">

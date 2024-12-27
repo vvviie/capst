@@ -1,8 +1,8 @@
-// UsersFilter Component
 "use client";
 import Image from "next/image";
 import React, { useState, useEffect, useRef } from "react";
 
+// Status options data
 const statusOptions = [
     { id: 1, value: "All", min: 0, max: Infinity },
     { id: 2, value: "Regular", min: 0, max: 999 },
@@ -12,17 +12,24 @@ const statusOptions = [
     { id: 6, value: "Diamond", min: 20000, max: Infinity },
 ];
 
-const UsersFilter = ({ onFilterChange }) => {
+// Type for the props of UsersFilter component
+interface UsersFilterProps {
+  onFilterChange: (value: string) => void; // Define the type for the callback
+}
+
+const UsersFilter: React.FC<UsersFilterProps> = ({ onFilterChange }) => {
     const [open, setOpen] = useState(false);
     const [selectedStatus, setSelectedStatus] = useState("All");
-    const formRef = useRef(null);
+    const formRef = useRef<HTMLFormElement | null>(null); // Type the formRef
 
-    const handleClickOutside = (event) => {     
-        if (formRef.current && !formRef.current.contains(event.target)) {
+    // Event type for MouseEvent
+    const handleClickOutside = (event: MouseEvent) => {
+        if (formRef.current && !formRef.current.contains(event.target as Node)) {
             setOpen(false);
         }
-    };  
+    };
 
+    // Effect for managing event listener on outside click
     useEffect(() => {
         if (open) {
             document.addEventListener("mousedown", handleClickOutside);
@@ -32,7 +39,7 @@ const UsersFilter = ({ onFilterChange }) => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, [open]);
 
-    const handleStatusChange = (value) => {
+    const handleStatusChange = (value: string) => {
         setSelectedStatus(value);
         onFilterChange(value);
         setOpen(false);

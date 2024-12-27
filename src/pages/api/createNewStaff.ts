@@ -1,18 +1,20 @@
+import { NextApiRequest, NextApiResponse } from 'next';
 import admin from 'firebase-admin';
+import path from 'path';
+import serviceAccount from '../../app/adminsettings/adminsettings.json';
 
-// Initialize Firebase Admin SDK
 if (!admin.apps.length) {
     admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
+        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
         databaseURL: "https://testingcapstonejg-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "testingcapstonejg",
     });
 }
 
-export default async (req, res) => {
+const createNewStaff = async (req: NextApiRequest, res: NextApiResponse) => {
     if (req.method === "POST") {
         const { username, password } = req.body;
 
-        // Validate input
         if (!username || !password) {
             console.error("Username and password must be provided.");
             return res.status(400).json({ error: "Username and password are required." });
@@ -25,19 +27,20 @@ export default async (req, res) => {
             });
 
             console.log("User created successfully:", userRecord.uid);
-            res.status(201).json({ uid: userRecord.uid }); // Return the UID to the client
+            res.status(201).json({ uid: userRecord.uid });
         } catch (error) {
             console.error("Error creating new user:", error);
 
-            // Handle specific error for email already in use
-            if (error.code === 'auth/email-already-exists') {
+            if ((error as { code: string }).code === 'auth/email-already-exists') {
                 return res.status(409).json({ error: "The email address is already in use by another account." });
             }
 
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: (error as Error).message });
         }
     } else {
         res.setHeader("Allow", ["POST"]);
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 };
+
+export default createNewStaff;

@@ -1,23 +1,33 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import CheckoutPopup from "./CheckoutPopup";
 import { db } from "../firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-const hasExpenses = true;
-const InputExpenses = ({ isOpen, toggleForm }) => {
-  const formRef = useRef(null);
+
+type InputExpensesProps = {
+  isOpen: boolean;
+  toggleForm: () => void;
+};
+
+interface Expense {
+  expenseLabel: string;
+  expenseAmount: number;
+}
+
+const InputExpenses: React.FC<InputExpensesProps> = ({ isOpen, toggleForm }) => {
+  const formRef = useRef<HTMLFormElement | null>(null);
   const [input, setInput] = useState("today");
   const [isPopUpVisible, setIsPopUpVisible] = useState(false);
-  const [addedExpenses, setAddedExpenses] = useState([]);
+  const [addedExpenses, setAddedExpenses] = useState<Expense[]>([]);
   const [totalExpense, setTotalExpense] = useState(0);
   const [expenseLabel, setExpenseLabel] = useState("");
-  const [expenseAmount, setExpenseAmount] = useState(0);
+  const [expenseAmount, setExpenseAmount] = useState<number>(0);
   const [date, setDate] = useState("");
   const [error, setError] = useState("");
-  const [activeExpenseIndex, setActiveExpenseIndex] = useState(null); // State to track the active expense
+  const [activeExpenseIndex, setActiveExpenseIndex] = useState<number | null>(null);
 
-  const handleExpenseClick = (index) => {
-    setInput("today");
+  const handleExpenseClick = (index: number) => {
+    //setInput("today");
     setActiveExpenseIndex(index); // Set the clicked expense as active
   };
 
@@ -69,7 +79,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     }
   };
 
-  const handleRemoveExpense = (index) => {
+  const handleRemoveExpense = (index: number) => {
     // Get the amount of the expense being removed
     const removedExpenseAmount = addedExpenses[index].expenseAmount;
 
@@ -82,10 +92,10 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     );
 
     // Reset active expense index if necessary
-    setActiveExpenseIndex(null);
+    //setActiveExpenseIndex(null);
   };
 
-  const handleSubmit = async (event) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     let isValid = true;
 
@@ -169,7 +179,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     setDate("");
     setExpenseLabel("");
     setExpenseAmount(0);
-    setInput("today");
+    //setInput("today");
 
 
     // Submit to salesData collection
@@ -203,16 +213,16 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     // Hide the popup and toggle the form after a delay
     setTimeout(() => {
       setIsPopUpVisible(false);
-      toggleForm(); // Close the form
+      ///toggleForm(); // Close the form
     }, 750);
   };
 
-  const handleChange = (event) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target;
     if (name === "expenseLabel") {
       setExpenseLabel(value);
     } else if (name === "expenseAmount") {
-      setExpenseAmount(value);
+      setExpenseAmount(Number(value)); 
     } else if (name === "date") {
       setDate(value);
     } else {
@@ -220,9 +230,8 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
     }
   };
 
-  const handleClickOutside = (event) => {
-    if (formRef.current && !formRef.current.contains(event.target)) {
-      
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (formRef.current && !formRef.current.contains(event.target as Node)) {
       toggleForm();
       setExpenseLabel("");
       setExpenseAmount(0);
@@ -231,7 +240,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
       setInput("today");
       setError("");
     }
-  };
+  }, [toggleForm, setExpenseLabel, setExpenseAmount, setAddedExpenses, setTotalExpense, setInput, setError]);
 
   useEffect(() => {
     if (isOpen) {
@@ -240,7 +249,7 @@ const InputExpenses = ({ isOpen, toggleForm }) => {
       document.removeEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, handleClickOutside]);
 
   if (!isOpen) return null;
 

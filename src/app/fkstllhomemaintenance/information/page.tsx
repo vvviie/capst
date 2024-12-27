@@ -14,28 +14,59 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
+import { useRouter } from "next/navigation";
+type ConfirmationModalProps = {
+  isVisible: boolean;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+};
+
+type LimitExceededModalProps = {
+  isVisible: boolean;
+  message: string;
+  onClose: () => void;
+};
+
+interface Data {
+  aboutUs: string;
+  location: string;
+  operatingDays: string;
+  openHours: string;
+  accessibility: string;
+  img: string[];
+}
+
 const AdminLandingPageMaintenance = () => {
   const [editTabOpen, setEditTabOpen] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
+  const router = useRouter(); // Initialize useRouter
   const [isPopupVisible, setIsPopupVisible] = useState(false);
   const [aboutUsText, setAboutUsText] = useState("");
-  const [data, setData] = useState({});
+  const [data, setData] = useState<Data>({
+    aboutUs: "",
+    location: "",
+    operatingDays: "",
+    openHours: "",
+    accessibility: "",
+    img: [],
+  });
   const [location, setLocation] = useState("");
   const [operatingDays, setOperatingDays] = useState("");
   const [openHours, setOpenHours] = useState("");
   const [accessibility, setAccessibility] = useState("");
   const [images, setImages] = useState([]); // State for images
-  const [uploadedImages, setUploadedImages] = useState([]); // State for uploaded images
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]); // State for uploaded images
   const maxCharacters = 360;
 
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [imageToDelete, setImageToDelete] = useState(null);
+  const [imageToDelete, setImageToDelete] = useState<string | null>(null);
 
   const [isLimitModalVisible, setIsLimitModalVisible] = useState(false);
   const [limitModalMessage, setLimitModalMessage] = useState("");
 
   // Function to open the modal
-  const openModal = (img) => {
+  const openModal = (img: string) => {
     setImageToDelete(img);
     setIsModalVisible(true);
   };
@@ -56,34 +87,63 @@ const AdminLandingPageMaintenance = () => {
   };
 
   useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
+
+  useEffect(() => {
     const fetchData = async () => {
       const docRef = doc(db, "webContent", "landing_infoSection");
       const docSnap = await getDoc(docRef);
       console.log("Document Reference:", docRef);
+      
       if (docSnap.exists()) {
-        console.log("Document data:", docSnap.data());
-        setData(docSnap.data());
-        setAboutUsText(docSnap.data()["aboutUs"] || ""); // Set initial About Us text
-        setLocation(docSnap.data()["location"] || ""); // Set initial Location
-        setOperatingDays(docSnap.data()["operatingDays"] || ""); // Set initial Operating Days
-        setOpenHours(docSnap.data()["openHours"] || ""); // Set initial Open Hours
-        setAccessibility(docSnap.data()["accessibility"] || ""); // Set initial Accessibility
-        setImages(docSnap.data()["img"] || []); // Set initial images from Firestore
+        const fetchedData = docSnap.data();
+        console.log("Document data:", fetchedData);
+        
+        // Type assertion to make sure fetched data matches Data type
+        setData(fetchedData as Data); // Assert as Data type
+        setAboutUsText(fetchedData["aboutUs"] || ""); // Set initial About Us text
+        setLocation(fetchedData["location"] || ""); // Set initial Location
+        setOperatingDays(fetchedData["operatingDays"] || ""); // Set initial Operating Days
+        setOpenHours(fetchedData["openHours"] || ""); // Set initial Open Hours
+        setAccessibility(fetchedData["accessibility"] || ""); // Set initial Accessibility
+        setImages(fetchedData["img"] || []); // Set initial images from Firestore
       } else {
         console.log("No such document!");
       }
     };
-
+  
     fetchData();
   }, []);
 
-  const convertImageToWebP = (file) => {
+  const convertImageToWebP = (file: File): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const imgElement = new window.Image();
       const reader = new FileReader();
 
       reader.onload = (e) => {
-        imgElement.src = e.target.result;
+        const result = e.target?.result;
+        if (typeof result === 'string') {
+          imgElement.src = result; // Type assertion to string
+        } else {
+          reject(new Error('File read failed or result is not a valid string.'));
+        }
       };
 
       imgElement.onload = () => {
@@ -117,18 +177,23 @@ const AdminLandingPageMaintenance = () => {
     });
   };
 
-  const uploadImageToStorage = async (file) => {
+  const uploadImageToStorage = async (file: File): Promise<string | null> => {
     const storage = getStorage();
     const storageRef = ref(
       storage,
       `images/landing/${file.name.split(".").slice(0, -1).join(".")}.webp`
     );
-
+  
     try {
+      // Convert image to WebP format
       const webpBlob = await convertImageToWebP(file);
-      const downloadUrl = await uploadBytes(storageRef, webpBlob, {
+  
+      // Upload the WebP blob to Firebase Storage
+      const uploadResult = await uploadBytes(storageRef, webpBlob, {
         contentType: "image/webp",
       });
+  
+      // Get the download URL of the uploaded image
       const url = await getDownloadURL(storageRef);
       return url; // Return the URL
     } catch (error) {
@@ -137,39 +202,40 @@ const AdminLandingPageMaintenance = () => {
     }
   };
 
-  const handleImageUpload = async (event) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (files.length > 0) {
-      const totalImages = images.length + uploadedImages.length; // Calculate total images
-
-      // Check if adding new images would exceed the limit
-      if (totalImages >= 10) {
-        setLimitModalMessage(
-          "Maximum number of images reached. Please delete an existing image to upload a new one."
-        );
-        setIsLimitModalVisible(true); // Show the modal
-        return; // Exit if the maximum number of images is reached
-      }
-
-      const uploadedUrls = await Promise.all(
-        Array.from(files).map(async (file) => {
-          if (uploadedImages.length < 10 - images.length) {
-            // Check remaining capacity
-            const url = await uploadImageToStorage(file);
-            return url;
-          } else {
-            console.log("Maximum number of images reached.");
-            return null;
-          }
-        })
+  
+    if (!files || files.length === 0) return; // Handle the case where files is null or empty
+  
+    const totalImages = images.length + uploadedImages.length; // Calculate total images
+  
+    // Check if adding new images would exceed the limit
+    if (totalImages >= 10) {
+      setLimitModalMessage(
+        "Maximum number of images reached. Please delete an existing image to upload a new one."
       );
-
-      const filteredUrls = uploadedUrls.filter((url) => url !== null);
-      setUploadedImages((prevImages) => [...prevImages, ...filteredUrls]);
+      setIsLimitModalVisible(true); // Show the modal
+      return; // Exit if the maximum number of images is reached
     }
+  
+    const uploadedUrls = await Promise.all(
+      Array.from(files).map(async (file) => {
+        if (uploadedImages.length < 10 - images.length) {
+          // Check remaining capacity
+          const url = await uploadImageToStorage(file);
+          return url;
+        } else {
+          console.log("Maximum number of images reached.");
+          return null;
+        }
+      })
+    );
+  
+    const filteredUrls = uploadedUrls.filter((url): url is string => url !== null);
+    setUploadedImages((prevImages) => [...prevImages, ...filteredUrls]);
   };
 
-  const handleRemoveImage = async (imageUrl) => {
+  const handleRemoveImage = async (imageUrl: string) => {
     const storage = getStorage();
     const imageRef = ref(storage, imageUrl);
 
@@ -200,23 +266,23 @@ const AdminLandingPageMaintenance = () => {
     }
   };
 
-  const handleAboutUsChange = (e) => {
+  const handleAboutUsChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setAboutUsText(e.target.value);
   };
 
-  const handleLocationChange = (e) => {
+  const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocation(e.target.value);
   };
 
-  const handleOperatingDaysChange = (e) => {
+  const handleOperatingDaysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOperatingDays(e.target.value);
   };
 
-  const handleOpenHoursChange = (e) => {
+  const handleOpenHoursChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setOpenHours(e.target.value);
   };
 
-  const handleAccessibilityChange = (e) => {
+  const handleAccessibilityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAccessibility(e.target.value);
   };
 
@@ -255,7 +321,11 @@ const AdminLandingPageMaintenance = () => {
       }, 750);
       window.location.reload();
     } catch (error) {
-      console.error("Error updating document: ", error.message);
+      if (error instanceof Error) {
+        console.error("Error updating document: ", error.message);
+      } else {
+        console.error("Unknown error: ", error);
+      }
     }
   };
 
@@ -267,7 +337,7 @@ const AdminLandingPageMaintenance = () => {
     setCurrentImage((prev) => (prev === 0 ? images.length - 1 : prev - 1));
   };
 
-  const ConfirmationModal = ({ isVisible, message, onConfirm, onCancel }) => {
+  const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ isVisible, message, onConfirm, onCancel }) => {
     if (!isVisible) return null;
 
     return (
@@ -293,7 +363,7 @@ const AdminLandingPageMaintenance = () => {
     );
   };
 
-  const LimitExceededModal = ({ isVisible, message, onClose }) => {
+  const LimitExceededModal: React.FC<LimitExceededModalProps> = ({ isVisible, message, onClose }) => {
     if (!isVisible) return null;
 
     return (
