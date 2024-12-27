@@ -37,7 +37,7 @@ const ReservationPage = () => {
   const modalRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const [isPopupVisible, setIsPopupVisible] = useState(false);
-  const slug = pathname?.split("/").pop() || '';
+  const slug = pathname?.split("/").pop() || "";
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const router = useRouter();
@@ -76,9 +76,18 @@ const ReservationPage = () => {
   const [limits, setLimits] = useState<LimitsMap>({});
 
   const [remarks, setRemarks] = useState("");
+
+  const [payment, setPayment] = useState("Cash");
+
+  const [expandImage, setExpandImage] = useState(false);
   //#endregion
 
   //#region Global EffectHooks
+
+  const handlePaymentChange = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.defaultPrevented;
+    setPayment(event.currentTarget.value);
+  };
 
   useEffect(() => {
     if (slug === "table") {
@@ -203,7 +212,7 @@ const ReservationPage = () => {
 
     // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
-      setError(true)
+      setError(true);
       setErrorMessage("Please fill in all required fields."); // Show error message
       setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
       return;
@@ -211,7 +220,7 @@ const ReservationPage = () => {
 
     // Check for hour input of 0 specifically
     if (hourInput === 0) {
-      setError(true)
+      setError(true);
       setErrorMessage("Please enter a valid hour."); // Show error message for invalid hour
       setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
       return;
@@ -351,21 +360,22 @@ const ReservationPage = () => {
         const limitsCollection = collection(db, "packageOffers"); // Assuming limits are in the same collection
         const limitsSnapshot = await getDocs(limitsCollection);
         const limitsMap: LimitsMap = {}; // Explicitly typed object
-  
+
         limitsSnapshot.docs.forEach((doc) => {
           const data = doc.data();
-          if (data.limits && data.title) { // Ensure data has 'limits' and 'title'
+          if (data.limits && data.title) {
+            // Ensure data has 'limits' and 'title'
             limitsMap[data.title] = data.limits; // Store limits by document title
           }
         });
-  
+
         console.log("Fetched Limits:", limitsMap); // Debugging log
         setLimits(limitsMap);
       } catch (error) {
         console.error("Error fetching limits:", error);
       }
     };
-  
+
     fetchLimits();
   }, []);
 
@@ -639,10 +649,13 @@ const ReservationPage = () => {
         : selectedPackage === "B"
         ? "Package B"
         : "Package C";
-        const buffetChosen = chosenItems.reduce<{ [key: string]: string }>((acc, item) => {
-          acc[item.title] = item.items.join(", ");
-          return acc;
-        }, {});
+    const buffetChosen = chosenItems.reduce<{ [key: string]: string }>(
+      (acc, item) => {
+        acc[item.title] = item.items.join(", ");
+        return acc;
+      },
+      {}
+    );
 
     const orderId = Math.floor(
       1000000000 + Math.random() * 9000000000
@@ -705,9 +718,11 @@ const ReservationPage = () => {
 
   return (
     <div
-      className="h-auto lg:min-h-[69.2vh] bg-white mt-14 py-6 px-10 lg:flex lg:flex-col
-    lg:justify-center lg:px-24 lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center
-    lg:gap-4 xl:px-56 items-center lg:py-16"
+      className={`h-auto lg:min-h-[69.2vh] bg-white mt-14 py-6 px-10 lg:flex lg:flex-col
+    lg:justify-center lg:px-24 lg:bg-[url('/backgrounds/bg3-2.png')] ${
+      payment === "Cash" ? "lg:bg-cover" : "lg:bg-contain"
+    } lg:bg-no-repeat lg:bg-center
+    lg:gap-4 xl:px-56 items-center lg:py-16`}
     >
       {/* HEADER */}
       <Link
@@ -958,7 +973,7 @@ const ReservationPage = () => {
               <div className="flex flex-col gap-0.5">
                 {chosenItems.length > 0 && ( // Check if there are chosen items
                   <span className="text-sm text-gray-700 flex items-center space-x-1 font-semibold">
-                  {'You\'ve chosen:'}
+                    {"You've chosen:"}
                   </span>
                 )}
                 <div className="text-sm">
@@ -1088,6 +1103,118 @@ const ReservationPage = () => {
               </div>
             )}
 
+            {/* PAYMENT METHOD */}
+            <div className="w-full flex justify-between items-center gap-2">
+              <button
+                type="button"
+                value={"Cash"}
+                onClick={handlePaymentChange}
+                className={`${
+                  payment === "Cash"
+                    ? "bg-orange-400 text-orange-50 hover:bg-orange-300"
+                    : "bg-white border-2 border-gray-100 hover:bg-gray-100 text-gray-500"
+                } shadow-md rounded-md h-10 flex justify-center items-center
+              flex-1 font-bold hover:scale-y-[1.05] duration-200 cursor-pointer`}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                value={"Card"}
+                onClick={handlePaymentChange}
+                className={`${
+                  payment === "Card"
+                    ? "bg-orange-400 text-orange-50 hover:bg-orange-300"
+                    : "bg-white border-2 border-gray-100 hover:bg-gray-100 text-gray-500"
+                } shadow-md rounded-md h-10 flex justify-center items-center
+              flex-1 font-bold hover:scale-y-[1.05] duration-200 cursor-pointer`}
+              >
+                Card
+              </button>
+            </div>
+            {payment === "Card" && (
+              <>
+                <h1 className="text-gray-500 mt-2 text-sm mb-2">
+                  Scan QR Code
+                </h1>
+                {/* INSTAPAY QR IMAGE CONTAINER */}
+                <div className="relative aspect-square w-full">
+                  <Image
+                    src={`/instapayqr.webp`}
+                    alt=""
+                    fill
+                    className="object-contain cursor-pointer hover:scale-[1.02] duration-200"
+                    onClick={() => setExpandImage(true)}
+                  />
+                </div>
+                {expandImage && (
+                  <div
+                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                    style={{ background: "rgba(0, 0, 0, 0.85)" }}
+                  >
+                    <div className="w-full max-w-[620px] aspect-square relative">
+                      <div
+                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                    absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                    hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                        onClick={() => setExpandImage(false)}
+                      >
+                        <span className="font-bold">X</span>
+                      </div>
+                      <Image
+                        src={`/instapayqr.webp`}
+                        alt="idpic"
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
+                <div className="w-full flex flex-col gap-2 items-center mt-4">
+                  <span className="text-gray-500 text-sm">
+                    Upload Image of Payment Receipt
+                  </span>
+
+                  <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
+                    <Image src={""} alt="ID" fill className="object-cover" />
+                    <button className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                      X
+                    </button>
+                  </div>
+
+                  <div className="w-full flex gap-2 items-center">
+                    <div className="w-full flex flex-col gap-1 items-center justify-center">
+                      <label
+                        className="text-orange-950 text-sm w-full text-left space-x-1"
+                        htmlFor="imageName2"
+                      >
+                        <span>Image File Name</span>
+                      </label>
+                      <div className="w-full flex items-center gap-1">
+                        <input
+                          className="border-2 border-solid border-orange-900 w-2/3 h-10 pl-4 rounded-md bg-orange-50"
+                          name="imageName2"
+                          id="imageName2"
+                          type="text"
+                          placeholder="Image Name"
+                        />
+                        <button
+                          className="h-10 w-1/3 bg-white border-2 border-gray-100 shadow-md rounded-md font-bold
+                                  text-gray-600"
+                        >
+                          Upload
+                        </button>
+                        <input
+                          type="file"
+                          accept="image/*" // Attach the ref
+                          style={{ display: "none" }} // Hide the input
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
             {/* Button */}
             <button
               type="button" // Change type to "button" to prevent default form submission
@@ -1115,30 +1242,30 @@ const ReservationPage = () => {
             {slug === "event"
               ? "There must be a 50% downpayment upon reservation."
               : slug === "table"
-              ? "The reservation fee would be deductable to the total bill upon ordering."
+              ? "The reservation fee would be converted to consumable balance after paying."
               : ""}
           </p>
         </form>
         {/* IMAGE CONTAINER */}
         <div className="w-full aspect-video relative lg:aspect-auto lg:w-1/2 z-0">
-        <Image
-          src={
-            slug === "table"
-              ? Reserve[0]?.img || "/fikaplace/3.jpg"
-              : slug === "event"
-              ? Reserve[1]?.img || "/fikaplace/1.jpg"
-              : Reserve[2]?.img || "/fikaplace/6.jpg"
-          }
-          alt={
-            slug === "table"
-              ? "Table setting image"
-              : slug === "event"
-              ? "Event image"
-              : "Default image"
-          }
-          fill
-          className="object-cover lg:h-full"
-        />
+          <Image
+            src={
+              slug === "table"
+                ? Reserve[0]?.img || "/fikaplace/3.jpg"
+                : slug === "event"
+                ? Reserve[1]?.img || "/fikaplace/1.jpg"
+                : Reserve[2]?.img || "/fikaplace/6.jpg"
+            }
+            alt={
+              slug === "table"
+                ? "Table setting image"
+                : slug === "event"
+                ? "Event image"
+                : "Default image"
+            }
+            fill
+            className={`object-cover lg:h-full`}
+          />
         </div>
       </div>
       {/* BOOKING MADE POP UP */}
