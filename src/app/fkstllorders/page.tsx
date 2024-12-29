@@ -896,8 +896,6 @@ const AdminAndStaffOrdersPage = () => {
     console.log("User role is set to:", user);
   }, [user]); // Add `userRole` as a dependency to log updates if it changes
 
- 
-
   useEffect(() => {
     console.log("useEffect triggered"); // Log when the useEffect runs
 
@@ -1053,110 +1051,104 @@ const AdminAndStaffOrdersPage = () => {
     fetchCompletedOrders();
   }, [orderStatCat, applySrPWD]);
 
-
-
   // Set the default date to today when the component mounts
-useEffect(() => {
-  const today = new Date();
-  const formattedDate = today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
-  setSelectedDate(formattedDate); // Set the selected date to today
-}, []); // Empty dependency array ensures this runs only once on mount
-
- // Function to show all records
- const showAllRecords = () => {
-  setSearchId(""); // Reset search ID
-  setSelectedDate(""); // Reset selected date (or set to today's date if preferred)
-};
-
-// Function to handle filter option change
-const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-  const value = e.target.value;
-  setFilterOption(value);
-
-  if (value === "today") {
+  useEffect(() => {
     const today = new Date();
-    const formattedDate = today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+    const formattedDate = today.toISOString().split("T")[0]; // Format to YYYY-MM-DD
     setSelectedDate(formattedDate); // Set the selected date to today
-  } else {
-    setSelectedDate(""); // Reset date if "Show All Records" is selected
-  }
-};
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  // Function to show all records
+  const showAllRecords = () => {
+    setSearchId(""); // Reset search ID
+    setSelectedDate(""); // Reset selected date (or set to today's date if preferred)
+  };
+
+  // Function to handle filter option change
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFilterOption(value);
+
+    if (value === "today") {
+      const today = new Date();
+      const formattedDate = today.toISOString().split("T")[0]; // Format to YYYY-MM-DD
+      setSelectedDate(formattedDate); // Set the selected date to today
+    } else {
+      setSelectedDate(""); // Reset date if "Show All Records" is selected
+    }
+  };
 
   //#region PAGES CODE
- const [currentPage, setCurrentPage] = useState(1);
- const [pageWindowStart, setPageWindowStart] = useState(1);
- const itemsPerPage = 5;
- const pagesToShow = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const itemsPerPage = 5;
+  const pagesToShow = 5;
 
+  const filteredOrders = userOrders.filter((order) => {
+    const matchesId = order.id.toLowerCase().includes(searchId.toLowerCase());
 
- const filteredOrders = userOrders.filter(order => {
-  const matchesId = order.id.toLowerCase().includes(searchId.toLowerCase());
-  
-  // Create date objects for comparison
-  const orderDate = new Date(order.date);
-  const selectedDateObj = new Date(selectedDate);
+    // Create date objects for comparison
+    const orderDate = new Date(order.date);
+    const selectedDateObj = new Date(selectedDate);
 
-  // Compare only the date parts (year, month, day)
-  const matchesDate = selectedDate ? 
-    (orderDate.getFullYear() === selectedDateObj.getFullYear() &&
-     orderDate.getMonth() === selectedDateObj.getMonth() &&
-     orderDate.getDate() === selectedDateObj.getDate()) 
-    : true; // If no date is selected, include all orders
+    // Compare only the date parts (year, month, day)
+    const matchesDate = selectedDate
+      ? orderDate.getFullYear() === selectedDateObj.getFullYear() &&
+        orderDate.getMonth() === selectedDateObj.getMonth() &&
+        orderDate.getDate() === selectedDateObj.getDate()
+      : true; // If no date is selected, include all orders
 
-  return matchesId && matchesDate; // Combine both filters
-});
+    return matchesId && matchesDate; // Combine both filters
+  });
 
   // Calculate total pages based on filtered orders
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
 
- // Get current page orders
- const currentOrders = userOrders.slice(
-   (currentPage - 1) * itemsPerPage,
-   currentPage * itemsPerPage
- );
+  // Get current page orders
+  const currentOrders = userOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
- const visiblePages = Array.from(
-   { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
-   (_, index) => pageWindowStart + index
- );
+  const visiblePages = Array.from(
+    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
+    (_, index) => pageWindowStart + index
+  );
 
- // Handle page change
- const goToPage = (pageNumber: number) => {
-   setCurrentPage(pageNumber);
+  // Handle page change
+  const goToPage = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
 
-   // Adjust the visible page numbers if necessary
-   if (pageNumber >= pageWindowStart + pagesToShow) {
-     setPageWindowStart(pageWindowStart + 1);
-   } else if (pageNumber < pageWindowStart) {
-     setPageWindowStart(pageWindowStart - 1);
-   }
- };
+    // Adjust the visible page numbers if necessary
+    if (pageNumber >= pageWindowStart + pagesToShow) {
+      setPageWindowStart(pageWindowStart + 1);
+    } else if (pageNumber < pageWindowStart) {
+      setPageWindowStart(pageWindowStart - 1);
+    }
+  };
 
- const handleNext = () => {
-   if (currentPage < totalPages) {
-     goToPage(currentPage + 1);
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
 
-     // Adjust page window start for "Next"
-     if (currentPage + 1 >= pageWindowStart + pagesToShow) {
-       setPageWindowStart(pageWindowStart + 1);
-     }
-   }
- };
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
 
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
 
- const handlePrevious = () => {
-   if (currentPage > 1) {
-     goToPage(currentPage - 1);
-
-     // Adjust page window start for "Previous"
-     if (currentPage - 1 < pageWindowStart) {
-       setPageWindowStart(pageWindowStart - 1);
-     }
-   }
- };
+      // Adjust page window start for "Previous"
+      if (currentPage - 1 < pageWindowStart) {
+        setPageWindowStart(pageWindowStart - 1);
+      }
+    }
+  };
   //const currentOrders = userOrders; // Display all orders without slicing
-
-
 
   //#endregion
 
@@ -1174,61 +1166,67 @@ const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       >
         {user === "admin" ? (
           <>
-            {/* HEADER */}
-            <div className="w-full flex flex-col items-end mb-4">
-              <div className="w-full flex gap-4 items-center">
-                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
-                <span className="text-2xl text-center font-bold text-orange-900">
-                  Orders
-                </span>
-                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
-              </div>
+           {/* HEADER */}
+<div className="w-full flex flex-col items-end mb-4">
+  <div className="w-full flex gap-4 items-center">
+    <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+    <span className="text-2xl text-center font-bold text-orange-900">Orders</span>
+    <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+  </div>
 
-              <div className="flex items-center w-full justify-between">
-                <div className="flex items-center gap-4">
-                  <label className="text-gray-500 font-bold">Search ID:</label>
-                  <input
-                    type="text"
-                    placeholder="Enter ID"
-                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md max-w-28 h-10 font-bold px-2"
-                    onChange={(e) => setSearchId(e.target.value)} // Update state on input change
-                  />
-                </div>
+  <div className="flex flex-col md:flex-row items-center w-full justify-between gap-2">
+    {/* Search ID Input */}
+    <div className="flex items-center gap-2 flex-1">
+      <input
+        type="text"
+        placeholder="Enter ID"
+        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+        onChange={(e) => setSearchId(e.target.value)} // Update state on input change
+      />
+    </div>
 
-                <input
-                  type="date"
-                  className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
-                  onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
-                />
+    {/* Date Picker */}
+    <div className="flex items-center gap-2 flex-1">
+      <input
+        type="date"
+        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+        onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
+      />
+    </div>
 
-<select
-                  className=" bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
-                  value={filterOption}
-                  onChange={handleFilterChange} // Handle filter option change
-                >
-                  <option value="all">Show All Records</option>
-                  <option value="today">Today</option>
-                </select>
+    {/* Filter Dropdown */}
+    <div className="flex items-center gap-2 flex-1">
+      <select
+        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-48" // Responsive width
+        value={filterOption}
+        onChange={handleFilterChange} // Handle filter option change
+      >
+        <option value="all">Show All Records</option>
+        <option value="today">Today</option>
+      </select>
+    </div>
 
-                <select
-                  name=""
-                  id=""
-                  className="w-1/2 bg-white border-2 border-gray-100 text-gray-500 shadow-md
-      rounded-md text-center h-10 font-bold max-w-28"
-                  onChange={handleCategoryChange}
-                >
-                  <option value="all">All</option>
-                  <option value="topay">To Pay</option>
-                  <option value="paid">Paid</option>
-                  <option value="prep">Prep</option>
-                  <option value="ready">Ready</option>
-                  <option value="done">Done</option>
-                  <option value="cancelled">Cancelled</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="refund">Refunded</option>
-                </select>
-              </div>
-            </div>
+    {/* Category Dropdown */}
+    <div className="flex items-center gap-2 flex-1">
+      <select
+        name=""
+        id=""
+        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+        onChange={handleCategoryChange}
+      >
+        <option value="all">All</option>
+        <option value="topay">To Pay</option>
+        <option value="paid">Paid</option>
+        <option value="prep">Prep</option>
+        <option value="ready">Ready</option>
+        <option value="done">Done</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="rejected">Rejected</option>
+        <option value="refund">Refunded</option>
+      </select>
+    </div>
+  </div>
+</div>
             {/* ORDERS LIST CONTAINER */}
             <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
               {hasOrder ? (
