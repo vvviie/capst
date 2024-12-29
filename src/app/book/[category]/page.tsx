@@ -440,7 +440,19 @@ const ReservationPage = () => {
     });
 
     try {
-      await setDoc(doc(db, "tableReservations", orderId), {
+      const reservationData: {
+        dateReserved: string;
+        timeReserved: string;
+        numberOfPersons: number;
+        reservedBy: string | null;
+        status: string;
+        dateToBeReserved: string;
+        timeToBeReserved: string;
+        totalPrice: number;
+        type: string;
+        payment: string;
+        receiptImage?: string; // Optional property
+      } = {
         dateReserved,
         timeReserved,
         numberOfPersons: numberOfPersonsTable,
@@ -451,9 +463,15 @@ const ReservationPage = () => {
         totalPrice: totalPriceT,
         type: "Table",
         payment,
-        receiptImage: payment === "Card" ? firebaseImageUrl : null // Add the URL only for "Card" payment
-      });
-
+      };
+    
+      // Conditionally add 'receiptImage' only when payment is "Card"
+      if (payment === "Card") {
+        reservationData.receiptImage = firebaseImageUrl;
+      }
+    
+      await setDoc(doc(db, "tableReservations", orderId), reservationData);
+    
       console.log("Reservation successfully saved.");
       setIsPopupVisible(true);
       setTimeout(() => {
@@ -463,7 +481,7 @@ const ReservationPage = () => {
     } catch (error) {
       console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");
-    }
+    }    
   };
   //#endregion
 
@@ -842,39 +860,43 @@ const ReservationPage = () => {
 
     // Calculate the downpayment and balance
     const downpaymentAmount =
-      paymentType === "downpayment" ? totalPrice / 2 : 0;
+    paymentType === "downpayment" ? totalPrice / 2 : 0;
 
-    // Define totalPrice to be submitted, depending on paymentType
-    const amountToSubmit =
-      paymentType === "fullpayment" ? totalPrice : downpaymentAmount;
+  try {
+    const reservationData: Record<string, any> = {
+      dateReserved,
+      timeReserved,
+      dateToBeReserved: formattedDateToBeReserved,
+      timeToBeReserved: formattedTime,
+      packageOffer,
+      buffetChosen,
+      numberOfPersons: numberOfPersonsEvent,
+      totalPrice,
+      paymentType,
+      status: "REQUESTED",
+      type: "Event",
+      reservedBy: userEmail,
+      remarks: remarks || "None",
+      payment,
+    };
 
-    try {
-      await setDoc(doc(db, "tableReservations", orderId), {
-        dateReserved,
-        timeReserved,
-        dateToBeReserved: formattedDateToBeReserved,
-        timeToBeReserved: formattedTime,
-        packageOffer,
-        buffetChosen,
-        numberOfPersons: numberOfPersonsEvent,
-        downpayment: paymentType === "downpayment" ? downpaymentAmount : null, // Store downpayment amount only if applicable
-        totalPrice: totalPrice, // Always store the original totalPrice
-        paymentType: paymentType,
-        status: "REQUESTED",
-        type: "Event",
-        reservedBy: userEmail,
-        remarks: remarks || "None",
-        payment,
-        receiptImage: payment === "Card" ? firebaseImageUrl : null // Add the URL only for "Card" payment
-      });
-      setIsPopupVisible(true);
-      setTimeout(() => {
-        setIsPopupVisible(false); // Hide after a few seconds if desired
-        router.push("/book/reservations"); // Redirect to /book
-      }, 3000);
-    } catch (error) {
-      console.error("Error adding reservation: ", error);
+    if (paymentType === "downpayment") {
+      reservationData.downpayment = downpaymentAmount;
     }
+    if (payment === "Card") {
+      reservationData.receiptImage = firebaseImageUrl;
+    }
+
+    await setDoc(doc(db, "tableReservations", orderId), reservationData);
+
+    setIsPopupVisible(true);
+    setTimeout(() => {
+      setIsPopupVisible(false);
+      router.push("/book/reservations");
+    }, 3000);
+  } catch (error) {
+    console.error("Error adding reservation: ", error);
+  }
   };
 
   //#endregion

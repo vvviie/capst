@@ -41,6 +41,7 @@ type res = {
   paymentType: string;
   downpayment: number;
   remarks?: string;
+  payment: string;
 };
 
 interface PaymentResponse {
@@ -763,6 +764,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         {expandedOrders[res.id] && (
                           <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
+                            <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
 
