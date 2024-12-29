@@ -100,6 +100,7 @@ const AdminAndStaffOrdersPage = () => {
   >(null);
 
   const [selectedDate, setSelectedDate] = useState<string>(""); // State to store the selected date
+  const [filterOption, setFilterOption] = useState<string>("today"); // State for filter option
   const [searchId, setSearchId] = useState<string>(""); // State to store the search ID
 
   const toggleOrder = (id: string) => {
@@ -1054,6 +1055,32 @@ const AdminAndStaffOrdersPage = () => {
 
 
 
+  // Set the default date to today when the component mounts
+useEffect(() => {
+  const today = new Date();
+  const formattedDate = today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+  setSelectedDate(formattedDate); // Set the selected date to today
+}, []); // Empty dependency array ensures this runs only once on mount
+
+ // Function to show all records
+ const showAllRecords = () => {
+  setSearchId(""); // Reset search ID
+  setSelectedDate(""); // Reset selected date (or set to today's date if preferred)
+};
+
+// Function to handle filter option change
+const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const value = e.target.value;
+  setFilterOption(value);
+
+  if (value === "today") {
+    const today = new Date();
+    const formattedDate = today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+    setSelectedDate(formattedDate); // Set the selected date to today
+  } else {
+    setSelectedDate(""); // Reset date if "Show All Records" is selected
+  }
+};
 
   //#region PAGES CODE
  const [currentPage, setCurrentPage] = useState(1);
@@ -1116,6 +1143,7 @@ const AdminAndStaffOrdersPage = () => {
    }
  };
 
+
  const handlePrevious = () => {
    if (currentPage > 1) {
      goToPage(currentPage - 1);
@@ -1128,12 +1156,7 @@ const AdminAndStaffOrdersPage = () => {
  };
   //const currentOrders = userOrders; // Display all orders without slicing
 
-// Set the default date to today when the component mounts
-useEffect(() => {
-  const today = new Date();
-  const formattedDate = today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
-  setSelectedDate(formattedDate); // Set the selected date to today
-}, []); // Empty dependency array ensures this runs only once on mount
+
 
   //#endregion
 
@@ -1177,6 +1200,15 @@ useEffect(() => {
                   className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
                   onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
                 />
+
+<select
+                  className=" bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
+                  value={filterOption}
+                  onChange={handleFilterChange} // Handle filter option change
+                >
+                  <option value="all">Show All Records</option>
+                  <option value="today">Today</option>
+                </select>
 
                 <select
                   name=""
