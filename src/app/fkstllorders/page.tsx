@@ -99,6 +99,7 @@ const AdminAndStaffOrdersPage = () => {
     "activated" | "deactivated" | null
   >(null);
 
+  const [selectedDate, setSelectedDate] = useState<string>(""); // State to store the selected date
   const [searchId, setSearchId] = useState<string>(""); // State to store the search ID
 
   const toggleOrder = (id: string) => {
@@ -894,9 +895,7 @@ const AdminAndStaffOrdersPage = () => {
     console.log("User role is set to:", user);
   }, [user]); // Add `userRole` as a dependency to log updates if it changes
 
-  //#region PAGES CODE
-  // Get current orders (this will be modified to show all orders)
-  const currentOrders = userOrders; // Display all orders without slicing
+ 
 
   useEffect(() => {
     console.log("useEffect triggered"); // Log when the useEffect runs
@@ -1053,9 +1052,84 @@ const AdminAndStaffOrdersPage = () => {
     fetchCompletedOrders();
   }, [orderStatCat, applySrPWD]);
 
-  const filteredOrders = currentOrders.filter(order =>
-    order.id.toLowerCase().includes(searchId.toLowerCase()) // Filter orders by ID
-  );
+
+
+
+  //#region PAGES CODE
+ const [currentPage, setCurrentPage] = useState(1);
+ const [pageWindowStart, setPageWindowStart] = useState(1);
+ const itemsPerPage = 5;
+ const pagesToShow = 5;
+
+
+ const filteredOrders = userOrders.filter(order => {
+  const matchesId = order.id.toLowerCase().includes(searchId.toLowerCase());
+  
+  // Create date objects for comparison
+  const orderDate = new Date(order.date);
+  const selectedDateObj = new Date(selectedDate);
+
+  // Compare only the date parts (year, month, day)
+  const matchesDate = selectedDate ? 
+    (orderDate.getFullYear() === selectedDateObj.getFullYear() &&
+     orderDate.getMonth() === selectedDateObj.getMonth() &&
+     orderDate.getDate() === selectedDateObj.getDate()) 
+    : true; // If no date is selected, include all orders
+
+  return matchesId && matchesDate; // Combine both filters
+});
+
+  // Calculate total pages based on filtered orders
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+
+ // Get current page orders
+ const currentOrders = userOrders.slice(
+   (currentPage - 1) * itemsPerPage,
+   currentPage * itemsPerPage
+ );
+
+ const visiblePages = Array.from(
+   { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
+   (_, index) => pageWindowStart + index
+ );
+
+ // Handle page change
+ const goToPage = (pageNumber: number) => {
+   setCurrentPage(pageNumber);
+
+   // Adjust the visible page numbers if necessary
+   if (pageNumber >= pageWindowStart + pagesToShow) {
+     setPageWindowStart(pageWindowStart + 1);
+   } else if (pageNumber < pageWindowStart) {
+     setPageWindowStart(pageWindowStart - 1);
+   }
+ };
+
+ const handleNext = () => {
+   if (currentPage < totalPages) {
+     goToPage(currentPage + 1);
+
+     // Adjust page window start for "Next"
+     if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+       setPageWindowStart(pageWindowStart + 1);
+     }
+   }
+ };
+
+ const handlePrevious = () => {
+   if (currentPage > 1) {
+     goToPage(currentPage - 1);
+
+     // Adjust page window start for "Previous"
+     if (currentPage - 1 < pageWindowStart) {
+       setPageWindowStart(pageWindowStart - 1);
+     }
+   }
+ };
+  //const currentOrders = userOrders; // Display all orders without slicing
+
+
+
   //#endregion
 
   return (
@@ -1088,10 +1162,16 @@ const AdminAndStaffOrdersPage = () => {
                   <input
                     type="text"
                     placeholder="Enter ID"
-                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md max-w-28 h-10 font-bold px-2"
                     onChange={(e) => setSearchId(e.target.value)} // Update state on input change
                   />
                 </div>
+
+                <input
+                  type="date"
+                  className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
+                  onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
+                />
 
                 <select
                   name=""
@@ -1570,6 +1650,37 @@ const AdminAndStaffOrdersPage = () => {
                       )}
                     </div>
                   ))}
+
+                  {/* PAGINATION CONTROLS */}
+                  <div className="flex justify-center items-center space-x-2">
+                    <button
+                      className="font-semibold cursor-pointer w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                      disabled={currentPage === 1}
+                      onClick={handlePrevious}
+                    >
+                      Prev
+                    </button>
+                    {visiblePages.map((page) => (
+                      <button
+                        key={page}
+                        className={`cursor-pointer h-9 aspect-square font-semibold rounded-md ${
+                          currentPage === page
+                            ? "bg-orange-300 text-white border-orange-300 border-2"
+                            : "bg-white text-gray-500 hover:bg-orange-50 border-2 border-gray-100 hover:border-orange-50 hover:text-orange-500"
+                        } shadow-md`}
+                        onClick={() => goToPage(page)}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      className="cursor-pointer font-semibold w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
+                      disabled={currentPage === totalPages}
+                      onClick={handleNext}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </>
               ) : (
                 // IF WALANG MAIPAKITA
