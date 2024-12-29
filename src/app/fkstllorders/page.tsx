@@ -1128,7 +1128,12 @@ const AdminAndStaffOrdersPage = () => {
  };
   //const currentOrders = userOrders; // Display all orders without slicing
 
-
+// Set the default date to today when the component mounts
+useEffect(() => {
+  const today = new Date();
+  const formattedDate = today.toISOString().split('T')[0]; // Format to YYYY-MM-DD
+  setSelectedDate(formattedDate); // Set the selected date to today
+}, []); // Empty dependency array ensures this runs only once on mount
 
   //#endregion
 
