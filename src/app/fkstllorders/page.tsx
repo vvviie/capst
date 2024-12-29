@@ -99,6 +99,8 @@ const AdminAndStaffOrdersPage = () => {
     "activated" | "deactivated" | null
   >(null);
 
+  const [searchId, setSearchId] = useState<string>(""); // State to store the search ID
+
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
       ...prev,
@@ -893,58 +895,8 @@ const AdminAndStaffOrdersPage = () => {
   }, [user]); // Add `userRole` as a dependency to log updates if it changes
 
   //#region PAGES CODE
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageWindowStart, setPageWindowStart] = useState(1);
-  const itemsPerPage = 5;
-  const pagesToShow = 5;
-
-  // Calculate total pages
-  const totalPages = Math.ceil(userOrders.length / itemsPerPage);
-
-  // Get current page orders
-  const currentOrders = userOrders.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const visiblePages = Array.from(
-    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
-    (_, index) => pageWindowStart + index
-  );
-
-  // Handle page change
-  const goToPage = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-
-    // Adjust the visible page numbers if necessary
-    if (pageNumber >= pageWindowStart + pagesToShow) {
-      setPageWindowStart(pageWindowStart + 1);
-    } else if (pageNumber < pageWindowStart) {
-      setPageWindowStart(pageWindowStart - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      goToPage(currentPage + 1);
-
-      // Adjust page window start for "Next"
-      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
-        setPageWindowStart(pageWindowStart + 1);
-      }
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      goToPage(currentPage - 1);
-
-      // Adjust page window start for "Previous"
-      if (currentPage - 1 < pageWindowStart) {
-        setPageWindowStart(pageWindowStart - 1);
-      }
-    }
-  };
+  // Get current orders (this will be modified to show all orders)
+  const currentOrders = userOrders; // Display all orders without slicing
 
   useEffect(() => {
     console.log("useEffect triggered"); // Log when the useEffect runs
@@ -1100,6 +1052,10 @@ const AdminAndStaffOrdersPage = () => {
 
     fetchCompletedOrders();
   }, [orderStatCat, applySrPWD]);
+
+  const filteredOrders = currentOrders.filter(order =>
+    order.id.toLowerCase().includes(searchId.toLowerCase()) // Filter orders by ID
+  );
   //#endregion
 
   return (
@@ -1132,9 +1088,8 @@ const AdminAndStaffOrdersPage = () => {
                   <input
                     type="text"
                     placeholder="Enter ID"
-                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md
-  rounded-md h-10 font-bold px-2" // Added padding on the x-axis
-                    //onChange={handleSearchChange}
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2"
+                    onChange={(e) => setSearchId(e.target.value)} // Update state on input change
                   />
                 </div>
 
@@ -1161,7 +1116,7 @@ const AdminAndStaffOrdersPage = () => {
             <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
               {hasOrder ? (
                 <>
-                  {currentOrders.map((order) => (
+                  {filteredOrders.map((order) => (
                     <div
                       className={`w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
                   ${
@@ -1615,36 +1570,6 @@ const AdminAndStaffOrdersPage = () => {
                       )}
                     </div>
                   ))}
-                  {/* PAGINATION CONTROLS */}
-                  <div className="flex justify-center items-center space-x-2">
-                    <button
-                      className="font-semibold cursor-pointer w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
-                      disabled={currentPage === 1}
-                      onClick={handlePrevious}
-                    >
-                      Prev
-                    </button>
-                    {visiblePages.map((page) => (
-                      <button
-                        key={page}
-                        className={`cursor-pointer h-9 aspect-square font-semibold rounded-md ${
-                          currentPage === page
-                            ? "bg-orange-300 text-white border-orange-300 border-2"
-                            : "bg-white text-gray-500 hover:bg-orange-50 border-2 border-gray-100 hover:border-orange-50 hover:text-orange-500"
-                        } shadow-md`}
-                        onClick={() => goToPage(page)}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                    <button
-                      className="cursor-pointer font-semibold w-24 border-2 shadow-md h-9 border-gray-100 bg-white rounded-md text-gray-500 hover:bg-gray-50"
-                      disabled={currentPage === totalPages}
-                      onClick={handleNext}
-                    >
-                      Next
-                    </button>
-                  </div>
                 </>
               ) : (
                 // IF WALANG MAIPAKITA
