@@ -159,8 +159,8 @@ const AdminAndStaffOrdersPage = () => {
         ? "PREP"
         : value === "ready"
         ? "READY"
-        : value === "done"
-        ? "DONE"
+        : value === "served"
+        ? "SERVED"
         : value === "refund"
         ? "REFUNDED"
         : value === "cancelled"
@@ -405,7 +405,7 @@ const AdminAndStaffOrdersPage = () => {
         setIsMarkAsPrepVisible(false);
       }, 750);
     } catch (error) {
-      console.error("Error updating status to 'DONE':", error);
+      console.error("Error updating status to 'SERVED':", error);
     }
   };
 
@@ -420,7 +420,7 @@ const AdminAndStaffOrdersPage = () => {
         setIsMarkAsReadyVisible(false);
       }, 750);
     } catch (error) {
-      console.error("Error updating status to 'DONE':", error);
+      console.error("Error updating status to 'SERVED':", error);
     }
   };
 
@@ -441,7 +441,7 @@ const AdminAndStaffOrdersPage = () => {
   const handleDone = async (id: string) => {
     try {
       await updateDoc(doc(db, "completedOrders", id), {
-        status: "DONE",
+        status: "SERVED",
         hasRated: false,
       });
 
@@ -450,7 +450,7 @@ const AdminAndStaffOrdersPage = () => {
         setIsMarkAsDoneVisible(false);
       }, 750);
     } catch (error) {
-      console.error("Error updating status to 'DONE':", error);
+      console.error("Error updating status to 'SERVED':", error);
     }
   };
 
@@ -1219,7 +1219,7 @@ const AdminAndStaffOrdersPage = () => {
         <option value="paid">Paid</option>
         <option value="prep">Prep</option>
         <option value="ready">Ready</option>
-        <option value="done">Done</option>
+        <option value="served">Served</option>
         <option value="cancelled">Cancelled</option>
         <option value="rejected">Rejected</option>
         <option value="refund">Refunded</option>
@@ -1243,7 +1243,7 @@ const AdminAndStaffOrdersPage = () => {
                       ? "hidden"
                       : orderStatCat === "ready" && order.status !== "READY"
                       ? "hidden"
-                      : orderStatCat === "done" && order.status !== "DONE"
+                      : orderStatCat === "served" && order.status !== "SERVED"
                       ? "hidden"
                       : orderStatCat === "refund" && order.status !== "REFUNDED"
                       ? "hidden"
@@ -1300,7 +1300,7 @@ const AdminAndStaffOrdersPage = () => {
                                   ? "text-yellow-500"
                                   : order.status === "READY"
                                   ? "text-blue-600"
-                                  : order.status === "DONE"
+                                  : order.status === "SERVED"
                                   ? "text-green-700"
                                   : order.status === "REFUNDED"
                                   ? "text-black-700"
@@ -1613,7 +1613,7 @@ const AdminAndStaffOrdersPage = () => {
                                 : order.status === "PREP"
                                 ? "Mark as Ready"
                                 : order.status === "READY"
-                                ? "Mark as Done"
+                                ? "Mark as Served"
                                 : "Hide"}
                             </button>
 
@@ -1659,7 +1659,7 @@ const AdminAndStaffOrdersPage = () => {
                                   Delete
                                 </button>
                               ))}
-                            {order.status === "DONE" && (
+                            {order.status === "SERVED" && (
                               <div className="flex w-full gap-2">
                                 {/* Print Details Button */}
                                 <button
@@ -2114,7 +2114,7 @@ const AdminAndStaffOrdersPage = () => {
                                     : order.status === "PREP"
                                     ? "Mark as Ready"
                                     : order.status === "READY"
-                                    ? "Mark as Done"
+                                    ? "Mark as Served"
                                     : "Hide"}
                                 </button>
 
@@ -2140,7 +2140,7 @@ const AdminAndStaffOrdersPage = () => {
                                     Delete
                                   </button>
                                 )}
-                                {order.status === "DONE" && (
+                                {order.status === "SERVED" && (
                                   <div className="flex w-full gap-2">
                                     {/* Print Details Button */}
                                     <button
@@ -2573,7 +2573,7 @@ const AdminAndStaffOrdersPage = () => {
                                     : order.status === "PREP"
                                     ? "Mark as Ready"
                                     : order.status === "READY"
-                                    ? "Mark as Done"
+                                    ? "Mark as Served"
                                     : "Hide"}
                                 </button>
 
@@ -2609,7 +2609,7 @@ const AdminAndStaffOrdersPage = () => {
                                     Delete
                                   </button>
                                 )}
-                                {order.status === "DONE" && (
+                                {order.status === "SERVED" && (
                                   <div className="flex w-full gap-2">
                                     {/* Print Details Button */}
                                     <button
@@ -2687,7 +2687,7 @@ const AdminAndStaffOrdersPage = () => {
         )}
 
         {/* MARKED AS DONE POP UP */}
-        {isMarkAsDoneVisible && <CheckoutPopup message="Marked as Done!" />}
+        {isMarkAsDoneVisible && <CheckoutPopup message="Marked as Served!" />}
 
         {/* PAID POP UP */}
         {isPaidVisible && <CheckoutPopup message="Marked as Paid!" />}
