@@ -13,6 +13,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 type Expense = {
   expenseAmount: number;
@@ -28,6 +29,7 @@ type ExpenseDocument = {
 };
 
 const ExpensesPage = () => {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -41,6 +43,26 @@ const ExpensesPage = () => {
   const getMonthIndex = (monthName: string) => {
     return months.indexOf(monthName);
   };
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const fetchCafeExpenses = async () => {

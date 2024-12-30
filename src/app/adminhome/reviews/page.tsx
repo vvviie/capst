@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { db } from "@/app/firebase";
 import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 // Define Review interface for type safety
 interface Review {
@@ -30,7 +31,28 @@ interface FeedbackItem {
 const CustomerReviewsPage = () => {
   const [review, setReview] = useState("all");
   const [reviews, setReviews] = useState<Review[]>([]);
+  const router = useRouter();
 
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
+  
   useEffect(() => {
     const fetchReviews = async () => {
       const feedbackCollection = collection(db, "customerFeedbacks");

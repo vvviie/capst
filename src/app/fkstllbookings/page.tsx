@@ -17,6 +17,7 @@ import {
 } from "firebase/firestore";
 import AdminReservationFilter from "../components/AdminReservationFilter";
 import DynamicPackageOffers from "../components/DynamicPackageOffers";
+import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 
 type res = {
@@ -40,6 +41,7 @@ type res = {
   paymentType: string;
   downpayment: number;
   remarks?: string;
+  payment: string;
 };
 
 interface PaymentResponse {
@@ -76,6 +78,7 @@ const AdminCheckReservationsPage = () => {
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
+  const router = useRouter(); // Initialize useRouter
   const [isToPaymentVisible, setIsToPaymentVisible] = useState(false);
   const [isRejectedVisible, setIsRejectedVisible] = useState(false);
   const [isMarkAsDoneVisible, setIsMarkAsDoneVisible] = useState(false);
@@ -438,6 +441,26 @@ const AdminCheckReservationsPage = () => {
   };
 
   useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
+
+  useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "tableReservations"),
       (querySnapshot) => {
@@ -741,6 +764,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         {expandedOrders[res.id] && (
                           <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
+                            <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
 

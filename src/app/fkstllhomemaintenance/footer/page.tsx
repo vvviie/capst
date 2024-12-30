@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useState, useEffect } from "react";
 import { db } from "@/app/firebase"; // Adjust the import based on your file structure
 import { doc, getDoc, setDoc } from "firebase/firestore"; // Import Firestore functions
+import { useRouter } from "next/navigation";
 
 interface Social {
     name: string;
@@ -15,10 +16,29 @@ interface Social {
 const FooterMaintenancePage = () => {
     const [open, setOpen] = useState(false);
     const [isPopupVisible, setIsPopupVisible] = useState(false);
-
+    const router = useRouter(); // Initialize useRouter
     // State to hold telephone and social media URLs
     const [tel, setTel] = useState("");
     const [socials, setSocials] = useState<Social[]>([]);
+
+    useEffect(() => {
+        // Get all cookies as an array
+        const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+        // Check if no cookies exist
+        if (cookies.length === 0) {
+          // Redirect if no cookies exist
+        router.push('/');
+        return;
+        }
+    
+        // Check if the 'user' cookie exists
+        const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+    
+        if (userCookie) {
+          // Redirect if the 'user' cookie exists
+        router.push('/');
+        }
+    }, [router]);
 
     // Fetch existing footer data from Firestore on component mount
     useEffect(() => {

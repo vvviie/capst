@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 import { db } from "@/app/firebase";
 import { doc, updateDoc, getDoc } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { useRouter } from "next/navigation";
 
 interface Slide {
   // Define the expected fields in the slide data
@@ -21,6 +22,7 @@ interface SlideData extends Slide {
 }
 
 const AdminLandingPageMaintenance = () => {
+  const router = useRouter();
   const [addSlideClicked, setAddSlideClicked] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -32,6 +34,26 @@ const AdminLandingPageMaintenance = () => {
   });
   const [slidesData, setSlidesData] = useState<SlideData[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null); // Store the selected file
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   useEffect(() => {
     const fetchSlides = async () => {

@@ -17,6 +17,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useRouter } from "next/navigation";
 
 type User = {
   uid: string;
@@ -49,12 +50,32 @@ const AdminHomePage = () => {
   const [timeFrame, setTimeFrame] = useState("today");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [latestReviews, setLatestReviews] = useState<Review[]>([]); 
-
+  const router = useRouter(); // Initialize useRouter
   const [topSpendingCustomers, setTopSpendingCustomers] = useState<
     TopSpendingCustomer[]
   >([]);
   const [isOrderingEnabled, setIsOrderingEnabled] = useState(true);
   const [exportedData, setExportedData] = useState<any>(null);
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   // Fetch the current foodCartAvailable value when component mounts
   useEffect(() => {

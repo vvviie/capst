@@ -4,8 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import CheckoutPopup from "@/app/components/CheckoutPopup";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { db } from "@/app/firebase";
+import { useRouter } from "next/navigation";
 
 const AddVoucherPage = () => {
+  const router = useRouter();
   const [validity, setValidity] = useState(false);
   const [limitUse, setLimitUse] = useState(false);
   const [thresholdUse, setThresholdUse] = useState(false);
@@ -215,6 +217,26 @@ const AddVoucherPage = () => {
     setDescription(event.target.value); // Update description state
     console.log("Voucher Description:", event.target.value); // Log the entered description
   };
+
+  useEffect(() => {
+    // Get all cookies as an array
+    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
+  
+    // Check if no cookies exist
+    if (cookies.length === 0) {
+      // Redirect if no cookies exist
+      router.push('/');
+      return;
+    }
+  
+    // Check if the 'user' cookie exists
+    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
+  
+    if (userCookie) {
+      // Redirect if the 'user' cookie exists
+      router.push('/');
+    }
+  }, [router]);
 
   // Effect to enforce min/max values
   useEffect(() => {
