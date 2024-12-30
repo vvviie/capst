@@ -22,6 +22,7 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { ChosenItem } from "@/app/hooks/types";
+import { getDownloadURL, getStorage, ref, uploadBytes } from "firebase/storage";
 
 type PackageChoice = {
   id: string;
@@ -49,8 +50,8 @@ const ReservationPage = () => {
   //#region "table" Variables
   const [tableMinDate, setTableMinDate] = useState(""); // New state variable for the 'table' slug
   const [dateError, setDateError] = useState("");
-  const [timeError, setTimeError] = useState<string | null>(null);
-  const [hourInput, setHourInput] = useState<number | "">("");
+  const [timeError, setTimeError] = useState("");
+  const [hourInput, setHourInput] = useState("");
   const [minuteInput, setMinuteInput] = useState<number | "">("");
   const [numberOfPersonsTable, setNumberOfPersonsTable] = useState<number>(1);
   //#endregion
@@ -80,9 +81,146 @@ const ReservationPage = () => {
   const [payment, setPayment] = useState("Cash");
 
   const [expandImage, setExpandImage] = useState(false);
+
+  // For Image
+  const [imageUrl, setImageUrl] = useState("");
+
+  // For Image's File Name
+  const [fileName, setFileName] = useState("");
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // For Firebase Image URL
+  const [firebaseImageUrl, setFirebaseImageUrl] = useState("");
   //#endregion
 
   //#region Global EffectHooks
+
+  const handleUploadClick = () => {
+    // Trigger the file input click
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+
+    if (files && files.length > 0) {
+      const file = files[0];
+      const validTypes = ["image/jpeg", "image/png"];
+
+      if (!validTypes.includes(file.type)) {
+        console.error("Invalid file type. Please upload a PNG or JPEG.");
+        return;
+      }
+
+      setFileName(file.name);
+      const previewUrl = URL.createObjectURL(file);
+      setImageUrl(previewUrl);
+
+      try {
+        // Upload the image and get the URL
+        const webpUrl: string | null = await uploadImageToStorage(file);
+        console.log("Uploaded image URL:", webpUrl);
+
+        // Update Firebase image URL in state (only if it's a valid string)
+        if (webpUrl) {
+          setFirebaseImageUrl(webpUrl); // set only if webpUrl is a valid string
+        } else {
+          console.error("Error: webpUrl is null or invalid");
+        }
+      } catch (error) {
+        console.error("Error during image processing:", error);
+      }
+    } else {
+      console.error("No file selected");
+    }
+  };
+
+  const uploadImageToStorage = async (file: File) => {
+    const storage = getStorage();
+    const storageRef = ref(
+      storage,
+      `images/tempImg/${file.name.split(".").slice(0, -1).join(".")}.webp`
+    ); // Update path to WebP
+
+    try {
+      // Convert the image to WebP format
+      const webpBlob = await convertImageToWebP(file);
+      console.log("WebP Blob size:", webpBlob.size); // Log size for debugging
+      console.log("WebP Blob type:", webpBlob.type); // Should be 'image/webp'
+
+      // Create URL for the WebP Blob to preview
+      const webpUrl = URL.createObjectURL(webpBlob);
+      console.log("Converted to WebP:", webpUrl); // Log the WebP URL
+      setImageUrl(webpUrl); // Set this URL for preview, if needed
+
+      // Upload the WebP file
+      await uploadBytes(storageRef, webpBlob, { contentType: "image/webp" });
+      const downloadUrl = await getDownloadURL(storageRef); // Get the download URL
+      return downloadUrl; // Return the URL
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      return null; // Return null if there's an error
+    }
+  };
+
+  // Function to convert image to WebP using canvas
+  const convertImageToWebP = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const imgElement = new window.Image();
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        if (e.target) {
+          // Safely access e.target.result if e.target is not null
+          imgElement.src = e.target.result as string;
+        } else {
+          console.error("FileReader onload event target is null");
+        }
+      };
+
+      imgElement.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imgElement.width;
+        canvas.height = imgElement.height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(imgElement, 0, 0);
+
+          // Convert to WebP format
+          canvas.toBlob((blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("Conversion to WebP failed."));
+            }
+          }, "image/webp");
+        } else {
+          reject(new Error("Canvas context is null."));
+        }
+      };
+
+      imgElement.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.onerror = (err) => {
+        reject(err);
+      };
+
+      reader.readAsDataURL(file); // Read the file as Data URL
+    });
+  };
+
+  const handleRemoveImage = () => {
+    setImageUrl(""); // Remove the image preview
+    setFileName(""); // Clear the file name
+
+    // Check if fileInputRef.current is not null
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Clear the file input
+    }
+  };
 
   const handlePaymentChange = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.defaultPrevented;
@@ -210,35 +348,56 @@ const ReservationPage = () => {
     );
     const num = numberOfPersonsTable;
 
-    // Validate that all required fields are filled
     if (!dateInput || isNaN(hourInput) || isNaN(minuteInput) || !num) {
       setError(true);
-      setErrorMessage("Please fill in all required fields."); // Show error message
-      setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
+      setDateError("Please fill in all required fields."); // Show error message
+      setTimeout(() => {
+        setError(false); // Clear error flag
+        setDateError(""); // Clear the error message
+      }, 3000); // Clear error after 3 seconds
       return;
     }
 
     // Check for hour input of 0 specifically
     if (hourInput === 0) {
       setError(true);
-      setErrorMessage("Please enter a valid hour."); // Show error message for invalid hour
-      setTimeout(() => setError(false), 3000); // Clear error after 3 seconds
+      setDateError("Please enter a valid hour."); // Show error message
+      setTimeout(() => {
+        setError(false); // Clear error flag
+        setDateError(""); // Clear the error message
+      }, 3000); // Clear error after 3 seconds
       return;
     }
 
     // Validate date
     if (!validateDate(dateInput)) {
-      setTimeout(() => setDateError(""), 3000); // Clear the date error after 3 seconds
+      setError(true);
+      setDateError("Please fill in all required fields."); // Show error message
+      setTimeout(() => {
+        setError(false); // Clear error flag
+        setDateError(""); // Clear the error message
+      }, 3000); // Clear error after 3 seconds
       return;
     }
 
     // Check if the number of persons is less than 30 or greater than 50
     if (numberOfPersonsTable > 20) {
-      setError(true); // Trigger error state
-      setErrorMessage("Number of persons must be below 20.");
+      setError(true);
+      setDateError("Number of persons must be below 20.");
       setTimeout(() => {
-        setError(false);
-      }, 5000); // Clear the error after 5 seconds
+        setError(false); // Clear error flag
+        setDateError(""); // Clear the error message
+      }, 3000); // Clear error after 3 seconds
+      return;
+    }
+
+    if (payment === "Card" && fileName === "") {
+      setError(true);
+      setDateError("Please upload the image of the receipt.");
+      setTimeout(() => {
+        setError(false); // Clear error flag
+        setDateError(""); // Clear the error message
+      }, 3000); // Clear error after 3 seconds
       return;
     }
 
@@ -281,7 +440,19 @@ const ReservationPage = () => {
     });
 
     try {
-      await setDoc(doc(db, "tableReservations", orderId), {
+      const reservationData: {
+        dateReserved: string;
+        timeReserved: string;
+        numberOfPersons: number;
+        reservedBy: string | null;
+        status: string;
+        dateToBeReserved: string;
+        timeToBeReserved: string;
+        totalPrice: number;
+        type: string;
+        payment: string;
+        receiptImage?: string; // Optional property
+      } = {
         dateReserved,
         timeReserved,
         numberOfPersons: numberOfPersonsTable,
@@ -291,7 +462,15 @@ const ReservationPage = () => {
         timeToBeReserved,
         totalPrice: totalPriceT,
         type: "Table",
-      });
+        payment,
+      };
+
+      // Conditionally add 'receiptImage' only when payment is "Card"
+      if (payment === "Card") {
+        reservationData.receiptImage = firebaseImageUrl;
+      }
+
+      await setDoc(doc(db, "tableReservations", orderId), reservationData);
 
       console.log("Reservation successfully saved.");
       setIsPopupVisible(true);
@@ -683,12 +862,8 @@ const ReservationPage = () => {
     const downpaymentAmount =
       paymentType === "downpayment" ? totalPrice / 2 : 0;
 
-    // Define totalPrice to be submitted, depending on paymentType
-    const amountToSubmit =
-      paymentType === "fullpayment" ? totalPrice : downpaymentAmount;
-
     try {
-      await setDoc(doc(db, "tableReservations", orderId), {
+      const reservationData: Record<string, any> = {
         dateReserved,
         timeReserved,
         dateToBeReserved: formattedDateToBeReserved,
@@ -696,18 +871,28 @@ const ReservationPage = () => {
         packageOffer,
         buffetChosen,
         numberOfPersons: numberOfPersonsEvent,
-        downpayment: paymentType === "downpayment" ? downpaymentAmount : null, // Store downpayment amount only if applicable
-        totalPrice: totalPrice, // Always store the original totalPrice
-        paymentType: paymentType,
+        totalPrice,
+        paymentType,
         status: "REQUESTED",
         type: "Event",
         reservedBy: userEmail,
         remarks: remarks || "None",
-      });
+        payment,
+      };
+
+      if (paymentType === "downpayment") {
+        reservationData.downpayment = downpaymentAmount;
+      }
+      if (payment === "Card") {
+        reservationData.receiptImage = firebaseImageUrl;
+      }
+
+      await setDoc(doc(db, "tableReservations", orderId), reservationData);
+
       setIsPopupVisible(true);
       setTimeout(() => {
-        setIsPopupVisible(false); // Hide after a few seconds if desired
-        router.push("/book/reservations"); // Redirect to /book
+        setIsPopupVisible(false);
+        router.push("/book/reservations");
       }, 3000);
     } catch (error) {
       console.error("Error adding reservation: ", error);
@@ -719,9 +904,7 @@ const ReservationPage = () => {
   return (
     <div
       className={`h-auto lg:min-h-[69.2vh] bg-white mt-14 py-6 px-10 lg:flex lg:flex-col
-    lg:justify-center lg:px-24 lg:bg-[url('/backgrounds/bg3-2.png')] ${
-      payment === "Cash" ? "lg:bg-cover" : "lg:bg-contain"
-    } lg:bg-no-repeat lg:bg-center
+    lg:justify-center lg:px-24 lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center
     lg:gap-4 xl:px-56 items-center lg:py-16`}
     >
       {/* HEADER */}
@@ -753,17 +936,17 @@ const ReservationPage = () => {
           </h1>
           {/* USE THIS FOR ERROR PROOFING */}
           {error && slug === "table" && (
-            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+            <p className="text-xs text-red-500 font-semibold mb-[-20px] text-center">
               {error}
             </p>
           )}
           {timeError && slug === "table" && (
-            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+            <p className="text-xs text-red-500 font-semibold mb-[-20px] text-center">
               {timeError}
             </p>
           )}
           {dateError && slug === "table" && (
-            <p className="text-xs text-red-500 font-semibold my-[-20px] text-center">
+            <p className="text-xs text-red-500 font-semibold mb-[-20px] text-center">
               {dateError}
             </p>
           )}
@@ -774,6 +957,7 @@ const ReservationPage = () => {
                 <span className="block">{errorMessage}</span>
               </div>
             )}
+
           {slug === "table" ? (
             //#region Table Reservation
             <>
@@ -1132,89 +1316,6 @@ const ReservationPage = () => {
                 Card
               </button>
             </div>
-            {payment === "Card" && (
-              <>
-                <h1 className="text-gray-500 mt-2 text-sm mb-2">
-                  Scan QR Code
-                </h1>
-                {/* INSTAPAY QR IMAGE CONTAINER */}
-                <div className="relative aspect-square w-full">
-                  <Image
-                    src={`/instapayqr.webp`}
-                    alt=""
-                    fill
-                    className="object-contain cursor-pointer hover:scale-[1.02] duration-200"
-                    onClick={() => setExpandImage(true)}
-                  />
-                </div>
-                {expandImage && (
-                  <div
-                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                    style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                  >
-                    <div className="w-full max-w-[620px] aspect-square relative">
-                      <div
-                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                    absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                    hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                        onClick={() => setExpandImage(false)}
-                      >
-                        <span className="font-bold">X</span>
-                      </div>
-                      <Image
-                        src={`/instapayqr.webp`}
-                        alt="idpic"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  </div>
-                )}
-                <div className="w-full flex flex-col gap-2 items-center mt-4">
-                  <span className="text-gray-500 text-sm">
-                    Upload Image of Payment Receipt
-                  </span>
-
-                  <div className="w-full aspect-square relative border-2 border-gray-100 bg-gray-300 md:max-w-56">
-                    <Image src={""} alt="ID" fill className="object-cover" />
-                    <button className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      X
-                    </button>
-                  </div>
-
-                  <div className="w-full flex gap-2 items-center">
-                    <div className="w-full flex flex-col gap-1 items-center justify-center">
-                      <label
-                        className="text-orange-950 text-sm w-full text-left space-x-1"
-                        htmlFor="imageName2"
-                      >
-                        <span>Image File Name</span>
-                      </label>
-                      <div className="w-full flex items-center gap-1">
-                        <input
-                          className="border-2 border-solid border-orange-900 w-2/3 h-10 pl-4 rounded-md bg-orange-50"
-                          name="imageName2"
-                          id="imageName2"
-                          type="text"
-                          placeholder="Image Name"
-                        />
-                        <button
-                          className="h-10 w-1/3 bg-white border-2 border-gray-100 shadow-md rounded-md font-bold
-                                  text-gray-600"
-                        >
-                          Upload
-                        </button>
-                        <input
-                          type="file"
-                          accept="image/*" // Attach the ref
-                          style={{ display: "none" }} // Hide the input
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
             {/* Button */}
             <button
               type="button" // Change type to "button" to prevent default form submission

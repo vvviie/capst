@@ -2175,7 +2175,7 @@ const CartPage = () => {
                         className="object-cover"
                       />
                       <button
-                      onClick={handleRemoveImage}
+                      onClick={handleRemoveImageCard}
                       className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
                     >
                       X
