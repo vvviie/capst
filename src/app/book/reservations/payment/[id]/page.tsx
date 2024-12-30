@@ -372,7 +372,7 @@ const PaymentPage = () => {
           </div>
           <button
             className="w-full bg-orange-950 font-bold text-white shadow-md rounded-md
-          h-10 mb-[-10px] mt-4 max-w-[500px]"
+          h-10 mb-[-10px] mt-4"
             onClick={handleSubmit}
           >
             Submit Payment
