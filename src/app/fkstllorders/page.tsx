@@ -1166,70 +1166,80 @@ const AdminAndStaffOrdersPage = () => {
       >
         {user === "admin" ? (
           <>
-           {/* HEADER */}
-<div className="w-full flex flex-col items-end mb-4">
-  <div className="w-full flex gap-4 items-center">
-    <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
-    <span className="text-2xl text-center font-bold text-orange-900">Orders</span>
-    <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
-  </div>
+            {/* HEADER */}
+            <div className="w-full flex flex-col items-end mb-4">
+              <div className="w-full flex gap-4 items-center">
+                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+                <span className="text-2xl text-center font-bold text-orange-900">
+                  Orders
+                </span>
+                <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
+              </div>
 
-  <div className="flex flex-col md:flex-row items-center w-full justify-between gap-2">
-    {/* Search ID Input */}
-    <div className="flex items-center gap-2 flex-1">
-      <input
-        type="text"
-        placeholder="Enter ID"
-        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
-        onChange={(e) => setSearchId(e.target.value)} // Update state on input change
-      />
-    </div>
+              <div className="flex flex-col md:flex-row items-center w-full justify-between gap-2">
+                {/* Search ID Input */}
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    placeholder="Enter ID"
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+                    onChange={(e) => setSearchId(e.target.value)} // Update state on input change
+                  />
+                </div>
 
-    {/* Date Picker */}
-    <div className="flex items-center gap-2 flex-1">
-      <input
-        type="date"
-        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
-        onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
-      />
-    </div>
+                {/* Date Picker */}
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="date"
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+                    onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
+                  />
+                </div>
 
-    {/* Filter Dropdown */}
-    <div className="flex items-center gap-2 flex-1">
-      <select
-        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-48" // Responsive width
-        value={filterOption}
-        onChange={handleFilterChange} // Handle filter option change
-      >
-        <option value="all">Show All Records</option>
-        <option value="today">Today</option>
-      </select>
-    </div>
+                {/* Filter Dropdown */}
+                <div className="flex items-center gap-2 flex-1">
+                  <select
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-48" // Responsive width
+                    value={filterOption}
+                    onChange={handleFilterChange} // Handle filter option change
+                  >
+                    <option value="all">Show All Records</option>
+                    <option value="today">Today</option>
+                  </select>
+                </div>
 
-    {/* Category Dropdown */}
-    <div className="flex items-center gap-2 flex-1">
-      <select
-        name=""
-        id=""
-        className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
-        onChange={handleCategoryChange}
-      >
-        <option value="all">All</option>
-        <option value="topay">To Pay</option>
-        <option value="paid">Paid</option>
-        <option value="prep">Prep</option>
-        <option value="ready">Ready</option>
-        <option value="served">Served</option>
-        <option value="cancelled">Cancelled</option>
-        <option value="rejected">Rejected</option>
-        <option value="refund">Refunded</option>
-      </select>
-    </div>
-  </div>
-</div>
+                {/* Category Dropdown */}
+                <div className="flex items-center gap-2 flex-1">
+                  <select
+                    name=""
+                    id=""
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+                    onChange={handleCategoryChange}
+                  >
+                    <option value="all">All</option>
+                    <option value="topay">To Pay</option>
+                    <option value="paid">Paid</option>
+                    <option value="prep">Prep</option>
+                    <option value="ready">Ready</option>
+                    <option value="served">Served</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="refund">Refunded</option>
+                  </select>
+                </div>
+              </div>
+            </div>
             {/* ORDERS LIST CONTAINER */}
             <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
-              {hasOrder ? (
+              {filterOption === "today" && filteredOrders.length === 0 ? (
+                // Display message when "today" is selected and there are no orders
+                <div
+                  className="w-full h-32 bg-white text-gray-400 font-bold text-xl text-center
+      flex items-center justify-center border-2 border-gray-100 shadow-md rounded-md"
+                >
+                  <span>No orders placed yet.</span>
+                </div>
+              ) : hasOrder ? (
                 <>
                   {filteredOrders.map((order) => (
                     <div
