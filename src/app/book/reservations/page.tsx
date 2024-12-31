@@ -41,6 +41,8 @@ interface Reservation {
   remarks: string;
 }
 
+const cardPayment = true;
+
 const ReservationsPage = () => {
   const [expandedRes, setExpandedRes] = useState<Record<string, boolean>>({});
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
@@ -110,24 +112,24 @@ const ReservationsPage = () => {
   useEffect(() => {
     const fetchReservations = async () => {
       if (!userEmail) return;
-  
+
       try {
         const reservationsRef = collection(db, "tableReservations");
         const querySnapshot = await getDocs(
           query(reservationsRef, where("reservedBy", "==", userEmail))
         );
-  
+
         const fetchedReservations = querySnapshot.docs.map((doc) => {
           const data = doc.data();
-  
+
           // Parse buffetChosen from the stored object with comma-separated values
-          const buffetChosen: BuffetItem[] = Object.entries(data.buffetChosen || {}).map(
-            ([title, foods]: [string, unknown]) => ({
-              title,
-              foods: (foods as string).split(",").map((food) => food.trim()),
-            })
-          );
-  
+          const buffetChosen: BuffetItem[] = Object.entries(
+            data.buffetChosen || {}
+          ).map(([title, foods]: [string, unknown]) => ({
+            title,
+            foods: (foods as string).split(",").map((food) => food.trim()),
+          }));
+
           return {
             id: doc.id,
             type: data.type,
@@ -147,32 +149,34 @@ const ReservationsPage = () => {
             remarks: data.remarks || "None",
           };
         });
-  
+
         // Sort fetchedReservations by dateToBeReserved in descending order
         fetchedReservations.sort((a, b) => {
           return b.dateToBeReserved.getTime() - a.dateToBeReserved.getTime(); // Compare Date objects using getTime()
         });
-  
+
         // Convert dates to locale strings for display
-        const formattedReservations = fetchedReservations.map(reservation => ({
-          ...reservation,
-          dateReserved: reservation.dateReserved.toLocaleDateString(),
-          dateToBeReserved: reservation.dateToBeReserved.toLocaleDateString(),
-        }));
-  
+        const formattedReservations = fetchedReservations.map(
+          (reservation) => ({
+            ...reservation,
+            dateReserved: reservation.dateReserved.toLocaleDateString(),
+            dateToBeReserved: reservation.dateToBeReserved.toLocaleDateString(),
+          })
+        );
+
         setReservations(formattedReservations);
         setHasReservation(formattedReservations.length > 0);
       } catch (error) {
         console.error("Error fetching reservations:", error);
       }
     };
-  
+
     // Helper function to parse date strings in "MM/DD/YYYY" format
     const parseDate = (dateString: string) => {
       const [month, day, year] = dateString.split("/").map(Number);
       return new Date(year, month - 1, day); // Month is 0-indexed in JavaScript
     };
-  
+
     fetchReservations();
   }, [userEmail]);
 
@@ -228,7 +232,9 @@ const ReservationsPage = () => {
 
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, {
+          align: "center",
+        });
 
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
@@ -267,7 +273,9 @@ const ReservationsPage = () => {
 
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, {
+          align: "center",
+        });
 
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
@@ -365,7 +373,7 @@ const ReservationsPage = () => {
   // Handle page change
   const goToPage = (pageNumber: number) => {
     setCurrentPage(pageNumber);
-  
+
     // Adjust the visible page numbers if necessary
     if (pageNumber >= pageWindowStart + pagesToShow) {
       setPageWindowStart(pageWindowStart + 1);
@@ -462,12 +470,14 @@ const ReservationsPage = () => {
                     <div className="flex flex-col gap-1 w-5/6">
                       {/* HEADERS CONTAINER */}
                       <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                        <span className="">{res.type}</span>
+                        <span className="">{res.type + " - Reservation #" + res.id}</span>
                         <span
                           className={`${
                             res.status === "REQUESTED"
                               ? "text-orange-500"
                               : res.status === "TO PAY"
+                              ? "text-yellow-500"
+                              : res.status === "PAYMENT POSTED"
                               ? "text-yellow-500"
                               : res.status === "PAID"
                               ? "text-blue-500"
@@ -540,13 +550,13 @@ const ReservationsPage = () => {
                               ))}
                             </div>
                           ))}
-                        <span className="font-semibold">
-                          Remarks:{" "}
-                          <span className="font-normal text-xs">
-                            {res.remarks}
-                          </span>{" "}
-                          <br />
-                        </span>
+                          <span className="font-semibold">
+                            Remarks:{" "}
+                            <span className="font-normal text-xs">
+                              {res.remarks}
+                            </span>{" "}
+                            <br />
+                          </span>
                         </>
                       )}
                       <span className="text-xs text-gray-400">
@@ -566,10 +576,14 @@ const ReservationsPage = () => {
                           </>
                         )}
                       </span>
+                      <span className="text-xs text-gray-400">
+                        Payment Method: {cardPayment ? "Card" : "Cash"}
+                      </span>
                       {/* CONDITIONAL BUTTON RENDERING */}
                       {res.status === "REJECTED" ||
                       res.status === "CANCELLED" ||
                       res.status === "PAID" ||
+                      res.status === "PAYMENT POSTED" || 
                       res.status === "DOWNPAYMENT PAID" ? null : res.status ===
                         "DONE" ? (
                         res.type === "Table" ? (
@@ -587,6 +601,15 @@ const ReservationsPage = () => {
                             Print Details
                           </button>
                         ) : null
+                      ) : res.status === "TO PAY" && cardPayment ? (
+                        <a
+                          href={`/book/reservations/payment/${res.id}`}
+                          className="h-10 font-bold w-full text-center no-underline
+                          bg-white pt-1.5 rounded-md shadow-md border-gray-100 border-2
+                          text-gray-400 hover:bg-gray-50 hover:scale-[1.02] duration-200"
+                        >
+                          To Payment
+                        </a>
                       ) : (
                         <button
                           className="font-bold bg-red-500 rounded-md text-white py-2 shadow-md hover:scale-[1.03] duration-300"

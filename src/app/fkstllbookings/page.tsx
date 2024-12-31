@@ -216,7 +216,7 @@ const AdminCheckReservationsPage = () => {
   const handleMarkAsPending = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-        status: "PENDING",
+      status: "REQUESTED",
       });
 
       setIsPendingVisible(true);
@@ -931,6 +931,8 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 ? "text-orange-500"
                                 : res.status === "TO PAY"
                                 ? "text-yellow-500"
+                                : res.status === "PAYMENT POSTED"
+                                ? "text-yellow-500"
                                 : res.status === "PAID"
                                 ? "text-blue-500"
                                 : res.status === "DONE"
@@ -960,6 +962,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                       {expandedOrders[res.id] && (
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
+                          <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                           <p className="text-xs select-none text-gray-400">
                             {`Payment Type: ${res.paymentType.charAt(0).toUpperCase() + res.paymentType.slice(1)}`}
@@ -1088,7 +1091,72 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 Delete
                               </button>
                             </div>
-                          ) : res.status !== "REJECTED" ? (
+                          ) : res.status !== "REJECTED" && res.payment === "Cash" ? (
+                            <div className="flex gap-2 items-center w-full mt-1">
+                              <button
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
+                                border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => {
+                                  // Ensure res.id and res.totalPrice are numbers
+                                  if (res.id && res.totalPrice !== undefined) {
+                                    handlePaid(res.id, res.totalPrice); // Call handlePaid with numbers
+                                  } else {
+                                    console.error('Invalid reservation data: id or totalPrice is missing');
+                                  }
+                          
+                                  // Ensure paymentType is valid (either "downpayment" or "fullpayment")
+                                  if (res.paymentType === "downpayment" || res.paymentType === "fullpayment") {
+                                    handlePayment(res as PaymentResponse); // Assert res as PaymentResponse type
+                                  } else {
+                                    console.error('Invalid paymentType:', res.paymentType);
+                                  }
+                                }}
+                              >
+                                <i className="fa-solid fa-money-bill"></i>
+                                <span>Mark as Paid</span>
+                              </button> {/* Correctly close the button tag here */}
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleCancel(res.id)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : res.status !== "REJECTED" && res.status !== "TO PAY" && res.payment === "Card" ? (
+                            <div className="flex gap-2 items-center w-full mt-1">
+                              <button
+                                className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
+                                border-gray-100 hover:bg-gray-50 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                onClick={() => {
+                                  /* // Ensure res.id and res.totalPrice are numbers
+                                  if (res.id && res.totalPrice !== undefined) {
+                                    handlePaid(res.id, res.totalPrice); // Call handlePaid with numbers
+                                  } else {
+                                    console.error('Invalid reservation data: id or totalPrice is missing');
+                                  }
+                          
+                                  // Ensure paymentType is valid (either "downpayment" or "fullpayment")
+                                  if (res.paymentType === "downpayment" || res.paymentType === "fullpayment") {
+                                    handlePayment(res as PaymentResponse); // Assert res as PaymentResponse type
+                                  } else {
+                                    console.error('Invalid paymentType:', res.paymentType);
+                                  } */
+                                  handleToPayment(res.id);
+                                }}
+                              >
+                                <i className="fa-solid fa-money-bill"></i>
+                                <span>To Payment</span>
+                              </button> {/* Correctly close the button tag here */}
+                              <button
+                                className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
+                                          hover:bg-red-400 hover:scale-[1.02] duration-200"
+                                onClick={() => handleCancel(res.id)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : res.status === "TO PAY" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
@@ -1133,7 +1201,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                   </div>
                 )
                 // #endregion
-              }
+              } 
             </div>
           </div>
           {/* PAGINATION CONTROLS */}
@@ -1288,6 +1356,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             expandedOrders[res.id] && (
                               <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                                 <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
+                                <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                                 <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
                                 {/* BUTTON CONTAINER */}
@@ -1381,6 +1450,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         {expandedOrders[res.id] && (
                           <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
+                            <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
