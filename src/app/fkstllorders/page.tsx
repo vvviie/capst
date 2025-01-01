@@ -103,6 +103,11 @@ const AdminAndStaffOrdersPage = () => {
   const [filterOption, setFilterOption] = useState<string>("today"); // State for filter option
   const [searchId, setSearchId] = useState<string>(""); // State to store the search ID
 
+  const [isReady, setIsReady] = useState<{ [key: string]: boolean }>({}); // State to track if the item is ready
+  const [isPartiallyServed, setIsPartiallyServed] = useState<{
+    [key: string]: boolean;
+  }>({});
+
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
       ...prev,
@@ -1536,70 +1541,76 @@ const AdminAndStaffOrdersPage = () => {
                             )}
 
                           {order.items.map((item, index) => {
-                            // Find the highest price in the order items
-                            const maxPrice = Math.max(
-                              ...order.items.map((i) => i.price)
-                            );
-
-                            // Check if this is the first item with the highest price
-                            const isHighestPriced =
-                              item.price === maxPrice &&
-                              order.items.findIndex(
-                                (i) => i.price === maxPrice
-                              ) === index;
-
-                            // Apply discount conditionally based on the order's status and senior discount eligibility
-                            const discountAmount =
-                              isHighestPriced &&
-                              ((order.status === "TO PAY" &&
-                                applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
-                                (order.status !== "TO PAY" && order.pwdSenior)) // Discount if status is not 'TO PAY' and it's a senior order
-                                ? item.price * 0.2
-                                : 0;
-
-                            // Calculate discounted price if the discount applies
-                            const discountedPrice = isHighestPriced
-                              ? item.price - discountAmount
-                              : item.price;
+                            const uniqueId = item.title; // Use `title` as the unique identifier
 
                             return (
                               <div
                                 className="flex flex-col gap-1"
-                                key={item.title}
+                                key={uniqueId}
+                                onClick={(e) => {
+                                  // Toggle expanded state only if the click is on the card itself (not a button)
+                                  if (e.target === e.currentTarget) {
+                                    toggleOrder(order.id); // Use the toggleOrder function
+                                  }
+                                }}
                               >
                                 <hr />
-                                {/* ITEM TITLE AND PRICE CONTAINER */}
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
                                     {`${item.qty}x - ${item.title}`}
-                                    {isHighestPriced && // Only show discounted label for the highest-priced item
-                                      ((order.status === "TO PAY" &&
-                                        applySrPWD[order.id]) ||
-                                        (order.status !== "TO PAY" &&
-                                          order.pwdSenior)) && ( // Apply condition to show discount label
-                                        <span className="text-green-600 text-xs ml-2">
-                                          (discounted: PHP{" "}
-                                          {discountAmount.toFixed(2)})
-                                        </span>
-                                      )}
                                   </span>
-                                  {/* Only show price if status is not "PAID" or "PREP" */}
-                                  {order.status !== "PAID" &&
-                                    order.status !== "PREP" && (
-                                      <span
-                                        className={
-                                          isHighestPriced && // Highlight the discounted price
-                                          ((order.status === "TO PAY" &&
-                                            applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" &&
-                                              order.pwdSenior))
-                                            ? "text-green-600"
-                                            : ""
-                                        }
+                                  {order.status === "PREP" ? (
+                                    <button
+                                      className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                        isReady[uniqueId]
+                                          ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                          : "bg-green-500 hover:bg-green-600 text-white"
+                                      } transition-all duration-200`}
+                                      onClick={(e) => {
+                                        e.stopPropagation(); // Stop event propagation
+                                        setIsReady((prev) => ({
+                                          ...prev,
+                                          [uniqueId]: !prev[uniqueId], // Toggle readiness for this specific item
+                                        }));
+                                      }}
+                                    >
+                                      {isReady[uniqueId]
+                                        ? "Undo"
+                                        : "Ready Partially"}
+                                    </button>
+                                  ) : order.status === "READY" ? (
+                                    isReady[uniqueId] ? (
+                                      <button
+                                        className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                          isPartiallyServed[uniqueId]
+                                            ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                            : "bg-blue-500 hover:bg-blue-600 text-white"
+                                        } transition-all duration-200`}
+                                        onClick={(e) => {
+                                          e.stopPropagation(); // Stop event propagation
+                                          setIsPartiallyServed((prev) => ({
+                                            ...prev,
+                                            [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                          }));
+                                        }}
                                       >
-                                        PHP {discountedPrice.toFixed(2)}
-                                      </span>
-                                    )}
+                                        {isPartiallyServed[uniqueId]
+                                          ? "Undo"
+                                          : "Partially Served"}
+                                      </button>
+                                    ) : (
+                                      <button
+                                        className="h-8 px-3 text-sm font-semibold rounded-md bg-gray-300 text-gray-700 cursor-not-allowed"
+                                        disabled
+                                      >
+                                        Pending
+                                      </button>
+                                    )
+                                  ) : (
+                                    order.status !== "PAID" && (
+                                      <span>PHP {item.price.toFixed(2)}</span>
+                                    )
+                                  )}
                                 </div>
                                 {item.tags.map((tag, index) => (
                                   <p className="text-xs" key={index}>
