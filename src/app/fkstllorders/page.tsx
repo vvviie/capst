@@ -2739,7 +2739,7 @@ const AdminAndStaffOrdersPage = () => {
           </div>
         )}
 
-        {/* MARKED AS DONE POP UP */}
+        {/* MARKED AS SERVED(DONE) POP UP */}
         {isMarkAsDoneVisible && <CheckoutPopup message="Marked as Served!" />}
 
         {/* PAID POP UP */}
