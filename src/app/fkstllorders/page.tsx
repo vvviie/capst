@@ -1335,146 +1335,171 @@ const AdminAndStaffOrdersPage = () => {
                       {expandedOrders[order.id] && (
                         <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
                           {/* EXPANDED CONTENT */}
-                          {/* PAYMENT METHOD */}
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              Payment method
-                            </span>
-                            <span>{order.payment}</span>
-                          </div>
-                          {/* CARD */}
-                          {order.payment === "Card" && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Card Payment Receipt
-                              </span>
-                            </div>
-                          )}
-                          {order.payment === "Card" && order.cardIdImg && (
-                            <>
-                              <div className="w-full flex flex-col gap-1 justify-center items-center">
-                                <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                                  <Image
-                                    src={order.cardIdImg}
-                                    alt="idpic"
-                                    layout="fill"
-                                    className="object-cover"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setCardIdImageEnlarge(true);
-                                    }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-400">
-                                  Click the picture to enlarge.
-                                </p>
+                          {/* PAYMENT METHOD - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" && (
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  Payment method
+                                </span>
+                                <span>{order.payment}</span>
                               </div>
-                              {cardIdImageEnlarge && (
-                                // ENLARGED IMAGE
-                                <div
-                                  className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                                  style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                                >
-                                  <div className="w-full max-w-[620px] aspect-square relative">
-                                    <div
-                                      className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                                    absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                                    hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() =>
-                                        setCardIdImageEnlarge(false)
-                                      }
-                                    >
-                                      <span className="font-bold">X</span>
-                                    </div>
+                            )}
+
+                          {/* CARD - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            order.payment === "Card" && (
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  Card Payment Receipt
+                                </span>
+                              </div>
+                            )}
+
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            order.payment === "Card" &&
+                            order.cardIdImg && (
+                              <>
+                                <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                  <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                     <Image
                                       src={order.cardIdImg}
                                       alt="idpic"
-                                      fill
+                                      layout="fill"
                                       className="object-cover"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCardIdImageEnlarge(true);
+                                      }}
                                     />
                                   </div>
+                                  <p className="text-xs text-gray-400">
+                                    Click the picture to enlarge.
+                                  </p>
                                 </div>
-                              )}
-                            </>
-                          )}
-                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              {order.status !== "TO PAY"
-                                ? "Senior Citizen / PWD Discount Given?"
-                                : "Applied for Senior/PWD?"}
-                            </span>
-                            <span>{order.pwdSenior ? "Yes" : "No"}</span>
-                          </div>
-
-                          {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
-                          {((order.status === "TO PAY" &&
-                            order.pwdSenior &&
-                            applySrPWD[order.id]) ||
-                            (order.status !== "TO PAY" && order.pwdSenior)) && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Senior Citizen/PWD Discount
-                              </span>
-                              <span>
-                                PHP {order.sampleDiscountDeduction?.toFixed(2)}
-                              </span>
-                            </div>
-                          )}
-                          {/* PICTURE OF ID CONTAINER */}
-                          {order.pwdSenior && (
-                            <>
-                              <div className="w-full flex flex-col gap-1 justify-center items-center">
-                                <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                                  <Image
-                                    src={
-                                      order.idPic ??
-                                      "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
-                                    }
-                                    alt="idpic"
-                                    layout="fill"
-                                    className="object-cover"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setIdPicEnlarge(true);
+                                {cardIdImageEnlarge && (
+                                  // ENLARGED IMAGE
+                                  <div
+                                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                    style={{
+                                      background: "rgba(0, 0, 0, 0.85)",
                                     }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-400">
-                                  Click the picture to enlarge.
-                                </p>
-                              </div>
-                              {idPicEnlarge && (
-                                // ENLARGED IMAGE
-                                <div
-                                  className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                                  style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                                >
-                                  <div className="w-full max-w-[620px] aspect-square relative">
-                                    <div
-                                      className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                        absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                        hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setIdPicEnlarge(false)}
-                                    >
-                                      <span className="font-bold">X</span>
+                                  >
+                                    <div className="w-full max-w-[620px] aspect-square relative">
+                                      <div
+                                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                        onClick={() =>
+                                          setCardIdImageEnlarge(false)
+                                        }
+                                      >
+                                        <span className="font-bold">X</span>
+                                      </div>
+                                      <Image
+                                        src={order.cardIdImg}
+                                        alt="idpic"
+                                        fill
+                                        className="object-cover"
+                                      />
                                     </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" && (
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  {order.status !== "TO PAY"
+                                    ? "Senior Citizen / PWD Discount Given?"
+                                    : "Applied for Senior/PWD?"}
+                                </span>
+                                <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                              </div>
+                            )}
+
+                          {/* SENIOR/PWD DISCOUNT VALUE CONTAINER - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            ((order.status === "TO PAY" &&
+                              order.pwdSenior &&
+                              applySrPWD[order.id]) ||
+                              (order.status !== "TO PAY" &&
+                                order.pwdSenior)) && (
+                              <div className="font-bold text-sm flex justify between items-center">
+                                <span className="font-semibold">
+                                  Senior Citizen/PWD Discount
+                                </span>
+                                <span>
+                                  PHP{" "}
+                                  {order.sampleDiscountDeduction?.toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                          {/* PICTURE OF ID CONTAINER - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            order.pwdSenior && (
+                              <>
+                                <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                  <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                     <Image
                                       src={
-                                        order.idPic ||
+                                        order.idPic ??
                                         "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
                                       }
                                       alt="idpic"
-                                      fill
+                                      layout="fill"
                                       className="object-cover"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIdPicEnlarge(true);
+                                      }}
                                     />
                                   </div>
+                                  <p className="text-xs text-gray-400">
+                                    Click the picture to enlarge.
+                                  </p>
                                 </div>
-                              )}
-                            </>
-                          )}
+                                {idPicEnlarge && (
+                                  // ENLARGED IMAGE
+                                  <div
+                                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                    style={{
+                                      background: "rgba(0, 0, 0, 0.85)",
+                                    }}
+                                  >
+                                    <div className="w-full max-w-[620px] aspect-square relative">
+                                      <div
+                                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                        onClick={() => setIdPicEnlarge(false)}
+                                      >
+                                        <span className="font-bold">X</span>
+                                      </div>
+                                      <Image
+                                        src={
+                                          order.idPic ??
+                                          "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                        }
+                                        alt="idpic"
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                          {/* Apply Sr/PWD Discount Button */}
+                          {/* Apply Sr/PWD Discount Button - Only show if status is "TO PAY" */}
                           {order.status === "TO PAY" &&
                             order.pwdSenior === true && (
                               <div className="w-full flex justify-end">
@@ -1494,8 +1519,11 @@ const AdminAndStaffOrdersPage = () => {
                                 </button>
                               </div>
                             )}
-                          {/* PROMO, IF THERE IS ONE */}
-                          {(order.promo || order.promo === 0) &&
+
+                          {/* PROMO, IF THERE IS ONE - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            (order.promo || order.promo === 0) &&
                             order.promo !== null &&
                             order.promo !== undefined &&
                             order.promo !== 0 && (
@@ -1506,6 +1534,7 @@ const AdminAndStaffOrdersPage = () => {
                                 <span>{order.promo}</span>
                               </div>
                             )}
+
                           {order.items.map((item, index) => {
                             // Find the highest price in the order items
                             const maxPrice = Math.max(
@@ -1554,19 +1583,23 @@ const AdminAndStaffOrdersPage = () => {
                                         </span>
                                       )}
                                   </span>
-                                  <span
-                                    className={
-                                      isHighestPriced && // Highlight the discounted price
-                                      ((order.status === "TO PAY" &&
-                                        applySrPWD[order.id]) ||
-                                        (order.status !== "TO PAY" &&
-                                          order.pwdSenior))
-                                        ? "text-green-600"
-                                        : ""
-                                    }
-                                  >
-                                    PHP {discountedPrice.toFixed(2)}
-                                  </span>
+                                  {/* Only show price if status is not "PAID" or "PREP" */}
+                                  {order.status !== "PAID" &&
+                                    order.status !== "PREP" && (
+                                      <span
+                                        className={
+                                          isHighestPriced && // Highlight the discounted price
+                                          ((order.status === "TO PAY" &&
+                                            applySrPWD[order.id]) ||
+                                            (order.status !== "TO PAY" &&
+                                              order.pwdSenior))
+                                            ? "text-green-600"
+                                            : ""
+                                        }
+                                      >
+                                        PHP {discountedPrice.toFixed(2)}
+                                      </span>
+                                    )}
                                 </div>
                                 {item.tags.map((tag, index) => (
                                   <p className="text-xs" key={index}>
@@ -1602,8 +1635,7 @@ const AdminAndStaffOrdersPage = () => {
                                   : order.status === "READY"
                                   ? "bg-green-700 text-white hover:bg-green-600 w-full"
                                   : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
-                              } shadow-md hover:scale-[1.02] duration-200
-            rounded-md h-10`}
+                              } shadow-md hover:scale-[1.02] duration-200 rounded-md h-10`}
                               onClick={() => {
                                 if (order.status === "TO PAY") {
                                   handlePaid(order.id);
@@ -1630,7 +1662,7 @@ const AdminAndStaffOrdersPage = () => {
                             {order.status === "PAID" && (
                               <button
                                 className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-            hover:scale-[1.02] duration-200 hover:bg-red-400"
+          hover:scale-[1.02] duration-200 hover:bg-red-400"
                                 onClick={() =>
                                   handleRefund(
                                     order.id,
@@ -1646,7 +1678,7 @@ const AdminAndStaffOrdersPage = () => {
                               className={`${
                                 order.status !== "TO PAY" && "hidden"
                               } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-            hover:scale-[1.02] duration-200 hover:bg-red-400`}
+        hover:scale-[1.02] duration-200 hover:bg-red-400`}
                               onClick={() => {
                                 if (order.payment === "Card") {
                                   handleReject(order.id); // Handle rejection for card payment
@@ -1661,7 +1693,7 @@ const AdminAndStaffOrdersPage = () => {
                               (order.status === "REJECTED" && (
                                 <button
                                   className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                hover:scale-[1.02] duration-200 hover:bg-red-400"
+          hover:scale-[1.02] duration-200 hover:bg-red-400"
                                   onClick={() => {
                                     handleDelete(order.id);
                                   }}
@@ -1674,7 +1706,7 @@ const AdminAndStaffOrdersPage = () => {
                                 {/* Print Details Button */}
                                 <button
                                   className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                  hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+            hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => handlePrintDetails(order.id)}
                                 >
                                   Print Details
@@ -1683,7 +1715,7 @@ const AdminAndStaffOrdersPage = () => {
                                 {/* Delete Button */}
                                 <button
                                   className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                  hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+            hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => handleDelete(order.id)}
                                 >
                                   Delete
