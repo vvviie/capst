@@ -70,7 +70,7 @@ const AdminAndStaffOrdersPage = () => {
   const [orderStatCat, setOrderStatCat] = useState<string>("ALL");
   const [enlargePicture, setEnlargePicture] = useState(false);
   const [cardIdImageEnlarge, setCardIdImageEnlarge] = useState(false);
-  const [idPicEnlarge, setIdPicEnlarge] = useState(false)
+  const [idPicEnlarge, setIdPicEnlarge] = useState(false);
   const [hasOrder, setHasOrder] = useState(false);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
   const [applySrPWD, setApplySrPWD] = useState<{ [key: string]: boolean }>({});
@@ -249,8 +249,8 @@ const AdminAndStaffOrdersPage = () => {
 
       // Fetch existing food and drink data
       const foodDrinkDoc = await getDoc(foodDrinkDataRef);
-      let existingFoodData: { [key: string]: number } = {}; 
-      let existingDrinkData: { [key: string]: number } = {}; 
+      let existingFoodData: { [key: string]: number } = {};
+      let existingDrinkData: { [key: string]: number } = {};
 
       if (foodDrinkDoc.exists()) {
         const foodDrinkData = foodDrinkDoc.data();
@@ -580,8 +580,8 @@ const AdminAndStaffOrdersPage = () => {
 
         // Fetch existing food and drink data
         const foodDrinkDoc = await getDoc(foodDrinkDataRef);
-        let existingFoodData: { [key: string]: number } = {}; 
-        let existingDrinkData: { [key: string]: number } = {}; 
+        let existingFoodData: { [key: string]: number } = {};
+        let existingDrinkData: { [key: string]: number } = {};
 
         if (foodDrinkDoc.exists()) {
           const foodDrinkData = foodDrinkDoc.data();
@@ -710,7 +710,9 @@ const AdminAndStaffOrdersPage = () => {
 
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, {
+          align: "center",
+        });
 
         // Add spacing
         doc.text("ORDER DETAILS", 105, 50, { align: "center" });
@@ -754,8 +756,9 @@ const AdminAndStaffOrdersPage = () => {
         // Check if the discount applies and find the highest priced item
         if (order.pwdSenior) {
           // Find the highest priced item
-          const highestPricedItem = order.items.reduce((maxItem: OrderItem, item: OrderItem) =>
-            item.totalPrice > maxItem.totalPrice ? item : maxItem
+          const highestPricedItem = order.items.reduce(
+            (maxItem: OrderItem, item: OrderItem) =>
+              item.totalPrice > maxItem.totalPrice ? item : maxItem
           );
 
           // Apply the discount to the highest priced item
@@ -854,24 +857,26 @@ const AdminAndStaffOrdersPage = () => {
 
   useEffect(() => {
     // Get all cookies as an array
-    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
-  
+    const cookies = document.cookie
+      ? document.cookie.split(";").map((cookie) => cookie.trim())
+      : [];
+
     // Check if no cookies exist
     if (cookies.length === 0) {
       // Redirect if no cookies exist
-      router.push('/');
+      router.push("/");
       return;
     }
-  
+
     // Check if the 'user' cookie exists
-    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
-  
+    const userCookie = cookies.find((cookie) => cookie.startsWith("user="));
+
     if (userCookie) {
       // Redirect if the 'user' cookie exists
-      router.push('/');
+      router.push("/");
     }
   }, [router]);
-  
+
   useEffect(() => {
     const cookies = Cookies.get(); // Retrieve all cookies
 
@@ -993,12 +998,12 @@ const AdminAndStaffOrdersPage = () => {
         collection(db, "completedOrders"),
         (querySnapshot) => {
           const orders: Order[] = [];
-  
+
           querySnapshot.forEach((doc) => {
             const data = doc.data();
             let highestPricedItem = data.items[0]; // Initialize with the first item
             let highestPrice = highestPricedItem.totalPrice;
-  
+
             // Find the highest-priced item in the current order
             data.items.forEach((item: any) => {
               if (item.totalPrice > highestPrice) {
@@ -1006,15 +1011,15 @@ const AdminAndStaffOrdersPage = () => {
                 highestPrice = item.totalPrice;
               }
             });
-  
+
             const items = data.items.map((item: Item) => {
               let discountedPrice = item.totalPrice;
-  
+
               // Apply the discount only if this order's Sr/PWD discount is active
               if (applySrPWD[doc.id] && item.id === highestPricedItem.id) {
                 discountedPrice = item.totalPrice * 0.8;
               }
-  
+
               return {
                 title: item.productTitle,
                 price: discountedPrice,
@@ -1025,13 +1030,13 @@ const AdminAndStaffOrdersPage = () => {
                     : [item.note],
               };
             });
-  
+
             // Recalculate the total price
             const totalPrice = items.reduce(
               (total: number, item: { price: number }) => total + item.price,
               0
             );
-  
+
             const order: Order = {
               id: doc.id,
               userName: data.userName,
@@ -1052,47 +1057,47 @@ const AdminAndStaffOrdersPage = () => {
               subtotal: data.subtotal || totalPrice,
               cardIdImg: data.cardIdImg,
             };
-  
+
             // Add only if status matches selected category or if "ALL"
             if (orderStatCat === "ALL" || order.status === orderStatCat) {
               orders.push(order);
             }
           });
-  
+
           const convertTo24HourFormat = (timeStr: string) => {
             const [time, modifier] = timeStr.split(" ");
             let [hours, minutes] = time.split(":").map(Number);
-  
+
             if (modifier === "PM" && hours < 12) hours += 12;
             if (modifier === "AM" && hours === 12) hours = 0;
-  
+
             return `${hours.toString().padStart(2, "0")}:${minutes
               .toString()
               .padStart(2, "0")}`;
           };
-  
+
           // Sort the orders from latest to oldest by date and time
           orders.sort((a, b) => {
             // Compare dates first
             if (a.date > b.date) return -1;
             if (a.date < b.date) return 1;
-  
+
             // If dates are the same, compare converted times
             const timeA = convertTo24HourFormat(a.time);
             const timeB = convertTo24HourFormat(b.time);
-  
+
             return timeA > timeB ? -1 : 1;
           });
-  
+
           // Update the orders state with the sorted data
           setUserOrders(orders);
           setHasOrder(orders.length > 0);
         }
       );
-  
+
       return unsubscribe;
     };
-  
+
     fetchCompletedOrders();
   }, [orderStatCat, applySrPWD]);
   //#endregion
@@ -1170,25 +1175,30 @@ const AdminAndStaffOrdersPage = () => {
                         <div className="flex flex-col gap-1 w-5/6">
                           {/* HEADERS CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center">
-                          <span className="font-bold text-orange-900">
-                            ID: {order.id}
-                          </span>
-                          <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
-                            PHP{" "}
-                            {order.status === "TO PAY" // If order is "TO PAY"
-                              ? applySrPWD[order.id] // If PWD is applied for this order
-                                ? // Apply PWD after promo has been subtracted
-                                  Number(
-                                    (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
-                                  ).toFixed(2)
-                                : // If PWD is not applied, subtract promo if available
-                                  (order.promo && order.promo > 0
+                            <span className="font-bold text-orange-900">
+                              ID: {order.id}
+                            </span>
+                            <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                              PHP{" "}
+                              {
+                                order.status === "TO PAY" // If order is "TO PAY"
+                                  ? applySrPWD[order.id] // If PWD is applied for this order
+                                    ? // Apply PWD after promo has been subtracted
+                                      Number(
+                                        order.price -
+                                          (order.sampleDiscountDeduction || 0) // Apply PWD discount (20%)
+                                      ).toFixed(2)
+                                    : // If PWD is not applied, subtract promo if available
+                                    order.promo && order.promo > 0
                                     ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
-                                      (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
-                                    : order.subtotal.toFixed(2)) // If no promo, show original subtotal
-                              : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
-                            }
-                          </span>
+                                      (
+                                        order.subtotal -
+                                        (order.promo - order.promo)
+                                      ).toFixed(2) // Subtract promo from subtotal
+                                    : order.subtotal.toFixed(2) // If no promo, show original subtotal
+                                  : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                              }
+                            </span>
                           </div>
                           {/* SUBHEADER CONTAINER */}
                           <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -1277,7 +1287,9 @@ const AdminAndStaffOrdersPage = () => {
                                       className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                                     absolute top-[8px] right-[8px] flex justify-center items-center z-10
                                     hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setCardIdImageEnlarge(false)}
+                                      onClick={() =>
+                                        setCardIdImageEnlarge(false)
+                                      }
                                     >
                                       <span className="font-bold">X</span>
                                     </div>
@@ -1322,7 +1334,10 @@ const AdminAndStaffOrdersPage = () => {
                               <div className="w-full flex flex-col gap-1 justify-center items-center">
                                 <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                   <Image
-                                    src={order.idPic ?? "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
+                                    src={
+                                      order.idPic ??
+                                      "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                    }
                                     alt="idpic"
                                     layout="fill"
                                     className="object-cover"
@@ -1352,7 +1367,10 @@ const AdminAndStaffOrdersPage = () => {
                                       <span className="font-bold">X</span>
                                     </div>
                                     <Image
-                                      src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
+                                      src={
+                                        order.idPic ||
+                                        "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                      }
                                       alt="idpic"
                                       fill
                                       className="object-cover"
@@ -1699,25 +1717,31 @@ const AdminAndStaffOrdersPage = () => {
                             <div className="flex flex-col gap-1 w-5/6">
                               {/* HEADERS CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                              <span className="font-bold text-orange-900">
-                                ID: {order.id}
-                              </span>
-                              <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
-                                PHP{" "}
-                                {order.status === "TO PAY" // If order is "TO PAY"
-                                  ? applySrPWD[order.id] // If PWD is applied for this order
-                                    ? // Apply PWD after promo has been subtracted
-                                      Number(
-                                        (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
-                                      ).toFixed(2)
-                                    : // If PWD is not applied, subtract promo if available
-                                      (order.promo && order.promo > 0
+                                <span className="font-bold text-orange-900">
+                                  ID: {order.id}
+                                </span>
+                                <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
+                                  PHP{" "}
+                                  {
+                                    order.status === "TO PAY" // If order is "TO PAY"
+                                      ? applySrPWD[order.id] // If PWD is applied for this order
+                                        ? // Apply PWD after promo has been subtracted
+                                          Number(
+                                            order.price -
+                                              (order.sampleDiscountDeduction ||
+                                                0) // Apply PWD discount (20%)
+                                          ).toFixed(2)
+                                        : // If PWD is not applied, subtract promo if available
+                                        order.promo && order.promo > 0
                                         ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
-                                          (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
-                                        : order.subtotal.toFixed(2)) // If no promo, show original subtotal
-                                  : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
-                                }
-                              </span>
+                                          (
+                                            order.subtotal -
+                                            (order.promo - order.promo)
+                                          ).toFixed(2) // Subtract promo from subtotal
+                                        : order.subtotal.toFixed(2) // If no promo, show original subtotal
+                                      : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                                  }
+                                </span>
                               </div>
                               {/* SUBHEADER CONTAINER */}
                               <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
@@ -1767,40 +1791,43 @@ const AdminAndStaffOrdersPage = () => {
                                 </div>
                               )}
                               {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                              { user === "bar" && (
-                              <div className="font-bold text-sm flex justify-between items-center">
-                                <span className="font-semibold">
-                                  {order.status !== "TO PAY"
-                                    ? "Senior Citizen / PWD Discount Given?"
-                                    : "Applied for Senior/PWD?"}
-                                </span>
-                                <span>{order.pwdSenior ? "Yes" : "No"}</span>
-                              </div>
+                              {user === "bar" && (
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    {order.status !== "TO PAY"
+                                      ? "Senior Citizen / PWD Discount Given?"
+                                      : "Applied for Senior/PWD?"}
+                                  </span>
+                                  <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                                </div>
                               )}
 
                               {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
 
-                              {user === "bar" && (
+                              {user === "bar" &&
                                 ((order.status === "TO PAY" &&
                                   order.pwdSenior &&
                                   applySrPWD[order.id]) ||
-                                  (order.status !== "TO PAY" && order.pwdSenior)) && (
+                                  (order.status !== "TO PAY" &&
+                                    order.pwdSenior)) && (
                                   <div className="font-bold text-sm flex justify-between items-center">
                                     <span className="font-semibold">
                                       Senior Citizen/PWD Discount
                                     </span>
                                     <span>{order.sampleDiscountDeduction}</span>
                                   </div>
-                                )
-                              )}
+                                )}
 
                               {/* PICTURE OF ID CONTAINER */}
-                              { user === "bar" && order.pwdSenior && (
+                              {user === "bar" && order.pwdSenior && (
                                 <>
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                       <Image
-                                        src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
+                                        src={
+                                          order.idPic ||
+                                          "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                        }
                                         alt="idpic"
                                         fill
                                         className="object-cover"
@@ -1827,14 +1854,15 @@ const AdminAndStaffOrdersPage = () => {
                                           className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                       absolute top-[8px] right-[8px] flex justify-center items-center z-10
                       hover:bg-gray-950 hover:scale-[1.02] duration-200"
-                                          onClick={() =>
-                                            setIdPicEnlarge(false)
-                                          }
+                                          onClick={() => setIdPicEnlarge(false)}
                                         >
                                           <span className="font-bold">X</span>
                                         </div>
                                         <Image
-                                          src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
+                                          src={
+                                            order.idPic ||
+                                            "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                          }
                                           alt="idpic"
                                           fill
                                           className="object-cover"
@@ -1846,7 +1874,8 @@ const AdminAndStaffOrdersPage = () => {
                               )}
 
                               {/* Apply Sr/PWD Discount Button */}
-                              {user === "bar" && order.status === "TO PAY" &&
+                              {user === "bar" &&
+                                order.status === "TO PAY" &&
                                 order.pwdSenior === true && (
                                   <div className="w-full flex justify-end">
                                     <button
@@ -1868,78 +1897,93 @@ const AdminAndStaffOrdersPage = () => {
                                   </div>
                                 )}
                               {/* PROMO, IF THERE IS ONE */}
-                              {user === "bar" && (order.promo || order.promo === 0) &&
-                              order.promo !== null &&
-                              order.promo !== undefined &&
-                              order.promo !== 0 && (
-                                <div className="font-bold text-sm flex justify-between items-center">
-                                  <span className="font-semibold">
-                                    Promo discount
-                                  </span>
-                                  <span>{order.promo}</span>
-                                </div>
-                              )}
-                              {order.items.map((item, index) => {
-                              // Find the highest price in the order items
-                              const maxPrice = Math.max(...order.items.map((i) => i.price));
-
-                              // Check if this is the first item with the highest price
-                              const isHighestPriced =
-                                item.price === maxPrice &&
-                                order.items.findIndex((i) => i.price === maxPrice) === index;
-
-                              // Apply discount conditionally based on the order's status and senior discount eligibility
-                              const discountAmount =
-                                isHighestPriced &&
-                                ((order.status === "TO PAY" && applySrPWD[order.id]) || 
-                                  (order.status !== "TO PAY" && order.pwdSenior))
-                                  ? item.price * 0.2
-                                  : 0;
-
-                              // Calculate discounted price if the discount applies
-                              const discountedPrice = isHighestPriced
-                                ? item.price - discountAmount
-                                : item.price;
-
-                              return (
-                                <div className="flex flex-col gap-1" key={item.title}>
-                                  {/* ITEM TITLE AND PRICE CONTAINER */}
+                              {user === "bar" &&
+                                (order.promo || order.promo === 0) &&
+                                order.promo !== null &&
+                                order.promo !== undefined &&
+                                order.promo !== 0 && (
                                   <div className="font-bold text-sm flex justify-between items-center">
                                     <span className="font-semibold">
-                                      {`${item.qty}x - ${item.title}`}
-                                      {isHighestPriced &&
-                                        ((order.status === "TO PAY" && applySrPWD[order.id]) ||
-                                          (order.status !== "TO PAY" && order.pwdSenior && user === "bar")) && (
-                                          <span className="text-green-600 text-xs ml-2">
-                                            (discounted: PHP {discountAmount.toFixed(2)})
-                                          </span>
-                                        )}
+                                      Promo discount
                                     </span>
-                                    {/* Only show the price if the role is "bar" */}
-                                    {user === "bar" && (
-                                      <span
-                                        className={
-                                          isHighestPriced &&
-                                          ((order.status === "TO PAY" && applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" && order.pwdSenior))
-                                            ? "text-green-600"
-                                            : ""
-                                        }
-                                      >
-                                        PHP {discountedPrice.toFixed(2)}
-                                      </span>
-                                    )}
+                                    <span>{order.promo}</span>
                                   </div>
-                                  {item.tags.map((tag, index) => (
-                                    <p className="text-xs" key={index}>
-                                      -{tag}
-                                    </p>
-                                  ))}
-                                <hr />
-                                </div>
-                              );
-                            })}
+                                )}
+                              {order.items.map((item, index) => {
+                                // Find the highest price in the order items
+                                const maxPrice = Math.max(
+                                  ...order.items.map((i) => i.price)
+                                );
 
+                                // Check if this is the first item with the highest price
+                                const isHighestPriced =
+                                  item.price === maxPrice &&
+                                  order.items.findIndex(
+                                    (i) => i.price === maxPrice
+                                  ) === index;
+
+                                // Apply discount conditionally based on the order's status and senior discount eligibility
+                                const discountAmount =
+                                  isHighestPriced &&
+                                  ((order.status === "TO PAY" &&
+                                    applySrPWD[order.id]) ||
+                                    (order.status !== "TO PAY" &&
+                                      order.pwdSenior))
+                                    ? item.price * 0.2
+                                    : 0;
+
+                                // Calculate discounted price if the discount applies
+                                const discountedPrice = isHighestPriced
+                                  ? item.price - discountAmount
+                                  : item.price;
+
+                                return (
+                                  <div
+                                    className="flex flex-col gap-1"
+                                    key={item.title}
+                                  >
+                                    {/* ITEM TITLE AND PRICE CONTAINER */}
+                                    <div className="font-bold text-sm flex justify-between items-center">
+                                      <span className="font-semibold">
+                                        {`${item.qty}x - ${item.title}`}
+                                        {isHighestPriced &&
+                                          ((order.status === "TO PAY" &&
+                                            applySrPWD[order.id]) ||
+                                            (order.status !== "TO PAY" &&
+                                              order.pwdSenior &&
+                                              user === "bar")) && (
+                                            <span className="text-green-600 text-xs ml-2">
+                                              (discounted: PHP{" "}
+                                              {discountAmount.toFixed(2)})
+                                            </span>
+                                          )}
+                                      </span>
+                                      {/* Only show the price if the role is "bar" */}
+                                      {user === "bar" && (
+                                        <span
+                                          className={
+                                            isHighestPriced &&
+                                            ((order.status === "TO PAY" &&
+                                              applySrPWD[order.id]) ||
+                                              (order.status !== "TO PAY" &&
+                                                order.pwdSenior))
+                                              ? "text-green-600"
+                                              : ""
+                                          }
+                                        >
+                                          PHP {discountedPrice.toFixed(2)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {item.tags.map((tag, index) => (
+                                      <p className="text-xs" key={index}>
+                                        -{tag}
+                                      </p>
+                                    ))}
+                                    <hr />
+                                  </div>
+                                );
+                              })}
 
                               {/* USERNAME */}
                               <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
@@ -2081,18 +2125,24 @@ const AdminAndStaffOrdersPage = () => {
                                 </span>
                                 <span className="bg-orange-300 text-white px-3 py-0.5 rounded-full text-xs sm:text-sm">
                                   PHP{" "}
-                                  {order.status === "TO PAY" // If order is "TO PAY"
-                                    ? applySrPWD[order.id] // If PWD is applied for this order
-                                      ? // Apply PWD after promo has been subtracted
-                                        Number(
-                                          (order.price - (order.sampleDiscountDeduction || 0)) // Apply PWD discount (20%)
-                                        ).toFixed(2)
-                                      : // If PWD is not applied, subtract promo if available
-                                        (order.promo && order.promo > 0
-                                          ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
-                                            (order.subtotal - (order.promo - order.promo)).toFixed(2) // Subtract promo from subtotal
-                                          : order.subtotal.toFixed(2)) // If no promo, show original subtotal
-                                    : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
+                                  {
+                                    order.status === "TO PAY" // If order is "TO PAY"
+                                      ? applySrPWD[order.id] // If PWD is applied for this order
+                                        ? // Apply PWD after promo has been subtracted
+                                          Number(
+                                            order.price -
+                                              (order.sampleDiscountDeduction ||
+                                                0) // Apply PWD discount (20%)
+                                          ).toFixed(2)
+                                        : // If PWD is not applied, subtract promo if available
+                                        order.promo && order.promo > 0
+                                        ? // If promo exists, subtract promo from subtotal (but do it once, no double subtraction)
+                                          (
+                                            order.subtotal -
+                                            (order.promo - order.promo)
+                                          ).toFixed(2) // Subtract promo from subtotal
+                                        : order.subtotal.toFixed(2) // If no promo, show original subtotal
+                                      : (order.subtotal ?? 0).toFixed(2) // If not "TO PAY", show the subtotal or 0 if undefined
                                   }
                                 </span>
                               </div>
@@ -2144,7 +2194,7 @@ const AdminAndStaffOrdersPage = () => {
                                 </div>
                               )}
                               {/* CARD */}
-                              
+
                               {order.payment === "Card" && (
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
@@ -2203,38 +2253,41 @@ const AdminAndStaffOrdersPage = () => {
                                 </>
                               )}
                               {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                              { user === "bar" && (
-                              <div className="font-bold text-sm flex justify-between items-center">
-                                <span className="font-semibold">
-                                  {order.status !== "TO PAY"
-                                    ? "Senior Citizen / PWD Discount Given?"
-                                    : "Applied for Senior/PWD?"}
-                                </span>
-                                <span>{order.pwdSenior ? "Yes" : "No"}</span>
-                              </div>
+                              {user === "bar" && (
+                                <div className="font-bold text-sm flex justify-between items-center">
+                                  <span className="font-semibold">
+                                    {order.status !== "TO PAY"
+                                      ? "Senior Citizen / PWD Discount Given?"
+                                      : "Applied for Senior/PWD?"}
+                                  </span>
+                                  <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                                </div>
                               )}
 
                               {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
-                              {user === "bar" && (
+                              {user === "bar" &&
                                 ((order.status === "TO PAY" &&
                                   order.pwdSenior &&
                                   applySrPWD[order.id]) ||
-                                  (order.status !== "TO PAY" && order.pwdSenior)) && (
+                                  (order.status !== "TO PAY" &&
+                                    order.pwdSenior)) && (
                                   <div className="font-bold text-sm flex justify-between items-center">
                                     <span className="font-semibold">
                                       Senior Citizen/PWD Discount
                                     </span>
                                     <span>{order.sampleDiscountDeduction}</span>
                                   </div>
-                                )
-                              )}
+                                )}
                               {/* PICTURE OF ID CONTAINER */}
                               {user === "bar" && order.pwdSenior && (
                                 <>
                                   <div className="w-full flex flex-col gap-1 justify-center items-center">
                                     <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                       <Image
-                                        src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
+                                        src={
+                                          order.idPic ||
+                                          "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                        }
                                         alt="idpic"
                                         fill
                                         className="object-cover"
@@ -2261,14 +2314,15 @@ const AdminAndStaffOrdersPage = () => {
                                           className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
                       absolute top-[8px] right-[8px] flex justify-center items-center z-10
                       hover:bg-gray-950 hover:scale-[1.02] duration-200"
-                                          onClick={() =>
-                                            setIdPicEnlarge(false)
-                                          }
+                                          onClick={() => setIdPicEnlarge(false)}
                                         >
                                           <span className="font-bold">X</span>
                                         </div>
                                         <Image
-                                          src={order.idPic || "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"}
+                                          src={
+                                            order.idPic ||
+                                            "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                          }
                                           alt="idpic"
                                           fill
                                           className="object-cover"
@@ -2280,7 +2334,8 @@ const AdminAndStaffOrdersPage = () => {
                               )}
 
                               {/* Apply Sr/PWD Discount Button */}
-                              {user === "bar" && order.status === "TO PAY" &&
+                              {user === "bar" &&
+                                order.status === "TO PAY" &&
                                 order.pwdSenior === true && (
                                   <div className="w-full flex justify-end">
                                     <button
@@ -2302,77 +2357,93 @@ const AdminAndStaffOrdersPage = () => {
                                   </div>
                                 )}
                               {/* PROMO, IF THERE IS ONE */}
-                              {user === "bar" && (order.promo || order.promo === 0) &&
-                              order.promo !== null &&
-                              order.promo !== undefined &&
-                              order.promo !== 0 && (
-                                <div className="font-bold text-sm flex justify-between items-center">
-                                  <span className="font-semibold">
-                                    Promo discount
-                                  </span>
-                                  <span>{order.promo}</span>
-                                </div>
-                              )}
-                              {order.items.map((item, index) => {
-                              // Find the highest price in the order items
-                              const maxPrice = Math.max(...order.items.map((i) => i.price));
-
-                              // Check if this is the first item with the highest price
-                              const isHighestPriced =
-                                item.price === maxPrice &&
-                                order.items.findIndex((i) => i.price === maxPrice) === index;
-
-                              // Apply discount conditionally based on the order's status and senior discount eligibility
-                              const discountAmount =
-                                isHighestPriced &&
-                                ((order.status === "TO PAY" && applySrPWD[order.id]) || 
-                                  (order.status !== "TO PAY" && order.pwdSenior))
-                                  ? item.price * 0.2
-                                  : 0;
-
-                              // Calculate discounted price if the discount applies
-                              const discountedPrice = isHighestPriced
-                                ? item.price - discountAmount
-                                : item.price;
-
-                              return (
-                                <div className="flex flex-col gap-1" key={item.title}>
-                                  {/* ITEM TITLE AND PRICE CONTAINER */}
+                              {user === "bar" &&
+                                (order.promo || order.promo === 0) &&
+                                order.promo !== null &&
+                                order.promo !== undefined &&
+                                order.promo !== 0 && (
                                   <div className="font-bold text-sm flex justify-between items-center">
                                     <span className="font-semibold">
-                                      {`${item.qty}x - ${item.title}`}
-                                      {isHighestPriced &&
-                                        ((order.status === "TO PAY" && applySrPWD[order.id]) ||
-                                          (order.status !== "TO PAY" && order.pwdSenior && user === "bar")) && (
-                                          <span className="text-green-600 text-xs ml-2">
-                                            (discounted: PHP {discountAmount.toFixed(2)})
-                                          </span>
-                                        )}
+                                      Promo discount
                                     </span>
-                                    {/* Only show the price if the role is "bar" */}
-                                    {user === "bar" && (
-                                      <span
-                                        className={
-                                          isHighestPriced &&
-                                          ((order.status === "TO PAY" && applySrPWD[order.id]) ||
-                                            (order.status !== "TO PAY" && order.pwdSenior))
-                                            ? "text-green-600"
-                                            : ""
-                                        }
-                                      >
-                                        PHP {discountedPrice.toFixed(2)}
-                                      </span>
-                                    )}
+                                    <span>{order.promo}</span>
                                   </div>
-                                  {item.tags.map((tag, index) => (
-                                    <p className="text-xs" key={index}>
-                                      -{tag}
-                                    </p>
-                                  ))}
-                                <hr />
-                                </div>
-                              );
-                            })}
+                                )}
+                              {order.items.map((item, index) => {
+                                // Find the highest price in the order items
+                                const maxPrice = Math.max(
+                                  ...order.items.map((i) => i.price)
+                                );
+
+                                // Check if this is the first item with the highest price
+                                const isHighestPriced =
+                                  item.price === maxPrice &&
+                                  order.items.findIndex(
+                                    (i) => i.price === maxPrice
+                                  ) === index;
+
+                                // Apply discount conditionally based on the order's status and senior discount eligibility
+                                const discountAmount =
+                                  isHighestPriced &&
+                                  ((order.status === "TO PAY" &&
+                                    applySrPWD[order.id]) ||
+                                    (order.status !== "TO PAY" &&
+                                      order.pwdSenior))
+                                    ? item.price * 0.2
+                                    : 0;
+
+                                // Calculate discounted price if the discount applies
+                                const discountedPrice = isHighestPriced
+                                  ? item.price - discountAmount
+                                  : item.price;
+
+                                return (
+                                  <div
+                                    className="flex flex-col gap-1"
+                                    key={item.title}
+                                  >
+                                    {/* ITEM TITLE AND PRICE CONTAINER */}
+                                    <div className="font-bold text-sm flex justify-between items-center">
+                                      <span className="font-semibold">
+                                        {`${item.qty}x - ${item.title}`}
+                                        {isHighestPriced &&
+                                          ((order.status === "TO PAY" &&
+                                            applySrPWD[order.id]) ||
+                                            (order.status !== "TO PAY" &&
+                                              order.pwdSenior &&
+                                              user === "bar")) && (
+                                            <span className="text-green-600 text-xs ml-2">
+                                              (discounted: PHP{" "}
+                                              {discountAmount.toFixed(2)})
+                                            </span>
+                                          )}
+                                      </span>
+                                      {/* Only show the price if the role is "bar" */}
+                                      {user === "bar" && (
+                                        <span
+                                          className={
+                                            isHighestPriced &&
+                                            ((order.status === "TO PAY" &&
+                                              applySrPWD[order.id]) ||
+                                              (order.status !== "TO PAY" &&
+                                                order.pwdSenior))
+                                              ? "text-green-600"
+                                              : ""
+                                          }
+                                        >
+                                          PHP {discountedPrice.toFixed(2)}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {item.tags.map((tag, index) => (
+                                      <p className="text-xs" key={index}>
+                                        -{tag}
+                                      </p>
+                                    ))}
+                                    <hr />
+                                  </div>
+                                );
+                              })}
                               {/* USERNAME */}
                               <span className="w-full flex flex-col gap-0 text-gray-400 text-xs">
                                 <span>Order by:</span>
