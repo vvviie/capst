@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -391,16 +392,6 @@ const ReservationPage = () => {
       return;
     }
 
-    if (payment === "Card" && fileName === "") {
-      setError(true);
-      setDateError("Please upload the image of the receipt.");
-      setTimeout(() => {
-        setError(false); // Clear error flag
-        setDateError(""); // Clear the error message
-      }, 3000); // Clear error after 3 seconds
-      return;
-    }
-
     const orderId = generateOrderId();
     const now = new Date();
 
@@ -451,7 +442,6 @@ const ReservationPage = () => {
         totalPrice: number;
         type: string;
         payment: string;
-        receiptImage?: string; // Optional property
       } = {
         dateReserved,
         timeReserved,
@@ -464,14 +454,10 @@ const ReservationPage = () => {
         type: "Table",
         payment,
       };
-    
-      // Conditionally add 'receiptImage' only when payment is "Card"
-      if (payment === "Card") {
-        reservationData.receiptImage = firebaseImageUrl;
-      }
-    
+
+
       await setDoc(doc(db, "tableReservations", orderId), reservationData);
-    
+
       console.log("Reservation successfully saved.");
       setIsPopupVisible(true);
       setTimeout(() => {
@@ -481,7 +467,7 @@ const ReservationPage = () => {
     } catch (error) {
       console.error("Error adding reservation: ", error);
       alert("Failed to make reservation. Please try again.");
-    }    
+    }
   };
   //#endregion
 
@@ -860,43 +846,40 @@ const ReservationPage = () => {
 
     // Calculate the downpayment and balance
     const downpaymentAmount =
-    paymentType === "downpayment" ? totalPrice / 2 : 0;
+      paymentType === "downpayment" ? totalPrice / 2 : 0;
 
-  try {
-    const reservationData: Record<string, any> = {
-      dateReserved,
-      timeReserved,
-      dateToBeReserved: formattedDateToBeReserved,
-      timeToBeReserved: formattedTime,
-      packageOffer,
-      buffetChosen,
-      numberOfPersons: numberOfPersonsEvent,
-      totalPrice,
-      paymentType,
-      status: "REQUESTED",
-      type: "Event",
-      reservedBy: userEmail,
-      remarks: remarks || "None",
-      payment,
-    };
+    try {
+      const reservationData: Record<string, any> = {
+        dateReserved,
+        timeReserved,
+        dateToBeReserved: formattedDateToBeReserved,
+        timeToBeReserved: formattedTime,
+        packageOffer,
+        buffetChosen,
+        numberOfPersons: numberOfPersonsEvent,
+        totalPrice,
+        paymentType,
+        status: "REQUESTED",
+        type: "Event",
+        reservedBy: userEmail,
+        remarks: remarks || "None",
+        payment,
+      };
 
-    if (paymentType === "downpayment") {
-      reservationData.downpayment = downpaymentAmount;
+      if (paymentType === "downpayment") {
+        reservationData.downpayment = downpaymentAmount;
+      }
+
+      await setDoc(doc(db, "tableReservations", orderId), reservationData);
+
+      setIsPopupVisible(true);
+      setTimeout(() => {
+        setIsPopupVisible(false);
+        router.push("/book/reservations");
+      }, 3000);
+    } catch (error) {
+      console.error("Error adding reservation: ", error);
     }
-    if (payment === "Card") {
-      reservationData.receiptImage = firebaseImageUrl;
-    }
-
-    await setDoc(doc(db, "tableReservations", orderId), reservationData);
-
-    setIsPopupVisible(true);
-    setTimeout(() => {
-      setIsPopupVisible(false);
-      router.push("/book/reservations");
-    }, 3000);
-  } catch (error) {
-    console.error("Error adding reservation: ", error);
-  }
   };
 
   //#endregion
@@ -904,9 +887,7 @@ const ReservationPage = () => {
   return (
     <div
       className={`h-auto lg:min-h-[69.2vh] bg-white mt-14 py-6 px-10 lg:flex lg:flex-col
-    lg:justify-center lg:px-24 lg:bg-[url('/backgrounds/bg3-2.png')] ${
-      payment === "Cash" ? "lg:bg-cover" : "lg:bg-contain"
-    } lg:bg-no-repeat lg:bg-center
+    lg:justify-center lg:px-24 lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center
     lg:gap-4 xl:px-56 items-center lg:py-16`}
     >
       {/* HEADER */}
