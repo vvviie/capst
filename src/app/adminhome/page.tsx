@@ -49,7 +49,7 @@ type Review = {
 const AdminHomePage = () => {
   const [timeFrame, setTimeFrame] = useState("today");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [latestReviews, setLatestReviews] = useState<Review[]>([]); 
+  const [latestReviews, setLatestReviews] = useState<Review[]>([]);
   const router = useRouter(); // Initialize useRouter
   const [topSpendingCustomers, setTopSpendingCustomers] = useState<
     TopSpendingCustomer[]
@@ -59,21 +59,23 @@ const AdminHomePage = () => {
 
   useEffect(() => {
     // Get all cookies as an array
-    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
-  
+    const cookies = document.cookie
+      ? document.cookie.split(";").map((cookie) => cookie.trim())
+      : [];
+
     // Check if no cookies exist
     if (cookies.length === 0) {
       // Redirect if no cookies exist
-      router.push('/');
+      router.push("/");
       return;
     }
-  
+
     // Check if the 'user' cookie exists
-    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
-  
+    const userCookie = cookies.find((cookie) => cookie.startsWith("user="));
+
     if (userCookie) {
       // Redirect if the 'user' cookie exists
-      router.push('/');
+      router.push("/");
     }
   }, [router]);
 
@@ -125,7 +127,10 @@ const AdminHomePage = () => {
   const handlePrintData = () => {
     if (exportedData) {
       console.log("Labels:", exportedData.labels);
-      console.log("Data:", exportedData.datasets.map((d: any) => d.data));
+      console.log(
+        "Data:",
+        exportedData.datasets.map((d: any) => d.data)
+      );
     } else {
       console.log("No data to print");
     }
@@ -190,7 +195,9 @@ const AdminHomePage = () => {
     const fetchReviews = async () => {
       try {
         // Step 1: Fetch reviews from customerFeedbacks collection
-        const reviewsSnapshot = await getDocs(collection(db, "customerFeedbacks"));
+        const reviewsSnapshot = await getDocs(
+          collection(db, "customerFeedbacks")
+        );
 
         const reviewsData: Review[] = [];
 
@@ -256,7 +263,7 @@ const AdminHomePage = () => {
       lg:bg-[url('/backgrounds/bg3-2.png')] lg:bg-cover lg:bg-no-repeat lg:bg-center"
       ></div>
       <div className="w-full max-w-[1400px] py-4">
-      <div className="flex w-full items-center gap-2 justify-between mb-4">
+        <div className="flex w-full items-center gap-2 justify-between mb-4">
           <div className="w-full flex gap-4 items-center">
             <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
             <span className="text-2xl text-center font-bold text-orange-900">
@@ -264,8 +271,9 @@ const AdminHomePage = () => {
             </span>
             <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
           </div>
-          </div>
-          <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
+        </div>
+        <div className="flex flex-row-reverse w-full items-center justify-between mb-4"></div>
+        <div className="flex flex-row-reverse w-full items-center justify-between mb-4">
           <Link
             href={`/adminhome/announcement`}
             className="h-10 bg-orange-950 shadow-md rounded-md pt-2.5 w-full max-w-[170px] sm:pt-2 text-sm sm:text-base
@@ -316,7 +324,7 @@ const AdminHomePage = () => {
               Net Sales and Expenses -{" "}
               {timeFrame.charAt(0).toUpperCase() + timeFrame.slice(1)}
             </h1>
-            <NetSalesExpensesGraph timeFrame={timeFrame}/>
+            <NetSalesExpensesGraph timeFrame={timeFrame} />
           </div>
 
           {/* FOODS AND DRINKS SOLD SECTION */}
@@ -473,7 +481,7 @@ const AdminHomePage = () => {
                     {/* Updated date and time */}
                   </div>
                   <p className="text-gray-700 text-sm italic">
-                  {`"${rev.comments}"`}
+                    {`"${rev.comments}"`}
                   </p>{" "}
                   {/* Updated review content */}
                 </div>

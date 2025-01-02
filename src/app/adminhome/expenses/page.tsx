@@ -46,21 +46,23 @@ const ExpensesPage = () => {
 
   useEffect(() => {
     // Get all cookies as an array
-    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
-  
+    const cookies = document.cookie
+      ? document.cookie.split(";").map((cookie) => cookie.trim())
+      : [];
+
     // Check if no cookies exist
     if (cookies.length === 0) {
       // Redirect if no cookies exist
-      router.push('/');
+      router.push("/");
       return;
     }
-  
+
     // Check if the 'user' cookie exists
-    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
-  
+    const userCookie = cookies.find((cookie) => cookie.startsWith("user="));
+
     if (userCookie) {
       // Redirect if the 'user' cookie exists
-      router.push('/');
+      router.push("/");
     }
   }, [router]);
 

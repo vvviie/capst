@@ -470,7 +470,9 @@ const ReservationsPage = () => {
                     <div className="flex flex-col gap-1 w-5/6">
                       {/* HEADERS CONTAINER */}
                       <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                        <span className="">{res.type + " - Reservation #" + res.id}</span>
+                        <span className="">
+                          {res.type + " - Reservation #" + res.id}
+                        </span>
                         <span
                           className={`${
                             res.status === "REQUESTED"
@@ -583,7 +585,7 @@ const ReservationsPage = () => {
                       {res.status === "REJECTED" ||
                       res.status === "CANCELLED" ||
                       res.status === "PAID" ||
-                      res.status === "PAYMENT POSTED" || 
+                      res.status === "PAYMENT POSTED" ||
                       res.status === "DOWNPAYMENT PAID" ? null : res.status ===
                         "DONE" ? (
                         res.type === "Table" ? (

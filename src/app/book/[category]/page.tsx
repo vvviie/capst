@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -454,7 +453,6 @@ const ReservationPage = () => {
         type: "Table",
         payment,
       };
-
 
       await setDoc(doc(db, "tableReservations", orderId), reservationData);
 
