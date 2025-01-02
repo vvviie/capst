@@ -42,6 +42,7 @@ type res = {
   downpayment: number;
   remarks?: string;
   payment: string;
+  receiptImage?: string;
 };
 
 interface PaymentResponse {
@@ -1028,6 +1029,12 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 }
                               )}
                           </div>
+
+                          {/* INDICATION OF CARD PAYMENT */}
+                          {res.status !== "REQUESTED" && res.status !== "CANCELLED" && res.status !== "REJECTED" && res.payment === "Card" && (
+                          <p className="text-xs select-none text-gray-400">{`Resibo ng Card Payment: ${res.receiptImage}`}</p>
+                          )}
+
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
