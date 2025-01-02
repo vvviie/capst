@@ -391,16 +391,6 @@ const ReservationPage = () => {
       return;
     }
 
-    if (payment === "Card" && fileName === "") {
-      setError(true);
-      setDateError("Please upload the image of the receipt.");
-      setTimeout(() => {
-        setError(false); // Clear error flag
-        setDateError(""); // Clear the error message
-      }, 3000); // Clear error after 3 seconds
-      return;
-    }
-
     const orderId = generateOrderId();
     const now = new Date();
 
@@ -451,7 +441,6 @@ const ReservationPage = () => {
         totalPrice: number;
         type: string;
         payment: string;
-        receiptImage?: string; // Optional property
       } = {
         dateReserved,
         timeReserved,
@@ -464,11 +453,6 @@ const ReservationPage = () => {
         type: "Table",
         payment,
       };
-
-      // Conditionally add 'receiptImage' only when payment is "Card"
-      if (payment === "Card") {
-        reservationData.receiptImage = firebaseImageUrl;
-      }
 
       await setDoc(doc(db, "tableReservations", orderId), reservationData);
 
@@ -882,9 +866,6 @@ const ReservationPage = () => {
 
       if (paymentType === "downpayment") {
         reservationData.downpayment = downpaymentAmount;
-      }
-      if (payment === "Card") {
-        reservationData.receiptImage = firebaseImageUrl;
       }
 
       await setDoc(doc(db, "tableReservations", orderId), reservationData);

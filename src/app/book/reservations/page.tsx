@@ -470,12 +470,16 @@ const ReservationsPage = () => {
                     <div className="flex flex-col gap-1 w-5/6">
                       {/* HEADERS CONTAINER */}
                       <div className="w-full px-4 flex justify-between items-center text-lg font-bold text-gray-800">
-                        <span className="">{res.type}</span>
+                        <span className="">
+                          {res.type + " - Reservation #" + res.id}
+                        </span>
                         <span
                           className={`${
                             res.status === "REQUESTED"
                               ? "text-orange-500"
                               : res.status === "TO PAY"
+                              ? "text-yellow-500"
+                              : res.status === "PAYMENT POSTED"
                               ? "text-yellow-500"
                               : res.status === "PAID"
                               ? "text-blue-500"
@@ -581,6 +585,7 @@ const ReservationsPage = () => {
                       {res.status === "REJECTED" ||
                       res.status === "CANCELLED" ||
                       res.status === "PAID" ||
+                      res.status === "PAYMENT POSTED" ||
                       res.status === "DOWNPAYMENT PAID" ? null : res.status ===
                         "DONE" ? (
                         res.type === "Table" ? (
@@ -600,7 +605,7 @@ const ReservationsPage = () => {
                         ) : null
                       ) : res.status === "TO PAY" && cardPayment ? (
                         <a
-                          href={`/book/reservations/payment/123`}
+                          href={`/book/reservations/payment/${res.id}`}
                           className="h-10 font-bold w-full text-center no-underline
                           bg-white pt-1.5 rounded-md shadow-md border-gray-100 border-2
                           text-gray-400 hover:bg-gray-50 hover:scale-[1.02] duration-200"
