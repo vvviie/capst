@@ -19,6 +19,7 @@ import AdminReservationFilter from "../components/AdminReservationFilter";
 import DynamicPackageOffers from "../components/DynamicPackageOffers";
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
+import Image from "next/image";
 
 type res = {
   id: string;
@@ -69,7 +70,7 @@ type BuffetChosen = {
 };
 
 const res: { buffetChosen?: BuffetChosen } = {
-  buffetChosen: {} // You can test this as an empty object or undefined to simulate no data
+  buffetChosen: {}, // You can test this as an empty object or undefined to simulate no data
 };
 
 const AdminCheckReservationsPage = () => {
@@ -79,6 +80,7 @@ const AdminCheckReservationsPage = () => {
   const [expandedOrders, setExpandedOrders] = useState<Record<string, boolean>>(
     {}
   );
+  const [picEnlarge, setPicEnlarge] = useState(false);
   const router = useRouter(); // Initialize useRouter
   const [isToPaymentVisible, setIsToPaymentVisible] = useState(false);
   const [isRejectedVisible, setIsRejectedVisible] = useState(false);
@@ -217,7 +219,7 @@ const AdminCheckReservationsPage = () => {
   const handleMarkAsPending = async (id: string) => {
     try {
       await updateDoc(doc(db, "tableReservations", id), {
-      status: "REQUESTED",
+        status: "REQUESTED",
       });
 
       setIsPendingVisible(true);
@@ -288,7 +290,9 @@ const AdminCheckReservationsPage = () => {
 
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, {
+          align: "center",
+        });
 
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
@@ -366,7 +370,9 @@ const AdminCheckReservationsPage = () => {
 
         // Title and address - Centered
         doc.text("fikaställe by fika kafé", 105, 20, { align: "center" });
-        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, { align: "center" });
+        doc.text("Brgy. Iba, Silang, Cavite, 4118", 105, 30, {
+          align: "center",
+        });
 
         // Add spacing
         doc.text("BOOKING DETAILS", 105, 50, { align: "center" });
@@ -443,21 +449,23 @@ const AdminCheckReservationsPage = () => {
 
   useEffect(() => {
     // Get all cookies as an array
-    const cookies = document.cookie ? document.cookie.split(';').map(cookie => cookie.trim()) : [];
-  
+    const cookies = document.cookie
+      ? document.cookie.split(";").map((cookie) => cookie.trim())
+      : [];
+
     // Check if no cookies exist
     if (cookies.length === 0) {
       // Redirect if no cookies exist
-      router.push('/');
+      router.push("/");
       return;
     }
-  
+
     // Check if the 'user' cookie exists
-    const userCookie = cookies.find(cookie => cookie.startsWith('user='));
-  
+    const userCookie = cookies.find((cookie) => cookie.startsWith("user="));
+
     if (userCookie) {
       // Redirect if the 'user' cookie exists
-      router.push('/');
+      router.push("/");
     }
   }, [router]);
 
@@ -554,8 +562,8 @@ const AdminCheckReservationsPage = () => {
   }, [selectedFilterDate]); // Trigger useEffect when selectedFilterDate changes
 
   //#region PAGES CODE
-  const [currentPage, setCurrentPage] = useState<number>(1); 
-  const [pageWindowStart, setPageWindowStart] = useState<number>(1); 
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageWindowStart, setPageWindowStart] = useState<number>(1);
   const itemsPerPage = 5;
   const pagesToShow = 5;
 
@@ -662,22 +670,22 @@ const AdminCheckReservationsPage = () => {
               <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
             </div>
             <div className="w-full flex justify-between items-start gap-1">
-              <div className="flex flex-col gap-2 items-start
-              lg:flex-row lg:items-center">
-              <Link
-                href={`/fkstllbookings/${
-                  resType === "table" ? "table" : "event"
-                }`}
-                className="bg-orange-950 rounded-md shadow-md text-white pt-2 text-center
-font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
+              <div
+                className="flex flex-col gap-2 items-start
+              lg:flex-row lg:items-center"
               >
-                Add
-              </Link>
-              {resType === "event" && (
-                  <DynamicPackageOffers />
-              )}
+                <Link
+                  href={`/fkstllbookings/${
+                    resType === "table" ? "table" : "event"
+                  }`}
+                  className="bg-orange-950 rounded-md shadow-md text-white pt-2 text-center
+font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
+                >
+                  Add
+                </Link>
+                {resType === "event" && <DynamicPackageOffers />}
               </div>
-              
+
               <div className="flex items-center gap-2 flex-1 justify-end">
                 <select
                   className="h-10 bg-white border-2 border-gray-100 shadow-md rounded-md w-full font-bold
@@ -729,7 +737,9 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               <i className="fa-solid fa-people-group text-sm"></i>
                               {resType && (
                                 <span>{`${res.numberOfPersons} PAX - PHP ${
-                                  res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"
+                                  res.totalPrice
+                                    ? res.totalPrice.toFixed(2)
+                                    : "0.00"
                                 }`}</span>
                               )}
                             </p>
@@ -766,6 +776,65 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                             <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
+
+                            {/* INDICATION OF CARD PAYMENT */}
+                            {res.status !== "REQUESTED" &&
+                              res.status !== "CANCELLED" &&
+                              res.status !== "REJECTED" &&
+                              res.payment === "Card" && (
+                                <>
+                                  <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                    <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
+                                      <Image
+                                        src={
+                                          res.receiptImage ||
+                                          "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                        }
+                                        alt="idpic"
+                                        fill
+                                        className="object-cover"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setPicEnlarge(true);
+                                        }}
+                                      />
+                                    </div>
+                                    <p className="text-xs text-gray-400">
+                                      Click the picture to enlarge.
+                                    </p>
+                                  </div>
+                                  {picEnlarge && (
+                                    // ENLARGED IMAGE
+                                    <div
+                                      className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                      style={{
+                                        background: "rgba(0, 0, 0, 0.85)",
+                                      }}
+                                    >
+                                      <div className="w-full max-w-[620px] aspect-square relative">
+                                        <div
+                                          className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                                                        absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                                                        hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                          onClick={() => setPicEnlarge(false)}
+                                        >
+                                          <span className="font-bold">X</span>
+                                        </div>
+                                        <Image
+                                          src={
+                                            res.receiptImage ||
+                                            "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                          }
+                                          alt="idpic"
+                                          fill
+                                          className="object-contain"
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
 
@@ -840,18 +909,22 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   onClick={() => {
                                     // Ensure totalPrice is a number (default to 0 if undefined)
                                     const totalPrice = res.totalPrice ?? 0;
-                                    
-                                    // Ensure paymentType is either "downpayment" or "fullpayment"
-                                    const paymentType: "downpayment" | "fullpayment" = res.paymentType === "downpayment" || res.paymentType === "fullpayment" 
-                                      ? res.paymentType 
-                                      : "downpayment";  // Default to "downpayment" if invalid
 
-                                    handlePaid(res.id, totalPrice);  // Pass totalPrice as a valid number
+                                    // Ensure paymentType is either "downpayment" or "fullpayment"
+                                    const paymentType:
+                                      | "downpayment"
+                                      | "fullpayment" =
+                                      res.paymentType === "downpayment" ||
+                                      res.paymentType === "fullpayment"
+                                        ? res.paymentType
+                                        : "downpayment"; // Default to "downpayment" if invalid
+
+                                    handlePaid(res.id, totalPrice); // Pass totalPrice as a valid number
                                     handlePayment({
-                                      paymentType,  // Ensure it's either "downpayment" or "fullpayment"
+                                      paymentType, // Ensure it's either "downpayment" or "fullpayment"
                                       id: res.id,
                                       totalPrice,
-                                      downpayment: res.downpayment  // Include downpayment if available
+                                      downpayment: res.downpayment, // Include downpayment if available
                                     });
                                   }}
                                 >
@@ -964,9 +1037,68 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                         <div className="bg-gray-100 p-2 rounded-md flex flex-col gap-1 items-start">
                           <p className="text-xs select-none text-gray-400">{`Reservation ID: ${res.id}`}</p>
                           <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
+                          {res.status !== "REQUESTED" &&
+                            res.status !== "CANCELLED" &&
+                            res.status !== "REJECTED" &&
+                            res.payment === "Card" && (
+                              <>
+                                <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                  <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
+                                    <Image
+                                      src={
+                                        res.receiptImage ||
+                                        "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                      }
+                                      alt="idpic"
+                                      fill
+                                      className="object-cover"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPicEnlarge(true);
+                                      }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-gray-400">
+                                    Click the picture to enlarge.
+                                  </p>
+                                </div>
+                                {picEnlarge && (
+                                  // ENLARGED IMAGE
+                                  <div
+                                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                    style={{
+                                      background: "rgba(0, 0, 0, 0.85)",
+                                    }}
+                                  >
+                                    <div className="w-full max-w-[620px] aspect-square relative">
+                                      <div
+                                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                                                        absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                                                        hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                        onClick={() => setPicEnlarge(false)}
+                                      >
+                                        <span className="font-bold">X</span>
+                                      </div>
+                                      <Image
+                                        src={
+                                          res.receiptImage ||
+                                          "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                        }
+                                        alt="idpic"
+                                        fill
+                                        className="object-contain"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
                           <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                           <p className="text-xs select-none text-gray-400">
-                            {`Payment Type: ${res.paymentType.charAt(0).toUpperCase() + res.paymentType.slice(1)}`}
+                            {`Payment Type: ${
+                              res.paymentType.charAt(0).toUpperCase() +
+                              res.paymentType.slice(1)
+                            }`}
                           </p>
 
                           {/* Conditional rendering for Downpayment Amount or Balance label */}
@@ -974,8 +1106,8 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">
                               {res.status === "DOWNPAYMENT PAID"
                                 ? "Balance:"
-                                : "Downpayment Amount: "}PHP{" "}
-                              {res.downpayment.toFixed(2)}
+                                : "Downpayment Amount: "}
+                              PHP {res.downpayment.toFixed(2)}
                             </p>
                           )}
 
@@ -986,7 +1118,13 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                           <div className="flex flex-col gap-4">
                             {res.buffetChosen &&
                               Object.entries(res.buffetChosen).map(
-                                ([category, items]: [string, string | string[]], index: number) => {
+                                (
+                                  [category, items]: [
+                                    string,
+                                    string | string[]
+                                  ],
+                                  index: number
+                                ) => {
                                   console.log(
                                     "Buffet Category:",
                                     category,
@@ -1010,30 +1148,30 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   }
 
                                   return (
-                                    <div key={index} className="pl-2 w-full flex flex-col gap-2">
+                                    <div
+                                      key={index}
+                                      className="pl-2 w-full flex flex-col gap-2"
+                                    >
                                       <h1 className="py-0.5 bg-gray-400 text-white rounded-full text-xs w-20 text-center font-semibold shadow-sm">
                                         {category}
                                       </h1>
                                       <div className="w-full flex flex-wrap gap-1">
-                                        {itemsArray.map((item: string, itemIndex: number) => (
-                                          <span
-                                            key={itemIndex}
-                                            className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
-                                          >
-                                            {item}
-                                          </span>
-                                        ))}
+                                        {itemsArray.map(
+                                          (item: string, itemIndex: number) => (
+                                            <span
+                                              key={itemIndex}
+                                              className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
+                                            >
+                                              {item}
+                                            </span>
+                                          )
+                                        )}
                                       </div>
                                     </div>
                                   );
                                 }
                               )}
                           </div>
-
-                          {/* INDICATION OF CARD PAYMENT */}
-                          {res.status !== "REQUESTED" && res.status !== "CANCELLED" && res.status !== "REJECTED" && res.payment === "Card" && (
-                          <p className="text-xs select-none text-gray-400">{`Resibo ng Card Payment: ${res.receiptImage}`}</p>
-                          )}
 
                           {/* BUTTON CONTAINER */}
                           {res.status === "PENDING" ? (
@@ -1098,7 +1236,8 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 Delete
                               </button>
                             </div>
-                          ) : res.status !== "REJECTED" && res.payment === "Cash" ? (
+                          ) : res.status !== "REJECTED" &&
+                            res.payment === "Cash" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
@@ -1108,20 +1247,29 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   if (res.id && res.totalPrice !== undefined) {
                                     handlePaid(res.id, res.totalPrice); // Call handlePaid with numbers
                                   } else {
-                                    console.error('Invalid reservation data: id or totalPrice is missing');
+                                    console.error(
+                                      "Invalid reservation data: id or totalPrice is missing"
+                                    );
                                   }
-                          
+
                                   // Ensure paymentType is valid (either "downpayment" or "fullpayment")
-                                  if (res.paymentType === "downpayment" || res.paymentType === "fullpayment") {
+                                  if (
+                                    res.paymentType === "downpayment" ||
+                                    res.paymentType === "fullpayment"
+                                  ) {
                                     handlePayment(res as PaymentResponse); // Assert res as PaymentResponse type
                                   } else {
-                                    console.error('Invalid paymentType:', res.paymentType);
+                                    console.error(
+                                      "Invalid paymentType:",
+                                      res.paymentType
+                                    );
                                   }
                                 }}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
-                              </button> {/* Correctly close the button tag here */}
+                              </button>{" "}
+                              {/* Correctly close the button tag here */}
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-red-400 hover:scale-[1.02] duration-200"
@@ -1130,7 +1278,9 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                 Cancel
                               </button>
                             </div>
-                          ) : res.status !== "REJECTED" && res.status !== "TO PAY" && res.payment === "Card" ? (
+                          ) : res.status !== "REJECTED" &&
+                            res.status !== "TO PAY" &&
+                            res.payment === "Card" ? (
                             <div className="flex gap-2 items-center w-full mt-1">
                               <button
                                 className="w-2/3 h-10 bg-white border-2 shadow-md rounded-md font-bold text-gray-500 gap-1 
@@ -1154,7 +1304,8 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>To Payment</span>
-                              </button> {/* Correctly close the button tag here */}
+                              </button>{" "}
+                              {/* Correctly close the button tag here */}
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-red-400 hover:scale-[1.02] duration-200"
@@ -1173,20 +1324,29 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                   if (res.id && res.totalPrice !== undefined) {
                                     handlePaid(res.id, res.totalPrice); // Call handlePaid with numbers
                                   } else {
-                                    console.error('Invalid reservation data: id or totalPrice is missing');
+                                    console.error(
+                                      "Invalid reservation data: id or totalPrice is missing"
+                                    );
                                   }
-                          
+
                                   // Ensure paymentType is valid (either "downpayment" or "fullpayment")
-                                  if (res.paymentType === "downpayment" || res.paymentType === "fullpayment") {
+                                  if (
+                                    res.paymentType === "downpayment" ||
+                                    res.paymentType === "fullpayment"
+                                  ) {
                                     handlePayment(res as PaymentResponse); // Assert res as PaymentResponse type
                                   } else {
-                                    console.error('Invalid paymentType:', res.paymentType);
+                                    console.error(
+                                      "Invalid paymentType:",
+                                      res.paymentType
+                                    );
                                   }
                                 }}
                               >
                                 <i className="fa-solid fa-money-bill"></i>
                                 <span>Mark as Paid</span>
-                              </button> {/* Correctly close the button tag here */}
+                              </button>{" "}
+                              {/* Correctly close the button tag here */}
                               <button
                                 className="w-1/3 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
                                           hover:bg-red-400 hover:scale-[1.02] duration-200"
@@ -1208,7 +1368,7 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                   </div>
                 )
                 // #endregion
-              } 
+              }
             </div>
           </div>
           {/* PAGINATION CONTROLS */}
@@ -1334,9 +1494,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                               {/* USER PERSONS AND PRICE CONTAINER */}
                               <p className="text-sm font-semibold text-gray-500 flex gap-1 items-center select-none">
                                 <i className="fa-solid fa-people-group text-sm"></i>
-                                {resType as ResType === "event" ? (
+                                {(resType as ResType) === "event" ? (
                                   <span>{`${res.numberOfPersons} PAX - PHP ${
-                                    res.totalPrice ? res.totalPrice.toFixed(2) : "0.00"
+                                    res.totalPrice
+                                      ? res.totalPrice.toFixed(2)
+                                      : "0.00"
                                   }`}</span>
                                 ) : resType === "table" ? (
                                   <span>{`${res.numberOfPersons} PAX`}</span>
@@ -1460,13 +1622,19 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                             <p className="text-xs select-none text-gray-400">{`Mode of Payment: ${res.payment}`}</p>
                             <p className="text-xs select-none text-gray-400">{`Date Requested: ${res.dateReserved} - ${res.timeReserved}`}</p>
                             <p className="text-xs select-none text-gray-400">{`From: ${res.reservedBy}`}</p>
-                          <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
+                            <p className="text-xs select-none text-gray-400">{`Remarks: ${res.remarks}`}</p>
                             <span className="w-full bg-gray-200 h-0.5 rounded-full"></span>
                             <p className="text-xs select-none text-gray-400">{`Chosen Package: ${res.packageOffer}`}</p>
                             <div className="flex flex-col gap-4">
                               {res.buffetChosen &&
                                 Object.entries(res.buffetChosen).map(
-                                  ([category, items]: [string, string | string[]], index: number) => {
+                                  (
+                                    [category, items]: [
+                                      string,
+                                      string | string[]
+                                    ],
+                                    index: number
+                                  ) => {
                                     console.log(
                                       "Buffet Category:",
                                       category,
@@ -1476,11 +1644,11 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
 
                                     // Ensure items is a string and split it into an array if needed
                                     let itemsArray: string[] = [];
-                                  if (typeof items === "string") {
-                                    itemsArray = items
-                                      .split(",")
-                                      .map((item: string) => item.trim()); // Split by commas and trim extra spaces
-                                  } else if (Array.isArray(items)) {
+                                    if (typeof items === "string") {
+                                      itemsArray = items
+                                        .split(",")
+                                        .map((item: string) => item.trim()); // Split by commas and trim extra spaces
+                                    } else if (Array.isArray(items)) {
                                       itemsArray = items; // If it's already an array, use it directly
                                     } else {
                                       console.warn(
@@ -1498,14 +1666,19 @@ font-bold h-10 px-4 hover:bg-orange-900 hover:scale-[1.03] duration-200 w-24"
                                           {category}
                                         </h1>
                                         <div className="w-full flex flex-wrap gap-1">
-                                          {itemsArray.map((item: string, itemIndex: number) => (
-                                            <span
-                                              key={itemIndex}
-                                              className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
-                                            >
-                                              {item}
-                                            </span>
-                                          ))}
+                                          {itemsArray.map(
+                                            (
+                                              item: string,
+                                              itemIndex: number
+                                            ) => (
+                                              <span
+                                                key={itemIndex}
+                                                className="py-0.5 bg-gray-50 text-gray-400 rounded-full text-xs px-2 text-center shadow-sm"
+                                              >
+                                                {item}
+                                              </span>
+                                            )
+                                          )}
                                         </div>
                                       </div>
                                     );
