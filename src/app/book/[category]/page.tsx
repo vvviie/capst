@@ -442,6 +442,7 @@ const ReservationPage = () => {
         totalPrice: number;
         type: string;
         payment: string;
+        consumableApplied: boolean;
       } = {
         dateReserved,
         timeReserved,
@@ -453,6 +454,7 @@ const ReservationPage = () => {
         totalPrice: totalPriceT,
         type: "Table",
         payment,
+        consumableApplied: false,
       };
 
 
