@@ -11,10 +11,11 @@ const statusOptions: FilterOption[] = [
   { id: 1, name: "ALL", value: "all" },
   { id: 2, name: "REQUESTED", value: "REQUESTED" },
   { id: 3, name: "TO PAY", value: "TO PAY" },
-  { id: 4, name: "PAID", value: "PAID" },
-  { id: 5, name: "REJECTED", value: "REJECTED" },
-  { id: 6, name: "CANCELLED", value: "CANCELLED" },
-  { id: 7, name: "DONE", value: "DONE" },
+  { id: 4, name: "PAYMENT POSTED", value: "PAYMENT POSTED" },
+  { id: 5, name: "PAID", value: "PAID" },
+  { id: 6, name: "REJECTED", value: "REJECTED" },
+  { id: 7, name: "CANCELLED", value: "CANCELLED" },
+  { id: 8, name: "DONE", value: "DONE" },
 ];
 
 interface AdminReservationFilterProps {

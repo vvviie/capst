@@ -61,24 +61,32 @@ const CartPage = () => {
   const [selectedPayment, setSelectedPayment] = useState<string>("Cash");
   const [modeOfPayment, setModeOfPayment] = useState<string>("Cash");
   const [discountPromoForm, openDiscountPromoForm] = useState(false);
+  const [consumablesForm, openConsumablesForm] = useState(false);
   const [voucherForm, openVoucherForm] = useState(false);
   const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const modalRef = useRef<HTMLFormElement>(null); 
+  const modalRef = useRef<HTMLFormElement>(null);
   const modalRef2 = useRef<HTMLDivElement>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [promoCodeInput, setPromoCodeInput] = useState("");
+  const [consumableInput, setConsumableInput] = useState("");
+  const [consumableID, setConsumableID] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
+  const [consumableApplied, setConsumableApplied] = useState(false);
   const [voucherApplied, setVoucherApplied] = useState(false);
   const [voucherDeduction, setVoucherDeduction] = useState(0);
+  const [consumableDeduction, setConsumableDeduction] = useState(0);
   const [voucherType, setVoucherType] = useState("");
   const [discountedVoucher, setDiscountedVoucher] = useState<number>(0);
   const [totalCartPrice, setTotalCartPrice] = useState(0);
   const [subtotal, setSubtotal] = useState(0);
   const [discountedPromo, setDiscountedPromo] = useState(0);
+  const [discountedConsumable, setDiscountedConsumable] = useState(0);
   const [showRemoveItemNotif, setShowRemoveItemNotif] = useState(false);
-  const [notificationTimeout, setNotificationTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [notificationTimeout, setNotificationTimeout] = useState<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const [productId] = useState<string | undefined>(undefined);
   const [needsOrder, setNeedsOrder] = useState<boolean>(false); // Flag to indicate if new order needs handling
   const [appliedPromoCode, setAppliedPromoCode] = useState("");
@@ -255,11 +263,11 @@ const CartPage = () => {
         if (validityType === "expiration" && validityDate) {
           const today = new Date();
           const promoValidityDate = new Date(validityDate);
-        
+
           // Reset hours, minutes, and seconds to only compare dates
           today.setHours(0, 0, 0, 0);
           promoValidityDate.setHours(0, 0, 0, 0);
-        
+
           // Check if the promo code has expired (today is still valid)
           if (promoValidityDate < today) {
             setShowError(true);
@@ -273,29 +281,29 @@ const CartPage = () => {
         }
 
         // Check if the subtotal meets the threshold condition
-      if (thresholdUse && subtotal < thresholdCondition) {
-        setShowError(true);
-        setErrorMessage(
-          `Your total must be at least worth PHP ${thresholdCondition.toFixed(
-            2
-          )}`
-        );
-        setPromoCodeInput("");
-        setTimeout(() => {
-          setShowError(false);
-        }, 3000);
-        return;
-      }
+        if (thresholdUse && subtotal < thresholdCondition) {
+          setShowError(true);
+          setErrorMessage(
+            `Your total must be at least worth PHP ${thresholdCondition.toFixed(
+              2
+            )}`
+          );
+          setPromoCodeInput("");
+          setTimeout(() => {
+            setShowError(false);
+          }, 3000);
+          return;
+        }
 
-      if (usageLimitType === "limited" && numberOfUses <= 0) {
-        setShowError(true);
-        setErrorMessage("Maximum uses of this promo were reached.");
-        setPromoCodeInput("");
-        setTimeout(() => {
-          setShowError(false);
-        }, 3000);
-        return;
-      }
+        if (usageLimitType === "limited" && numberOfUses <= 0) {
+          setShowError(true);
+          setErrorMessage("Maximum uses of this promo were reached.");
+          setPromoCodeInput("");
+          setTimeout(() => {
+            setShowError(false);
+          }, 3000);
+          return;
+        }
 
         // Add more console logs to help debug
         console.log("Promo Data:", promoData); // Log the whole promo data
@@ -325,10 +333,11 @@ const CartPage = () => {
 
           // Resetting voucher states
           setVoucherApplied(false);
+          setConsumableApplied(false);
           setVoucherDeduction(0);
           setVoucherType("");
           setDiscountedVoucher(0);
-
+          setConsumableDeduction(0);
           // Setting discount percent in state
           setDiscountPercent(discount); // Set the discount value in decimal
 
@@ -378,6 +387,149 @@ const CartPage = () => {
   };
   //#endregion
 
+  //#region Handling of Processes for Consumables (Booking ID)
+  const handleConsumableSubmit = async () => {
+    if (!userEmail) {
+      showErrorPopup("Please log in to redeem your consumables.");
+      return;
+    }
+  
+    if (consumableApplied) {
+      setShowError(true);
+      setErrorMessage(
+        "A reservation ID has already been utilized. You cannot apply another one."
+      );
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+      return;
+    }
+  
+    const consumableCode = consumableInput.trim();
+    if (!consumableCode) {
+      setShowError(true);
+      setErrorMessage("Please enter a reservation ID.");
+      setTimeout(() => {
+        setShowError(false);
+      }, 3000);
+      return;
+    }
+  
+    console.log("Searching for reservation with ID:", consumableCode);
+    console.log("User email:", userEmail);
+  
+    try {
+      const consumableCodesRef = collection(db, "tableReservations");
+      const consumableQuery = query(
+        consumableCodesRef,
+        where("__name__", "==", consumableCode), // Search by document ID
+        where("reservedBy", "==", userEmail) // Match the "reservedBy" field
+      );
+  
+      const consumableSnapshot = await getDocs(consumableQuery);
+  
+      if (!consumableSnapshot.empty) {
+        consumableSnapshot.forEach((doc) => {
+
+          const data = doc.data(); // Extract the document data
+          console.log("Matching document data:", data);
+  
+          if (data.status === "REQUESTED" || data.status === "PENDING") {
+            setShowError(true);
+            setErrorMessage("Your booking is still being under review.");
+            setTimeout(() => {
+              setShowError(false);
+            }, 3000);
+            setConsumableInput("");
+            return;
+          }
+
+          if (data.status === "TO PAY") {
+            setShowError(true);
+            setErrorMessage("Please settle your payment first.");
+            setTimeout(() => {
+              setShowError(false);
+            }, 3000);
+            setConsumableInput("");
+            return;
+          }
+
+          if (data.status === "PAYMENT POSTED") {
+            setShowError(true);
+            setErrorMessage("Your payment is still under review.");
+            setTimeout(() => {
+              setShowError(false);
+            }, 3000);
+            setConsumableInput("");
+            return;
+          }
+
+          if (data.consumableApplied === true) {
+            setShowError(true);
+            setErrorMessage("Your consumables were already used.");
+            setTimeout(() => {
+              setShowError(false);
+            }, 3000);
+            setConsumableInput("");
+            return;
+          }
+
+          // Ensure totalPrice exists and is a valid number
+          const totalPrice = data.totalPrice || 0;
+          console.log("Total Price from reservation:", totalPrice);
+  
+          // Use totalPrice directly for calculations
+          const discountValue = Number(totalPrice.toFixed(2));
+          setConsumableApplied(true);
+          setConsumableDeduction(discountValue);
+          setConsumableID(doc.id);
+          setDiscountedConsumable(discountValue);
+
+          setVoucherApplied(false);
+          setPromoApplied(false);
+
+          setDiscountedVoucher(0);
+          setDiscountedPromo(0);
+
+          console.log("Setting Discounted Consumable to:", discountValue);
+          console.log("Reservation ID: ", doc.id);
+  
+          // Calculate the new total cart price using discountValue directly
+          const calculatedDiscount = totalCartPrice - discountValue;
+          const newTotalCartPrice = calculatedDiscount; // The total after discount
+          console.log("CP: ", totalCartPrice);
+          console.log("Calculated Discount: ", calculatedDiscount);
+  
+          // Update the total cart price
+          setTotalCartPrice(newTotalCartPrice);
+          console.log("Total Price Updated: ", newTotalCartPrice);
+  
+          openDiscountPromoForm(false);
+          setConsumableInput("");
+  
+          // Show success message
+          setShowSuccess(true);
+          setTimeout(() => {
+            setShowSuccess(false);
+          }, 3000);
+        });
+      } else {
+        console.log("No matching reservations found for the given ID and email.");
+        setShowError(true);
+        setErrorMessage("Invalid reservation ID given.");
+        setTimeout(() => {
+          setShowError(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error("Error during reservation validation:", error);
+      showErrorPopup("An error occurred. Please try again.");
+      setConsumableInput("");
+    }
+  };
+  
+  //#endregion
+
   //#region Handling of Processes for Vouchers
   const handleVoucherSubmit = async () => {
     if (!userEmail) {
@@ -410,8 +562,10 @@ const CartPage = () => {
       //console.log(`Voucher type: ${voucherType}, Deduction: ${deduction}`);
 
       setPromoApplied(false);
+      setConsumableApplied(false);
       setDiscountPercent(0);
       setDiscountedPromo(0);
+      setConsumableDeduction(0);
 
       let newTotalCartPrice = totalCartPrice;
       let calculatedDiscount = 0;
@@ -551,17 +705,17 @@ const CartPage = () => {
       setShowLoginModal(true);
       return;
     }
-  
+
     try {
       const tempOrdersRef = collection(db, "tempOrders");
       const querySnapshot = await getDocs(
         query(tempOrdersRef, where("user", "==", userEmail))
       );
-  
+
       let cartItems: any[] = [];
       let totalCartPrice = 0;
       let subtotal = 0;
-  
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         Object.keys(data).forEach((key) => {
@@ -572,7 +726,7 @@ const CartPage = () => {
           ) {
             const itemData = data[key];
             const slug = itemData.slug;
-  
+
             let tags = [];
             if (slug === "drinks") {
               tags = [
@@ -595,7 +749,7 @@ const CartPage = () => {
             } else if (slug === "pastries") {
               tags = [itemData.note && `"${itemData.note}"`].filter(Boolean);
             }
-  
+
             cartItems.push({
               id: key,
               title: itemData.productTitle,
@@ -605,16 +759,16 @@ const CartPage = () => {
               qtty: itemData.itemQty,
               price: itemData.totalPrice,
             });
-  
+
             subtotal += itemData.totalPrice;
           }
         });
         totalCartPrice = data.totalCartPrice;
       });
-  
+
       setTotalCartPrice(totalCartPrice);
       setSubtotal(subtotal);
-  
+
       if (cartItems.length > 0) {
         setAddedToCart(cartItems);
         setIsEmpty(false);
@@ -629,7 +783,7 @@ const CartPage = () => {
 
   const calculateFinalTotal = () => {
     let finalTotal = subtotal; // Start with the subtotal
-  
+
     // Apply promo discount if applicable
     if (promoApplied) {
       let promoDiscount = 0; // Initialize promoDiscount
@@ -640,7 +794,7 @@ const CartPage = () => {
       }
       finalTotal -= promoDiscount; // Deduct promo discount from subtotal
     }
-  
+
     // Apply voucher discount if applicable
     if (voucherApplied) {
       if (voucherType === "percent") {
@@ -650,11 +804,20 @@ const CartPage = () => {
         finalTotal -= voucherDeduction; // Deduct the fixed amount
       }
     }
-  
+
+    if (consumableApplied) { 
+      if (consumableDeduction > finalTotal )
+      {
+        finalTotal = 0;
+      } else {
+        finalTotal -= consumableDeduction; // Deduct consumable discount from finalTotal
+      }
+    }
+    
     finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
     return finalTotal; // Return final total
   };
-  
+
   const finalTotal = calculateFinalTotal();
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -748,6 +911,19 @@ const CartPage = () => {
       finalTotal -= promoDiscount; // Reduce finalTotal by promoDiscount
     }
 
+    if (consumableApplied) {
+      let consumableDiscount = 0;
+
+      if (consumableDiscount > finalTotal) {
+        consumableDiscount = 0;
+      } else {
+        consumableDiscount = consumableDeduction;
+      }
+
+      setConsumableDeduction(consumableDiscount);
+      finalTotal -= consumableDeduction;
+    }
+    
     // Check if a voucher has been applied
     if (voucherApplied) {
       let voucherDiscount = 0; // Initialize voucherDiscount
@@ -786,7 +962,7 @@ const CartPage = () => {
     // Trigger the file input click
     fileInputRef.current?.click();
   };
-  
+
   const handleUpload2Click = () => {
     // Trigger the file input click
     cardInputRef.current?.click();
@@ -794,25 +970,25 @@ const CartPage = () => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-  
+
     if (files && files.length > 0) {
       const file = files[0];
       const validTypes = ["image/jpeg", "image/png"];
-  
+
       if (!validTypes.includes(file.type)) {
         console.error("Invalid file type. Please upload a PNG or JPEG.");
         return;
       }
-  
+
       setFileName(file.name);
       const previewUrl = URL.createObjectURL(file);
       setImageUrl(previewUrl);
-  
+
       try {
         // Upload the image and get the URL
         const webpUrl: string | null = await uploadImageToStorage(file);
         console.log("Uploaded image URL:", webpUrl);
-  
+
         // Update Firebase image URL in state (only if it's a valid string)
         if (webpUrl) {
           setFirebaseImageUrl(webpUrl); // set only if webpUrl is a valid string
@@ -827,30 +1003,32 @@ const CartPage = () => {
     }
   };
 
-  const handleCardPaymentChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardPaymentChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files2 = e.target.files;
-    
+
     // Ensure files is not null and contains at least one file
     if (files2 && files2.length > 0) {
       const file = files2[0];
       const validTypes = ["image/jpeg", "image/png"];
-      
+
       // Check if the file type is valid
       if (!validTypes.includes(file.type)) {
         console.error("Invalid file type. Please upload a PNG or JPEG.");
         return;
       }
-  
+
       // Set the file name and preview URL
       setCardFileName(file.name);
       const previewUrl2 = URL.createObjectURL(file);
       setCardUrl(previewUrl2);
-  
+
       try {
         // Upload the image and get the URL
         const webpUrl: string | null = await uploadImageToStorageCard(file);
         console.log("Uploaded image URL:", webpUrl);
-  
+
         // Update Firebase image URL in state only if webpUrl is not null
         if (webpUrl) {
           setCardImageUrl(webpUrl);
@@ -973,7 +1151,7 @@ const CartPage = () => {
   const handleRemoveImage = () => {
     setImageUrl(""); // Remove the image preview
     setFileName(""); // Clear the file name
-  
+
     // Check if fileInputRef.current is not null
     if (fileInputRef.current) {
       fileInputRef.current.value = ""; // Clear the file input
@@ -983,7 +1161,7 @@ const CartPage = () => {
   const handleRemoveImageCard = () => {
     setCardUrl(""); // Remove the image preview
     setCardFileName(""); // Clear the file name
-  
+
     // Check if fileInputRef.current is not null
     if (fileInputRef.current) {
       fileInputRef.current.value = ""; // Clear the file input
@@ -1051,6 +1229,8 @@ const CartPage = () => {
               selectedDrinkSize: itemData.selectedDrinkSize || null,
               additionals: itemData.additionals || null,
               milkOption: itemData.milkOption || null,
+              isReady: false, // Default value for isReady
+              isPartiallyServed: false, // Default value for isPartiallyServed
             });
 
             totalItems += itemData.itemQty;
@@ -1131,11 +1311,34 @@ const CartPage = () => {
         dateCreated: date,
         timeCreated: time,
         status: "TO PAY",
+        consumableDiscounted: consumableDeduction,
         promoDiscounted: promoDiscounted,
         voucherDiscounted: discountedVoucher
           ? Math.round(discountedVoucher * 100) / 100
           : 0,
       });
+
+      const consumableIDRef = collection(db, "tableReservations");
+      const consumableQuery = query(
+        consumableIDRef,
+        where("__name__", "==", consumableID),
+        where("reservedBy", "==", userEmail)
+      );
+      const consumableSnapshot = await getDocs(consumableQuery);
+
+      if (!consumableSnapshot.empty) {
+        // Get the first document from the snapshot
+        const docRef = doc(db, "tableReservations", consumableSnapshot.docs[0].id);
+        
+        // Update the consumableUsed field to true
+        await updateDoc(docRef, {
+          consumableApplied: true
+        });
+      
+        console.log("Consumable used status updated to true.");
+      } else {
+        console.log("No matching document found.");
+      }
 
       // Update the timesUsed in the promoCodes collection
       const promoCodesRef = collection(db, "promoCodes");
@@ -1156,9 +1359,15 @@ const CartPage = () => {
             await updateDoc(promoDocRef, {
               numberOfUses: promoData.numberOfUses - 1, // Decrement numberOfUses by 1
             });
-            console.log(`Promo code ${appliedPromoCode} usage decremented. Remaining uses: ${promoData.numberOfUses - 1}`);
+            console.log(
+              `Promo code ${appliedPromoCode} usage decremented. Remaining uses: ${
+                promoData.numberOfUses - 1
+              }`
+            );
           } else {
-            console.error(`Promo code ${appliedPromoCode} has no remaining uses.`);
+            console.error(
+              `Promo code ${appliedPromoCode} has no remaining uses.`
+            );
             showErrorPopup("The selected promo code has been fully utilized.");
             return; // Exit to prevent completing the order with an expired promo code
           }
@@ -1189,21 +1398,19 @@ const CartPage = () => {
 
           // Check if a voucher was applied, and mark it as "used" if true
           if (voucherApplied && selectedVoucher) {
-
-            if (selectedVoucher.usageLimitType === "limited")
-            {
+            if (selectedVoucher.usageLimitType === "limited") {
               const voucherCodesRef = collection(db, "vouchers");
               const voucherQuery = query(
                 voucherCodesRef,
                 where("voucherID", "==", selectedVoucher.id) // Assuming `appliedPromoCode` is a state variable holding the currently applied promo code
               );
               const voucherSnapshot = await getDocs(voucherQuery);
-  
+
               if (!voucherSnapshot.empty) {
                 const promoDoc = voucherSnapshot.docs[0];
                 const promoDocRef = doc(db, "vouchers", promoDoc.id);
                 const promoData = promoDoc.data();
-  
+
                 await updateDoc(promoDocRef, {
                   numberOfUses: (promoData?.numberOfUses || 0) - 1,
                 });
@@ -1230,13 +1437,17 @@ const CartPage = () => {
 
               if (voucherIndex) {
                 // If the voucher is found, update its 'used' status to true
-                console.log(`Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`);
-                
+                console.log(
+                  `Updating voucher ${userVouchers[voucherIndex].voucherID} status to 'used'`
+                );
+
                 await updateDoc(userDocRef, {
                   [`vouchers.${voucherIndex}.used`]: true, // Update only the 'used' field
                 });
 
-                console.log(`Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`);
+                console.log(
+                  `Voucher ${userVouchers[voucherIndex].voucherID} marked as used.`
+                );
               } else {
                 // If the voucher is not found in the user's vouchers, log an error
                 console.error("Selected voucher not found in user's vouchers.");
@@ -1245,7 +1456,6 @@ const CartPage = () => {
               // If the user's document does not exist, log an error
               console.error("User document does not exist.");
             }
-
           }
         } else {
           //console.error("User document does not exist.");
@@ -1256,7 +1466,7 @@ const CartPage = () => {
       showErrorPopup("Failed to complete order. Please try again.");
     }
   };
-  
+
   //#endregion
 
   //#endregion
@@ -1437,14 +1647,17 @@ const CartPage = () => {
 
   useEffect(() => {
     const fetchNumberOfUses = async () => {
-      if (selectedVoucher?.usageLimitType === "limited" && selectedVoucher?.id) {
+      if (
+        selectedVoucher?.usageLimitType === "limited" &&
+        selectedVoucher?.id
+      ) {
         const voucherCodesRef = collection(db, "vouchers");
         const voucherQuery = query(
           voucherCodesRef,
           where("voucherID", "==", selectedVoucher.id)
         );
         const voucherSnapshot = await getDocs(voucherQuery);
-  
+
         if (!voucherSnapshot.empty) {
           const promoData = voucherSnapshot.docs[0].data();
           setNumberOfUses(promoData?.numberOfUses ?? 0); // Set the fetched number of uses
@@ -1453,7 +1666,7 @@ const CartPage = () => {
         }
       }
     };
-  
+
     fetchNumberOfUses();
   }, [selectedVoucher?.id, selectedVoucher?.usageLimitType]);
 
@@ -1578,7 +1791,7 @@ const CartPage = () => {
                     <div className="col-span-2 px-4">
                       <h1 className="font-bold text-lg">{items.title}</h1>
                       <div>
-                      {items.tags.map((tag: string, index: number) => (
+                        {items.tags.map((tag: string, index: number) => (
                           <p key={index} className="text-sm text-gray-600">
                             {tag}
                           </p>
@@ -1752,6 +1965,17 @@ const CartPage = () => {
                 </div>
               )}
 
+              {/* ONLY SHOW PROMO IF APPLIED */}
+              {consumableApplied && (
+                <div className="flex justify-between items-center px-4">
+                  <span>Consumables</span>
+                  <span className="font-bold text-lg text-gray-600">
+                    -PHP {Number(discountedConsumable).toFixed(2)}{" "}
+                    {/* Ensure discountedPromo is treated as a number */}
+                  </span>
+                </div>
+              )}
+
               {/* ONLY SHOW VOUCHER IF APPLIED */}
               {voucherApplied && (
                 <div className="flex justify-between items-center px-4">
@@ -1782,6 +2006,16 @@ const CartPage = () => {
               py-2 rounded-lg mt-3 mb-2 flex-1 hover:scale-[1.03] duration-300 hover:bg-gray-50"
                 >
                   <span className="font-bold text-lg">!% Use Promo Code</span>
+                </button>
+                {/* PROMO CODE BUTTON */}
+                <button
+                  onClick={() => openConsumablesForm(true)}//
+
+                  className="shadow-md bg-white border-gray-50 border-2 space-x-2 text-gray-600
+              py-2 rounded-lg mt-3 mb-2 flex-1 hover:scale-[1.03] duration-300 hover:bg-gray-50"
+                >
+                  <i className="fa-solid fas fa-receipt text-gray-600 text-xl"></i>
+                  <span className="font-bold text-lg">Use Consumables</span>
                 </button>
               </div>
             ) : (
@@ -1900,114 +2134,173 @@ const CartPage = () => {
                 </form>
               </div>
             )}
+            {/* CONSUMABLES FORM */}
+            {consumablesForm && (
+              <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                onClick={() => openDiscountPromoForm(false)} // Close modal when clicking on the background
+              >
+                <form
+                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                  ref={modalRef}
+                >
+                  <i className="fa-solid fas fa-receipt text-orange-950 text-7xl"></i>
+                  <h2 className="text-xl font-bold mt-4">Redeem Consumables</h2>
+                  <p className="mb-4">Please enter your reservation ID:</p>
+                  <input
+                    type="text"
+                    value={consumableInput}
+                    onChange={(e) => setConsumableInput(e.target.value)}
+                    className="text-center font-bold text-2xl inline-block w-64 border-2 border-gray-100 rounded-sm mb-4"
+                    style={{
+                      MozAppearance: "textfield",
+                      boxShadow: "inset 0 2px 4px rgba(100, 100, 100, 0.1)",
+                    }}
+                  />
+                  {showSuccess && ( // Change from promoApplied to showSuccess
+                    <p className="text-green-600 mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100">
+                      Consumable successfully redeemed!
+                    </p>
+                  )}
+                  {showError && (
+                    <p className="text-red-500 mt-[-10px] mb-2 transition-opacity duration-2000 ease-in-out opacity-100">
+                      {errorMessage}
+                    </p>
+                  )}
+                  <div className="flex justify-center items-center gap-4">
+                    <button
+                      type="button"
+                      className="bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+          hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300"
+                      onClick={handleConsumableSubmit}
+                    >
+                      Enter ID
+                    </button>
+                    <button
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+          hover:bg-gray-50 hover:scale-[1.1] duration-300"
+                      onClick={() => openConsumablesForm(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
             {/* VOUCHER FORM */}
             {voucherForm && (
-  <div
-    className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
-    onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
-  >
-    <form
-      className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
-      onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
-      ref={modalRef}
-    >
-      <div className="flex flex-col mb-6">
-        <div className="flex flex-col items-center">
-          <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
-        </div>
-
-        {selectedVoucher && (
-          <>
-            <h1 className="text-lg font-bold text-orange-900 text-center">
-              Selected Voucher
-            </h1>
-            <div className="flex flex-col items-center">
-              <h1 className="font-bold text-orange-950 text-xl">
-                {selectedVoucher?.title}
-              </h1>
-              <p className="text-sm">{selectedVoucher?.desc}</p>
-
-              {selectedVoucher?.thresholdUse && (
-                <p className="text-xs text-gray-700 font-semibold mt-2">
-                  Minimum spend of PHP{" "}
-                  {selectedVoucher.thresholdCondition?.toFixed(2) ?? "N/A"}
-                </p>
-              )}
-
-              {selectedVoucher?.validityType === "expiration" && (
-                <p className="text-xs text-red-500 font-semibold mt-4">
-                  {(() => {
-                    const today = new Date();
-                    const validityDate = selectedVoucher?.validityDate ? new Date(selectedVoucher.validityDate) : null;
-
-                    // Reset hours, minutes, and seconds for date-only comparison
-                    today.setHours(0, 0, 0, 0);
-
-                    // Check if validityDate is not null before setting hours and comparing
-                    if (validityDate) {
-                      validityDate.setHours(0, 0, 0, 0);
-
-                      const isExpired = validityDate < today;
-
-                      if (isExpired) {
-                        return "Voucher has expired.";
-                      } else {
-                        return `Use before: ${selectedVoucher?.validityDate ?? "N/A"}`;
-                      }
-                    } else {
-                      return "Invalid validity date.";
-                    }
-                  })()}
-                </p>
-              )}
-
-            {selectedVoucher?.usageLimitType === "limited" && (
-              <>
-                <p className="text-xs text-gray-700 font-semibold mt-4">
-                  {numberOfUses <= 0
-                    ? "Voucher has reached maximum number of uses."
-                    : `Uses remaining: ${numberOfUses}`}
-                </p>
-              </>
-            )}
-            
-            </div>
-            <hr className="my-4" />
-          </>
-        )}
-
-        <div className="flex items-center justify-center h-12">
-          <h1 className="text-lg font-bold text-orange-900 text-center">
-            {vouchers.length > 0
-              ? "Select a voucher"
-              : "No vouchers available"}
-          </h1>
-        </div>
-
-        {vouchers.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
-            {vouchers.map((vouch) => (
-              <span
-                key={vouch.id}
-                onClick={() => setSelectedVoucher(vouch)}
-                className={`${
-                  selectedVoucher?.id === vouch.id
-                    ? "bg-orange-100 text-orange-900 hover:bg-gray-200"
-                    : "bg-white text-gray-700 hover:bg-gray-50"
-                } font-bold text-center text-xs rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+              <div
+                className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-20"
+                onClick={() => openVoucherForm(false)} // Close modal when clicking on the background
               >
-                {vouch.title}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-      <hr className="mb-6" />
-      <div className="flex justify-center items-center gap-4">
-        {vouchers.length > 0 && (
-          <button
-          type="button"
-          className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
+                <form
+                  className="bg-white p-6 rounded-lg shadow-xl max-w-sm text-center border-2 border-gray-50"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal content
+                  ref={modalRef}
+                >
+                  <div className="flex flex-col mb-6">
+                    <div className="flex flex-col items-center">
+                      <i className="fa-solid fa-ticket text-orange-950 text-7xl"></i>
+                    </div>
+
+                    {selectedVoucher && (
+                      <>
+                        <h1 className="text-lg font-bold text-orange-900 text-center">
+                          Selected Voucher
+                        </h1>
+                        <div className="flex flex-col items-center">
+                          <h1 className="font-bold text-orange-950 text-xl">
+                            {selectedVoucher?.title}
+                          </h1>
+                          <p className="text-sm">{selectedVoucher?.desc}</p>
+
+                          {selectedVoucher?.thresholdUse && (
+                            <p className="text-xs text-gray-700 font-semibold mt-2">
+                              Minimum spend of PHP{" "}
+                              {selectedVoucher.thresholdCondition?.toFixed(2) ??
+                                "N/A"}
+                            </p>
+                          )}
+
+                          {selectedVoucher?.validityType === "expiration" && (
+                            <p className="text-xs text-red-500 font-semibold mt-4">
+                              {(() => {
+                                const today = new Date();
+                                const validityDate =
+                                  selectedVoucher?.validityDate
+                                    ? new Date(selectedVoucher.validityDate)
+                                    : null;
+
+                                // Reset hours, minutes, and seconds for date-only comparison
+                                today.setHours(0, 0, 0, 0);
+
+                                // Check if validityDate is not null before setting hours and comparing
+                                if (validityDate) {
+                                  validityDate.setHours(0, 0, 0, 0);
+
+                                  const isExpired = validityDate < today;
+
+                                  if (isExpired) {
+                                    return "Voucher has expired.";
+                                  } else {
+                                    return `Use before: ${
+                                      selectedVoucher?.validityDate ?? "N/A"
+                                    }`;
+                                  }
+                                } else {
+                                  return "Invalid validity date.";
+                                }
+                              })()}
+                            </p>
+                          )}
+
+                          {selectedVoucher?.usageLimitType === "limited" && (
+                            <>
+                              <p className="text-xs text-gray-700 font-semibold mt-4">
+                                {numberOfUses <= 0
+                                  ? "Voucher has reached maximum number of uses."
+                                  : `Uses remaining: ${numberOfUses}`}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        <hr className="my-4" />
+                      </>
+                    )}
+
+                    <div className="flex items-center justify-center h-12">
+                      <h1 className="text-lg font-bold text-orange-900 text-center">
+                        {vouchers.length > 0
+                          ? "Select a voucher"
+                          : "No vouchers available"}
+                      </h1>
+                    </div>
+
+                    {vouchers.length > 0 && (
+                      <div className="grid grid-cols-2 gap-2 max-h-[360px] overflow-auto">
+                        {vouchers.map((vouch) => (
+                          <span
+                            key={vouch.id}
+                            onClick={() => setSelectedVoucher(vouch)}
+                            className={`${
+                              selectedVoucher?.id === vouch.id
+                                ? "bg-orange-100 text-orange-900 hover:bg-gray-200"
+                                : "bg-white text-gray-700 hover:bg-gray-50"
+                            } font-bold text-center text-xs rounded-md shadow-sm border-gray-50 border-2 py-2 cursor-pointer`}
+                          >
+                            {vouch.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <hr className="mb-6" />
+                  <div className="flex justify-center items-center gap-4">
+                    {vouchers.length > 0 && (
+                      <button
+                        type="button"
+                        className={`bg-orange-950 text-white px-4 py-2 rounded-md font-bold shadow-md border-2 border-orange-950
           hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.1] duration-300 ${
             (selectedVoucher?.thresholdUse &&
               selectedVoucher.thresholdCondition !== undefined && // Check for undefined
@@ -2016,7 +2309,9 @@ const CartPage = () => {
               (() => {
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const validityDate = selectedVoucher?.validityDate ? new Date(selectedVoucher.validityDate) : null;
+                const validityDate = selectedVoucher?.validityDate
+                  ? new Date(selectedVoucher.validityDate)
+                  : null;
                 if (validityDate) {
                   validityDate.setHours(0, 0, 0, 0);
                   return validityDate < today;
@@ -2029,39 +2324,42 @@ const CartPage = () => {
               ? "opacity-50 cursor-not-allowed"
               : ""
           }`}
-          onClick={handleVoucherSubmit}
-          disabled={
-            (selectedVoucher?.thresholdUse &&
-              selectedVoucher?.thresholdCondition !== undefined && 
-              selectedVoucher.thresholdCondition > subtotal) ||
-              (selectedVoucher?.validityType === "expiration" &&
-                (() => {
-                  if (selectedVoucher?.validityDate) {
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    const validityDate = new Date(selectedVoucher.validityDate);
-                    validityDate.setHours(0, 0, 0, 0);
-                    return validityDate < today;
-                  }
-                  return false; // If validityDate is undefined, return false
-                })()) ||
-              (selectedVoucher?.usageLimitType === "limited" && numberOfUses <= 0)
-          }
-        >        
-            Apply Voucher
-          </button>
-        )}
-        <button
-          className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
+                        onClick={handleVoucherSubmit}
+                        disabled={
+                          (selectedVoucher?.thresholdUse &&
+                            selectedVoucher?.thresholdCondition !== undefined &&
+                            selectedVoucher.thresholdCondition > subtotal) ||
+                          (selectedVoucher?.validityType === "expiration" &&
+                            (() => {
+                              if (selectedVoucher?.validityDate) {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                const validityDate = new Date(
+                                  selectedVoucher.validityDate
+                                );
+                                validityDate.setHours(0, 0, 0, 0);
+                                return validityDate < today;
+                              }
+                              return false; // If validityDate is undefined, return false
+                            })()) ||
+                          (selectedVoucher?.usageLimitType === "limited" &&
+                            numberOfUses <= 0)
+                        }
+                      >
+                        Apply Voucher
+                      </button>
+                    )}
+                    <button
+                      className="bg-white text-gray-500 px-4 py-2 rounded-md shadow-md font-bold border-gray-50 border-solid border-2
           hover:bg-gray-50 hover:scale-[1.1] duration-300"
-          onClick={closeVoucherForm}
-        >
-          Close
-        </button>
-      </div>
-    </form>
-  </div>
-)}
+                      onClick={closeVoucherForm}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
 
             {!(voucherApplied || isPromoCodeApplied) && (
               <button
@@ -2175,11 +2473,11 @@ const CartPage = () => {
                         className="object-cover"
                       />
                       <button
-                      onClick={handleRemoveImageCard}
-                      className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                    >
-                      X
-                    </button>
+                        onClick={handleRemoveImageCard}
+                        className="absolute top-0 left-0 w-full h-full bg-gray-800 bg-opacity-70 text-white text-2xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                      >
+                        X
+                      </button>
                     </div>
                   )}
 

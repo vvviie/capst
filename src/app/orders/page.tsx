@@ -47,6 +47,7 @@ type Order = {
   sampleDiscountDeduction?: number;
   slug: string;
   subtotal: number;
+  consumableDiscounted?: number;
 };
 
 interface OrderItem {
@@ -258,6 +259,7 @@ const OrdersPage = () => {
             userName: data.userName || "", // Provide a default value or extract from data
             userEmail: data.userEmail || "", // Provide a default value or extract from data
             slug: data.slug || "", // Provide a default value or extract from data
+            consumableDiscounted: (data.consumableDiscounted || 0).toFixed(2),
           };
   
           // Add the current order to the orders array
@@ -969,7 +971,7 @@ const OrdersPage = () => {
                         <div className="w-full px-4 flex justify-between items-center text-sm font-semibold text-gray-500">
                           {/* DATE AND TIME, TABLE OR PICK UP */}
                           <span>
-                            {order.date} - {order.time}, {order.where}
+                            {order.date} - {order.time}, {order.where} 
                           </span>
                           {/* STATUS OF PAYMENT */}
                           <span
@@ -1041,6 +1043,13 @@ const OrdersPage = () => {
                           <div className="font-bold text-sm flex justify-between items-center">
                             <span className="font-semibold">Promo discount</span>
                             <span>PHP {order.promo}</span>
+                          </div>
+                        )}
+                        {/* CONSUMABLE, IF THERE IS ONE */}
+                        {(order.consumableDiscounted && order.consumableDiscounted > 0) && (
+                          <div className="font-bold text-sm flex justify-between items-center">
+                            <span className="font-semibold">Consumable applied</span>
+                            <span>PHP {order.consumableDiscounted}</span>
                           </div>
                         )}
                         {/* Iterate through order items */}
