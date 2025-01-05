@@ -2533,7 +2533,6 @@ const CartPage = () => {
                 </span>
               </div>
 
-              {/* WIP */}
               {/* CONSUMABLE NOTE */}
               {consumableApplied && consumableDeduction > finalTotal && (
                 <div className="flex justify-center items-center px-4 py-4">
