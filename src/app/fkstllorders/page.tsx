@@ -47,7 +47,13 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  items: { title: string; price: number; qty: number; tags: string[] }[];
+  items: {
+    isPartiallyServed: boolean;
+    title: string;
+    price: number;
+    qty: number;
+    tags: string[];
+  }[];
   id: string;
   pwdSenior: boolean;
   idPic?: string;
@@ -1605,70 +1611,72 @@ const AdminAndStaffOrdersPage = () => {
                                   <span className="font-semibold">
                                     {`${item.qty}x - ${item.title}`}
                                   </span>
-                                  {order.status === "PREP" ? (
-                                    <button
-                                      className={`h-8 px-3 text-sm font-semibold rounded-md ${
-                                        isReady[uniqueId]
-                                          ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
-                                          : "bg-green-500 hover:bg-green-600 text-white"
-                                      } transition-all duration-200`}
-                                      onClick={(e) => {
-                                        e.stopPropagation(); // Stop event propagation
-                                        const newIsReadyState =
-                                          !isReady[uniqueId];
-                                        setIsReady((prev) => ({
-                                          ...prev,
-                                          [uniqueId]: newIsReadyState, // Toggle readiness for this specific item
-                                        }));
-                                        updateIsReadyField(
-                                          order.id,
-                                          index,
-                                          newIsReadyState
-                                        ); // Update Firebase
-                                      }}
-                                    >
-                                      {isReady[uniqueId]
-                                        ? "Undo"
-                                        : "Ready Partially"}
-                                    </button>
-                                  ) : order.status === "READY" ? (
-                                    isReady[uniqueId] ? (
+                                  <div className="flex justify-end items-center mt-2 mr-2">
+                                    {order.status === "PREP" ? (
                                       <button
                                         className={`h-8 px-3 text-sm font-semibold rounded-md ${
-                                          isPartiallyServed[uniqueId]
+                                          isReady[uniqueId]
                                             ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
-                                            : "bg-blue-500 hover:bg-blue-600 text-white"
+                                            : "bg-orange-400 hover:bg-orange-300 text-white"
                                         } transition-all duration-200`}
                                         onClick={(e) => {
                                           e.stopPropagation(); // Stop event propagation
-                                          setIsPartiallyServed((prev) => ({
+                                          const newIsReadyState =
+                                            !isReady[uniqueId];
+                                          setIsReady((prev) => ({
                                             ...prev,
-                                            [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                            [uniqueId]: newIsReadyState, // Toggle readiness for this specific item
                                           }));
-                                          updateIsPartiallyServedField(
+                                          updateIsReadyField(
                                             order.id,
                                             index,
-                                            !isPartiallyServed[uniqueId]
+                                            newIsReadyState
                                           ); // Update Firebase
                                         }}
                                       >
-                                        {isPartiallyServed[uniqueId]
+                                        {isReady[uniqueId]
                                           ? "Undo"
-                                          : "Partially Served"}
+                                          : "Set to Ready"}
                                       </button>
+                                    ) : order.status === "READY" ? (
+                                      isReady[uniqueId] ? (
+                                        <button
+                                          className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                            isPartiallyServed[uniqueId]
+                                              ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                              : "bg-green-700 hover:bg-green-600 text-white"
+                                          } transition-all duration-200`}
+                                          onClick={(e) => {
+                                            e.stopPropagation(); // Stop event propagation
+                                            setIsPartiallyServed((prev) => ({
+                                              ...prev,
+                                              [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                            }));
+                                            updateIsPartiallyServedField(
+                                              order.id,
+                                              index,
+                                              !isPartiallyServed[uniqueId]
+                                            ); // Update Firebase
+                                          }}
+                                        >
+                                          {isPartiallyServed[uniqueId]
+                                            ? "Undo"
+                                            : "Set to Partially Served"}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          className="h-8 px-3 text-sm font-semibold rounded-md bg-gray-300 text-gray-700 cursor-not-allowed"
+                                          disabled={true}
+                                        >
+                                          Pending
+                                        </button>
+                                      )
                                     ) : (
-                                      <button
-                                        className="h-8 px-3 text-sm font-semibold rounded-md bg-gray-300 text-gray-700 cursor-not-allowed"
-                                        disabled={true}
-                                      >
-                                        Pending
-                                      </button>
-                                    )
-                                  ) : (
-                                    order.status !== "PAID" && (
-                                      <span>PHP {item.price.toFixed(2)}</span>
-                                    )
-                                  )}
+                                      order.status !== "PAID" && (
+                                        <span>PHP {item.price.toFixed(2)}</span>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
                                 {item.tags.map((tag, index) => (
                                   <p className="text-xs" key={index}>
@@ -1694,15 +1702,20 @@ const AdminAndStaffOrdersPage = () => {
                           {/* CANCEL BUTTON */}
                           <div className="w-full flex items-center gap-1">
                             <button
-                              className={` font-bold ${
+                              className={`font-bold ${
                                 order.status === "TO PAY"
                                   ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
                                   : order.status === "PAID"
                                   ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
                                   : order.status === "PREP"
-                                  ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                  ? order.items.some(
+                                      (item, index) =>
+                                        isReady[`${order.id}-${index}`]
+                                    )
+                                    ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                    : "bg-blue-300 text-white cursor-not-allowed w-full"
                                   : order.status === "READY"
-                                  ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                  ? "hidden" // Hide the button for "READY" status
                                   : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
                               } shadow-md hover:scale-[1.02] duration-200 rounded-md h-10`}
                               onClick={() => {
@@ -1710,17 +1723,14 @@ const AdminAndStaffOrdersPage = () => {
                                   handlePaid(order.id);
                                 } else if (order.status === "PAID") {
                                   handlePrep(order.id);
-                                } else if (order.status === "PREP") {
-                                  if (
-                                    order.items.every(
-                                      (item, index) =>
-                                        isReady[`${order.id}-${index}`]
-                                    )
-                                  ) {
-                                    handleReady(order.id);
-                                  }
-                                } else if (order.status === "READY") {
-                                  handleDone(order.id);
+                                } else if (
+                                  order.status === "PREP" &&
+                                  order.items.some(
+                                    (item, index) =>
+                                      isReady[`${order.id}-${index}`]
+                                  )
+                                ) {
+                                  handleReady(order.id);
                                 }
                               }}
                             >
@@ -1730,31 +1740,28 @@ const AdminAndStaffOrdersPage = () => {
                                 ? "Mark as Prep"
                                 : order.status === "PREP"
                                 ? "Mark as Ready"
-                                : order.status === "READY"
-                                ? "Mark as Served"
                                 : "Hide"}
                             </button>
 
                             {order.status === "PAID" && (
                               <button
-                                className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-          hover:scale-[1.02] duration-200 hover:bg-red-400"
+                                className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md hover:scale-[1.02] duration-200 hover:bg-red-400"
                                 onClick={() =>
                                   handleRefund(
                                     order.id,
                                     order.date,
                                     order.price
                                   )
-                                } // Call handleRefund here
+                                }
                               >
                                 Refund
                               </button>
                             )}
+
                             <button
                               className={`${
                                 order.status !== "TO PAY" && "hidden"
-                              } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-        hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                              } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md hover:scale-[1.02] duration-200 hover:bg-red-400`}
                               onClick={() => {
                                 if (order.payment === "Card") {
                                   handleReject(order.id); // Handle rejection for card payment
@@ -1765,11 +1772,11 @@ const AdminAndStaffOrdersPage = () => {
                             >
                               {order.payment === "Card" ? "Reject" : "Cancel"}
                             </button>
+
                             {order.status === "CANCELLED" ||
                               (order.status === "REJECTED" && (
                                 <button
-                                  className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-          hover:scale-[1.02] duration-200 hover:bg-red-400"
+                                  className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md hover:scale-[1.02] duration-200 hover:bg-red-400"
                                   onClick={() => {
                                     handleDelete(order.id);
                                   }}
@@ -1777,12 +1784,49 @@ const AdminAndStaffOrdersPage = () => {
                                   Delete
                                 </button>
                               ))}
+
+                            {order.status === "READY" && (
+                              <div className="flex w-full gap-2">
+                                {/* Back to PREP Button */}
+                                <button
+                                  className="w-1/2 h-10 bg-orange-500 font-bold shadow-md rounded-md text-white hover:bg-orange-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  onClick={() => handlePrep(order.id)} // Call handlePrep to go back to "PREP" stage
+                                >
+                                  Back to PREP
+                                </button>
+
+                                {/* Mark as Served Button */}
+                                <button
+                                  className={`w-1/2 h-10 font-bold shadow-md rounded-md flex items-center justify-center ${
+                                    order.items.every(
+                                      (item, index) =>
+                                        isPartiallyServed[
+                                          `${order.id}-${index}`
+                                        ]
+                                    )
+                                      ? "bg-green-700 text-white hover:bg-green-600 hover:scale-[1.02] duration-200" // Enabled state
+                                      : "bg-green-300 text-white cursor-not-allowed" // Disabled state
+                                  }`}
+                                  onClick={() => handleDone(order.id)} // Call handleDone to mark as served
+                                  disabled={
+                                    !order.items.every(
+                                      (item, index) =>
+                                        isPartiallyServed[
+                                          `${order.id}-${index}`
+                                        ]
+                                    )
+                                  } // Disable if not all items are partially served
+                                >
+                                  Mark as Served
+                                </button>
+                              </div>
+                            )}
+
                             {order.status === "SERVED" && (
                               <div className="flex w-full gap-2">
                                 {/* Print Details Button */}
                                 <button
-                                  className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-            hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => handlePrintDetails(order.id)}
                                 >
                                   Print Details
@@ -1790,8 +1834,7 @@ const AdminAndStaffOrdersPage = () => {
 
                                 {/* Delete Button */}
                                 <button
-                                  className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-            hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => handleDelete(order.id)}
                                 >
                                   Delete
