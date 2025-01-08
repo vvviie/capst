@@ -1711,7 +1711,14 @@ const AdminAndStaffOrdersPage = () => {
                                 } else if (order.status === "PAID") {
                                   handlePrep(order.id);
                                 } else if (order.status === "PREP") {
-                                  handleReady(order.id);
+                                  if (
+                                    order.items.every(
+                                      (item, index) =>
+                                        isReady[`${order.id}-${index}`]
+                                    )
+                                  ) {
+                                    handleReady(order.id);
+                                  }
                                 } else if (order.status === "READY") {
                                   handleDone(order.id);
                                 }
