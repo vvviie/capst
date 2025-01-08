@@ -1153,7 +1153,53 @@ const AdminAndStaffOrdersPage = () => {
       }
     }
   };
-  //const currentOrders = userOrders; // Display all orders without slicing
+  const updateIsReadyField = async (
+    docID: string,
+    itemIndex: number,
+    isReady: boolean
+  ) => {
+    const orderRef = doc(db, "completedOrders", docID);
+
+    try {
+      // Get the current document data
+      const docSnap = await getDoc(orderRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Update the isReady field for the specific item
+        data.items[itemIndex].isReady = isReady;
+        // Update the document with the new data
+        await setDoc(orderRef, data, { merge: true });
+      } else {
+        console.log("Document not found");
+      }
+    } catch (error) {
+      console.error("Error updating isReady field: ", error);
+    }
+  };
+
+  const updateIsPartiallyServedField = async (
+    docID: string,
+    itemIndex: number,
+    isPartiallyServed: boolean
+  ) => {
+    const orderRef = doc(db, "completedOrders", docID);
+
+    try {
+      // Get the current document data
+      const docSnap = await getDoc(orderRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Update the isPartiallyServed field for the specific item
+        data.items[itemIndex].isPartiallyServed = isPartiallyServed;
+        // Update the document with the new data
+        await setDoc(orderRef, data, { merge: true });
+      } else {
+        console.log("Document not found");
+      }
+    } catch (error) {
+      console.error("Error updating isPartiallyServed field: ", error);
+    }
+  };
 
   //#endregion
 
@@ -1541,7 +1587,7 @@ const AdminAndStaffOrdersPage = () => {
                             )}
 
                           {order.items.map((item, index) => {
-                            const uniqueId = item.title; // Use `title` as the unique identifier
+                            const uniqueId = `${order.id}-${index}`; // Use a unique identifier that includes the order ID and item index
 
                             return (
                               <div
@@ -1568,10 +1614,17 @@ const AdminAndStaffOrdersPage = () => {
                                       } transition-all duration-200`}
                                       onClick={(e) => {
                                         e.stopPropagation(); // Stop event propagation
+                                        const newIsReadyState =
+                                          !isReady[uniqueId];
                                         setIsReady((prev) => ({
                                           ...prev,
-                                          [uniqueId]: !prev[uniqueId], // Toggle readiness for this specific item
+                                          [uniqueId]: newIsReadyState, // Toggle readiness for this specific item
                                         }));
+                                        updateIsReadyField(
+                                          order.id,
+                                          index,
+                                          newIsReadyState
+                                        ); // Update Firebase
                                       }}
                                     >
                                       {isReady[uniqueId]
@@ -1592,6 +1645,11 @@ const AdminAndStaffOrdersPage = () => {
                                             ...prev,
                                             [uniqueId]: !prev[uniqueId], // Toggle partially served state
                                           }));
+                                          updateIsPartiallyServedField(
+                                            order.id,
+                                            index,
+                                            !isPartiallyServed[uniqueId]
+                                          ); // Update Firebase
                                         }}
                                       >
                                         {isPartiallyServed[uniqueId]
@@ -1601,7 +1659,7 @@ const AdminAndStaffOrdersPage = () => {
                                     ) : (
                                       <button
                                         className="h-8 px-3 text-sm font-semibold rounded-md bg-gray-300 text-gray-700 cursor-not-allowed"
-                                        disabled
+                                        disabled={true}
                                       >
                                         Pending
                                       </button>
