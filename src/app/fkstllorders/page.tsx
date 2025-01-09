@@ -1609,7 +1609,11 @@ const AdminAndStaffOrdersPage = () => {
                                 <hr />
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
-                                    {`${item.qty}x - ${item.title}`}
+                                    {order.status === "READY"
+                                      ? `${item.qty}x - ${
+                                          item.title
+                                        } (PHP ${item.price.toFixed(2)})`
+                                      : `${item.qty}x - ${item.title}`}
                                   </span>
                                   <div className="flex justify-end items-center mt-2 mr-2">
                                     {order.status === "PREP" ? (
@@ -2182,15 +2186,22 @@ const AdminAndStaffOrdersPage = () => {
                                   ? item.price - discountAmount
                                   : item.price;
 
+                                // Unique ID for each item
+                                const uniqueId = `${order.id}-${index}`;
+
                                 return (
                                   <div
                                     className="flex flex-col gap-1"
                                     key={item.title}
                                   >
-                                    {/* ITEM TITLE AND PRICE CONTAINER */}
+                                    {/* ITEM TITLE, PRICE, AND "PREP" BUTTON CONTAINER */}
                                     <div className="font-bold text-sm flex justify-between items-center">
                                       <span className="font-semibold">
-                                        {`${item.qty}x - ${item.title}`}
+                                        {order.status === "READY"
+                                          ? `${item.qty}x - ${
+                                              item.title
+                                            } (PHP ${item.price.toFixed(2)})`
+                                          : `${item.qty}x - ${item.title}`}
                                         {isHighestPriced &&
                                           ((order.status === "TO PAY" &&
                                             applySrPWD[order.id]) ||
@@ -2203,23 +2214,64 @@ const AdminAndStaffOrdersPage = () => {
                                             </span>
                                           )}
                                       </span>
-                                      {/* Only show the price if the role is "bar" */}
-                                      {user === "bar" && (
-                                        <span
-                                          className={
-                                            isHighestPriced &&
-                                            ((order.status === "TO PAY" &&
-                                              applySrPWD[order.id]) ||
-                                              (order.status !== "TO PAY" &&
-                                                order.pwdSenior))
-                                              ? "text-green-600"
-                                              : ""
-                                          }
-                                        >
-                                          PHP {discountedPrice.toFixed(2)}
-                                        </span>
-                                      )}
+                                      <div className="flex items-center gap-2">
+                                        {/* "PREP" BUTTON */}
+                                        {order.status === "PREP" && (
+                                          <button
+                                            className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                              isReady[uniqueId]
+                                                ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                                : "bg-orange-400 hover:bg-orange-300 text-white"
+                                            } transition-all duration-200`}
+                                            onClick={(e) => {
+                                              e.stopPropagation(); // Stop event propagation
+                                              const newIsReadyState =
+                                                !isReady[uniqueId];
+                                              setIsReady((prev) => ({
+                                                ...prev,
+                                                [uniqueId]: newIsReadyState, // Toggle readiness for this specific item
+                                              }));
+                                              updateIsReadyField(
+                                                order.id,
+                                                index,
+                                                newIsReadyState
+                                              ); // Update Firebase
+                                            }}
+                                          >
+                                            {isReady[uniqueId]
+                                              ? "Undo"
+                                              : "Set to Ready"}
+                                          </button>
+                                        )}
+                                        {/* "PARTIALLY SERVED" BUTTON FOR "READY" STATUS */}
+                                        {order.status === "READY" && (
+                                          <button
+                                            className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                              isPartiallyServed[uniqueId]
+                                                ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                                : "bg-green-700 hover:bg-green-600 text-white"
+                                            } transition-all duration-200`}
+                                            onClick={(e) => {
+                                              e.stopPropagation(); // Stop event propagation
+                                              setIsPartiallyServed((prev) => ({
+                                                ...prev,
+                                                [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                              }));
+                                              updateIsPartiallyServedField(
+                                                order.id,
+                                                index,
+                                                !isPartiallyServed[uniqueId]
+                                              ); // Update Firebase
+                                            }}
+                                          >
+                                            {isPartiallyServed[uniqueId]
+                                              ? "Undo"
+                                              : "Set to Partially Served"}
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
+                                    {/* TAGS */}
                                     {item.tags.map((tag, index) => (
                                       <p className="text-xs" key={index}>
                                         -{tag}
@@ -2244,24 +2296,34 @@ const AdminAndStaffOrdersPage = () => {
                               {/* CANCEL BUTTON */}
                               <div className="w-full flex items-center gap-1">
                                 <button
-                                  className={` font-bold ${
+                                  className={`font-bold ${
                                     order.status === "TO PAY"
                                       ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
                                       : order.status === "PAID"
                                       ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
                                       : order.status === "PREP"
-                                      ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                      ? order.items.some(
+                                          (item, index) =>
+                                            isReady[`${order.id}-${index}`]
+                                        )
+                                        ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                        : "bg-blue-300 text-white cursor-not-allowed w-full"
                                       : order.status === "READY"
                                       ? "bg-green-700 text-white hover:bg-green-600 w-full"
                                       : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
-                                  } shadow-md hover:scale-[1.02] duration-200
-                      rounded-md h-10`}
+                                  } shadow-md hover:scale-[1.02] duration-200 rounded-md h-10`}
                                   onClick={() => {
                                     if (order.status === "TO PAY") {
                                       handlePaid(order.id);
                                     } else if (order.status === "PAID") {
                                       handlePrep(order.id);
-                                    } else if (order.status === "PREP") {
+                                    } else if (
+                                      order.status === "PREP" &&
+                                      order.items.some(
+                                        (item, index) =>
+                                          isReady[`${order.id}-${index}`]
+                                      )
+                                    ) {
                                       handleReady(order.id);
                                     } else if (order.status === "READY") {
                                       handleDone(order.id);
