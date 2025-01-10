@@ -24,6 +24,8 @@ import { useRouter } from "next/navigation";
 
 // #region Sample Data
 type Item = {
+  isPartiallyServed: boolean;
+  isReady: boolean;
   productTitle: string;
   price: number;
   itemQty: number;
@@ -48,6 +50,7 @@ type Order = {
   payment: string;
   promo?: number;
   items: {
+    isReady: boolean;
     isPartiallyServed: boolean;
     title: string;
     price: number;
@@ -952,7 +955,6 @@ const AdminAndStaffOrdersPage = () => {
     };
   }, [auth, email]); // Dependencies
 
-  // Fetch orders on component mount and when `orderStatCat` changes
   useEffect(() => {
     const fetchCompletedOrders = () => {
       const unsubscribe = onSnapshot(
@@ -989,6 +991,8 @@ const AdminAndStaffOrdersPage = () => {
                   item.slug === "drinks"
                     ? [item.selectedDrinkSize, item.note]
                     : [item.note],
+                isReady: item.isReady || false, // Fetch isReady status for each item
+                isPartiallyServed: item.isPartiallyServed || false, // Fetch isPartiallyServed status for each item
               };
             });
 
@@ -1665,14 +1669,14 @@ const AdminAndStaffOrdersPage = () => {
                                         >
                                           {isPartiallyServed[uniqueId]
                                             ? "Undo"
-                                            : "Set to Partially Served"}
+                                            : "Partially Served"}
                                         </button>
                                       ) : (
                                         <button
-                                          className="h-8 px-3 text-sm font-semibold rounded-md bg-gray-300 text-gray-700 cursor-not-allowed"
+                                          className="min-h-8 px-1 text-sm font-semibold rounded-md text-orange-700"
                                           disabled={true}
                                         >
-                                          Pending
+                                          Pending..
                                         </button>
                                       )
                                     ) : (
@@ -1744,6 +1748,8 @@ const AdminAndStaffOrdersPage = () => {
                                 ? "Mark as Prep"
                                 : order.status === "PREP"
                                 ? "Mark as Ready"
+                                : order.status === "READY"
+                                ? "Mark as Served"
                                 : "Hide"}
                             </button>
 
@@ -2214,9 +2220,9 @@ const AdminAndStaffOrdersPage = () => {
                                             </span>
                                           )}
                                       </span>
-                                      <div className="flex items-center gap-2">
-                                        {/* "PREP" BUTTON */}
-                                        {order.status === "PREP" && (
+                                      {/* <div className="flex items-center gap-2"> */}
+                                      <div className="flex justify-end items-center mt-2 mr-2">
+                                        {order.status === "PREP" ? (
                                           <button
                                             className={`h-8 px-3 text-sm font-semibold rounded-md ${
                                               isReady[uniqueId]
@@ -2242,32 +2248,44 @@ const AdminAndStaffOrdersPage = () => {
                                               ? "Undo"
                                               : "Set to Ready"}
                                           </button>
-                                        )}
-                                        {/* "PARTIALLY SERVED" BUTTON FOR "READY" STATUS */}
-                                        {order.status === "READY" && (
-                                          <button
-                                            className={`h-8 px-3 text-sm font-semibold rounded-md ${
-                                              isPartiallyServed[uniqueId]
-                                                ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
-                                                : "bg-green-700 hover:bg-green-600 text-white"
-                                            } transition-all duration-200`}
-                                            onClick={(e) => {
-                                              e.stopPropagation(); // Stop event propagation
-                                              setIsPartiallyServed((prev) => ({
-                                                ...prev,
-                                                [uniqueId]: !prev[uniqueId], // Toggle partially served state
-                                              }));
-                                              updateIsPartiallyServedField(
-                                                order.id,
-                                                index,
-                                                !isPartiallyServed[uniqueId]
-                                              ); // Update Firebase
-                                            }}
-                                          >
-                                            {isPartiallyServed[uniqueId]
-                                              ? "Undo"
-                                              : "Set to Partially Served"}
-                                          </button>
+                                        ) : order.status === "READY" ? (
+                                          item.isReady ? (
+                                            <button
+                                              className={`min-h-10  px-4 text-sm font-semibold rounded-md ${
+                                                isPartiallyServed[uniqueId]
+                                                  ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                                  : "bg-green-700 hover:bg-green-600 text-white"
+                                              } transition-all duration-200`}
+                                              onClick={(e) => {
+                                                e.stopPropagation(); // Stop event propagation
+                                                setIsPartiallyServed(
+                                                  (prev) => ({
+                                                    ...prev,
+                                                    [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                                  })
+                                                );
+                                                updateIsPartiallyServedField(
+                                                  order.id,
+                                                  index,
+                                                  !isPartiallyServed[uniqueId]
+                                                ); // Update Firebase
+                                              }}
+                                            >
+                                              {isPartiallyServed[uniqueId]
+                                                ? "Undo"
+                                                : "Partially Served"}
+                                            </button>
+                                          ) : (
+                                            <div className="min-h-8 px-1 text-sm font-semibold rounded-md text-orange-700">
+                                              Pending..
+                                            </div>
+                                          )
+                                        ) : (
+                                          order.status !== "PAID" && (
+                                            <span>
+                                              PHP {item.price.toFixed(2)}
+                                            </span>
+                                          )
                                         )}
                                       </div>
                                     </div>
@@ -2309,7 +2327,7 @@ const AdminAndStaffOrdersPage = () => {
                                         ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
                                         : "bg-blue-300 text-white cursor-not-allowed w-full"
                                       : order.status === "READY"
-                                      ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                      ? "hidden" // Hide the button for "READY" status
                                       : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
                                   } shadow-md hover:scale-[1.02] duration-200 rounded-md h-10`}
                                   onClick={() => {
@@ -2325,8 +2343,6 @@ const AdminAndStaffOrdersPage = () => {
                                       )
                                     ) {
                                       handleReady(order.id);
-                                    } else if (order.status === "READY") {
-                                      handleDone(order.id);
                                     }
                                   }}
                                 >
@@ -2363,12 +2379,49 @@ const AdminAndStaffOrdersPage = () => {
                                     Delete
                                   </button>
                                 )}
+
+                                {order.status === "READY" && (
+                                  <div className="flex w-full gap-2">
+                                    {/* Back to PREP Button */}
+                                    <button
+                                      className="w-1/2 h-10 bg-orange-500 font-bold shadow-md rounded-md text-white hover:bg-orange-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                      onClick={() => handlePrep(order.id)} // Call handlePrep to go back to "PREP" stage
+                                    >
+                                      Back to PREP
+                                    </button>
+
+                                    {/* Mark as Served Button */}
+                                    <button
+                                      className={`w-1/2 h-10 font-bold shadow-md rounded-md flex items-center justify-center ${
+                                        order.items.every(
+                                          (item, index) =>
+                                            isPartiallyServed[
+                                              `${order.id}-${index}`
+                                            ]
+                                        )
+                                          ? "bg-green-700 text-white hover:bg-green-600 hover:scale-[1.02] duration-200" // Enabled state
+                                          : "bg-green-300 text-white cursor-not-allowed" // Disabled state
+                                      }`}
+                                      onClick={() => handleDone(order.id)} // Call handleDone to mark as served
+                                      disabled={
+                                        !order.items.every(
+                                          (item, index) =>
+                                            isPartiallyServed[
+                                              `${order.id}-${index}`
+                                            ]
+                                        )
+                                      } // Disable if not all items are partially served
+                                    >
+                                      Mark as Served
+                                    </button>
+                                  </div>
+                                )}
+
                                 {order.status === "SERVED" && (
                                   <div className="flex w-full gap-2">
                                     {/* Print Details Button */}
                                     <button
-                                      className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                                        hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                      className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                       onClick={() =>
                                         handlePrintDetails(order.id)
                                       }
@@ -2378,8 +2431,7 @@ const AdminAndStaffOrdersPage = () => {
 
                                     {/* Delete Button */}
                                     <button
-                                      className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                                        hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                      className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                       onClick={() => handleDelete(order.id)}
                                     >
                                       Delete
