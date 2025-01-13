@@ -1,4 +1,3 @@
-
 "use client";
 
 import Image from "next/image";
@@ -25,6 +24,8 @@ import { useRouter } from "next/navigation";
 
 // #region Sample Data
 type Item = {
+  isPartiallyServed: boolean;
+  isReady: boolean;
   productTitle: string;
   price: number;
   itemQty: number;
@@ -48,7 +49,14 @@ type Order = {
   where: string;
   payment: string;
   promo?: number;
-  items: { title: string; price: number; qty: number; tags: string[] }[];
+  items: {
+    isReady: boolean;
+    isPartiallyServed: boolean;
+    title: string;
+    price: number;
+    qty: number;
+    tags: string[];
+  }[];
   id: string;
   pwdSenior: boolean;
   idPic?: string;
@@ -99,6 +107,15 @@ const AdminAndStaffOrdersPage = () => {
   const [staffStatus, setStaffStatus] = useState<
     "activated" | "deactivated" | null
   >(null);
+
+  const [selectedDate, setSelectedDate] = useState<string>(""); // State to store the selected date
+  const [filterOption, setFilterOption] = useState<string>("today"); // State for filter option
+  const [searchId, setSearchId] = useState<string>(""); // State to store the search ID
+
+  const [isReady, setIsReady] = useState<{ [key: string]: boolean }>({}); // State to track if the item is ready
+  const [isPartiallyServed, setIsPartiallyServed] = useState<{
+    [key: string]: boolean;
+  }>({});
 
   const toggleOrder = (id: string) => {
     setExpandedOrders((prev) => ({
@@ -156,8 +173,8 @@ const AdminAndStaffOrdersPage = () => {
         ? "PREP"
         : value === "ready"
         ? "READY"
-        : value === "done"
-        ? "DONE"
+        : value === "served"
+        ? "SERVED"
         : value === "refund"
         ? "REFUNDED"
         : value === "cancelled"
@@ -402,7 +419,7 @@ const AdminAndStaffOrdersPage = () => {
         setIsMarkAsPrepVisible(false);
       }, 750);
     } catch (error) {
-      console.error("Error updating status to 'DONE':", error);
+      console.error("Error updating status to 'SERVED':", error);
     }
   };
 
@@ -417,7 +434,7 @@ const AdminAndStaffOrdersPage = () => {
         setIsMarkAsReadyVisible(false);
       }, 750);
     } catch (error) {
-      console.error("Error updating status to 'DONE':", error);
+      console.error("Error updating status to 'SERVED':", error);
     }
   };
 
@@ -438,7 +455,7 @@ const AdminAndStaffOrdersPage = () => {
   const handleDone = async (id: string) => {
     try {
       await updateDoc(doc(db, "completedOrders", id), {
-        status: "DONE",
+        status: "SERVED",
         hasRated: false,
       });
 
@@ -447,7 +464,7 @@ const AdminAndStaffOrdersPage = () => {
         setIsMarkAsDoneVisible(false);
       }, 750);
     } catch (error) {
-      console.error("Error updating status to 'DONE':", error);
+      console.error("Error updating status to 'SERVED':", error);
     }
   };
 
@@ -893,60 +910,6 @@ const AdminAndStaffOrdersPage = () => {
     console.log("User role is set to:", user);
   }, [user]); // Add `userRole` as a dependency to log updates if it changes
 
-  //#region PAGES CODE
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageWindowStart, setPageWindowStart] = useState(1);
-  const itemsPerPage = 5;
-  const pagesToShow = 5;
-
-  // Calculate total pages
-  const totalPages = Math.ceil(userOrders.length / itemsPerPage);
-
-  // Get current page orders
-  const currentOrders = userOrders.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  const visiblePages = Array.from(
-    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
-    (_, index) => pageWindowStart + index
-  );
-
-  // Handle page change
-  const goToPage = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
-
-    // Adjust the visible page numbers if necessary
-    if (pageNumber >= pageWindowStart + pagesToShow) {
-      setPageWindowStart(pageWindowStart + 1);
-    } else if (pageNumber < pageWindowStart) {
-      setPageWindowStart(pageWindowStart - 1);
-    }
-  };
-
-  const handleNext = () => {
-    if (currentPage < totalPages) {
-      goToPage(currentPage + 1);
-
-      // Adjust page window start for "Next"
-      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
-        setPageWindowStart(pageWindowStart + 1);
-      }
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentPage > 1) {
-      goToPage(currentPage - 1);
-
-      // Adjust page window start for "Previous"
-      if (currentPage - 1 < pageWindowStart) {
-        setPageWindowStart(pageWindowStart - 1);
-      }
-    }
-  };
-
   useEffect(() => {
     console.log("useEffect triggered"); // Log when the useEffect runs
 
@@ -992,7 +955,6 @@ const AdminAndStaffOrdersPage = () => {
     };
   }, [auth, email]); // Dependencies
 
-  // Fetch orders on component mount and when `orderStatCat` changes
   useEffect(() => {
     const fetchCompletedOrders = () => {
       const unsubscribe = onSnapshot(
@@ -1029,6 +991,8 @@ const AdminAndStaffOrdersPage = () => {
                   item.slug === "drinks"
                     ? [item.selectedDrinkSize, item.note]
                     : [item.note],
+                isReady: item.isReady || false, // Fetch isReady status for each item
+                isPartiallyServed: item.isPartiallyServed || false, // Fetch isPartiallyServed status for each item
               };
             });
 
@@ -1101,6 +1065,152 @@ const AdminAndStaffOrdersPage = () => {
 
     fetchCompletedOrders();
   }, [orderStatCat, applySrPWD]);
+
+  // Set the default date to today when the component mounts
+  useEffect(() => {
+    const today = new Date();
+    const formattedDate = today.toISOString().split("T")[0]; // Format to YYYY-MM-DD
+    setSelectedDate(formattedDate); // Set the selected date to today
+  }, []); // Empty dependency array ensures this runs only once on mount
+
+  // Function to show all records
+  const showAllRecords = () => {
+    setSearchId(""); // Reset search ID
+    setSelectedDate(""); // Reset selected date (or set to today's date if preferred)
+  };
+
+  // Function to handle filter option change
+  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    setFilterOption(value);
+
+    if (value === "today") {
+      const today = new Date();
+      const formattedDate = today.toISOString().split("T")[0]; // Format to YYYY-MM-DD
+      setSelectedDate(formattedDate); // Set the selected date to today
+    } else {
+      setSelectedDate(""); // Reset date if "Show All Records" is selected
+    }
+  };
+
+  //#region PAGES CODE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageWindowStart, setPageWindowStart] = useState(1);
+  const itemsPerPage = 5;
+  const pagesToShow = 5;
+
+  const filteredOrders = userOrders.filter((order) => {
+    const matchesId = order.id.toLowerCase().includes(searchId.toLowerCase());
+
+    // Create date objects for comparison
+    const orderDate = new Date(order.date);
+    const selectedDateObj = new Date(selectedDate);
+
+    // Compare only the date parts (year, month, day)
+    const matchesDate = selectedDate
+      ? orderDate.getFullYear() === selectedDateObj.getFullYear() &&
+        orderDate.getMonth() === selectedDateObj.getMonth() &&
+        orderDate.getDate() === selectedDateObj.getDate()
+      : true; // If no date is selected, include all orders
+
+    return matchesId && matchesDate; // Combine both filters
+  });
+
+  // Calculate total pages based on filtered orders
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+
+  // Get current page orders
+  const currentOrders = userOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const visiblePages = Array.from(
+    { length: Math.min(pagesToShow, totalPages - pageWindowStart + 1) },
+    (_, index) => pageWindowStart + index
+  );
+
+  // Handle page change
+  const goToPage = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+
+    // Adjust the visible page numbers if necessary
+    if (pageNumber >= pageWindowStart + pagesToShow) {
+      setPageWindowStart(pageWindowStart + 1);
+    } else if (pageNumber < pageWindowStart) {
+      setPageWindowStart(pageWindowStart - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      goToPage(currentPage + 1);
+
+      // Adjust page window start for "Next"
+      if (currentPage + 1 >= pageWindowStart + pagesToShow) {
+        setPageWindowStart(pageWindowStart + 1);
+      }
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      goToPage(currentPage - 1);
+
+      // Adjust page window start for "Previous"
+      if (currentPage - 1 < pageWindowStart) {
+        setPageWindowStart(pageWindowStart - 1);
+      }
+    }
+  };
+  const updateIsReadyField = async (
+    docID: string,
+    itemIndex: number,
+    isReady: boolean
+  ) => {
+    const orderRef = doc(db, "completedOrders", docID);
+
+    try {
+      // Get the current document data
+      const docSnap = await getDoc(orderRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Update the isReady field for the specific item
+        data.items[itemIndex].isReady = isReady;
+        // Update the document with the new data
+        await setDoc(orderRef, data, { merge: true });
+      } else {
+        console.log("Document not found");
+      }
+    } catch (error) {
+      console.error("Error updating isReady field: ", error);
+    }
+  };
+
+  const updateIsPartiallyServedField = async (
+    docID: string,
+    itemIndex: number,
+    isPartiallyServed: boolean
+  ) => {
+    const orderRef = doc(db, "completedOrders", docID);
+
+    try {
+      // Get the current document data
+      const docSnap = await getDoc(orderRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        // Update the isPartiallyServed field for the specific item
+        data.items[itemIndex].isPartiallyServed = isPartiallyServed;
+        // Update the document with the new data
+        await setDoc(orderRef, data, { merge: true });
+      } else {
+        console.log("Document not found");
+      }
+    } catch (error) {
+      console.error("Error updating isPartiallyServed field: ", error);
+    }
+  };
+
   //#endregion
 
   return (
@@ -1126,30 +1236,73 @@ const AdminAndStaffOrdersPage = () => {
                 </span>
                 <span className="flex-1 bg-orange-300 h-1 rounded-full"></span>
               </div>
-              <select
-                name=""
-                id=""
-                className="w-1/2 bg-white border-2 border-gray-100 text-gray-500 shadow-md
-          rounded-md text-center h-10 font-bold max-w-28"
-                onChange={handleCategoryChange}
-              >
-                <option value="all">All</option>
-                <option value="topay">To Pay</option>
-                <option value="paid">Paid</option>
-                <option value="prep">Prep</option>
-                <option value="ready">Ready</option>
 
-                <option value="done">Done</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="rejected">Rejected</option>
-                <option value="refund">Refunded</option>
-              </select>
+              <div className="flex flex-col md:flex-row items-center w-full justify-between gap-2">
+                {/* Search ID Input */}
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="text"
+                    placeholder="Enter ID"
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+                    onChange={(e) => setSearchId(e.target.value)} // Update state on input change
+                  />
+                </div>
+
+                {/* Date Picker */}
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="date"
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+                    onChange={(e) => setSelectedDate(e.target.value)} // Update state on date change
+                  />
+                </div>
+
+                {/* Filter Dropdown */}
+                <div className="flex items-center gap-2 flex-1">
+                  <select
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-48" // Responsive width
+                    value={filterOption}
+                    onChange={handleFilterChange} // Handle filter option change
+                  >
+                    <option value="all">Show All Records</option>
+                    <option value="today">Today</option>
+                  </select>
+                </div>
+
+                {/* Category Dropdown */}
+                <div className="flex items-center gap-2 flex-1">
+                  <select
+                    name=""
+                    id=""
+                    className="bg-white border-2 border-gray-100 text-gray-500 shadow-md rounded-md h-10 font-bold px-2 w-full md:w-32" // Responsive width
+                    onChange={handleCategoryChange}
+                  >
+                    <option value="all">All</option>
+                    <option value="topay">To Pay</option>
+                    <option value="paid">Paid</option>
+                    <option value="prep">Prep</option>
+                    <option value="ready">Ready</option>
+                    <option value="served">Served</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="refund">Refunded</option>
+                  </select>
+                </div>
+              </div>
             </div>
             {/* ORDERS LIST CONTAINER */}
             <div className="w-full lg:max-w-[800px] flex flex-col gap-2 max-h-[720px] overflow-auto pb-2">
-              {hasOrder ? (
+              {filterOption === "today" && filteredOrders.length === 0 ? (
+                // Display message when "today" is selected and there are no orders
+                <div
+                  className="w-full h-32 bg-white text-gray-400 font-bold text-xl text-center
+      flex items-center justify-center border-2 border-gray-100 shadow-md rounded-md"
+                >
+                  <span>No orders placed yet.</span>
+                </div>
+              ) : hasOrder ? (
                 <>
-                  {currentOrders.map((order) => (
+                  {filteredOrders.map((order) => (
                     <div
                       className={`w-full py-4 rounded-md border-2 border-gray-50 shadow-md gap-2 bg-white cursor-pointer
                   ${
@@ -1161,7 +1314,7 @@ const AdminAndStaffOrdersPage = () => {
                       ? "hidden"
                       : orderStatCat === "ready" && order.status !== "READY"
                       ? "hidden"
-                      : orderStatCat === "done" && order.status !== "DONE"
+                      : orderStatCat === "served" && order.status !== "SERVED"
                       ? "hidden"
                       : orderStatCat === "refund" && order.status !== "REFUNDED"
                       ? "hidden"
@@ -1218,7 +1371,7 @@ const AdminAndStaffOrdersPage = () => {
                                   ? "text-yellow-500"
                                   : order.status === "READY"
                                   ? "text-blue-600"
-                                  : order.status === "DONE"
+                                  : order.status === "SERVED"
                                   ? "text-green-700"
                                   : order.status === "REFUNDED"
                                   ? "text-black-700"
@@ -1243,146 +1396,171 @@ const AdminAndStaffOrdersPage = () => {
                       {expandedOrders[order.id] && (
                         <div className="mx-4 my-2 px-4 py-2 rounded-md bg-gray-50 text-gray-400 flex flex-col gap-4">
                           {/* EXPANDED CONTENT */}
-                          {/* PAYMENT METHOD */}
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              Payment method
-                            </span>
-                            <span>{order.payment}</span>
-                          </div>
-                          {/* CARD */}
-                          {order.payment === "Card" && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Card Payment Receipt
-                              </span>
-                            </div>
-                          )}
-                          {order.payment === "Card" && order.cardIdImg && (
-                            <>
-                              <div className="w-full flex flex-col gap-1 justify-center items-center">
-                                <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                                  <Image
-                                    src={order.cardIdImg}
-                                    alt="idpic"
-                                    layout="fill"
-                                    className="object-cover"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setCardIdImageEnlarge(true);
-                                    }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-400">
-                                  Click the picture to enlarge.
-                                </p>
+                          {/* PAYMENT METHOD - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" && (
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  Payment method
+                                </span>
+                                <span>{order.payment}</span>
                               </div>
-                              {cardIdImageEnlarge && (
-                                // ENLARGED IMAGE
-                                <div
-                                  className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                                  style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                                >
-                                  <div className="w-full max-w-[620px] aspect-square relative">
-                                    <div
-                                      className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                                    absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                                    hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() =>
-                                        setCardIdImageEnlarge(false)
-                                      }
-                                    >
-                                      <span className="font-bold">X</span>
-                                    </div>
+                            )}
+
+                          {/* CARD - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            order.payment === "Card" && (
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  Card Payment Receipt
+                                </span>
+                              </div>
+                            )}
+
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            order.payment === "Card" &&
+                            order.cardIdImg && (
+                              <>
+                                <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                  <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                     <Image
                                       src={order.cardIdImg}
                                       alt="idpic"
-                                      fill
+                                      layout="fill"
                                       className="object-cover"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCardIdImageEnlarge(true);
+                                      }}
                                     />
                                   </div>
+                                  <p className="text-xs text-gray-400">
+                                    Click the picture to enlarge.
+                                  </p>
                                 </div>
-                              )}
-                            </>
-                          )}
-                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER */}
-                          <div className="font-bold text-sm flex justify-between items-center">
-                            <span className="font-semibold">
-                              {order.status !== "TO PAY"
-                                ? "Senior Citizen / PWD Discount Given?"
-                                : "Applied for Senior/PWD?"}
-                            </span>
-                            <span>{order.pwdSenior ? "Yes" : "No"}</span>
-                          </div>
-
-                          {/* SENIOR/PWD DISCOUNT VALUE CONTAINER */}
-                          {((order.status === "TO PAY" &&
-                            order.pwdSenior &&
-                            applySrPWD[order.id]) ||
-                            (order.status !== "TO PAY" && order.pwdSenior)) && (
-                            <div className="font-bold text-sm flex justify-between items-center">
-                              <span className="font-semibold">
-                                Senior Citizen/PWD Discount
-                              </span>
-                              <span>
-                                PHP {order.sampleDiscountDeduction?.toFixed(2)}
-                              </span>
-                            </div>
-                          )}
-                          {/* PICTURE OF ID CONTAINER */}
-                          {order.pwdSenior && (
-                            <>
-                              <div className="w-full flex flex-col gap-1 justify-center items-center">
-                                <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
-                                  <Image
-                                    src={
-                                      order.idPic ??
-                                      "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
-                                    }
-                                    alt="idpic"
-                                    layout="fill"
-                                    className="object-cover"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setIdPicEnlarge(true);
+                                {cardIdImageEnlarge && (
+                                  // ENLARGED IMAGE
+                                  <div
+                                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                    style={{
+                                      background: "rgba(0, 0, 0, 0.85)",
                                     }}
-                                  />
-                                </div>
-                                <p className="text-xs text-gray-400">
-                                  Click the picture to enlarge.
-                                </p>
-                              </div>
-                              {idPicEnlarge && (
-                                // ENLARGED IMAGE
-                                <div
-                                  className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
-                                  style={{ background: "rgba(0, 0, 0, 0.85)" }}
-                                >
-                                  <div className="w-full max-w-[620px] aspect-square relative">
-                                    <div
-                                      className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
-                        absolute top-[8px] right-[8px] flex justify-center items-center z-10
-                        hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
-                                      onClick={() => setIdPicEnlarge(false)}
-                                    >
-                                      <span className="font-bold">X</span>
+                                  >
+                                    <div className="w-full max-w-[620px] aspect-square relative">
+                                      <div
+                                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                        onClick={() =>
+                                          setCardIdImageEnlarge(false)
+                                        }
+                                      >
+                                        <span className="font-bold">X</span>
+                                      </div>
+                                      <Image
+                                        src={order.cardIdImg}
+                                        alt="idpic"
+                                        fill
+                                        className="object-cover"
+                                      />
                                     </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
+
+                          {/* SENIOR/PWD DISCOUNT APPLICATION CONTAINER - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" && (
+                              <div className="font-bold text-sm flex justify-between items-center">
+                                <span className="font-semibold">
+                                  {order.status !== "TO PAY"
+                                    ? "Senior Citizen / PWD Discount Given?"
+                                    : "Applied for Senior/PWD?"}
+                                </span>
+                                <span>{order.pwdSenior ? "Yes" : "No"}</span>
+                              </div>
+                            )}
+
+                          {/* SENIOR/PWD DISCOUNT VALUE CONTAINER - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            ((order.status === "TO PAY" &&
+                              order.pwdSenior &&
+                              applySrPWD[order.id]) ||
+                              (order.status !== "TO PAY" &&
+                                order.pwdSenior)) && (
+                              <div className="font-bold text-sm flex justify between items-center">
+                                <span className="font-semibold">
+                                  Senior Citizen/PWD Discount
+                                </span>
+                                <span>
+                                  PHP{" "}
+                                  {order.sampleDiscountDeduction?.toFixed(2)}
+                                </span>
+                              </div>
+                            )}
+
+                          {/* PICTURE OF ID CONTAINER - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            order.pwdSenior && (
+                              <>
+                                <div className="w-full flex flex-col gap-1 justify-center items-center">
+                                  <div className="w-full max-w-72 aspect-square relative hover:scale-[0.98] duration-200">
                                     <Image
                                       src={
-                                        order.idPic ||
+                                        order.idPic ??
                                         "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
                                       }
                                       alt="idpic"
-                                      fill
+                                      layout="fill"
                                       className="object-cover"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setIdPicEnlarge(true);
+                                      }}
                                     />
                                   </div>
+                                  <p className="text-xs text-gray-400">
+                                    Click the picture to enlarge.
+                                  </p>
                                 </div>
-                              )}
-                            </>
-                          )}
+                                {idPicEnlarge && (
+                                  // ENLARGED IMAGE
+                                  <div
+                                    className="fixed top-0 left-0 w-full h-[100vh] flex justify-center items-center z-20"
+                                    style={{
+                                      background: "rgba(0, 0, 0, 0.85)",
+                                    }}
+                                  >
+                                    <div className="w-full max-w-[620px] aspect-square relative">
+                                      <div
+                                        className="bg-black shadow-lg rounded-full h-10 aspect-square text-white
+                absolute top-[8px] right-[8px] flex justify-center items-center z-10
+                hover:bg-gray-950 hover:scale-[1.02] duration-200 cursor-pointer"
+                                        onClick={() => setIdPicEnlarge(false)}
+                                      >
+                                        <span className="font-bold">X</span>
+                                      </div>
+                                      <Image
+                                        src={
+                                          order.idPic ??
+                                          "https://firebasestorage.googleapis.com/v0/b/testingcapstonejg.appspot.com/o/placeholder-photo.webp?alt=media&token=82bd0fae-bcdc-4acc-a831-54b38beeaf52"
+                                        }
+                                        alt="idpic"
+                                        fill
+                                        className="object-cover"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                          {/* Apply Sr/PWD Discount Button */}
+                          {/* Apply Sr/PWD Discount Button - Only show if status is "TO PAY" */}
                           {order.status === "TO PAY" &&
                             order.pwdSenior === true && (
                               <div className="w-full flex justify-end">
@@ -1402,8 +1580,11 @@ const AdminAndStaffOrdersPage = () => {
                                 </button>
                               </div>
                             )}
-                          {/* PROMO, IF THERE IS ONE */}
-                          {(order.promo || order.promo === 0) &&
+
+                          {/* PROMO, IF THERE IS ONE - Only show if status is not "PAID" or "PREP" */}
+                          {order.status !== "PAID" &&
+                            order.status !== "PREP" &&
+                            (order.promo || order.promo === 0) &&
                             order.promo !== null &&
                             order.promo !== undefined &&
                             order.promo !== 0 && (
@@ -1414,67 +1595,96 @@ const AdminAndStaffOrdersPage = () => {
                                 <span>{order.promo}</span>
                               </div>
                             )}
+
                           {order.items.map((item, index) => {
-                            // Find the highest price in the order items
-                            const maxPrice = Math.max(
-                              ...order.items.map((i) => i.price)
-                            );
-
-                            // Check if this is the first item with the highest price
-                            const isHighestPriced =
-                              item.price === maxPrice &&
-                              order.items.findIndex(
-                                (i) => i.price === maxPrice
-                              ) === index;
-
-                            // Apply discount conditionally based on the order's status and senior discount eligibility
-                            const discountAmount =
-                              isHighestPriced &&
-                              ((order.status === "TO PAY" &&
-                                applySrPWD[order.id]) || // Discount if 'TO PAY' and SrPWD is applied
-                                (order.status !== "TO PAY" && order.pwdSenior)) // Discount if status is not 'TO PAY' and it's a senior order
-                                ? item.price * 0.2
-                                : 0;
-
-                            // Calculate discounted price if the discount applies
-                            const discountedPrice = isHighestPriced
-                              ? item.price - discountAmount
-                              : item.price;
+                            const uniqueId = `${order.id}-${index}`; // Use a unique identifier that includes the order ID and item index
 
                             return (
                               <div
                                 className="flex flex-col gap-1"
-                                key={item.title}
+                                key={uniqueId}
+                                onClick={(e) => {
+                                  // Toggle expanded state only if the click is on the card itself (not a button)
+                                  if (e.target === e.currentTarget) {
+                                    toggleOrder(order.id); // Use the toggleOrder function
+                                  }
+                                }}
                               >
                                 <hr />
-                                {/* ITEM TITLE AND PRICE CONTAINER */}
                                 <div className="font-bold text-sm flex justify-between items-center">
                                   <span className="font-semibold">
-                                    {`${item.qty}x - ${item.title}`}
-                                    {isHighestPriced && // Only show discounted label for the highest-priced item
-                                      ((order.status === "TO PAY" &&
-                                        applySrPWD[order.id]) ||
-                                        (order.status !== "TO PAY" &&
-                                          order.pwdSenior)) && ( // Apply condition to show discount label
-                                        <span className="text-green-600 text-xs ml-2">
-                                          (discounted: PHP{" "}
-                                          {discountAmount.toFixed(2)})
-                                        </span>
-                                      )}
+                                    {order.status === "READY"
+                                      ? `${item.qty}x - ${
+                                          item.title
+                                        } (PHP ${item.price.toFixed(2)})`
+                                      : `${item.qty}x - ${item.title}`}
                                   </span>
-                                  <span
-                                    className={
-                                      isHighestPriced && // Highlight the discounted price
-                                      ((order.status === "TO PAY" &&
-                                        applySrPWD[order.id]) ||
-                                        (order.status !== "TO PAY" &&
-                                          order.pwdSenior))
-                                        ? "text-green-600"
-                                        : ""
-                                    }
-                                  >
-                                    PHP {discountedPrice.toFixed(2)}
-                                  </span>
+                                  <div className="flex justify-end items-center mt-2 mr-2">
+                                    {order.status === "PREP" ? (
+                                      <button
+                                        className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                          isReady[uniqueId]
+                                            ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                            : "bg-orange-400 hover:bg-orange-300 text-white"
+                                        } transition-all duration-200`}
+                                        onClick={(e) => {
+                                          e.stopPropagation(); // Stop event propagation
+                                          const newIsReadyState =
+                                            !isReady[uniqueId];
+                                          setIsReady((prev) => ({
+                                            ...prev,
+                                            [uniqueId]: newIsReadyState, // Toggle readiness for this specific item
+                                          }));
+                                          updateIsReadyField(
+                                            order.id,
+                                            index,
+                                            newIsReadyState
+                                          ); // Update Firebase
+                                        }}
+                                      >
+                                        {isReady[uniqueId]
+                                          ? "Undo"
+                                          : "Set to Ready"}
+                                      </button>
+                                    ) : order.status === "READY" ? (
+                                      isReady[uniqueId] ? (
+                                        <button
+                                          className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                            isPartiallyServed[uniqueId]
+                                              ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                              : "bg-green-700 hover:bg-green-600 text-white"
+                                          } transition-all duration-200`}
+                                          onClick={(e) => {
+                                            e.stopPropagation(); // Stop event propagation
+                                            setIsPartiallyServed((prev) => ({
+                                              ...prev,
+                                              [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                            }));
+                                            updateIsPartiallyServedField(
+                                              order.id,
+                                              index,
+                                              !isPartiallyServed[uniqueId]
+                                            ); // Update Firebase
+                                          }}
+                                        >
+                                          {isPartiallyServed[uniqueId]
+                                            ? "Undo"
+                                            : "Partially Served"}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          className="min-h-8 px-1 text-sm font-semibold rounded-md text-orange-700"
+                                          disabled={true}
+                                        >
+                                          Pending..
+                                        </button>
+                                      )
+                                    ) : (
+                                      order.status !== "PAID" && (
+                                        <span>PHP {item.price.toFixed(2)}</span>
+                                      )
+                                    )}
+                                  </div>
                                 </div>
                                 {item.tags.map((tag, index) => (
                                   <p className="text-xs" key={index}>
@@ -1500,27 +1710,35 @@ const AdminAndStaffOrdersPage = () => {
                           {/* CANCEL BUTTON */}
                           <div className="w-full flex items-center gap-1">
                             <button
-                              className={` font-bold ${
+                              className={`font-bold ${
                                 order.status === "TO PAY"
                                   ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
                                   : order.status === "PAID"
                                   ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
                                   : order.status === "PREP"
-                                  ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                  ? order.items.some(
+                                      (item, index) =>
+                                        isReady[`${order.id}-${index}`]
+                                    )
+                                    ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                    : "bg-blue-300 text-white cursor-not-allowed w-full"
                                   : order.status === "READY"
-                                  ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                  ? "hidden" // Hide the button for "READY" status
                                   : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
-                              } shadow-md hover:scale-[1.02] duration-200
-            rounded-md h-10`}
+                              } shadow-md hover:scale-[1.02] duration-200 rounded-md h-10`}
                               onClick={() => {
                                 if (order.status === "TO PAY") {
                                   handlePaid(order.id);
                                 } else if (order.status === "PAID") {
                                   handlePrep(order.id);
-                                } else if (order.status === "PREP") {
+                                } else if (
+                                  order.status === "PREP" &&
+                                  order.items.some(
+                                    (item, index) =>
+                                      isReady[`${order.id}-${index}`]
+                                  )
+                                ) {
                                   handleReady(order.id);
-                                } else if (order.status === "READY") {
-                                  handleDone(order.id);
                                 }
                               }}
                             >
@@ -1531,30 +1749,29 @@ const AdminAndStaffOrdersPage = () => {
                                 : order.status === "PREP"
                                 ? "Mark as Ready"
                                 : order.status === "READY"
-                                ? "Mark as Done"
+                                ? "Mark as Served"
                                 : "Hide"}
                             </button>
 
                             {order.status === "PAID" && (
                               <button
-                                className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-            hover:scale-[1.02] duration-200 hover:bg-red-400"
+                                className="w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md hover:scale-[1.02] duration-200 hover:bg-red-400"
                                 onClick={() =>
                                   handleRefund(
                                     order.id,
                                     order.date,
                                     order.price
                                   )
-                                } // Call handleRefund here
+                                }
                               >
                                 Refund
                               </button>
                             )}
+
                             <button
                               className={`${
                                 order.status !== "TO PAY" && "hidden"
-                              } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-            hover:scale-[1.02] duration-200 hover:bg-red-400`}
+                              } w-1/3 font-bold bg-red-500 rounded-md text-white h-10 shadow-md hover:scale-[1.02] duration-200 hover:bg-red-400`}
                               onClick={() => {
                                 if (order.payment === "Card") {
                                   handleReject(order.id); // Handle rejection for card payment
@@ -1565,11 +1782,11 @@ const AdminAndStaffOrdersPage = () => {
                             >
                               {order.payment === "Card" ? "Reject" : "Cancel"}
                             </button>
+
                             {order.status === "CANCELLED" ||
                               (order.status === "REJECTED" && (
                                 <button
-                                  className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md
-                hover:scale-[1.02] duration-200 hover:bg-red-400"
+                                  className="w-full font-bold bg-red-500 rounded-md text-white h-10 shadow-md hover:scale-[1.02] duration-200 hover:bg-red-400"
                                   onClick={() => {
                                     handleDelete(order.id);
                                   }}
@@ -1577,12 +1794,49 @@ const AdminAndStaffOrdersPage = () => {
                                   Delete
                                 </button>
                               ))}
-                            {order.status === "DONE" && (
+
+                            {order.status === "READY" && (
+                              <div className="flex w-full gap-2">
+                                {/* Back to PREP Button */}
+                                <button
+                                  className="w-1/2 h-10 bg-orange-500 font-bold shadow-md rounded-md text-white hover:bg-orange-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  onClick={() => handlePrep(order.id)} // Call handlePrep to go back to "PREP" stage
+                                >
+                                  Back to PREP
+                                </button>
+
+                                {/* Mark as Served Button */}
+                                <button
+                                  className={`w-1/2 h-10 font-bold shadow-md rounded-md flex items-center justify-center ${
+                                    order.items.every(
+                                      (item, index) =>
+                                        isPartiallyServed[
+                                          `${order.id}-${index}`
+                                        ]
+                                    )
+                                      ? "bg-green-700 text-white hover:bg-green-600 hover:scale-[1.02] duration-200" // Enabled state
+                                      : "bg-green-300 text-white cursor-not-allowed" // Disabled state
+                                  }`}
+                                  onClick={() => handleDone(order.id)} // Call handleDone to mark as served
+                                  disabled={
+                                    !order.items.every(
+                                      (item, index) =>
+                                        isPartiallyServed[
+                                          `${order.id}-${index}`
+                                        ]
+                                    )
+                                  } // Disable if not all items are partially served
+                                >
+                                  Mark as Served
+                                </button>
+                              </div>
+                            )}
+
+                            {order.status === "SERVED" && (
                               <div className="flex w-full gap-2">
                                 {/* Print Details Button */}
                                 <button
-                                  className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                  hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => handlePrintDetails(order.id)}
                                 >
                                   Print Details
@@ -1590,8 +1844,7 @@ const AdminAndStaffOrdersPage = () => {
 
                                 {/* Delete Button */}
                                 <button
-                                  className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                  hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                  className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                   onClick={() => handleDelete(order.id)}
                                 >
                                   Delete
@@ -1603,6 +1856,7 @@ const AdminAndStaffOrdersPage = () => {
                       )}
                     </div>
                   ))}
+
                   {/* PAGINATION CONTROLS */}
                   <div className="flex justify-center items-center space-x-2">
                     <button
@@ -1938,15 +2192,22 @@ const AdminAndStaffOrdersPage = () => {
                                   ? item.price - discountAmount
                                   : item.price;
 
+                                // Unique ID for each item
+                                const uniqueId = `${order.id}-${index}`;
+
                                 return (
                                   <div
                                     className="flex flex-col gap-1"
                                     key={item.title}
                                   >
-                                    {/* ITEM TITLE AND PRICE CONTAINER */}
+                                    {/* ITEM TITLE, PRICE, AND "PREP" BUTTON CONTAINER */}
                                     <div className="font-bold text-sm flex justify-between items-center">
                                       <span className="font-semibold">
-                                        {`${item.qty}x - ${item.title}`}
+                                        {order.status === "READY"
+                                          ? `${item.qty}x - ${
+                                              item.title
+                                            } (PHP ${item.price.toFixed(2)})`
+                                          : `${item.qty}x - ${item.title}`}
                                         {isHighestPriced &&
                                           ((order.status === "TO PAY" &&
                                             applySrPWD[order.id]) ||
@@ -1959,23 +2220,76 @@ const AdminAndStaffOrdersPage = () => {
                                             </span>
                                           )}
                                       </span>
-                                      {/* Only show the price if the role is "bar" */}
-                                      {user === "bar" && (
-                                        <span
-                                          className={
-                                            isHighestPriced &&
-                                            ((order.status === "TO PAY" &&
-                                              applySrPWD[order.id]) ||
-                                              (order.status !== "TO PAY" &&
-                                                order.pwdSenior))
-                                              ? "text-green-600"
-                                              : ""
-                                          }
-                                        >
-                                          PHP {discountedPrice.toFixed(2)}
-                                        </span>
-                                      )}
+                                      {/* <div className="flex items-center gap-2"> */}
+                                      <div className="flex justify-end items-center mt-2 mr-2">
+                                        {order.status === "PREP" ? (
+                                          <button
+                                            className={`h-8 px-3 text-sm font-semibold rounded-md ${
+                                              isReady[uniqueId]
+                                                ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                                : "bg-orange-400 hover:bg-orange-300 text-white"
+                                            } transition-all duration-200`}
+                                            onClick={(e) => {
+                                              e.stopPropagation(); // Stop event propagation
+                                              const newIsReadyState =
+                                                !isReady[uniqueId];
+                                              setIsReady((prev) => ({
+                                                ...prev,
+                                                [uniqueId]: newIsReadyState, // Toggle readiness for this specific item
+                                              }));
+                                              updateIsReadyField(
+                                                order.id,
+                                                index,
+                                                newIsReadyState
+                                              ); // Update Firebase
+                                            }}
+                                          >
+                                            {isReady[uniqueId]
+                                              ? "Undo"
+                                              : "Set to Ready"}
+                                          </button>
+                                        ) : order.status === "READY" ? (
+                                          item.isReady ? (
+                                            <button
+                                              className={`min-h-10  px-4 text-sm font-semibold rounded-md ${
+                                                isPartiallyServed[uniqueId]
+                                                  ? "bg-gray-300 hover:bg-gray-400 text-gray-700"
+                                                  : "bg-green-700 hover:bg-green-600 text-white"
+                                              } transition-all duration-200`}
+                                              onClick={(e) => {
+                                                e.stopPropagation(); // Stop event propagation
+                                                setIsPartiallyServed(
+                                                  (prev) => ({
+                                                    ...prev,
+                                                    [uniqueId]: !prev[uniqueId], // Toggle partially served state
+                                                  })
+                                                );
+                                                updateIsPartiallyServedField(
+                                                  order.id,
+                                                  index,
+                                                  !isPartiallyServed[uniqueId]
+                                                ); // Update Firebase
+                                              }}
+                                            >
+                                              {isPartiallyServed[uniqueId]
+                                                ? "Undo"
+                                                : "Partially Served"}
+                                            </button>
+                                          ) : (
+                                            <div className="min-h-8 px-1 text-sm font-semibold rounded-md text-orange-700">
+                                              Pending..
+                                            </div>
+                                          )
+                                        ) : (
+                                          order.status !== "PAID" && (
+                                            <span>
+                                              PHP {item.price.toFixed(2)}
+                                            </span>
+                                          )
+                                        )}
+                                      </div>
                                     </div>
+                                    {/* TAGS */}
                                     {item.tags.map((tag, index) => (
                                       <p className="text-xs" key={index}>
                                         -{tag}
@@ -2000,27 +2314,35 @@ const AdminAndStaffOrdersPage = () => {
                               {/* CANCEL BUTTON */}
                               <div className="w-full flex items-center gap-1">
                                 <button
-                                  className={` font-bold ${
+                                  className={`font-bold ${
                                     order.status === "TO PAY"
                                       ? "bg-orange-500 text-white hover:bg-orange-400 w-2/3"
                                       : order.status === "PAID"
                                       ? "bg-yellow-500 text-white hover:bg-yellow-400 w-full"
                                       : order.status === "PREP"
-                                      ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                      ? order.items.some(
+                                          (item, index) =>
+                                            isReady[`${order.id}-${index}`]
+                                        )
+                                        ? "bg-blue-500 text-white hover:bg-blue-400 w-full"
+                                        : "bg-blue-300 text-white cursor-not-allowed w-full"
                                       : order.status === "READY"
-                                      ? "bg-green-700 text-white hover:bg-green-600 w-full"
+                                      ? "hidden" // Hide the button for "READY" status
                                       : "bg-white text-gray-500 border-2 border-gray-100 hover:bg-gray-50 w-full hidden"
-                                  } shadow-md hover:scale-[1.02] duration-200
-                      rounded-md h-10`}
+                                  } shadow-md hover:scale-[1.02] duration-200 rounded-md h-10`}
                                   onClick={() => {
                                     if (order.status === "TO PAY") {
                                       handlePaid(order.id);
                                     } else if (order.status === "PAID") {
                                       handlePrep(order.id);
-                                    } else if (order.status === "PREP") {
+                                    } else if (
+                                      order.status === "PREP" &&
+                                      order.items.some(
+                                        (item, index) =>
+                                          isReady[`${order.id}-${index}`]
+                                      )
+                                    ) {
                                       handleReady(order.id);
-                                    } else if (order.status === "READY") {
-                                      handleDone(order.id);
                                     }
                                   }}
                                 >
@@ -2031,7 +2353,7 @@ const AdminAndStaffOrdersPage = () => {
                                     : order.status === "PREP"
                                     ? "Mark as Ready"
                                     : order.status === "READY"
-                                    ? "Mark as Done"
+                                    ? "Mark as Served"
                                     : "Hide"}
                                 </button>
 
@@ -2057,12 +2379,49 @@ const AdminAndStaffOrdersPage = () => {
                                     Delete
                                   </button>
                                 )}
-                                {order.status === "DONE" && (
+
+                                {order.status === "READY" && (
+                                  <div className="flex w-full gap-2">
+                                    {/* Back to PREP Button */}
+                                    <button
+                                      className="w-1/2 h-10 bg-orange-500 font-bold shadow-md rounded-md text-white hover:bg-orange-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                      onClick={() => handlePrep(order.id)} // Call handlePrep to go back to "PREP" stage
+                                    >
+                                      Back to PREP
+                                    </button>
+
+                                    {/* Mark as Served Button */}
+                                    <button
+                                      className={`w-1/2 h-10 font-bold shadow-md rounded-md flex items-center justify-center ${
+                                        order.items.every(
+                                          (item, index) =>
+                                            isPartiallyServed[
+                                              `${order.id}-${index}`
+                                            ]
+                                        )
+                                          ? "bg-green-700 text-white hover:bg-green-600 hover:scale-[1.02] duration-200" // Enabled state
+                                          : "bg-green-300 text-white cursor-not-allowed" // Disabled state
+                                      }`}
+                                      onClick={() => handleDone(order.id)} // Call handleDone to mark as served
+                                      disabled={
+                                        !order.items.every(
+                                          (item, index) =>
+                                            isPartiallyServed[
+                                              `${order.id}-${index}`
+                                            ]
+                                        )
+                                      } // Disable if not all items are partially served
+                                    >
+                                      Mark as Served
+                                    </button>
+                                  </div>
+                                )}
+
+                                {order.status === "SERVED" && (
                                   <div className="flex w-full gap-2">
                                     {/* Print Details Button */}
                                     <button
-                                      className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white
-                                        hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                      className="w-1/2 h-10 bg-blue-500 font-bold shadow-md rounded-md text-white hover:bg-blue-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                       onClick={() =>
                                         handlePrintDetails(order.id)
                                       }
@@ -2072,8 +2431,7 @@ const AdminAndStaffOrdersPage = () => {
 
                                     {/* Delete Button */}
                                     <button
-                                      className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white
-                                        hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
+                                      className="w-1/2 h-10 bg-red-500 font-bold shadow-md rounded-md text-white hover:bg-red-400 hover:scale-[1.02] duration-200 flex items-center justify-center"
                                       onClick={() => handleDelete(order.id)}
                                     >
                                       Delete
@@ -2490,7 +2848,7 @@ const AdminAndStaffOrdersPage = () => {
                                     : order.status === "PREP"
                                     ? "Mark as Ready"
                                     : order.status === "READY"
-                                    ? "Mark as Done"
+                                    ? "Mark as Served"
                                     : "Hide"}
                                 </button>
 
@@ -2526,7 +2884,7 @@ const AdminAndStaffOrdersPage = () => {
                                     Delete
                                   </button>
                                 )}
-                                {order.status === "DONE" && (
+                                {order.status === "SERVED" && (
                                   <div className="flex w-full gap-2">
                                     {/* Print Details Button */}
                                     <button
@@ -2603,8 +2961,8 @@ const AdminAndStaffOrdersPage = () => {
           </div>
         )}
 
-        {/* MARKED AS DONE POP UP */}
-        {isMarkAsDoneVisible && <CheckoutPopup message="Marked as Done!" />}
+        {/* MARKED AS SERVED(DONE) POP UP */}
+        {isMarkAsDoneVisible && <CheckoutPopup message="Marked as Served!" />}
 
         {/* PAID POP UP */}
         {isPaidVisible && <CheckoutPopup message="Marked as Paid!" />}
