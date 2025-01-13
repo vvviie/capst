@@ -504,6 +504,7 @@ const CartPage = () => {
           setTotalCartPrice(newTotalCartPrice);
           console.log("Total Price Updated: ", newTotalCartPrice);
   
+          console.log("Consumabel Discount: ", consumableDeduction)
           openDiscountPromoForm(false);
           setConsumableInput("");
   
@@ -529,6 +530,11 @@ const CartPage = () => {
   };
   
   //#endregion
+
+  // UseEffect to monitor updates to consumableDeduction
+  useEffect(() => {
+    console.log("Consumable Deduction updated to:", consumableDeduction);
+  }, [consumableDeduction]);
 
   //#region Handling of Processes for Vouchers
   const handleVoucherSubmit = async () => {
@@ -805,13 +811,9 @@ const CartPage = () => {
       }
     }
 
-    if (consumableApplied) { 
-      if (consumableDeduction > finalTotal )
-      {
-        finalTotal = 0;
-      } else {
-        finalTotal -= consumableDeduction; // Deduct consumable discount from finalTotal
-      }
+    if (consumableApplied) {
+      const actualDeduction = consumableDeduction > finalTotal ? 0 : consumableDeduction; 
+      finalTotal -= actualDeduction; // Deduct consumable discount from finalTotal
     }
     
     finalTotal = Math.max(finalTotal, 0); // Ensure final total doesn't go negative
@@ -912,13 +914,7 @@ const CartPage = () => {
     }
 
     if (consumableApplied) {
-      let consumableDiscount = 0;
-
-      if (consumableDiscount > finalTotal) {
-        consumableDiscount = 0;
-      } else {
-        consumableDiscount = consumableDeduction;
-      }
+      let consumableDiscount = consumableDeduction;
 
       setConsumableDeduction(consumableDiscount);
       finalTotal -= consumableDeduction;
@@ -1318,26 +1314,30 @@ const CartPage = () => {
           : 0,
       });
 
-      const consumableIDRef = collection(db, "tableReservations");
-      const consumableQuery = query(
-        consumableIDRef,
-        where("__name__", "==", consumableID),
-        where("reservedBy", "==", userEmail)
-      );
-      const consumableSnapshot = await getDocs(consumableQuery);
-
-      if (!consumableSnapshot.empty) {
-        // Get the first document from the snapshot
-        const docRef = doc(db, "tableReservations", consumableSnapshot.docs[0].id);
-        
-        // Update the consumableUsed field to true
-        await updateDoc(docRef, {
-          consumableApplied: true
-        });
+      if (consumableApplied) {
+        const consumableIDRef = collection(db, "tableReservations");
+        const consumableQuery = query(
+          consumableIDRef,
+          where("__name__", "==", consumableID),
+          where("reservedBy", "==", userEmail)
+        );
+        const consumableSnapshot = await getDocs(consumableQuery);
       
-        console.log("Consumable used status updated to true.");
+        if (!consumableSnapshot.empty) {
+          // Get the first document from the snapshot
+          const docRef = doc(db, "tableReservations", consumableSnapshot.docs[0].id);
+      
+          // Update the consumableApplied field to true
+          await updateDoc(docRef, {
+            consumableApplied: true,
+          });
+      
+          console.log("Consumable used status updated to true.");
+        } else {
+          console.log("No matching document found.");
+        }
       } else {
-        console.log("No matching document found.");
+        console.log("Consumable is not applied. Skipping update.");
       }
 
       // Update the timesUsed in the promoCodes collection
@@ -1466,7 +1466,6 @@ const CartPage = () => {
       showErrorPopup("Failed to complete order. Please try again.");
     }
   };
-
   //#endregion
 
   //#endregion
@@ -2534,7 +2533,7 @@ const CartPage = () => {
               </div>
 
               {/* CONSUMABLE NOTE */}
-              {consumableApplied && consumableDeduction > finalTotal && (
+              {consumableApplied && finalTotal > consumableDeduction && (
                 <div className="flex justify-center items-center px-4 py-4">
                   <span className="font-semibold text-small text-red-600 text-center lg:text-2xl">
                     Please add more items to your cart. Consumable must not be greater than subtotal.
@@ -2546,14 +2545,14 @@ const CartPage = () => {
               <button
                 className={`w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg
                   hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.03] duration-300 ${
-                    consumableApplied && consumableDeduction > finalTotal ? 'opacity-50 cursor-not-allowed' : ''
+                    consumableApplied && finalTotal > consumableDeduction ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 onClick={() => {
                   handleCompleteOrder(modeOfPayment, selectedOption, selectedServeTime, finalTotal);
                   handleSubmitOrder();
                   handleSubmit();
                 }}
-                disabled={consumableApplied && consumableDeduction > finalTotal}
+                disabled={consumableApplied && finalTotal > consumableDeduction}
               >
                 Checkout
               </button>
