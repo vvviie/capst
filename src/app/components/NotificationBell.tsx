@@ -11,7 +11,8 @@ import {
   doc,
   updateDoc,
   getDoc,
-  onSnapshot
+  onSnapshot,
+  deleteDoc
 } from "firebase/firestore";
 
 //#region Variable Arrays for Retrieving Purposes
@@ -49,6 +50,16 @@ type VoucherNotification = {
 
 interface NotificationBellProps {
   foodCartAvailable: boolean;
+}
+
+interface NotificationB {
+  id: string;
+  type: string;
+  subject: string;
+  details: string;
+  time: string;
+  date: string;
+  read: boolean;
 }
 
 interface OrderItem {
@@ -94,18 +105,53 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
       const q = query(tempReservationsRef, where("reservedBy", "==", userEmail));
   
       const unsubscribe = onSnapshot(q, (querySnapshot) => {
-        const newNotifications: notifs = []; // Temporary array for updated notifications
+        const newNotifications: notifs = []; // Use the 'notifs' type here
   
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          if (!data.isNotifDeleted) { // Check for deletion before adding
-            const notification = {
+  
+          if (!data.isNotifDeleted) {
+            let additionalDetails = "";
+  
+            if (data.status === "TO PAY" || data.status === "REQUESTED" || data.status === "PENDING") {
+              const today = new Date();
+              const reservationDate = new Date(data.dateToBeReserved); // Convert to Date object
+            
+              const diffTime = reservationDate.getTime() - today.getTime(); // Difference in ms
+              let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 2; // Adjust by 2 days
+            
+              if (diffDays === 0) {
+                // Extract the timeReserved (e.g., "22:25") and convert it to hours and minutes
+                const [reservedHours, reservedMinutes] = data.timeReserved.split(":").map(Number);
+            
+                // Create a Date object for the reserved time on the same day
+                const reservationTime = new Date();
+                reservationTime.setHours(reservedHours, reservedMinutes, 0, 0);
+            
+                // Calculate the difference in milliseconds between now and the reserved time
+                const diffMilliseconds = reservationTime.getTime() - today.getTime();
+                const diffHours = Math.floor(diffMilliseconds / (1000 * 60 * 60)); // Full hours remaining
+                const diffMinutes = Math.floor((diffMilliseconds % (1000 * 60 * 60)) / (1000 * 60)); // Remaining minutes
+            
+                if (diffMilliseconds > 0) {
+                  additionalDetails = `Please settle within ${diffHours} hour(s) and ${diffMinutes} minute(s).`;
+                } else {
+                  additionalDetails = `Payment time is almost up!`;
+                }
+              } else if (diffDays > 0) {
+                additionalDetails = `Please settle within ${diffDays} day(s).`;
+              } else {
+                additionalDetails = `Payment overdue by ${Math.abs(diffDays)} day(s).`;
+              }
+            }         
+  
+            const notification: deets = {
               id: doc.id,
               type: "Table Reservation",
               subject: `New Booking for: ${data.type || "Unknown"}`,
               details: `Your reservation for ${data.numberOfPersons} pax on ${data.dateToBeReserved} at ${data.timeToBeReserved} is ${
                 data.status === "PENDING" ? "REQUESTED" : data.status || "in progress"
-              }.`,
+              }. ${additionalDetails}`,
               time: data.timeReserved || "N/A",
               date: data.dateReserved || "N/A",
               read: data.isRead || false, // Ensure this is fetched
@@ -142,6 +188,54 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
     [userEmail, setNotifItems] // Add relevant dependencies
   );
   
+  useEffect(() => {
+    if (!userEmail) return;
+
+    const tempReservationsRef = collection(db, "tableReservations");
+
+    // Listen for changes in the `tableReservations` collection
+    const unsubscribe = onSnapshot(tempReservationsRef, (querySnapshot) => {
+      querySnapshot.forEach((docSnapshot) => {
+        const data = docSnapshot.data();
+        const reservationId = docSnapshot.id;
+
+        // Check if the reservation belongs to the current user
+        if (data.reservedBy === userEmail) {
+          // Process only if the status matches the criteria
+          if (
+            data.status === "TO PAY" ||
+            data.status === "REQUESTED" ||
+            data.status === "PENDING"
+          ) {
+            const today = new Date();
+            const reservationDate = new Date(data.dateToBeReserved);
+            const diffTime = reservationDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) - 2;
+
+            // Delete the reservation if overdue
+            if (diffDays < 0) {
+              deleteDoc(doc(db, "tableReservations", reservationId))
+                .then(() => {
+                  console.log(
+                    `Reservation ${reservationId} deleted due to non-payment.`
+                  );
+                })
+                .catch((error) => {
+                  console.error(
+                    `Error deleting reservation ${reservationId}:`,
+                    error
+                  );
+                });
+            }
+          }
+        }
+      });
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }, [userEmail]);
+
   //#region Fetching of All Vouchers
   useEffect(() => {
     const fetchVouchers = () => {
