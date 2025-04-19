@@ -2533,7 +2533,7 @@ const CartPage = () => {
               </div>
 
               {/* CONSUMABLE NOTE */}
-              {consumableApplied && finalTotal > consumableDeduction && (
+              {consumableApplied && finalTotal < consumableDeduction && (
                 <div className="flex justify-center items-center px-4 py-4">
                   <span className="font-semibold text-small text-red-600 text-center lg:text-2xl">
                     Please add more items to your cart. Consumable must not be greater than subtotal.
@@ -2545,14 +2545,14 @@ const CartPage = () => {
               <button
                 className={`w-full font-bold text-white text-xl bg-orange-950 py-3 rounded-lg shadow-lg
                   hover:border-orange-900 hover:bg-orange-900 hover:scale-[1.03] duration-300 ${
-                    consumableApplied && finalTotal > consumableDeduction ? 'opacity-50 cursor-not-allowed' : ''
+                    consumableApplied && finalTotal < consumableDeduction ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 onClick={() => {
                   handleCompleteOrder(modeOfPayment, selectedOption, selectedServeTime, finalTotal);
                   handleSubmitOrder();
                   handleSubmit();
                 }}
-                disabled={consumableApplied && finalTotal > consumableDeduction}
+                disabled={consumableApplied && finalTotal < consumableDeduction}
               >
                 Checkout
               </button>
