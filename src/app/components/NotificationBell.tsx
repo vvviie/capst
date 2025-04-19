@@ -136,7 +136,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
                 if (diffMilliseconds > 0) {
                   additionalDetails = `Please settle within ${diffHours} hour(s) and ${diffMinutes} minute(s).`;
                 } else {
-                  additionalDetails = `Payment time is almost up!`;
+                  additionalDetails = `Please settle within today!`;
                 }
               } else if (diffDays > 0) {
                 additionalDetails = `Please settle within ${diffDays} day(s).`;
