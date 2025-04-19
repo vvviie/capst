@@ -45,6 +45,7 @@ type VoucherNotification = {
   time: string;
   date: string;
   read: boolean;
+  isRead?: boolean;
   isNotifDeleted?: boolean;  // Add the isNotifDeleted property
 };
 
@@ -154,7 +155,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
               }. ${additionalDetails}`,
               time: data.timeReserved || "N/A",
               date: data.dateReserved || "N/A",
-              read: data.isRead || false, // Ensure this is fetched
+              read: data.read || false, // Ensure this is fetched
             };
             newNotifications.push(notification);
           }
@@ -266,7 +267,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
                 details: value.voucherDescription,
                 time: value.timeCreated,
                 date: value.dateCreated,
-                read: value.isRead,
+                read: value.read,
                 deleted: value.isNotifDeleted,
               }));
 
@@ -333,7 +334,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
                 details: `Your order '${doc.id}' with subtotal PHP ${data.subtotal.toFixed(2)} is ${data.status || "in progress"}.`,
                 time: data.timeCreated || "N/A",
                 date: data.dateCreated || "N/A",
-                read: item.isRead || false,
+                read: item.read || false,
               };
               fetchedNotificationsMap.set(notificationId, notification);
             }
@@ -375,7 +376,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
                   details: notifData.body || "No Details",
                   time: notifData.timeCreated || "N/A",
                   date: notifData.dateCreated || "N/A",
-                  read: notifData.isRead || false,
+                  read: notifData.read || false,
                 };
                 fetchedNotificationsMap.set(notifId, userNotification); // Add to the Map
               }
@@ -437,7 +438,7 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
       console.log("Updating user notification...");
       const updatedNotification = {
         ...userNotifications[notificationKey],
-        isRead: !currentReadStatus, // Toggle the read status
+        read: !currentReadStatus, // Toggle the read status
       };
 
       await updateDoc(userDocRef, {
@@ -465,7 +466,7 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
 
       const updatedVoucher = {
         ...userVouchers[voucherKey],
-        isRead: !currentReadStatus, // Toggle the read status
+        read: !currentReadStatus, // Toggle the read status
       };
 
       await updateDoc(userDocRef, {
@@ -491,7 +492,7 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
       const updatedReadStatus = !currentReadStatus;
 
       await updateDoc(tableReservationRef, {
-        isRead: updatedReadStatus, // Toggle the read status in Firestore
+        read: updatedReadStatus, // Toggle the read status in Firestore
       });
 
       // Update local state for the table reservation notification
@@ -514,7 +515,7 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
       const orderData = orderDoc.data();
       const updatedItems = orderData.items.map((item: any, index: number) => {
         if (index === parseInt(itemIndex)) {
-          return { ...item, isRead: !currentReadStatus }; // Toggle the read status for the specific item
+          return { ...item, read: !currentReadStatus }; // Toggle the read status for the specific item
         }
         return item;
       });
@@ -661,7 +662,7 @@ const markAllAsRead = async () => {
   try {
     if (!userEmail) {
       console.warn("User email not available.");
-      return; // Exit if userEmail is not available
+      return;
     }
 
     const userDocRef = doc(db, "users", userEmail);
@@ -676,43 +677,40 @@ const markAllAsRead = async () => {
     const userNotifications = userData.notifications || {};
     const userVouchers = userData.vouchers || {};
 
-    // Mark all user notifications as read
-    const updatedUserNotifications = Object.fromEntries(
-      Object.entries(userNotifications).map(([key, value]) => [
-        key,
-        { ...(value as deets), read: true }, // Cast value as deets type
-      ])
+    // ✅ Handle user notifications (update each key individually)
+    await Promise.all(
+      Object.keys(userNotifications).map(async (key) => {
+        const notif = userNotifications[key];
+        if (!notif.read) {
+          await updateDoc(userDocRef, {
+            [`notifications.${key}`]: {
+              ...notif,
+              read: true,
+            },
+          });
+        }
+      })
     );
 
-    // Update Firestore for user notifications
-    await updateDoc(userDocRef, { notifications: updatedUserNotifications });
-
-    // Update local state for user notifications
-    setNotifItems((prevNotifs) =>
-      prevNotifs.map((notif) =>
-        notif.type === "User Notification" ? { ...notif, read: true } : notif
-      )
+    // ✅ Handle user vouchers (update each key individually like toggleReadStatus)
+    await Promise.all(
+      Object.keys(userVouchers).map(async (key) => {
+        const voucher = userVouchers[key];
+        if (!voucher.read) {
+          await updateDoc(userDocRef, {
+            [`vouchers.${key}`]: {
+              ...voucher,
+              read: true,
+            },
+          });
+        }
+      })
     );
 
-    // Process other notification types
+    // ✅ Handle order items and table reservations
     await Promise.all(
       notifItems.map(async (notif) => {
         switch (notif.type) {
-          case "Voucher": {
-            const voucherKey = Object.keys(userVouchers).find(
-              (key) => userVouchers[key].voucherID === notif.id
-            );
-            if (voucherKey) {
-              // Update Firestore to mark the voucher as read
-              await updateDoc(userDocRef, {
-                [`vouchers.${voucherKey}`]: {
-                  ...userVouchers[voucherKey],
-                  read: true,
-                },
-              });
-            }
-            break;
-          }
           case "Order Item": {
             const [docId, itemIndex] = notif.id.split("-");
             const completedOrderRef = doc(db, "completedOrders", docId);
@@ -721,33 +719,32 @@ const markAllAsRead = async () => {
             if (orderDoc.exists()) {
               const orderData = orderDoc.data();
               const updatedItems = orderData.items.map((item: OrderItem, index: number) =>
-                index === parseInt(itemIndex) ? { ...item, isRead: true } : item
+                index === parseInt(itemIndex) ? { ...item, read: true } : item
               );
 
-              // Update Firestore with updated order items
               await updateDoc(completedOrderRef, { items: updatedItems });
             }
             break;
           }
           case "Table Reservation": {
             const reservationRef = doc(db, "tableReservations", notif.id);
-            // Mark the table reservation as read
-            await updateDoc(reservationRef, { isRead: true });
+            await updateDoc(reservationRef, { read: true });
             break;
           }
-          default:
-            break;
         }
       })
     );
 
-    // Mark all notifications as read in local state
-    setNotifItems((prev) => prev.map((notif) => ({ ...notif, read: true })));
+    // ✅ Update local state for all types
+    setNotifItems((prev) =>
+      prev.map((notif) => ({ ...notif, read: true }))
+    );
     setHasUnreadNotifs(false);
   } catch (error) {
     console.error("Error marking all notifications as read:", error);
   }
 };
+
 
 //#endregion
 
