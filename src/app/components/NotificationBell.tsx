@@ -334,7 +334,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ foodCartAvailable }
                 details: `Your order '${doc.id}' with subtotal PHP ${data.subtotal.toFixed(2)} is ${data.status || "in progress"}.`,
                 time: data.timeCreated || "N/A",
                 date: data.dateCreated || "N/A",
-                read: item.read || false,
+                read: item.isRead || false,
               };
               fetchedNotificationsMap.set(notificationId, notification);
             }
@@ -515,7 +515,7 @@ const toggleReadStatus = async (notificationId: string, currentReadStatus: boole
       const orderData = orderDoc.data();
       const updatedItems = orderData.items.map((item: any, index: number) => {
         if (index === parseInt(itemIndex)) {
-          return { ...item, read: !currentReadStatus }; // Toggle the read status for the specific item
+          return { ...item, isRead: !currentReadStatus }; // Toggle the read status for the specific item
         }
         return item;
       });
@@ -719,7 +719,7 @@ const markAllAsRead = async () => {
             if (orderDoc.exists()) {
               const orderData = orderDoc.data();
               const updatedItems = orderData.items.map((item: OrderItem, index: number) =>
-                index === parseInt(itemIndex) ? { ...item, read: true } : item
+                index === parseInt(itemIndex) ? { ...item, isRead: true } : item
               );
 
               await updateDoc(completedOrderRef, { items: updatedItems });
