@@ -1,8 +1,25 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 const NewsSubscription = () => {
+  const [shouldShow, setShouldShow] = useState(false);
+
+  useEffect(() => {
+    const hasUserCookie = document.cookie
+      .split("; ")
+      .some((cookie) => cookie.startsWith("user="));
+
+    // Only show if the cookie DOES NOT exist
+    if (!hasUserCookie) {
+      setShouldShow(true);
+    }
+  }, []);
+
+  if (!shouldShow) return null;
+
   return (
     <div className="bg-white relative flex flex-col lg:min-h-[69vh] lg:flex-row lg:px-24 xl:px-56 xl:gap-10">
       {/* FORM CONTAINER */}
@@ -10,7 +27,7 @@ const NewsSubscription = () => {
         <h1 className="text-4xl text-orange-950 font-bold text-center md:text-5xl">
           Sign-up now to receive notifications for promos and updates!
         </h1>
-        <Link
+        <Link 
           href={`signup`}
           className="bg-orange-950 w-3/5 md:w-4/5 text-white text-xl font-bold h-10 pt-1 rounded-md
                   hover:bg-orange-900 duration-300 hover:scale-[1.02] text-center"
