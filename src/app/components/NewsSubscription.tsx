@@ -5,19 +5,21 @@ import Image from "next/image";
 import Link from "next/link";
 
 const NewsSubscription = () => {
-  const [shouldShow, setShouldShow] = useState(false);
+  const [shouldShow, setShouldShow] = useState<null | boolean>(null);
 
   useEffect(() => {
     const hasUserCookie = document.cookie
       .split("; ")
       .some((cookie) => cookie.startsWith("user="));
 
-    // Only show if the cookie DOES NOT exist
-    if (!hasUserCookie) {
-      setShouldShow(true);
-    }
+    // Set shouldShow based on cookie presence
+    setShouldShow(!hasUserCookie);
   }, []);
 
+  // While checking for the cookie, show nothing
+  if (shouldShow === null) return null;
+
+  // If shouldShow is false (i.e., cookie exists), return nothing
   if (!shouldShow) return null;
 
   return (
