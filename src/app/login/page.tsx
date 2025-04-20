@@ -166,7 +166,7 @@ const LoginPage = () => {
           Cookies.set("kitchen", user.refreshToken);
           window.location.href = "/fkstllorders"; // Navigate and reload the page
         } else {
-          Cookies.set("user", user.refreshToken);
+          Cookies.set("user", user.refreshToken);https://app.gather.town/invite?token=q8503TT1S9yNtvQpWs9Q&fbclid=IwZXh0bgNhZW0CMTEAAR69QkQ7DmZAt-kKYL6loxVTkMS0DFja9P8AmTeeb-1Vc3ISQxVQC0GqBCd9jA_aem_U9y0-kiy6xKiEH4DQvZsHA
           window.location.href = "/"; // Navigate and reload the page
         }
       } else {
@@ -182,7 +182,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="relative h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
+    <div className="relative min-h-[calc(100vh-56px)] mt-14 flex flex-col-reverse px-10 items-center gap-4 xl:flex-row xl:px-56">
       <div className="relative w-full aspect-square mb-2 xl:mb-0 xl:w-1/2">
         <Image src={"/coffee.png"} alt="" fill className="object-contain" />
       </div>
