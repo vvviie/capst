@@ -719,7 +719,7 @@ const markAllAsRead = async () => {
             if (orderDoc.exists()) {
               const orderData = orderDoc.data();
               const updatedItems = orderData.items.map((item: OrderItem, index: number) =>
-                index === parseInt(itemIndex) ? { ...item, isRead: true } : item
+                index === parseInt(itemIndex) ? { ...item, read: true } : item
               );
 
               await updateDoc(completedOrderRef, { items: updatedItems });
