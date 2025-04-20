@@ -320,7 +320,7 @@ const OrdersPage = () => {
           query(
             collection(db, "completedOrders"),
             where("user", "==", userEmail),
-            where("status", "==", "DONE") // Ensure only 'DONE' orders are fetched
+            where("status", "==", "SERVED") // Ensure only 'DONE' orders are fetched
           )
         );
 
@@ -336,8 +336,8 @@ const OrdersPage = () => {
         ordersSnapshot.forEach((doc) => {
           const order = doc.data();
 
-          // Ensure status is 'DONE' and the order has not been rated
-          if (order.status === "DONE") {
+          // Ensure status is 'SERVED' and the order has not been rated
+          if (order.status === "SERVED") {
             if (!order.hasRated) {
               allRated = false;
               if (!firstUnratedOrder) {
@@ -346,7 +346,7 @@ const OrdersPage = () => {
             }
           } else {
             console.log(
-              `Skipping order ${doc.id} as it is not 'DONE' or has 'REJECTED' status.`
+              `Skipping order ${doc.id} as it is not 'SERVED' or has 'REJECTED' status.`
             );
           }
         });
@@ -491,7 +491,7 @@ const OrdersPage = () => {
         query(
           collection(db, "completedOrders"),
           where("user", "==", userEmail),
-          where("status", "==", "DONE")
+          where("status", "==", "SERVED")
         )
       );
 
@@ -1143,7 +1143,7 @@ const OrdersPage = () => {
                             </button>
                           </div>
                         )}
-                        {order.status === "DONE" && (
+                        {order.status === "SERVED" && (
                           <div className="flex w-full gap-2">
                             {/* Print Details Button */}
                             <button
