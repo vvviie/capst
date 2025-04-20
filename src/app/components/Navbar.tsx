@@ -72,6 +72,8 @@ const Navbar = () => {
   
       await signOut(auth); // Sign out from Firebase
       router.push("/"); // Redirect to the home page
+      window.location.reload();
+
     } catch (error) {
       console.error("Error during logout:", error);
     }
